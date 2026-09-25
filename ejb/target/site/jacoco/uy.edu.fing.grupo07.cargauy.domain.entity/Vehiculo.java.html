@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Vehiculo.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CargaUY - ejb</a> &gt; <a href="index.source.html" class="el_package">uy.edu.fing.grupo07.cargauy.domain.entity</a> &gt; <span class="el_source">Vehiculo.java</span></div><h1>Vehiculo.java</h1><pre class="source lang-java linenums">package uy.edu.fing.grupo07.cargauy.domain.entity;
+
+import jakarta.persistence.*;
+import java.io.Serializable;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+
+/**
+ * Entidad Vehiculo registrada por una empresa para el transporte de carga.
+ */
+@Entity
+@Table(name = &quot;vehiculos&quot;)
+public class Vehiculo implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    @Id
+    @Column(nullable = false)
+    private int matricula;
+
+    @Column(nullable = false, length = 100)
+    private String marca;
+
+    @Column(nullable = false, length = 100)
+    private String modelo;
+
+    @Column(nullable = false)
+    private int peso;
+
+    @Column(name = &quot;capacidad_carga&quot;, nullable = false)
+    private int capacidadCarga;
+
+    @Column(name = &quot;estado_habilitacion&quot;, nullable = false)
+    private boolean estadoHabilitacion;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = &quot;nro_empresa&quot;, nullable = false)
+    private Empresa empresa;
+
+<span class="pc" id="L42">    @OneToMany(mappedBy = &quot;vehiculo&quot;, cascade = CascadeType.ALL, orphanRemoval = true)</span>
+    private List&lt;PNC&gt; pncs = new ArrayList&lt;&gt;();
+
+    @OneToOne(mappedBy = &quot;vehiculo&quot;, cascade = CascadeType.ALL, orphanRemoval = true)
+    private ITV itv;
+
+<span class="pc" id="L48">    @OneToMany(mappedBy = &quot;vehiculo&quot;)</span>
+    private List&lt;GuiaDeViaje&gt; guias = new ArrayList&lt;&gt;();
+
+<span class="nc" id="L51">    public Vehiculo() {</span>
+<span class="nc" id="L52">    }</span>
+
+    public Vehiculo(int matricula, String marca, String modelo, int peso, int capacidadCarga,
+<span class="fc" id="L55">                    boolean estadoHabilitacion, Empresa empresa) {</span>
+<span class="fc" id="L56">        this.matricula = matricula;</span>
+<span class="fc" id="L57">        this.marca = marca;</span>
+<span class="fc" id="L58">        this.modelo = modelo;</span>
+<span class="fc" id="L59">        this.peso = peso;</span>
+<span class="fc" id="L60">        this.capacidadCarga = capacidadCarga;</span>
+<span class="fc" id="L61">        this.estadoHabilitacion = estadoHabilitacion;</span>
+<span class="fc" id="L62">        this.empresa = empresa;</span>
+<span class="fc" id="L63">    }</span>
+
+    public int getMatricula() {
+<span class="nc" id="L66">        return matricula;</span>
+    }
+
+    public void setMatricula(int matricula) {
+<span class="nc" id="L70">        this.matricula = matricula;</span>
+<span class="nc" id="L71">    }</span>
+
+    public String getMarca() {
+<span class="nc" id="L74">        return marca;</span>
+    }
+
+    public void setMarca(String marca) {
+<span class="nc" id="L78">        this.marca = marca;</span>
+<span class="nc" id="L79">    }</span>
+
+    public String getModelo() {
+<span class="nc" id="L82">        return modelo;</span>
+    }
+
+    public void setModelo(String modelo) {
+<span class="nc" id="L86">        this.modelo = modelo;</span>
+<span class="nc" id="L87">    }</span>
+
+    public int getPeso() {
+<span class="nc" id="L90">        return peso;</span>
+    }
+
+    public void setPeso(int peso) {
+<span class="nc" id="L94">        this.peso = peso;</span>
+<span class="nc" id="L95">    }</span>
+
+    public int getCapacidadCarga() {
+<span class="nc" id="L98">        return capacidadCarga;</span>
+    }
+
+    public void setCapacidadCarga(int capacidadCarga) {
+<span class="nc" id="L102">        this.capacidadCarga = capacidadCarga;</span>
+<span class="nc" id="L103">    }</span>
+
+    public boolean isEstadoHabilitacion() {
+<span class="nc" id="L106">        return estadoHabilitacion;</span>
+    }
+
+    public void setEstadoHabilitacion(boolean estadoHabilitacion) {
+<span class="fc" id="L110">        this.estadoHabilitacion = estadoHabilitacion;</span>
+<span class="fc" id="L111">    }</span>
+
+    public Empresa getEmpresa() {
+<span class="nc" id="L114">        return empresa;</span>
+    }
+
+    public void setEmpresa(Empresa empresa) {
+<span class="nc" id="L118">        this.empresa = empresa;</span>
+<span class="nc" id="L119">    }</span>
+
+    public List&lt;PNC&gt; getPncs() {
+<span class="fc" id="L122">        return pncs;</span>
+    }
+
+    public void setPncs(List&lt;PNC&gt; pncs) {
+<span class="nc" id="L126">        this.pncs = pncs;</span>
+<span class="nc" id="L127">    }</span>
+
+    public ITV getItv() {
+<span class="nc" id="L130">        return itv;</span>
+    }
+
+    public void setItv(ITV itv) {
+<span class="fc" id="L134">        this.itv = itv;</span>
+<span class="fc" id="L135">    }</span>
+
+    public List&lt;GuiaDeViaje&gt; getGuias() {
+<span class="nc" id="L138">        return guias;</span>
+    }
+
+    public void setGuias(List&lt;GuiaDeViaje&gt; guias) {
+<span class="nc" id="L142">        this.guias = guias;</span>
+<span class="nc" id="L143">    }</span>
+
+    /**
+     * Verifica si el vehículo cuenta con habilitación vigente (PNC e ITV al día).
+     */
+    public boolean verificarHabilitacionVigente() {
+<span class="pc bpc" id="L149" title="1 of 4 branches missed.">        boolean itvValido = itv != null &amp;&amp; itv.isVigente();</span>
+<span class="pc bpc" id="L150" title="1 of 4 branches missed.">        boolean pncValido = pncs != null &amp;&amp; pncs.stream().anyMatch(PNC::isVigente);</span>
+<span class="fc bfc" id="L151" title="All 6 branches covered.">        return estadoHabilitacion &amp;&amp; itvValido &amp;&amp; pncValido;</span>
+    }
+
+    @Override
+    public boolean equals(Object o) {
+<span class="nc bnc" id="L156" title="All 2 branches missed.">        if (this == o) return true;</span>
+<span class="nc bnc" id="L157" title="All 4 branches missed.">        if (o == null || getClass() != o.getClass()) return false;</span>
+<span class="nc" id="L158">        Vehiculo vehiculo = (Vehiculo) o;</span>
+<span class="nc bnc" id="L159" title="All 2 branches missed.">        return matricula == vehiculo.matricula;</span>
+    }
+
+    @Override
+    public int hashCode() {
+<span class="nc" id="L164">        return Objects.hash(matricula);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

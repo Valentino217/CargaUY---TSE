@@ -1,0 +1,62 @@
+stages:
+  - build
+  - test
+  - quality
+  - package
+
+variables:
+  MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
+  MAVEN_CLI_OPTS: "--batch-mode --errors --fail-at-end"
+
+cache:
+  key: "${CI_COMMIT_REF_SLUG}"
+  paths:
+    - .m2/repository
+
+# Etapa 1: Compilación de todos los módulos Maven
+build-job:
+  stage: build
+  image: maven:3.9-eclipse-temurin-17
+  script:
+    - mvn $MAVEN_CLI_OPTS clean compile
+
+# Etapa 2: Ejecución de tests unitarios y generación de reporte JaCoCo
+unit-tests-job:
+  stage: test
+  image: maven:3.9-eclipse-temurin-17
+  script:
+    - mvn $MAVEN_CLI_OPTS test jacoco:report
+  artifacts:
+    when: always
+    reports:
+      junit:
+        - "**/target/surefire-reports/TEST-*.xml"
+    paths:
+      - "**/target/site/jacoco/"
+
+# Etapa 3: Análisis estático de código y Quality Gate en SonarQube
+sonarqube-job:
+  stage: quality
+  image: maven:3.9-eclipse-temurin-17
+  script:
+    - mvn $MAVEN_CLI_OPTS sonar:sonar
+        -Dsonar.host.url=${SONAR_HOST_URL:-https://sonarqube.fing.edu.uy}
+        -Dsonar.login=${SONAR_TOKEN}
+        -Dsonar.projectKey=uy.edu.fing.grupo07:CargaUY
+        -Dsonar.coverage.jacoco.xmlReportPaths=**/target/site/jacoco/jacoco.xml
+  only:
+    - main
+    - develop
+  allow_failure: true
+
+# Etapa 4: Empaquetado final del EAR para entrega / despliegue
+package-job:
+  stage: package
+  image: maven:3.9-eclipse-temurin-17
+  script:
+    - mvn $MAVEN_CLI_OPTS package -DskipTests
+  artifacts:
+    name: "CargaUY-EAR-$CI_COMMIT_SHORT_SHA"
+    paths:
+      - ear/target/CargaUY.ear
+    expire_in: 30 days

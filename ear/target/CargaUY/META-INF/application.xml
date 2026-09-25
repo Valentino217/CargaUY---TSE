@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<application xmlns="https://jakarta.ee/xml/ns/jakartaee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/application_10.xsd" version="10">
+  <description>This is the EAR POM file</description>
+  <display-name>CargaUY-ear</display-name>
+  <module>
+    <web>
+      <web-uri>CargaUY-web.war</web-uri>
+      <context-root>/cargauy</context-root>
+    </web>
+  </module>
+  <module>
+    <ejb>CargaUY-ejb.jar</ejb>
+  </module>
+  <library-directory>lib</library-directory>
+</application>

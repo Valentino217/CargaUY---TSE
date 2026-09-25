@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<arquillian xmlns="http://jboss.org/schema/arquillian" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:schemaLocation="http://jboss.org/schema/arquillian
+                                https://jboss.org/schema/arquillian/arquillian_1_0.xsd">
+
+    <!-- Use the Servlet 6.0 protocol to communicate with the container -->
+    <defaultProtocol type="Servlet 6.0" />
+
+    <!-- Uncomment to have test archives exported to the file system for inspection -->
+    <!--<engine>
+        <property name="deploymentExportPath">target/</property>
+    </engine>-->
+
+    <!-- Example configuration for a managed WildFly / JBoss EAP instance -->
+    <container qualifier="managed">
+        <!-- By default, Arquillian will use the JBOSS_HOME environment variable to find the WildFly / JBoss EAP installation.
+             If you prefer not to define the JBOSS_HOME environment variable, alternatively you can uncomment the
+             following `jbossHome` property and replace EAP_HOME with the path to your WildFly / JBoss EAP installation. -->
+        <!--<configuration>
+            <property name="jbossHome">EAP_HOME</property>
+        </configuration> -->
+    </container>
+
+    <!-- Example configuration for a remote WildFly / JBoss EAP instance -->
+    <container qualifier="remote">
+        <!-- Arquillian will deploy to this WildFly server. -->
+        <configuration>
+            <property name="managementAddress">127.0.0.1</property>
+            <property name="managementPort">9990</property>
+            <!-- If deploying to a remote server, you have to specify username/password here -->
+            <!-- <property name="username">admin</property>
+            <property name="password">admin</property> -->
+        </configuration>
+    </container>
+</arquillian>

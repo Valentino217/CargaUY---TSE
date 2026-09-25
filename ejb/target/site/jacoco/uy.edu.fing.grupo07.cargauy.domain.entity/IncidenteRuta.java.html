@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="es"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>IncidenteRuta.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CargaUY - ejb</a> &gt; <a href="index.source.html" class="el_package">uy.edu.fing.grupo07.cargauy.domain.entity</a> &gt; <span class="el_source">IncidenteRuta.java</span></div><h1>IncidenteRuta.java</h1><pre class="source lang-java linenums">package uy.edu.fing.grupo07.cargauy.domain.entity;
+
+import jakarta.persistence.*;
+import java.io.Serializable;
+import java.util.Objects;
+
+/**
+ * Entidad IncidenteRuta con detalle fotográfico y descriptivo de eventualidades en ruta.
+ */
+@Entity
+@Table(name = &quot;incidentes_ruta&quot;)
+public class IncidenteRuta implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(length = 500)
+    private String foto;
+
+    @Column(nullable = false, length = 1000)
+    private String descripcion;
+
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = &quot;evento_id&quot;, nullable = false, unique = true)
+    private EventoViaje evento;
+
+<span class="nc" id="L30">    public IncidenteRuta() {</span>
+<span class="nc" id="L31">    }</span>
+
+<span class="fc" id="L33">    public IncidenteRuta(String foto, String descripcion, EventoViaje evento) {</span>
+<span class="fc" id="L34">        this.foto = foto;</span>
+<span class="fc" id="L35">        this.descripcion = descripcion;</span>
+<span class="fc" id="L36">        this.evento = evento;</span>
+<span class="fc" id="L37">    }</span>
+
+    public Long getId() {
+<span class="nc" id="L40">        return id;</span>
+    }
+
+    public void setId(Long id) {
+<span class="nc" id="L44">        this.id = id;</span>
+<span class="nc" id="L45">    }</span>
+
+    public String getFoto() {
+<span class="nc" id="L48">        return foto;</span>
+    }
+
+    public void setFoto(String foto) {
+<span class="nc" id="L52">        this.foto = foto;</span>
+<span class="nc" id="L53">    }</span>
+
+    public String getDescripcion() {
+<span class="fc" id="L56">        return descripcion;</span>
+    }
+
+    public void setDescripcion(String descripcion) {
+<span class="nc" id="L60">        this.descripcion = descripcion;</span>
+<span class="nc" id="L61">    }</span>
+
+    public EventoViaje getEvento() {
+<span class="fc" id="L64">        return evento;</span>
+    }
+
+    public void setEvento(EventoViaje evento) {
+<span class="fc" id="L68">        this.evento = evento;</span>
+<span class="fc" id="L69">    }</span>
+
+    @Override
+    public boolean equals(Object o) {
+<span class="nc bnc" id="L73" title="All 2 branches missed.">        if (this == o) return true;</span>
+<span class="nc bnc" id="L74" title="All 4 branches missed.">        if (o == null || getClass() != o.getClass()) return false;</span>
+<span class="nc" id="L75">        IncidenteRuta that = (IncidenteRuta) o;</span>
+<span class="nc" id="L76">        return Objects.equals(id, that.id);</span>
+    }
+
+    @Override
+    public int hashCode() {
+<span class="nc" id="L81">        return Objects.hash(id);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence version="3.2"
+   xmlns="https://jakarta.ee/xml/ns/persistence" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+   xsi:schemaLocation="
+        https://jakarta.ee/xml/ns/persistence
+        https://jakarta.ee/xml/ns/persistence/persistence_3_2.xsd">
+   <persistence-unit name="CargaUYPersistenceUnit" transaction-type="JTA">
+      <jta-data-source>java:jboss/datasources/PostgreSQLDS</jta-data-source>
+      <properties>
+         <property name="jakarta.persistence.schema-generation.database.action" value="drop-and-create"/>
+         <property name="jakarta.persistence.schema-generation.create-source" value="metadata"/>
+         <property name="jakarta.persistence.schema-generation.drop-source" value="metadata"/>
+
+         <!-- Propiedades Hibernate / PostgreSQL -->
+         <property name="hibernate.dialect" value="org.hibernate.dialect.PostgreSQLDialect"/>
+         <property name="hibernate.show_sql" value="true"/>
+         <property name="hibernate.format_sql" value="true"/>
+      </properties>
+   </persistence-unit>
+</persistence>

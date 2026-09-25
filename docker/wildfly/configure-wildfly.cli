@@ -1,0 +1,57 @@
+# Script de configuración JBoss CLI para WildFly (standalone-full.xml)
+embed-server --server-config=standalone-full.xml --std-out=echo
+
+echo Configurando driver JDBC PostgreSQL...
+if (outcome != success) of /subsystem=datasources/jdbc-driver=postgresql:read-resource
+    /subsystem=datasources/jdbc-driver=postgresql:add( \
+        driver-name=postgresql, \
+        driver-module-name=org.postgresql, \
+        driver-xa-datasource-class-name=org.postgresql.xa.PGXADataSource)
+end-if
+
+echo Configurando Datasource PostgreSQLDS...
+if (outcome != success) of /subsystem=datasources/data-source=PostgreSQLDS:read-resource
+    data-source add \
+        --name=PostgreSQLDS \
+        --jndi-name=java:jboss/datasources/PostgreSQLDS \
+        --driver-name=postgresql \
+        --connection-url=jdbc:postgresql://${env.DB_HOST:postgres}:${env.DB_PORT:5432}/${env.DB_NAME:cargauy} \
+        --user-name=${env.DB_USER:cargauy} \
+        --password=${env.DB_PASSWORD:cargauy123} \
+        --min-pool-size=5 \
+        --max-pool-size=25 \
+        --valid-connection-checker-class-name=org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLValidConnectionChecker \
+        --exception-sorter-class-name=org.jboss.jca.adapters.jdbc.extensions.postgres.PostgreSQLExceptionSorter \
+        --check-valid-connection-sql="SELECT 1" \
+        --background-validation=true \
+        --background-validation-millis=60000
+end-if
+
+echo Configurando colas JMS en ActiveMQ Artemis...
+if (outcome != success) of /subsystem=messaging-activemq/server=default/jms-queue=TrackingQueue:read-resource
+    jms-queue add --queue-address=TrackingQueue \
+        --entries=[java:/jms/queue/TrackingQueue,java:jboss/exported/jms/queue/TrackingQueue]
+end-if
+
+if (outcome != success) of /subsystem=messaging-activemq/server=default/jms-queue=FiscalizacionQueue:read-resource
+    jms-queue add --queue-address=FiscalizacionQueue \
+        --entries=[java:/jms/queue/FiscalizacionQueue,java:jboss/exported/jms/queue/FiscalizacionQueue]
+end-if
+
+if (outcome != success) of /subsystem=messaging-activemq/server=default/jms-queue=NotificacionQueue:read-resource
+    jms-queue add --queue-address=NotificacionQueue \
+        --entries=[java:/jms/queue/NotificacionQueue,java:jboss/exported/jms/queue/NotificacionQueue]
+end-if
+
+if (outcome != success) of /subsystem=messaging-activemq/server=default/jms-queue=DLQ.TrackingQueue:read-resource
+    jms-queue add --queue-address=DLQ.TrackingQueue \
+        --entries=[java:/jms/queue/DLQ.TrackingQueue]
+end-if
+
+echo Configurando logging para paquete uy.edu.fing.grupo07...
+if (outcome != success) of /subsystem=logging/logger=uy.edu.fing.grupo07:read-resource
+    /subsystem=logging/logger=uy.edu.fing.grupo07:add(level=DEBUG)
+end-if
+
+echo Configuración finalizada con éxito.
+stop-embedded-server
