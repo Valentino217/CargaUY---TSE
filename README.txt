@@ -6,8 +6,6 @@ Run the maven goals "install wildfly:deploy"
 To undeploy it:
 Run the maven goals "wildfly:undeploy"
 
-==========================
-
 DataSource:
 This sample includes a "persistence.xml" file in the EJB project. This file defines
 a persistence unit "CargaUYPersistenceUnit" which uses the JakartaEE default database.
