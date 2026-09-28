@@ -1,25 +1,25 @@
-C:\Users\valen\eclipse-workspace\CargaUY\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\Administrador.java
-C:\Users\valen\eclipse-workspace\CargaUY\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\Autoridad.java
-C:\Users\valen\eclipse-workspace\CargaUY\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\Chofer.java
-C:\Users\valen\eclipse-workspace\CargaUY\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\Ciudadano.java
-C:\Users\valen\eclipse-workspace\CargaUY\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\Descargo.java
-C:\Users\valen\eclipse-workspace\CargaUY\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\Empresa.java
-C:\Users\valen\eclipse-workspace\CargaUY\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\EventoViaje.java
-C:\Users\valen\eclipse-workspace\CargaUY\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\Funcionario.java
-C:\Users\valen\eclipse-workspace\CargaUY\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\GuiaDeViaje.java
-C:\Users\valen\eclipse-workspace\CargaUY\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\IncidenteRuta.java
-C:\Users\valen\eclipse-workspace\CargaUY\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\Infraccion.java
-C:\Users\valen\eclipse-workspace\CargaUY\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\ITV.java
-C:\Users\valen\eclipse-workspace\CargaUY\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\PesadaBalanza.java
-C:\Users\valen\eclipse-workspace\CargaUY\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\PNC.java
-C:\Users\valen\eclipse-workspace\CargaUY\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\PuntoTracking.java
-C:\Users\valen\eclipse-workspace\CargaUY\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\RegistroAuditoria.java
-C:\Users\valen\eclipse-workspace\CargaUY\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\ReglaFiscalizacion.java
-C:\Users\valen\eclipse-workspace\CargaUY\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\Rubro.java
-C:\Users\valen\eclipse-workspace\CargaUY\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\TipoCarga.java
-C:\Users\valen\eclipse-workspace\CargaUY\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\Usuario.java
-C:\Users\valen\eclipse-workspace\CargaUY\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\Vehiculo.java
-C:\Users\valen\eclipse-workspace\CargaUY\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\enums\EstadoInfraccion.java
-C:\Users\valen\eclipse-workspace\CargaUY\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\enums\TipoEstado.java
-C:\Users\valen\eclipse-workspace\CargaUY\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\enums\TipoEvento.java
-C:\Users\valen\eclipse-workspace\CargaUY\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\enums\TipoInfraccion.java
+C:\Users\USUARIO\Desktop\Laboratorio TSE\CargaUY---TSE\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\Administrador.java
+C:\Users\USUARIO\Desktop\Laboratorio TSE\CargaUY---TSE\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\Autoridad.java
+C:\Users\USUARIO\Desktop\Laboratorio TSE\CargaUY---TSE\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\Chofer.java
+C:\Users\USUARIO\Desktop\Laboratorio TSE\CargaUY---TSE\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\Ciudadano.java
+C:\Users\USUARIO\Desktop\Laboratorio TSE\CargaUY---TSE\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\Descargo.java
+C:\Users\USUARIO\Desktop\Laboratorio TSE\CargaUY---TSE\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\Empresa.java
+C:\Users\USUARIO\Desktop\Laboratorio TSE\CargaUY---TSE\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\EventoViaje.java
+C:\Users\USUARIO\Desktop\Laboratorio TSE\CargaUY---TSE\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\Funcionario.java
+C:\Users\USUARIO\Desktop\Laboratorio TSE\CargaUY---TSE\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\GuiaDeViaje.java
+C:\Users\USUARIO\Desktop\Laboratorio TSE\CargaUY---TSE\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\IncidenteRuta.java
+C:\Users\USUARIO\Desktop\Laboratorio TSE\CargaUY---TSE\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\Infraccion.java
+C:\Users\USUARIO\Desktop\Laboratorio TSE\CargaUY---TSE\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\ITV.java
+C:\Users\USUARIO\Desktop\Laboratorio TSE\CargaUY---TSE\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\PesadaBalanza.java
+C:\Users\USUARIO\Desktop\Laboratorio TSE\CargaUY---TSE\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\PNC.java
+C:\Users\USUARIO\Desktop\Laboratorio TSE\CargaUY---TSE\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\PuntoTracking.java
+C:\Users\USUARIO\Desktop\Laboratorio TSE\CargaUY---TSE\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\RegistroAuditoria.java
+C:\Users\USUARIO\Desktop\Laboratorio TSE\CargaUY---TSE\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\ReglaFiscalizacion.java
+C:\Users\USUARIO\Desktop\Laboratorio TSE\CargaUY---TSE\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\Rubro.java
+C:\Users\USUARIO\Desktop\Laboratorio TSE\CargaUY---TSE\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\TipoCarga.java
+C:\Users\USUARIO\Desktop\Laboratorio TSE\CargaUY---TSE\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\Usuario.java
+C:\Users\USUARIO\Desktop\Laboratorio TSE\CargaUY---TSE\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\entity\Vehiculo.java
+C:\Users\USUARIO\Desktop\Laboratorio TSE\CargaUY---TSE\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\enums\EstadoInfraccion.java
+C:\Users\USUARIO\Desktop\Laboratorio TSE\CargaUY---TSE\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\enums\TipoEstado.java
+C:\Users\USUARIO\Desktop\Laboratorio TSE\CargaUY---TSE\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\enums\TipoEvento.java
+C:\Users\USUARIO\Desktop\Laboratorio TSE\CargaUY---TSE\ejb\src\main\java\uy\edu\fing\grupo07\CargaUY\domain\enums\TipoInfraccion.java

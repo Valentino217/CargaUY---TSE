@@ -1,4 +1,4 @@
-package uy.edu.fing.grupo07.cargauy.domain.enums;
+package uy.edu.fing.grupo07.CargaUY.domain.enums;
 
 /**
  * Estados del ciclo de vida de un caso de infracción.

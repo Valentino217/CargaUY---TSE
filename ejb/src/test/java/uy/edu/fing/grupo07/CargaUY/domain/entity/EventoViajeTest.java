@@ -1,8 +1,8 @@
-package uy.edu.fing.grupo07.cargauy.domain.entity;
+package uy.edu.fing.grupo07.CargaUY.domain.entity;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import uy.edu.fing.grupo07.cargauy.domain.enums.TipoEvento;
+import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEvento;
 
 import java.time.LocalDateTime;
 

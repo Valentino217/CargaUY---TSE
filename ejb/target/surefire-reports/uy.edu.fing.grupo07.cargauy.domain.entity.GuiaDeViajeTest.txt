@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
-Test set: uy.edu.fing.grupo07.cargauy.domain.entity.GuiaDeViajeTest
+Test set: uy.edu.fing.grupo07.CargaUY.domain.entity.GuiaDeViajeTest
 -------------------------------------------------------------------------------
-Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.018 s -- in uy.edu.fing.grupo07.cargauy.domain.entity.GuiaDeViajeTest
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.081 s -- in uy.edu.fing.grupo07.CargaUY.domain.entity.GuiaDeViajeTest

@@ -1,5 +1,5 @@
-uy\edu\fing\grupo07\cargauy\domain\entity\RegistroAuditoriaTest.class
-uy\edu\fing\grupo07\cargauy\domain\entity\VehiculoHabilitacionTest.class
-uy\edu\fing\grupo07\cargauy\domain\entity\UsuarioTest.class
-uy\edu\fing\grupo07\cargauy\domain\entity\EventoViajeTest.class
-uy\edu\fing\grupo07\cargauy\domain\entity\GuiaDeViajeTest.class
+uy\edu\fing\grupo07\CargaUY\domain\entity\EventoViajeTest.class
+uy\edu\fing\grupo07\CargaUY\domain\entity\RegistroAuditoriaTest.class
+uy\edu\fing\grupo07\CargaUY\domain\entity\VehiculoHabilitacionTest.class
+uy\edu\fing\grupo07\CargaUY\domain\entity\GuiaDeViajeTest.class
+uy\edu\fing\grupo07\CargaUY\domain\entity\UsuarioTest.class

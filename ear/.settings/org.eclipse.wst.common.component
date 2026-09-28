@@ -1,6 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?><project-modules id="moduleCoreId" project-version="1.5.0">
+                
+    
+    
     <wb-module deploy-name="CargaUY">
+                                
+        
+        
         <wb-resource deploy-path="/" source-path="/target/m2e-wtp/ear-resources"/>
+                                
+        
+        
         <wb-resource deploy-path="/" source-path="/src/main/application" tag="defaultRootSource"/>
         <dependent-module archiveName="CargaUY-web.war" deploy-path="/" handle="module:/resource/CargaUY-web/CargaUY-web">
             <dependency-type>uses</dependency-type>
@@ -14,5 +23,11 @@
         <dependent-module archiveName="bytes.jar" deploy-path="/lib" handle="module:/classpath/var/M2_REPO/at/favre/lib/bytes/1.5.0/bytes-1.5.0.jar">
             <dependency-type>uses</dependency-type>
         </dependent-module>
+                            
+    
+    
     </wb-module>
+            
+
+
 </project-modules>
