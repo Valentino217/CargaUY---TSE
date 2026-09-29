@@ -1,4 +1,6 @@
 GROUP,PACKAGE,CLASS,INSTRUCTION_MISSED,INSTRUCTION_COVERED,BRANCH_MISSED,BRANCH_COVERED,LINE_MISSED,LINE_COVERED,COMPLEXITY_MISSED,COMPLEXITY_COVERED,METHOD_MISSED,METHOD_COVERED
+CargaUY - ejb,capa_negocio,FuncionarioEJB,8,0,0,0,4,0,2,0,2,0
+CargaUY - ejb,capa_negocio,UsuarioEJB,3,0,0,0,2,0,1,0,1,0
 CargaUY - ejb,uy.edu.fing.grupo07.CargaUY.domain.enums,TipoEstado,0,21,0,0,0,4,0,1,0,1
 CargaUY - ejb,uy.edu.fing.grupo07.CargaUY.domain.enums,TipoInfraccion,27,0,0,0,5,0,1,0,1,0
 CargaUY - ejb,uy.edu.fing.grupo07.CargaUY.domain.enums,EstadoInfraccion,33,0,0,0,6,0,1,0,1,0

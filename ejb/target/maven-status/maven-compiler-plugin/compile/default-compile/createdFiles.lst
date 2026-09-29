@@ -1,9 +1,11 @@
 uy\edu\fing\grupo07\CargaUY\domain\enums\EstadoInfraccion.class
 uy\edu\fing\grupo07\CargaUY\domain\enums\TipoEstado.class
+capa_negocio\FuncionarioEJBLocal.class
 uy\edu\fing\grupo07\CargaUY\domain\entity\Administrador.class
 uy\edu\fing\grupo07\CargaUY\domain\entity\Empresa.class
 uy\edu\fing\grupo07\CargaUY\domain\entity\ReglaFiscalizacion.class
 uy\edu\fing\grupo07\CargaUY\domain\enums\TipoEvento.class
+capa_negocio\FuncionarioEJB.class
 uy\edu\fing\grupo07\CargaUY\domain\entity\Funcionario.class
 uy\edu\fing\grupo07\CargaUY\domain\entity\PuntoTracking.class
 uy\edu\fing\grupo07\CargaUY\domain\entity\Chofer.class
@@ -17,9 +19,11 @@ uy\edu\fing\grupo07\CargaUY\domain\entity\PesadaBalanza.class
 uy\edu\fing\grupo07\CargaUY\domain\entity\Rubro.class
 uy\edu\fing\grupo07\CargaUY\domain\entity\Autoridad.class
 uy\edu\fing\grupo07\CargaUY\domain\entity\Ciudadano.class
+capa_negocio\UsuarioEJBLocal.class
 uy\edu\fing\grupo07\CargaUY\domain\entity\EventoViaje.class
 uy\edu\fing\grupo07\CargaUY\domain\entity\GuiaDeViaje.class
 uy\edu\fing\grupo07\CargaUY\domain\entity\Usuario.class
+capa_negocio\UsuarioEJB.class
 uy\edu\fing\grupo07\CargaUY\domain\entity\RegistroAuditoria.class
 uy\edu\fing\grupo07\CargaUY\domain\entity\IncidenteRuta.class
 uy\edu\fing\grupo07\CargaUY\domain\entity\Vehiculo.class
