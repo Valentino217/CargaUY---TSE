@@ -27,7 +27,7 @@
         <version.wildfly.maven.plugin>6.0.0.Final</version.wildfly.maven.plugin>
 
         <!-- Define the version of the JBoss BOMs we want to import to specify tested stacks. -->
-        <version.wildfly.bom>37.0.0.Final</version.wildfly.bom>
+        <version.wildfly.bom>41.0.0.Final</version.wildfly.bom>
 
         <!--Use JUnit 5 here - the WildFly bom still brings 4.x -->
         <version.junit5>6.1.2</version.junit5>
