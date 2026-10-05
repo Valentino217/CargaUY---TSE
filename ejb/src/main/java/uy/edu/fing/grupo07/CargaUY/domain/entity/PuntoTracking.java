@@ -1,4 +1,4 @@
-package uy.edu.fing.grupo07.cargauy.domain.entity;
+package uy.edu.fing.grupo07.CargaUY.domain.entity;
 
 import jakarta.persistence.*;
 import java.io.Serializable;

@@ -1,4 +1,4 @@
-package uy.edu.fing.grupo07.cargauy.domain.entity;
+package uy.edu.fing.grupo07.CargaUY.domain.entity;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,6 +21,7 @@ class UsuarioTest {
         assertEquals(12345678, f.getCi());
         assertEquals(101, f.getNroFuncionario());
         assertEquals("Fiscalización", f.getDepartamento());
+        assertEquals("hashed_pwd", f.getPassword());
     }
 
     @Test

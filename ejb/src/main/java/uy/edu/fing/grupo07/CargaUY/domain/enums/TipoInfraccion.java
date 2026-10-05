@@ -1,4 +1,4 @@
-package uy.edu.fing.grupo07.cargauy.domain.enums;
+package uy.edu.fing.grupo07.CargaUY.domain.enums;
 
 /**
  * Tipos de infracciones detectables automáticamente por el motor de fiscalización.

@@ -1,4 +1,4 @@
-package uy.edu.fing.grupo07.cargauy.domain.entity;
+package uy.edu.fing.grupo07.CargaUY.domain.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDate;
@@ -24,9 +24,9 @@ public class Funcionario extends Usuario {
         super();
     }
 
-    public Funcionario(String nombre, String mail, LocalDate fechaNac, int ci, String contraseña,
+    public Funcionario(String nombre, String mail, LocalDate fechaNac, int ci, String password,
                        int nroFuncionario, String departamento) {
-        super(nombre, mail, fechaNac, ci, contraseña);
+        super(nombre, mail, fechaNac, ci, password);
         this.nroFuncionario = nroFuncionario;
         this.departamento = departamento;
     }

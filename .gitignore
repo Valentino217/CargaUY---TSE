@@ -1,0 +1,13 @@
+/.metadata/
+target/
+**/target/
+*.class
+
+# Eclipse
+.apt_generated
+.apt_generated_tests
+.factorypath
+
+# OS files
+.DS_Store
+Thumbs.db

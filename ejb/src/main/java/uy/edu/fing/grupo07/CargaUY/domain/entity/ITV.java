@@ -1,6 +1,8 @@
-package uy.edu.fing.grupo07.cargauy.domain.entity;
+package uy.edu.fing.grupo07.CargaUY.domain.entity;
 
 import jakarta.persistence.*;
+import uy.edu.fing.grupo07.CargaUY.domain.entity.Vehiculo;
+
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.Objects;
