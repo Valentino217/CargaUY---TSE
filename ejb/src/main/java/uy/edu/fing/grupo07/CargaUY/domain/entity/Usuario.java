@@ -33,17 +33,17 @@ public abstract class Usuario implements Serializable {
     private int ci;
 
     @Column(nullable = false, length = 255)
-    private String contraseña;
+    private String password;
 
     public Usuario() {
     }
 
-    public Usuario(String nombre, String mail, LocalDate fechaNac, int ci, String contraseña) {
+    public Usuario(String nombre, String mail, LocalDate fechaNac, int ci, String password) {
         this.nombre = nombre;
         this.mail = mail;
         this.fechaNac = fechaNac;
         this.ci = ci;
-        this.contraseña = contraseña;
+        this.password = password;
     }
 
     public int getId() {
@@ -86,12 +86,20 @@ public abstract class Usuario implements Serializable {
         this.ci = ci;
     }
 
-    public String getContraseña() {
-        return contraseña;
+    public String getPassword() {
+        return password;
     }
 
-    public void setContraseña(String contraseña) {
-        this.contraseña = contraseña;
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    public String getContrasena() {
+        return password;
+    }
+
+    public void setContrasena(String contrasena) {
+        this.password = contrasena;
     }
 
     @Override

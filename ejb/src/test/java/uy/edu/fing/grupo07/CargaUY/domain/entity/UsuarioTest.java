@@ -21,6 +21,7 @@ class UsuarioTest {
         assertEquals(12345678, f.getCi());
         assertEquals(101, f.getNroFuncionario());
         assertEquals("Fiscalización", f.getDepartamento());
+        assertEquals("hashed_pwd", f.getPassword());
     }
 
     @Test

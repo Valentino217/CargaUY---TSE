@@ -18,7 +18,7 @@ public class Administrador extends Usuario {
         super();
     }
 
-    public Administrador(String nombre, String mail, LocalDate fechaNac, int ci, String contraseña) {
-        super(nombre, mail, fechaNac, ci, contraseña);
+    public Administrador(String nombre, String mail, LocalDate fechaNac, int ci, String password) {
+        super(nombre, mail, fechaNac, ci, password);
     }
 }

@@ -21,8 +21,8 @@ public class Autoridad extends Usuario {
         super();
     }
 
-    public Autoridad(String nombre, String mail, LocalDate fechaNac, int ci, String contraseña, String cargo) {
-        super(nombre, mail, fechaNac, ci, contraseña);
+    public Autoridad(String nombre, String mail, LocalDate fechaNac, int ci, String password, String cargo) {
+        super(nombre, mail, fechaNac, ci, password);
         this.cargo = cargo;
     }
 

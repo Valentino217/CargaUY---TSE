@@ -23,8 +23,8 @@ public class Chofer extends Usuario {
         super();
     }
 
-    public Chofer(String nombre, String mail, LocalDate fechaNac, int ci, String contraseña) {
-        super(nombre, mail, fechaNac, ci, contraseña);
+    public Chofer(String nombre, String mail, LocalDate fechaNac, int ci, String password) {
+        super(nombre, mail, fechaNac, ci, password);
     }
 
     public List<GuiaDeViaje> getGuias() {
