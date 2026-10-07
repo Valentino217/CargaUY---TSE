@@ -17,7 +17,7 @@ class VehiculoHabilitacionTest {
     @BeforeEach
     void setUp() {
         empresa = new Empresa(1234, "Trans logistics S.A.", "TransLog", "Ruta 5 km 20");
-        vehiculo = new Vehiculo(1001, "Scania", "R450", 14000, 30000, true, empresa);
+        vehiculo = new Vehiculo("1001", "Scania", "R450", 14000, 30000, true, empresa);
     }
 
     @Test

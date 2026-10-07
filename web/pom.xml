@@ -132,7 +132,16 @@
             <artifactId>mockito-junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+               <groupId>org.primefaces</groupId>
+               <artifactId>primefaces</artifactId>
+               <version>15.0.9</version>
+               <classifier>jakarta</classifier>
+       </dependency>
+        
     </dependencies>
+     <!--Agrego maicol primefaces para ajax-->
+    
 
     <build>
         <!-- Tell Maven that the resulting file should not have a file name containing the version -

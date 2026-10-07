@@ -18,7 +18,7 @@ public class Vehiculo implements Serializable {
 
     @Id
     @Column(nullable = false)
-    private int matricula;
+    private String matricula;
 
     @Column(nullable = false, length = 100)
     private String marca;
@@ -51,7 +51,7 @@ public class Vehiculo implements Serializable {
     public Vehiculo() {
     }
 
-    public Vehiculo(int matricula, String marca, String modelo, int peso, int capacidadCarga,
+    public Vehiculo(String matricula, String marca, String modelo, int peso, int capacidadCarga,
                     boolean estadoHabilitacion, Empresa empresa) {
         this.matricula = matricula;
         this.marca = marca;
@@ -62,11 +62,11 @@ public class Vehiculo implements Serializable {
         this.empresa = empresa;
     }
 
-    public int getMatricula() {
+    public String getMatricula() {
         return matricula;
     }
 
-    public void setMatricula(int matricula) {
+    public void setMatricula(String matricula) {
         this.matricula = matricula;
     }
 
