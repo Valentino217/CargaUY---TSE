@@ -20,12 +20,12 @@ build-job:
   script:
     - mvn $MAVEN_CLI_OPTS clean compile
 
-# Etapa 2: Ejecución de tests unitarios y generación de reporte JaCoCo
+# Etapa 2: tests unitarios + reporte JaCoCo + jacoco:check (umbral en pom raíz: jacoco.minimum.coverage)
 unit-tests-job:
   stage: test
   image: maven:3.9-eclipse-temurin-17
   script:
-    - mvn $MAVEN_CLI_OPTS test jacoco:report
+    - mvn $MAVEN_CLI_OPTS verify
   artifacts:
     when: always
     reports:

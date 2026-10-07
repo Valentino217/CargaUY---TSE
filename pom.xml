@@ -40,7 +40,9 @@
         <version.failsafe.plugin>3.5.6</version.failsafe.plugin>
         <version.war.plugin>3.5.1</version.war.plugin>
         <version.surefire.plugin>3.5.2</version.surefire.plugin>
-        <version.jacoco.plugin>0.8.12</version.jacoco.plugin>
+        <version.jacoco.plugin>0.8.15</version.jacoco.plugin>
+        <!-- Cobertura mínima de líneas exigida por jacoco:check (R015). Subir a 0.80 al cierre. -->
+        <jacoco.minimum.coverage>0.00</jacoco.minimum.coverage>
         <version.mockito>5.14.2</version.mockito>
         <version.bcrypt>0.10.2</version.bcrypt>
         <version.jakarta.xml.ws>4.0.2</version.jakarta.xml.ws>
