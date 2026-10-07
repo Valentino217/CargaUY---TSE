@@ -14,7 +14,6 @@ RUN mvn -B -q dependency:go-offline -DskipTests || true
 # Después el código fuente
 COPY ejb/src ejb/src
 COPY web/src web/src
-COPY ear/src ear/src
 RUN mvn -B package -DskipTests
 
 # =====================================================================
