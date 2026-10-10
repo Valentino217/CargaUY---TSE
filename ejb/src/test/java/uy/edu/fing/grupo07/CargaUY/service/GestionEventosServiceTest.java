@@ -26,6 +26,12 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+import uy.edu.fing.grupo07.CargaUY.domain.entity.Chofer;
+import uy.edu.fing.grupo07.CargaUY.domain.entity.Empresa;
+import uy.edu.fing.grupo07.CargaUY.domain.entity.Vehiculo;
+import uy.edu.fing.grupo07.CargaUY.dto.GuiaResumenDTO;
+import uy.edu.fing.grupo07.CargaUY.dto.ReportarIncidenteDTO;
+
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Pruebas Unitarias - GestionEventosService (Deduplicación e Idempotencia)")
 class GestionEventosServiceTest {
@@ -38,6 +44,9 @@ class GestionEventosServiceTest {
 
     @Mock
     private TypedQuery<EventoViaje> queryEventos;
+
+    @Mock
+    private TypedQuery<GuiaDeViaje> queryGuia;
 
     private GestionEventosServiceImpl service;
     private GuiaDeViaje guiaPrueba;
@@ -178,5 +187,120 @@ class GestionEventosServiceTest {
         assertEquals(2, dtos.size());
         assertEquals("u1", dtos.get(0).uuid());
         assertEquals("u2", dtos.get(1).uuid());
+    }
+
+    @Test
+    @DisplayName("Debe obtener la guía asignada por choferId exitosamente")
+    void testObtenerGuiaAsignadaPorChoferId() {
+        Vehiculo vehiculo = new Vehiculo(1234, "Volvo", "FH540", 8000, 30000, true, null);
+        Empresa empresa = new Empresa(101, "Transportes SA", "Trans SA", "Av Italia 1234");
+        Chofer chofer = new Chofer("Juan Chofer", "juan@mail.com", LocalDate.of(1990, 1, 1), 12345678, "pass");
+        chofer.setId(7);
+
+        guiaPrueba.setVehiculo(vehiculo);
+        guiaPrueba.setEmpresa(empresa);
+        guiaPrueba.setChofer(chofer);
+
+        when(em.createQuery(anyString(), eq(GuiaDeViaje.class))).thenReturn(queryGuia);
+        when(queryGuia.setParameter(eq("enCurso"), eq(TipoEstado.EN_CURSO))).thenReturn(queryGuia);
+        when(queryGuia.setParameter(eq("sinIniciar"), eq(TipoEstado.SIN_INICIAR))).thenReturn(queryGuia);
+        when(queryGuia.setParameter(eq("choferId"), eq(7))).thenReturn(queryGuia);
+        when(queryGuia.setMaxResults(1)).thenReturn(queryGuia);
+        when(queryGuia.getResultList()).thenReturn(List.of(guiaPrueba));
+
+        GuiaResumenDTO resumen = service.obtenerGuiaAsignadaChofer(7, null);
+
+        assertNotNull(resumen);
+        assertEquals(1L, resumen.id());
+        assertEquals("Montevideo", resumen.origen());
+        assertEquals(1234, resumen.vehiculoMatricula());
+        assertEquals("Volvo FH540", resumen.vehiculoMarcaModelo());
+        assertEquals(101, resumen.nroEmpresa());
+        assertEquals("Transportes SA", resumen.empresaRazonSocial());
+        assertEquals(7, resumen.choferId());
+        assertEquals("Juan Chofer", resumen.choferNombre());
+    }
+
+    @Test
+    @DisplayName("Debe obtener la guía asignada por CI del chofer exitosamente")
+    void testObtenerGuiaAsignadaPorCi() {
+        when(em.createQuery(anyString(), eq(GuiaDeViaje.class))).thenReturn(queryGuia);
+        when(queryGuia.setParameter(eq("enCurso"), eq(TipoEstado.EN_CURSO))).thenReturn(queryGuia);
+        when(queryGuia.setParameter(eq("sinIniciar"), eq(TipoEstado.SIN_INICIAR))).thenReturn(queryGuia);
+        when(queryGuia.setParameter(eq("ci"), eq(12345678))).thenReturn(queryGuia);
+        when(queryGuia.setMaxResults(1)).thenReturn(queryGuia);
+        when(queryGuia.getResultList()).thenReturn(List.of(guiaPrueba));
+
+        GuiaResumenDTO resumen = service.obtenerGuiaAsignadaChofer(null, 12345678);
+
+        assertNotNull(resumen);
+        assertEquals(1L, resumen.id());
+    }
+
+    @Test
+    @DisplayName("Debe retornar null cuando el chofer no tiene guías activas")
+    void testObtenerGuiaAsignadaNoEncontrada() {
+        when(em.createQuery(anyString(), eq(GuiaDeViaje.class))).thenReturn(queryGuia);
+        when(queryGuia.setParameter(eq("enCurso"), eq(TipoEstado.EN_CURSO))).thenReturn(queryGuia);
+        when(queryGuia.setParameter(eq("sinIniciar"), eq(TipoEstado.SIN_INICIAR))).thenReturn(queryGuia);
+        when(queryGuia.setParameter(eq("choferId"), eq(99))).thenReturn(queryGuia);
+        when(queryGuia.setMaxResults(1)).thenReturn(queryGuia);
+        when(queryGuia.getResultList()).thenReturn(Collections.emptyList());
+
+        GuiaResumenDTO resumen = service.obtenerGuiaAsignadaChofer(99, null);
+
+        assertNull(resumen);
+    }
+
+    @Test
+    @DisplayName("Debe lanzar BusinessException si no se pasa ni choferId ni ci")
+    void testObtenerGuiaAsignadaParametrosNulos() {
+        assertThrows(BusinessException.class, () -> service.obtenerGuiaAsignadaChofer(null, null));
+    }
+
+    @Test
+    @DisplayName("Debe reportar un incidente creando el EventoViaje y el IncidenteRuta")
+    void testReportarIncidenteExitoso() {
+        when(em.createQuery(anyString(), eq(Long.class))).thenReturn(queryCount);
+        when(queryCount.setParameter(eq("uuid"), anyString())).thenReturn(queryCount);
+        when(queryCount.getSingleResult()).thenReturn(0L);
+        when(em.find(GuiaDeViaje.class, 1L)).thenReturn(guiaPrueba);
+
+        ReportarIncidenteDTO dto = new ReportarIncidenteDTO(
+                "uuid-inc-1",
+                1L,
+                LocalDateTime.now(),
+                -32.5,
+                -55.8,
+                "/fotos/desvio.png",
+                "Corte de ruta en km 250"
+        );
+
+        EventoViajeDTO resultado = service.reportarIncidente(dto);
+
+        assertNotNull(resultado);
+        assertEquals("uuid-inc-1", resultado.uuid());
+        assertEquals(TipoEvento.INCIDENTE, resultado.tipo());
+        assertEquals(1L, resultado.guiaId());
+        assertNotNull(resultado.incidente());
+        assertEquals("Corte de ruta en km 250", resultado.incidente().descripcion());
+        assertEquals("/fotos/desvio.png", resultado.incidente().foto());
+        verify(em).persist(any(EventoViaje.class));
+    }
+
+    @Test
+    @DisplayName("Debe validar campos obligatorios al reportar incidente")
+    void testReportarIncidenteValidaciones() {
+        assertThrows(BusinessException.class, () -> service.reportarIncidente(null));
+
+        ReportarIncidenteDTO sinGuia = new ReportarIncidenteDTO(
+                "u-1", null, LocalDateTime.now(), -34.0, -56.0, null, "Choque"
+        );
+        assertThrows(BusinessException.class, () -> service.reportarIncidente(sinGuia));
+
+        ReportarIncidenteDTO sinDescripcion = new ReportarIncidenteDTO(
+                "u-2", 1L, LocalDateTime.now(), -34.0, -56.0, null, "  "
+        );
+        assertThrows(BusinessException.class, () -> service.reportarIncidente(sinDescripcion));
     }
 }

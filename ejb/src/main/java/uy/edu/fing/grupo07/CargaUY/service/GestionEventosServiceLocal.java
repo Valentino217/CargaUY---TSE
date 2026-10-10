@@ -30,4 +30,14 @@ public interface GestionEventosServiceLocal {
      * Retorna los eventos asociados a una guía ordenados cronológicamente por tiempo ASC (AC013).
      */
     List<EventoViajeDTO> listarEventosPorGuia(Long guiaId);
+
+    /**
+     * Obtiene la guía activa (EN_CURSO o SIN_INICIAR) asignada a un chofer identificado por ID o CI.
+     */
+    uy.edu.fing.grupo07.CargaUY.dto.GuiaResumenDTO obtenerGuiaAsignadaChofer(Integer choferId, Integer ci);
+
+    /**
+     * Registra un incidente en ruta asociado a un evento de tipo INCIDENTE.
+     */
+    EventoViajeDTO reportarIncidente(uy.edu.fing.grupo07.CargaUY.dto.ReportarIncidenteDTO dto);
 }

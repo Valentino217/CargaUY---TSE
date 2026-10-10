@@ -7,12 +7,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEvento;
-import uy.edu.fing.grupo07.CargaUY.dto.EventoViajeDTO;
-import uy.edu.fing.grupo07.CargaUY.dto.SyncResultDTO;
+import uy.edu.fing.grupo07.CargaUY.dto.*;
 import uy.edu.fing.grupo07.CargaUY.exception.BusinessException;
 import uy.edu.fing.grupo07.CargaUY.service.GestionEventosServiceLocal;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -95,5 +96,88 @@ class ChoferResourceTest {
         Response resp = resource.listarEventos(999L);
 
         assertEquals(Response.Status.NOT_FOUND.getStatusCode(), resp.getStatus());
+    }
+
+    @Test
+    @DisplayName("GET /guia-asignada debe retornar 200 OK cuando existe guía para el chofer")
+    void testObtenerGuiaAsignadaExitoso() {
+        GuiaResumenDTO guia = new GuiaResumenDTO(
+                1L, LocalDate.now(), "Montevideo", "Rivera", "Forestal", 40.0f,
+                TipoEstado.EN_CURSO, 1, 1234, "Volvo FH", 100, "Trans SA", 5, "Carlos"
+        );
+        when(eventosService.obtenerGuiaAsignadaChofer(5, null)).thenReturn(guia);
+
+        Response resp = resource.obtenerGuiaAsignada(5, null);
+
+        assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
+        assertEquals(guia, resp.getEntity());
+    }
+
+    @Test
+    @DisplayName("GET /guia-asignada sin parámetros debe retornar 400 Bad Request")
+    void testObtenerGuiaAsignadaSinParametros() {
+        Response resp = resource.obtenerGuiaAsignada(null, null);
+
+        assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), resp.getStatus());
+    }
+
+    @Test
+    @DisplayName("GET /guia-asignada cuando no existe guía debe retornar 404 Not Found")
+    void testObtenerGuiaAsignadaNoEncontrada() {
+        when(eventosService.obtenerGuiaAsignadaChofer(null, 12345678)).thenReturn(null);
+
+        Response resp = resource.obtenerGuiaAsignada(null, 12345678);
+
+        assertEquals(Response.Status.NOT_FOUND.getStatusCode(), resp.getStatus());
+    }
+
+    @Test
+    @DisplayName("POST /incidente con datos válidos debe retornar 201 Created")
+    void testReportarIncidenteExitoso() {
+        ReportarIncidenteDTO dto = new ReportarIncidenteDTO(
+                "inc-1", 1L, LocalDateTime.now(), -34.0, -56.0, "/fotos/1.png", "Rueda pinchada"
+        );
+        EventoViajeDTO creado = new EventoViajeDTO(
+                "inc-1", LocalDateTime.now(), TipoEvento.INCIDENTE, -34.0, -56.0, 1L,
+                new IncidenteDTO("/fotos/1.png", "Rueda pinchada")
+        );
+        when(eventosService.reportarIncidente(dto)).thenReturn(creado);
+
+        Response resp = resource.reportarIncidente(dto);
+
+        assertEquals(Response.Status.CREATED.getStatusCode(), resp.getStatus());
+        assertEquals(creado, resp.getEntity());
+    }
+
+    @Test
+    @DisplayName("POST /incidente con datos inválidos debe retornar 400 Bad Request")
+    void testReportarIncidenteInvalido() {
+        Response respNulo = resource.reportarIncidente(null);
+        assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), respNulo.getStatus());
+
+        ReportarIncidenteDTO sinGuia = new ReportarIncidenteDTO(
+                "inc-2", null, LocalDateTime.now(), -34.0, -56.0, null, "Falla"
+        );
+        Response respSinGuia = resource.reportarIncidente(sinGuia);
+        assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), respSinGuia.getStatus());
+
+        ReportarIncidenteDTO sinDesc = new ReportarIncidenteDTO(
+                "inc-3", 1L, LocalDateTime.now(), -34.0, -56.0, null, "  "
+        );
+        Response respSinDesc = resource.reportarIncidente(sinDesc);
+        assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), respSinDesc.getStatus());
+    }
+
+    @Test
+    @DisplayName("POST /incidente cuando el servicio lanza BusinessException debe retornar 400 Bad Request")
+    void testReportarIncidenteBusinessException() {
+        ReportarIncidenteDTO dto = new ReportarIncidenteDTO(
+                "inc-dup", 1L, LocalDateTime.now(), -34.0, -56.0, null, "Problema mecánico"
+        );
+        when(eventosService.reportarIncidente(dto)).thenThrow(new BusinessException("UUID ya registrado"));
+
+        Response resp = resource.reportarIncidente(dto);
+
+        assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), resp.getStatus());
     }
 }

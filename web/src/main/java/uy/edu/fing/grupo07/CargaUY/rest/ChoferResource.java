@@ -63,4 +63,47 @@ public class ChoferResource {
                     .build();
         }
     }
+
+    /**
+     * Obtiene la guía de viaje activa asignada a un chofer (por ID o por CI).
+     */
+    @GET
+    @Path("/guia-asignada")
+    public Response obtenerGuiaAsignada(
+            @QueryParam("choferId") Integer choferId,
+            @QueryParam("ci") Integer ci) {
+        if (choferId == null && ci == null) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(Collections.singletonMap("error", "Debe indicar choferId o ci como parámetro de consulta."))
+                    .build();
+        }
+        uy.edu.fing.grupo07.CargaUY.dto.GuiaResumenDTO guia = eventosService.obtenerGuiaAsignadaChofer(choferId, ci);
+        if (guia == null) {
+            return Response.status(Response.Status.NOT_FOUND)
+                    .entity(Collections.singletonMap("mensaje", "No se encontró una guía activa para el chofer indicado."))
+                    .build();
+        }
+        return Response.ok(guia).build();
+    }
+
+    /**
+     * Reporta un incidente en ruta asociado a la guía del chofer.
+     */
+    @POST
+    @Path("/incidente")
+    public Response reportarIncidente(uy.edu.fing.grupo07.CargaUY.dto.ReportarIncidenteDTO dto) {
+        if (dto == null || dto.guiaId() == null || dto.descripcion() == null || dto.descripcion().isBlank()) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(Collections.singletonMap("error", "guiaId y descripcion son obligatorios para reportar un incidente."))
+                    .build();
+        }
+        try {
+            EventoViajeDTO evento = eventosService.reportarIncidente(dto);
+            return Response.status(Response.Status.CREATED).entity(evento).build();
+        } catch (uy.edu.fing.grupo07.CargaUY.exception.BusinessException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(Collections.singletonMap("error", e.getMessage()))
+                    .build();
+        }
+    }
 }
