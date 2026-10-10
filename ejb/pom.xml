@@ -91,6 +91,12 @@
             <artifactId>jakarta.json.bind-api</artifactId>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.eclipse</groupId>
+            <artifactId>yasson</artifactId>
+            <version>3.0.3</version>
+            <scope>test</scope>
+        </dependency>
 
         <!-- BCrypt para hashing con salt (R003) -->
         <dependency>

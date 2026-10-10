@@ -22,6 +22,9 @@ public class ChoferResource {
     @EJB
     private GestionEventosServiceLocal eventosService;
 
+    @EJB
+    private uy.edu.fing.grupo07.CargaUY.jms.TrackingProducerLocal trackingProducer;
+
     public ChoferResource() {
     }
 
@@ -30,10 +33,16 @@ public class ChoferResource {
         this.eventosService = eventosService;
     }
 
+    ChoferResource(GestionEventosServiceLocal eventosService, uy.edu.fing.grupo07.CargaUY.jms.TrackingProducerLocal trackingProducer) {
+        this.eventosService = eventosService;
+        this.trackingProducer = trackingProducer;
+    }
+
     /**
      * Sincroniza un lote de eventos registrados offline por el chofer.
-     * Cada evento cuenta con un UUID para garantizar idempotencia.
-     * Retorna una lista con el estado individual de cada evento (ACCEPTED, DUPLICATE o ERROR).
+     * Si el productor JMS está disponible, encola asíncronamente en TrackingQueue
+     * absorbiendo picos de carga (AC012) tras validar deduplicación inmediata.
+     * Retorna una lista con el estado individual de cada evento (ACCEPTED o DUPLICATE).
      */
     @POST
     @Path("/eventos/sync")
@@ -42,6 +51,19 @@ public class ChoferResource {
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity(Collections.emptyList())
                     .build();
+        }
+
+        if (trackingProducer != null) {
+            java.util.List<SyncResultDTO> resultados = new java.util.ArrayList<>();
+            for (EventoViajeDTO ev : eventos) {
+                if (ev.uuid() != null && eventosService.existeEvento(ev.uuid())) {
+                    resultados.add(SyncResultDTO.duplicate(ev.uuid()));
+                } else {
+                    trackingProducer.enviarEvento(ev);
+                    resultados.add(SyncResultDTO.accepted(ev.uuid()));
+                }
+            }
+            return Response.ok(resultados).build();
         }
 
         List<SyncResultDTO> resultados = eventosService.guardarEventosLote(eventos);

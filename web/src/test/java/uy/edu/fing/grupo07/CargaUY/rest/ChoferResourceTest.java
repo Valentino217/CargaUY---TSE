@@ -29,6 +29,9 @@ class ChoferResourceTest {
     @Mock
     private GestionEventosServiceLocal eventosService;
 
+    @Mock
+    private uy.edu.fing.grupo07.CargaUY.jms.TrackingProducerLocal trackingProducer;
+
     private ChoferResource resource;
 
     @BeforeEach
@@ -57,6 +60,30 @@ class ChoferResourceTest {
         assertEquals("ACCEPTED", list.get(0).estado());
         assertEquals("ev-1", list.get(0).uuid());
         verify(eventosService).guardarEventosLote(List.of(evento));
+    }
+
+    @Test
+    @DisplayName("POST /eventos/sync con trackingProducer activo debe encolar en JMS y verificar deduplicación")
+    void testSincronizarEventosAsyncJMS() {
+        ChoferResource asyncResource = new ChoferResource(eventosService, trackingProducer);
+
+        EventoViajeDTO evNuevo = new EventoViajeDTO("ev-nuevo", LocalDateTime.now(), TipoEvento.CARGA, -34.9, -56.1, 1L, null);
+        EventoViajeDTO evDup = new EventoViajeDTO("ev-dup", LocalDateTime.now(), TipoEvento.DESCARGA, -34.9, -56.1, 1L, null);
+
+        when(eventosService.existeEvento("ev-nuevo")).thenReturn(false);
+        when(eventosService.existeEvento("ev-dup")).thenReturn(true);
+
+        Response resp = asyncResource.sincronizarEventos(List.of(evNuevo, evDup));
+
+        assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
+        @SuppressWarnings("unchecked")
+        List<SyncResultDTO> list = (List<SyncResultDTO>) resp.getEntity();
+        assertEquals(2, list.size());
+        assertEquals("ACCEPTED", list.get(0).estado());
+        assertEquals("DUPLICATE", list.get(1).estado());
+
+        verify(trackingProducer).enviarEvento(evNuevo);
+        verify(trackingProducer, never()).enviarEvento(evDup);
     }
 
     @Test
