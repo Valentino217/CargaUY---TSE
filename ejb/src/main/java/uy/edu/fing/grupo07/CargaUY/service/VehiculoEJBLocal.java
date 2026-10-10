@@ -11,7 +11,7 @@ public interface VehiculoEJBLocal {
 	List<Vehiculo> listarVehiculos();
 	List<Empresa> listarEmpresas();
 	void crear(Vehiculo vehiculo);
-	public void modificar(Vehiculo vehiculo);
+	void modificar(Vehiculo vehiculo);
 	void eliminar(Vehiculo vehiculo);
 	Vehiculo buscar(String matricula);
 }

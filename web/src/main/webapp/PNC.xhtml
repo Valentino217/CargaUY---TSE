@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:p="primefaces">
+
+<h:head>
+    <title>Permisos Nacionales de Circulación</title>
+</h:head>
+
+<h:body>
+
+    <h1>Gestión de Permisos Nacionales de Circulación (PNC)</h1>
+
+    <h:form id="form">
+
+        <p:messages id="mensajes" showDetail="true"/>
+
+        <h:outputLabel for="vehiculo" value="Vehículo (Matrícula):"/>
+        <br/>
+        <h:selectOneMenu id="vehiculo"
+                         value="#{PNCBean.matricula}"
+                         required="true"
+                         requiredMessage="Debe seleccionar un vehículo obligatorio.">
+
+            <f:selectItem itemLabel="Seleccione un vehículo" itemValue="#{null}" noSelectionOption="true"/>
+
+            <f:selectItems value="#{PNCBean.vehiculos}"
+                           var="v"
+                           itemValue="#{v.matricula}"
+                           itemLabel="#{v.matricula}"/>
+
+        </h:selectOneMenu>
+        
+        <br/><br/>
+
+        <h:outputLabel for="fechaVencimiento" value="Fecha de vencimiento:"/>
+        <br/>
+        <!-- Usamos p:datePicker con estilo simple e integrado a LocalDate -->
+        <p:datePicker id="fechaVencimiento" 
+                      value="#{PNCBean.pnc.fechaVencimiento}"
+                      pattern="dd/MM/yyyy"
+                      required="true"
+                      requiredMessage="La fecha de vencimiento es obligatoria."/>
+
+        <br/><br/>
+
+        <p:commandButton value="#{PNCBean.editando ? 'Actualizar' : 'Guardar'}"
+                         action="#{PNCBean.guardar}"
+                         process="@form"
+                         update="@form"
+                         ajax="true"/>
+
+        <p:commandButton value="Cancelar"
+                         action="#{PNCBean.nuevo}"
+                         process="@this"
+                         update="@form"
+                         rendered="#{PNCBean.editando}"
+                         style="margin-left:10px; background-color:gray; border:none;"/>
+
+        <h3>PNCs registrados</h3>
+
+        <p:dataTable id="tablaPncs"
+                     value="#{PNCBean.pncs}"
+                     var="p"
+                     emptyMessage="No hay PNCs registrados">
+
+            <p:column headerText="Nro">
+                <h:outputText value="#{p.nro}"/>
+            </p:column>
+         
+            <p:column headerText="Vehículo (Matrícula)">
+                <h:outputText value="#{p.vehiculo.matricula}"/>
+            </p:column>
+
+            <p:column headerText="Fecha de vencimiento">
+                <h:outputText value="#{p.fechaVencimiento}">
+                    <f:convertDateTime type="localDate" pattern="dd/MM/yyyy" />
+                </h:outputText>
+            </p:column>
+
+            <p:column headerText="Estado Vigencia">
+                <h:outputText value="#{p.isVigente() ? 'Vigente' : 'Vencido'}" 
+                              style="font-weight: bold; color: #{p.vigente ? 'green' : 'red'};" />
+            </p:column>
+
+            <p:column headerText="Acciones" style="width:180px">
+                <div style="display:flex; flex-direction:row; gap:8px; align-items:center;">
+                    <p:commandButton value="Modificar"
+                                     action="#{PNCBean.editar(p)}"
+                                     process="@this"
+                                     update="@form"/>
+
+                    <p:commandButton value="Eliminar"
+                                     action="#{PNCBean.eliminar(p)}"
+                                     process="@this"
+                                     update="@form"
+                                     onclick="return confirm('¿Eliminar este registro de PNC?')"/>
+                </div>
+            </p:column>
+
+        </p:dataTable>
+
+    </h:form>
+
+</h:body>
+</html>

@@ -14,21 +14,116 @@
 
     <h:form id="form">
 
-        <h:outputText value="Formulario funcionando"/>
+        <p:messages id="mensajes" showDetail="true"/>
+
+        <h:outputLabel for="matricula" value="Matrícula:"/>
+        <h:inputText id="matricula" value="#{VehiculoBean.vehiculo.matricula}"/>
 
         <br/><br/>
 
-        <h:outputLabel for="matricula"
-                       value="Matrícula:"/>
-
-        <h:inputText id="matricula"/>
+        <h:outputLabel for="marca" value="Marca:"/>
+        <h:inputText id="marca" value="#{VehiculoBean.vehiculo.marca}"/>
 
         <br/><br/>
+    
+        <h:outputLabel for="modelo" value="Modelo:"/>
+        <h:inputText id="modelo" value="#{VehiculoBean.vehiculo.modelo}"/>
 
-        <p:commandButton value="Probar"/>
+        <br/><br/>
+        
+        <h:outputLabel for="peso" value="Peso:"/>
+        <h:inputText id="peso" value="#{VehiculoBean.vehiculo.peso}"/>
+
+        <br/><br/>
+        
+        <h:outputLabel for="capacidadCarga" value="Capacidad de carga:"/>
+        <h:inputText id="capacidadCarga" value="#{VehiculoBean.vehiculo.capacidadCarga}"/>
+        
+        <br/><br/>
+
+        <h:outputLabel for="estadoHabilitacion" value="Estado de habilitación:"/>
+        <h:selectBooleanCheckbox id="estadoHabilitacion" value="#{VehiculoBean.vehiculo.estadoHabilitacion}"/>
+        
+        <br/><br/>
+        
+        <h:selectOneMenu id="empresa"
+                         value="#{VehiculoBean.empresaId}"
+                         required="true"
+                         requiredMessage="Debe seleccionar una empresa.">
+
+            <f:selectItem itemLabel="Seleccione una empresa" itemValue="#{null}" noSelectionOption="true"/>
+
+            <f:selectItems value="#{VehiculoBean.empresas}"
+                           var="empresa"
+                           itemValue="#{empresa.nroEmpresa}"
+                           itemLabel="#{empresa.razonSocial}"/>
+
+        </h:selectOneMenu>
+        
+        <br/><br/>
+
+        <p:commandButton value="#{VehiculoBean.editando ? 'Actualizar' : 'Guardar'}"
+                         action="#{VehiculoBean.guardar}"
+                         process="@form"
+                         update="@form"
+                         ajax="true"/>
+
+        <p:commandButton value="Cancelar"
+                         action="#{VehiculoBean.nuevo}"
+                         process="@this"
+                         update="@form"
+                         rendered="#{VehiculoBean.editando}"
+                         style="margin-left:10px; background-color:gray; border:none;"/>
+
+        <h3>Vehículos registrados</h3>
+
+        <p:dataTable id="tablaVehiculos"
+                     value="#{VehiculoBean.vehiculos}"
+                     var="v"
+                     emptyMessage="No hay vehículos registrados">
+
+            <p:column headerText="Matrícula">
+                <h:outputText value="#{v.matricula}"/>
+            </p:column>
+         
+            <p:column headerText="Marca">
+                <h:outputText value="#{v.marca}"/>
+            </p:column>
+
+            <p:column headerText="Modelo">
+                <h:outputText value="#{v.modelo}"/>
+            </p:column>
+
+            <p:column headerText="Peso">
+                <h:outputText value="#{v.peso}"/>
+            </p:column>
+
+            <p:column headerText="Capacidad de carga">
+                <h:outputText value="#{v.capacidadCarga}"/>
+            </p:column>
+          
+            <p:column headerText="Empresa">
+                <h:outputText value="#{v.empresa.razonSocial}"/>
+            </p:column>
+
+            <p:column headerText="Acciones" style="width:180px">
+                <div style="display:flex; flex-direction:row; gap:8px; align-items:center;">
+                    <p:commandButton value="Modificar"
+                                     action="#{VehiculoBean.editar(v)}"
+                                     process="@this"
+                                     update="@form"/>
+
+                    <p:commandButton value="Eliminar"
+                                     action="#{VehiculoBean.eliminar(v)}"
+                                     process="@this"
+                                     update="@form"
+                                     onclick="return confirm('¿Eliminar este vehículo?')"/>
+                </div>
+            </p:column>
+
+        </p:dataTable>
 
     </h:form>
 
 </h:body>
-
 </html>

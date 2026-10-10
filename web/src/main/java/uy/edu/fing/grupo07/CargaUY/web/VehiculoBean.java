@@ -1,10 +1,11 @@
 package uy.edu.fing.grupo07.CargaUY.web;
 
+import java.io.Serializable; // <--- OBLIGATORIO para ViewScoped
 import java.util.List;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.ejb.EJB;
-import jakarta.enterprise.context.RequestScoped;
+import jakarta.faces.view.ViewScoped; // <--- CAMBIAR DE RequestScoped A ViewScoped
 import jakarta.faces.application.FacesMessage;
 import jakarta.faces.context.FacesContext;
 import jakarta.inject.Named;
@@ -13,10 +14,12 @@ import uy.edu.fing.grupo07.CargaUY.domain.entity.Vehiculo;
 import uy.edu.fing.grupo07.CargaUY.service.VehiculoEJB;
 
 @Named("VehiculoBean")
-@RequestScoped
-public class VehiculoBean {
+@ViewScoped // <--- Permite mantener el estado del formulario entre AJAX requests
+public class VehiculoBean implements Serializable { // <--- Implementar Serializable
 	
-	@EJB
+    private static final long serialVersionUID = 1L;
+
+    @EJB
     private VehiculoEJB vehiculoEJB;
 
     private List<Vehiculo> vehiculos;
@@ -25,87 +28,89 @@ public class VehiculoBean {
     private Vehiculo vehiculo;
 
     private boolean editando;
+    
+    private int empresaId;
+
+    public int getEmpresaId() {
+        return empresaId;
+    }
+
+    public void setEmpresaId(int empresaId) {
+        this.empresaId = empresaId;
+    }
 
     @PostConstruct
     public void init() {
         vehiculos = vehiculoEJB.listarVehiculos();
         empresas = vehiculoEJB.listarEmpresas();
+        nuevo();
     }
-    // =========================
-    // ALTA vehiculo
-    // =========================
 
     public void nuevo() {
-    	//lo llama el usuario desde la pagina
         vehiculo = new Vehiculo();
         editando = false;
+        empresaId = 0;
     }
     
     public void guardar() {
         try {
-            vehiculoEJB.crear(vehiculo);
+            Empresa empresaSeleccionada = null;
+
+            for (Empresa empresa : empresas) {
+                if (empresa.getNroEmpresa() == empresaId) {
+                    empresaSeleccionada = empresa;
+                    break;
+                }
+            }
+
+            if (empresaSeleccionada == null) {
+                throw new IllegalArgumentException("Empresa no encontrada");
+            }
+
+            vehiculo.setEmpresa(empresaSeleccionada);
             
-            //se llama al EJB con los datos que el usuario cargo en el formulario
+            if (editando) {
+                // Si estaba editando, llama a modificar
+                vehiculoEJB.modificar(vehiculo);
+                mostrarMensaje(FacesMessage.SEVERITY_INFO, "Éxito", "Vehículo modificado correctamente");
+            } else {
+                // Si era nuevo, llama a crear
+                vehiculoEJB.crear(vehiculo);
+                mostrarMensaje(FacesMessage.SEVERITY_INFO, "Éxito", "Vehículo registrado correctamente");
+            }
 
             vehiculos = vehiculoEJB.listarVehiculos();
-
-            mostrarMensaje(
-                    FacesMessage.SEVERITY_INFO,
-                    "Éxito",
-                    "Vehículo registrado correctamente"
-            );
-
-            vehiculo = new Vehiculo();
-            //queda el sistema listo para agregar un nuevo vehiculo
+            nuevo(); // Limpia el formulario para el siguiente registro
 
         } catch (Exception e) {
             mostrarMensaje(
                     FacesMessage.SEVERITY_ERROR,
                     "Error",
-                    "No se pudo registrar el vehículo"
+                    "No se pudo guardar el vehículo: " + e.getMessage()
             );
         }
     }
     
-    private void mostrarMensaje(FacesMessage.Severity severity,String resumen, String detalle) 
-    {
-
+    private void mostrarMensaje(FacesMessage.Severity severity, String resumen, String detalle) {
         FacesContext.getCurrentInstance().addMessage(
                 null,
                 new FacesMessage(severity, resumen, detalle)
         );
     }
     
- // =========================
+    // =========================
     // MODIFICACIÓN
     // =========================
 
     public void editar(Vehiculo vehiculo) {
         this.vehiculo = vehiculo;
         this.editando = true;
-    }
-
-    public void modificar() {
-        try {
-            vehiculoEJB.modificar(vehiculo);
-
-            vehiculos = vehiculoEJB.listarVehiculos();
-
-            mostrarMensaje(
-                    FacesMessage.SEVERITY_INFO,
-                    "Éxito",
-                    "Vehículo modificado correctamente"
-            );
-
-        } catch (Exception e) {
-            mostrarMensaje(
-                    FacesMessage.SEVERITY_ERROR,
-                    "Error",
-                    "No se pudo modificar el vehículo"
-            );
+        // Cargar también la empresa asociada en el combo
+        if (vehiculo.getEmpresa() != null) {
+            this.empresaId = vehiculo.getEmpresa().getNroEmpresa();
         }
     }
-    
+
     // =========================
     // BAJA
     // =========================
@@ -113,7 +118,6 @@ public class VehiculoBean {
     public void eliminar(Vehiculo vehiculo) {
         try {
             vehiculoEJB.eliminar(vehiculo);
-
             vehiculos = vehiculoEJB.listarVehiculos();
 
             mostrarMensaje(
@@ -121,6 +125,11 @@ public class VehiculoBean {
                     "Éxito",
                     "Vehículo eliminado correctamente"
             );
+
+            if (this.vehiculo != null && this.vehiculo.getMatricula() != null 
+                    && this.vehiculo.getMatricula().equals(vehiculo.getMatricula())) {
+                nuevo();
+            }
 
         } catch (Exception e) {
             mostrarMensaje(
@@ -131,11 +140,7 @@ public class VehiculoBean {
         }
     }
 
-    
-    // =========================
     // GETTERS Y SETTERS
-    // =========================
-
     public List<Vehiculo> getVehiculos() {
         return vehiculos;
     }
@@ -155,5 +160,4 @@ public class VehiculoBean {
     public boolean isEditando() {
         return editando;
     }
-
 }

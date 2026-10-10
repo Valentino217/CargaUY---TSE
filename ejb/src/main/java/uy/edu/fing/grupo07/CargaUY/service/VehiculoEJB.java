@@ -28,8 +28,9 @@ public class VehiculoEJB implements VehiculoEJBLocal {
     @Override
     public List<Vehiculo> listarVehiculos() {
         return em.createQuery(
-                "SELECT v FROM Vehiculo v ORDER BY v.matricula",
-                Vehiculo.class
+            "SELECT v FROM Vehiculo v " +
+            "LEFT JOIN FETCH v.empresa",
+            Vehiculo.class
         ).getResultList();
     }
 
