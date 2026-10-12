@@ -1,5 +1,6 @@
 package uy.edu.fing.grupo07.CargaUY.service;
 
+import jakarta.ejb.EJB;
 import jakarta.ejb.Stateless;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
@@ -11,6 +12,7 @@ import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado;
 import uy.edu.fing.grupo07.CargaUY.dto.PesadaBalanzaDTO;
 import uy.edu.fing.grupo07.CargaUY.exception.BusinessException;
 import uy.edu.fing.grupo07.CargaUY.integration.BalanzaClient;
+import uy.edu.fing.grupo07.CargaUY.jms.FiscalizacionProducerLocal;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -27,11 +29,14 @@ public class GestionBalanzaServiceImpl implements GestionBalanzaServiceLocal {
 
     private static final Logger LOGGER = Logger.getLogger(GestionBalanzaServiceImpl.class.getName());
 
-    @PersistenceContext(unitName = "PostgreSQL")
+    @PersistenceContext(unitName = "CargaUYPersistenceUnit")
     private EntityManager em;
 
     @Inject
     private BalanzaClient balanzaClient;
+
+    @EJB
+    private FiscalizacionProducerLocal fiscalizacionProducer;
 
     public GestionBalanzaServiceImpl() {
     }
@@ -39,6 +44,16 @@ public class GestionBalanzaServiceImpl implements GestionBalanzaServiceLocal {
     public GestionBalanzaServiceImpl(EntityManager em, BalanzaClient balanzaClient) {
         this.em = em;
         this.balanzaClient = balanzaClient;
+    }
+
+    public GestionBalanzaServiceImpl(
+            EntityManager em,
+            BalanzaClient balanzaClient,
+            FiscalizacionProducerLocal fiscalizacionProducer
+    ) {
+        this.em = em;
+        this.balanzaClient = balanzaClient;
+        this.fiscalizacionProducer = fiscalizacionProducer;
     }
 
     @Override
@@ -94,6 +109,10 @@ public class GestionBalanzaServiceImpl implements GestionBalanzaServiceLocal {
 
         LOGGER.log(Level.INFO, "Pesada registrada con éxito. ID: {0}, Guía: {1}, Peso: {2} kg",
                 new Object[]{pesada.getIdPesada(), guia.getId(), pesada.getPesoRegistrado()});
+
+        if (fiscalizacionProducer != null && guia.getId() != null) {
+            fiscalizacionProducer.solicitarEvaluacion(guia.getId());
+        }
 
         String matriculaStr = (guia.getVehiculo() != null)
                 ? String.valueOf(guia.getVehiculo().getMatricula())

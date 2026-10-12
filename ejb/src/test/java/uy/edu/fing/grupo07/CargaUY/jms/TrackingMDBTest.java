@@ -30,6 +30,9 @@ class TrackingMDBTest {
     private GestionEventosServiceLocal eventosService;
 
     @Mock
+    private FiscalizacionProducerLocal fiscalizacionProducer;
+
+    @Mock
     private TextMessage textMessage;
 
     @Mock
@@ -40,11 +43,11 @@ class TrackingMDBTest {
 
     @BeforeEach
     void setUp() {
-        mdb = new TrackingMDB(eventosService);
+        mdb = new TrackingMDB(eventosService, fiscalizacionProducer);
     }
 
     @Test
-    @DisplayName("Debe persistir el evento cuando no es duplicado")
+    @DisplayName("Debe persistir el evento y solicitar fiscalización cuando no es duplicado")
     void testOnMessageEventoNuevo() throws JMSException {
         EventoViajeDTO dto = new EventoViajeDTO(
                 "uuid-async-1",
@@ -64,6 +67,7 @@ class TrackingMDBTest {
 
         verify(eventosService).existeEvento("uuid-async-1");
         verify(eventosService).guardarEvento(any(EventoViajeDTO.class));
+        verify(fiscalizacionProducer).solicitarEvaluacion(1L);
     }
 
     @Test

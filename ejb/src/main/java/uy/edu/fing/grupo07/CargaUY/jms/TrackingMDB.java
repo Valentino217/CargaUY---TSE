@@ -33,11 +33,22 @@ public class TrackingMDB implements MessageListener {
     @EJB
     private GestionEventosServiceLocal eventosService;
 
+    @EJB
+    private FiscalizacionProducerLocal fiscalizacionProducer;
+
     public TrackingMDB() {
     }
 
     public TrackingMDB(GestionEventosServiceLocal eventosService) {
         this.eventosService = eventosService;
+    }
+
+    public TrackingMDB(
+            GestionEventosServiceLocal eventosService,
+            FiscalizacionProducerLocal fiscalizacionProducer
+    ) {
+        this.eventosService = eventosService;
+        this.fiscalizacionProducer = fiscalizacionProducer;
     }
 
     @Override
@@ -65,6 +76,10 @@ public class TrackingMDB implements MessageListener {
             // Persistir evento
             eventosService.guardarEvento(evento);
             LOGGER.log(Level.INFO, "Evento con UUID {0} persistido exitosamente por TrackingMDB.", evento.uuid());
+
+            if (fiscalizacionProducer != null && evento.guiaId() != null) {
+                fiscalizacionProducer.solicitarEvaluacion(evento.guiaId());
+            }
 
         } catch (BusinessException e) {
             // Error de negocio (duplicado en carrera concurrente o validación): descartar sin reintentar

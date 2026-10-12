@@ -13,7 +13,9 @@ import java.util.Objects;
  * o gestionada por los funcionarios.
  */
 @Entity
-@Table(name = "infracciones")
+@Table(name = "infracciones", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_infraccion_guia_tipo", columnNames = {"guia_id", "tipo"})
+})
 public class Infraccion implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -43,6 +45,9 @@ public class Infraccion implements Serializable {
     @Column(name = "fecha_resolucion")
     private LocalDate fechaResolucion;
 
+    @Column(length = 1000)
+    private String evidencia;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "guia_id", nullable = false)
     private GuiaDeViaje guia;
@@ -58,10 +63,26 @@ public class Infraccion implements Serializable {
     }
 
     public Infraccion(LocalDate fecha, TipoInfraccion tipo, EstadoInfraccion estado, GuiaDeViaje guia) {
-        this.fecha = fecha != null ? fecha : LocalDate.now();
+        if (fecha != null) {
+            this.fecha = fecha;
+        } else {
+            this.fecha = LocalDate.now();
+        }
         this.tipo = tipo;
         this.estado = estado;
         this.guia = guia;
+    }
+
+    public Infraccion(LocalDate fecha, TipoInfraccion tipo, EstadoInfraccion estado, GuiaDeViaje guia, String evidencia) {
+        if (fecha != null) {
+            this.fecha = fecha;
+        } else {
+            this.fecha = LocalDate.now();
+        }
+        this.tipo = tipo;
+        this.estado = estado;
+        this.guia = guia;
+        this.evidencia = evidencia;
     }
 
     public int getIdCaso() {
@@ -118,6 +139,14 @@ public class Infraccion implements Serializable {
 
     public void setFechaResolucion(LocalDate fechaResolucion) {
         this.fechaResolucion = fechaResolucion;
+    }
+
+    public String getEvidencia() {
+        return evidencia;
+    }
+
+    public void setEvidencia(String evidencia) {
+        this.evidencia = evidencia;
     }
 
     public GuiaDeViaje getGuia() {

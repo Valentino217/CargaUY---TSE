@@ -15,6 +15,7 @@ import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado;
 import uy.edu.fing.grupo07.CargaUY.dto.PesadaBalanzaDTO;
 import uy.edu.fing.grupo07.CargaUY.exception.BusinessException;
 import uy.edu.fing.grupo07.CargaUY.integration.BalanzaClient;
+import uy.edu.fing.grupo07.CargaUY.jms.FiscalizacionProducerLocal;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -41,13 +42,16 @@ class GestionBalanzaServiceTest {
     @Mock
     private TypedQuery<PesadaBalanza> queryPesada;
 
+    @Mock
+    private FiscalizacionProducerLocal fiscalizacionProducer;
+
     private GestionBalanzaServiceImpl service;
     private GuiaDeViaje guiaPrueba;
     private Vehiculo vehiculoPrueba;
 
     @BeforeEach
     void setUp() {
-        service = new GestionBalanzaServiceImpl(em, balanzaClient);
+        service = new GestionBalanzaServiceImpl(em, balanzaClient, fiscalizacionProducer);
 
         vehiculoPrueba = new Vehiculo(123456, "Scania", "R450", 9000, 36000, true, null);
         guiaPrueba = new GuiaDeViaje();
@@ -72,6 +76,7 @@ class GestionBalanzaServiceTest {
         assertEquals(32000, resultado.pesoRegistrado());
         assertEquals("123456", resultado.matricula());
         verify(em).persist(any(PesadaBalanza.class));
+        verify(fiscalizacionProducer).solicitarEvaluacion(10L);
     }
 
     @Test
