@@ -9,6 +9,9 @@ import uy.edu.fing.grupo07.CargaUY.domain.entity.Vehiculo;
 @Local
 public interface VehiculoEJBLocal {
 	List<Vehiculo> listarVehiculos();
+	List<Vehiculo> listarVehiculosPorEmpresa(int nroEmpresa);
+	List<Empresa> listarEmpresasPorCiudadano(int ciudadanoId);
+	List<Vehiculo> listarVehiculosPorCiudadano(int ciudadanoId);
 	List<Empresa> listarEmpresas();
 	void crear(Vehiculo vehiculo);
 	void modificar(Vehiculo vehiculo);

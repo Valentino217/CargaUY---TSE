@@ -39,10 +39,35 @@ public class VehiculoBean implements Serializable { // <--- Implementar Serializ
         this.empresaId = empresaId;
     }
 
+ // Creamos una constante o variable de clase temporal para la simulación
+    private final int ID_CIUDADANO_SIMULADO = 1;
+
     @PostConstruct
     public void init() {
-        vehiculos = vehiculoEJB.listarVehiculos();
-        empresas = vehiculoEJB.listarEmpresas();
+        try {
+            // 1. CORRECCIÓN: Filtramos los vehículos de las empresas donde trabaja el ciudadano
+            vehiculos = vehiculoEJB.listarVehiculosPorCiudadano(ID_CIUDADANO_SIMULADO);
+            
+            // 2. Filtramos el combo de empresas disponibles para el ciudadano
+            empresas = vehiculoEJB.listarEmpresasPorCiudadano(ID_CIUDADANO_SIMULADO);
+            
+            // Salvaguarda por si tu BD local de pruebas está vacía
+          //  if (empresas == null || empresas.isEmpty()) {
+          //      empresas = vehiculoEJB.listarEmpresas(); 
+         //   }
+         //   if (vehiculos == null || vehiculos.isEmpty()) {
+         //       vehiculos = vehiculoEJB.listarVehiculos(); // Trae todos solo para desarrollo
+          //  }
+        } catch (Exception e) {
+            // Respaldos en caso de que falle alguna consulta durante las pruebas
+          //  empresas = vehiculoEJB.listarEmpresas();
+          //  vehiculos = vehiculoEJB.listarVehiculos();
+        	  mostrarMensaje(
+                      FacesMessage.SEVERITY_ERROR,
+                      "Error",
+                      "No se pudo ejecutar procedimiento init: " + e.getMessage()
+              );
+        }
         nuevo();
     }
 
@@ -79,7 +104,9 @@ public class VehiculoBean implements Serializable { // <--- Implementar Serializ
                 mostrarMensaje(FacesMessage.SEVERITY_INFO, "Éxito", "Vehículo registrado correctamente");
             }
 
-            vehiculos = vehiculoEJB.listarVehiculos();
+            // CORRECCIÓN: Al refrescar el listado de la tabla tras guardar, volvemos a filtrar por el ciudadano
+            vehiculos = vehiculoEJB.listarVehiculosPorCiudadano(ID_CIUDADANO_SIMULADO);
+
             nuevo(); // Limpia el formulario para el siguiente registro
 
         } catch (Exception e) {
@@ -118,7 +145,7 @@ public class VehiculoBean implements Serializable { // <--- Implementar Serializ
     public void eliminar(Vehiculo vehiculo) {
         try {
             vehiculoEJB.eliminar(vehiculo);
-            vehiculos = vehiculoEJB.listarVehiculos();
+            vehiculos = vehiculoEJB.listarVehiculosPorCiudadano(ID_CIUDADANO_SIMULADO);
 
             mostrarMensaje(
                     FacesMessage.SEVERITY_INFO,

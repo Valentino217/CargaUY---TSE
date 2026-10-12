@@ -41,7 +41,9 @@ public class VehiculoEJB implements VehiculoEJBLocal {
                 Empresa.class
         ).getResultList();
     }
+    
 
+    
     @Override
     public void crear(Vehiculo vehiculo) {
         em.persist(vehiculo);
@@ -60,5 +62,45 @@ public class VehiculoEJB implements VehiculoEJBLocal {
     @Override
     public Vehiculo buscar(String matricula) {
         return em.find(Vehiculo.class, matricula);
+    }
+     //permite encontrar los vehiculos dada una empresa
+    @Override
+    public List<Vehiculo> listarVehiculosPorCiudadano(int ciudadanoId) {
+        return em.createQuery(
+            "SELECT DISTINCT v FROM Vehiculo v " +
+            "JOIN FETCH v.empresa " +
+            "JOIN v.empresa e " +
+            "JOIN e.ciudadanos c " +
+            "WHERE c.id = :ciudadanoId " +
+            "ORDER BY v.matricula",
+            Vehiculo.class
+        )
+        .setParameter("ciudadanoId", ciudadanoId)
+        .getResultList();
+    }
+    
+    @Override
+    public List<Empresa> listarEmpresasPorCiudadano(int ciudadanoId) {
+        return em.createQuery(
+            "SELECT DISTINCT e FROM Empresa e " +
+            "JOIN e.ciudadanos c " +
+            "WHERE c.id = :ciudadanoId",
+            Empresa.class
+        )
+        .setParameter("ciudadanoId", ciudadanoId)
+        .getResultList();
+    }
+    
+    @Override
+    public List<Vehiculo> listarVehiculosPorEmpresa(int nroEmpresa) {
+        return em.createQuery(
+            "SELECT v FROM Vehiculo v " +
+            "JOIN FETCH v.empresa " +
+            "WHERE v.empresa.nroEmpresa = :nroEmpresa " +
+            "ORDER BY v.matricula",
+            Vehiculo.class
+        )
+        .setParameter("nroEmpresa", nroEmpresa)
+        .getResultList();
     }
 }

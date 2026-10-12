@@ -32,11 +32,14 @@ public class ITVBean implements Serializable {
     private boolean editando;
     
     private String matricula;
+    
+    // Creamos una constante o variable de clase temporal para la simulación
+    private final int ID_CIUDADANO_SIMULADO = 1;
 
     @PostConstruct
     public void init() {
         itvs = itvEJB.listarITVs();
-        vehiculos = vehiculoEJB.listarVehiculos();
+        vehiculos = vehiculoEJB.listarVehiculosPorCiudadano(ID_CIUDADANO_SIMULADO);
         nuevo();
     }
 
