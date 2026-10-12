@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:p="primefaces">
+
+<h:head>
+    <title>CargaUY - Bandeja de Fiscalización e Infracciones</title>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+            margin: 0;
+            padding: 24px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+        }
+        .header-bar h1 {
+            margin: 0;
+            color: #1e3a8a;
+            font-size: 1.8rem;
+        }
+        .nav-links a {
+            margin-left: 16px;
+            text-decoration: none;
+            color: #1e3a8a;
+            font-weight: 500;
+        }
+        .nav-links a:hover {
+            text-decoration: underline;
+        }
+        .mb-4 {
+            margin-bottom: 20px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .badge-DETECTADA { background-color: #fef3c7; color: #92400e; }
+        .badge-NOTIFICADA { background-color: #e0f2fe; color: #0369a1; }
+        .badge-EN_DESCARGO { background-color: #f3e8ff; color: #6b21a8; }
+        .badge-CONFIRMADA { background-color: #fee2e2; color: #991b1b; }
+        .badge-DESESTIMADA { background-color: #dcfce7; color: #166534; }
+    </style>
+</h:head>
+
+<h:body>
+    <div class="container">
+        <div class="header-bar">
+            <div>
+                <h1>Fiscalización de Cargas</h1>
+                <small style="color: #64748b;">Bandeja oficial del funcionario para control y seguimiento de infracciones</small>
+            </div>
+            <div class="nav-links">
+                <a href="index.xhtml">Inicio</a>
+                <a href="infracciones.xhtml">Infracciones</a>
+                <a href="dashboard.xhtml">Dashboard</a>
+                <a href="detalle-viaje">Tracking</a>
+            </div>
+        </div>
+
+        <h:form id="formInfracciones">
+            <p:growl id="growl" showDetail="true" life="4000"/>
+
+            <!-- Panel 1: Filtros de Búsqueda -->
+            <p:panel header="Filtros de Búsqueda" styleClass="mb-4" toggleable="true">
+                <div style="display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap;">
+                    <div>
+                        <p:outputLabel for="filtroEstado" value="Estado de Infracción: " style="display: block; font-weight: bold; margin-bottom: 6px;"/>
+                        <p:selectOneMenu id="filtroEstado" value="#{bandejaInfraccionesBean.filtroEstado}" style="min-width: 200px;">
+                            <f:selectItem itemLabel="-- Todos los estados --" itemValue="#{null}"/>
+                            <f:selectItems value="#{bandejaInfraccionesBean.estadosDisponibles}" var="est" itemLabel="#{est.name()}" itemValue="#{est}"/>
+                        </p:selectOneMenu>
+                    </div>
+
+                    <div>
+                        <p:outputLabel for="filtroTipo" value="Tipo de Infracción: " style="display: block; font-weight: bold; margin-bottom: 6px;"/>
+                        <p:selectOneMenu id="filtroTipo" value="#{bandejaInfraccionesBean.filtroTipo}" style="min-width: 220px;">
+                            <f:selectItem itemLabel="-- Todos los tipos --" itemValue="#{null}"/>
+                            <f:selectItems value="#{bandejaInfraccionesBean.tiposDisponibles}" var="tip" itemLabel="#{tip.name()}" itemValue="#{tip}"/>
+                        </p:selectOneMenu>
+                    </div>
+
+                    <div>
+                        <p:commandButton value="Filtrar" action="#{bandejaInfraccionesBean.filtrar}" update="formInfracciones:tablaInfracciones growl" icon="pi pi-filter" style="margin-right: 8px;"/>
+                        <p:commandButton value="Limpiar" action="#{bandejaInfraccionesBean.limpiarFiltros}" update="formInfracciones" icon="pi pi-times" styleClass="ui-button-secondary"/>
+                    </div>
+                </div>
+            </p:panel>
+
+            <!-- Panel 2: Evaluación manual de Guía -->
+            <p:panel header="Evaluación Manual de Guía (Motor de Fiscalización)" styleClass="mb-4" toggleable="true" collapsed="true">
+                <div style="display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap;">
+                    <div>
+                        <p:outputLabel for="guiaId" value="ID Guía de Viaje: " style="display: block; font-weight: bold; margin-bottom: 6px;"/>
+                        <p:inputNumber id="guiaId" value="#{bandejaInfraccionesBean.guiaIdFiscalizar}" decimalPlaces="0" placeholder="Ej: 10" style="width: 150px;"/>
+                    </div>
+
+                    <div>
+                        <p:outputLabel for="modoFisc" value="Modo de Ejecución: " style="display: block; font-weight: bold; margin-bottom: 6px;"/>
+                        <p:selectOneMenu id="modoFisc" value="#{bandejaInfraccionesBean.modoFiscalizacion}" style="min-width: 220px;">
+                            <f:selectItem itemLabel="Síncrono (Inmediato)" itemValue="sync"/>
+                            <f:selectItem itemLabel="Asíncrono (JMS FiscalizacionQueue)" itemValue="async"/>
+                        </p:selectOneMenu>
+                    </div>
+
+                    <div>
+                        <p:commandButton value="Ejecutar Fiscalización" action="#{bandejaInfraccionesBean.ejecutarFiscalizacion}" update="formInfracciones growl" icon="pi pi-bolt"/>
+                    </div>
+                </div>
+            </p:panel>
+
+            <!-- Panel 3: Tabla de Infracciones -->
+            <p:panel header="Infracciones Detectadas">
+                <p:dataTable id="tablaInfracciones" value="#{bandejaInfraccionesBean.infracciones}" var="inf" emptyMessage="No se encontraron infracciones con los criterios indicados." paginator="true" rows="10" responsiveLayout="scroll">
+
+                    <p:column headerText="Caso #" sortBy="#{inf.idCaso()}" style="width: 80px; text-align: center;">
+                        <strong>##{inf.idCaso()}</strong>
+                    </p:column>
+
+                    <p:column headerText="Fecha" sortBy="#{inf.fecha()}" style="width: 110px;">
+                        <h:outputText value="#{inf.fecha()}"/>
+                    </p:column>
+
+                    <p:column headerText="Tipo" sortBy="#{inf.tipo().name()}" style="width: 160px;">
+                        <span class="badge">#{inf.tipo().name()}</span>
+                    </p:column>
+
+                    <p:column headerText="Estado" sortBy="#{inf.estado().name()}" style="width: 130px; text-align: center;">
+                        <span class="badge badge-#{inf.estado().name()}">#{inf.estado().name()}</span>
+                    </p:column>
+
+                    <p:column headerText="Guía #" style="width: 90px; text-align: center;">
+                        <h:outputText value="#{inf.guiaId()}"/>
+                    </p:column>
+
+                    <p:column headerText="Vehículo" style="width: 120px;">
+                        <h:outputText value="#{inf.matricula()}"/>
+                    </p:column>
+
+                    <p:column headerText="Empresa">
+                        <h:outputText value="#{inf.nombreEmpresa()}"/>
+                    </p:column>
+
+                    <p:column headerText="Acción" style="width: 120px; text-align: center;">
+                        <p:button outcome="detalleInfraccion.xhtml" value="Gestionar" icon="pi pi-search">
+                            <f:param name="idCaso" value="#{inf.idCaso()}"/>
+                        </p:button>
+                    </p:column>
+
+                </p:dataTable>
+            </p:panel>
+        </h:form>
+    </div>
+</h:body>
+</html>

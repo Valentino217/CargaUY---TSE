@@ -139,6 +139,14 @@
             <artifactId>resteasy-core</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <!-- PrimeFaces para interfaz JSF (compatible con Maicol P2) -->
+        <dependency>
+            <groupId>org.primefaces</groupId>
+            <artifactId>primefaces</artifactId>
+            <version>15.0.9</version>
+            <classifier>jakarta</classifier>
+        </dependency>
     </dependencies>
 
     <build>
