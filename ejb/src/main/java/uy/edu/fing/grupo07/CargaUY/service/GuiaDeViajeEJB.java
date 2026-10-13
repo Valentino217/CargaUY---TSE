@@ -108,6 +108,26 @@ public class GuiaDeViajeEJB implements GuiaDeViajeEJBLocal {
             GuiaDeViaje.class
         ).getResultList();
     }
+    
+ // Lista las guías de las empresas asociadas al ciudadano
+    @Override
+    public List<GuiaDeViaje> listarGuiasPorCiudadano(int ciudadanoId) {
+        return em.createQuery(
+            "SELECT DISTINCT g FROM GuiaDeViaje g " +
+            "JOIN FETCH g.empresa " +
+            "LEFT JOIN FETCH g.vehiculo " +
+            "LEFT JOIN FETCH g.chofer " +
+            "WHERE g.empresa IN (" +
+            "    SELECT e FROM Empresa e " +
+            "    JOIN e.ciudadanos c " +
+            "    WHERE c.id = :ciudadanoId" +
+            ") " +
+            "ORDER BY g.fecha DESC",
+            GuiaDeViaje.class
+        )
+        .setParameter("ciudadanoId", ciudadanoId)
+        .getResultList();
+    }
 
     //buscar guia por id
     @Override

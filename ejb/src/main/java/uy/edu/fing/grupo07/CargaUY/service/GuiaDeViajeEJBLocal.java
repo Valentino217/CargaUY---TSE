@@ -16,5 +16,6 @@ public interface GuiaDeViajeEJBLocal {
 	GuiaDeViaje buscarGuias(Long id);
 	List<GuiaDeViaje> listarGuias();
 	List<Chofer> listarChoferesPorEmpresa(int nroEmpresa);
+	List<GuiaDeViaje> listarGuiasPorCiudadano(int ciudadanoId);
 	
 }
