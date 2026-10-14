@@ -206,11 +206,21 @@
                             String badgeClass = "badge-otro";
                             if (ev.tipo() != null) {
                                 switch (ev.tipo()) {
-                                    case INICIO -> badgeClass = "badge-inicio";
-                                    case CARGA -> badgeClass = "badge-carga";
-                                    case DESCARGA -> badgeClass = "badge-descarga";
-                                    case INCIDENTE -> badgeClass = "badge-incidente";
-                                    default -> badgeClass = "badge-otro";
+                                    case INICIO:
+                                        badgeClass = "badge-inicio";
+                                        break;
+                                    case CARGA:
+                                        badgeClass = "badge-carga";
+                                        break;
+                                    case DESCARGA:
+                                        badgeClass = "badge-descarga";
+                                        break;
+                                    case INCIDENTE:
+                                        badgeClass = "badge-incidente";
+                                        break;
+                                    default:
+                                        badgeClass = "badge-otro";
+                                        break;
                                 }
                             }
                         %>
