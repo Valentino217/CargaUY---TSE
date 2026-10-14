@@ -91,7 +91,7 @@ public class DatosPruebaStartupBean {
         try {
             entityManager.createNativeQuery(
                     "TRUNCATE TABLE administradores, autoridades, choferes, ciudadanos, "
-                    + "descargos, documentos_clinicos, empresa_choferes, empresa_ciudadanos, "
+                    + "descargos, empresa_choferes, empresa_ciudadanos, "
                     + "empresa_rubros, empresas, eventos_viaje, funcionarios, guia_tipos_carga, "
                     + "guias_de_viaje, incidentes_ruta, infracciones, itvs, pesadas_balanza, "
                     + "pncs, puntos_tracking, registro_auditoria, reglas_fiscalizacion, "
