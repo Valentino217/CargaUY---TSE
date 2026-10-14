@@ -99,24 +99,24 @@ public class DatosPruebaStartupBean {
         inicializarReglasFiscalizacion();
 
         // 1. Usuarios con distintos roles del sistema
-        Administrador administrador = new Administrador(
-                "Admin CargaUY",
-                "admin@cargauy.gub.uy",
-                LocalDate.of(1980, 1, 15),
-                10000001,
-                "admin123"
+        // Persistir Ciudadano primero para que su ID generado sea 1 (coincidiendo con ID_CIUDADANO_SIMULADO)
+        Ciudadano ciudadano = new Ciudadano(
+                "Pedro Empresario",
+                "pedro.empresario@transporte.uy",
+                LocalDate.of(1978, 3, 10),
+                87654321,
+                "ciudadano123"
         );
-        entityManager.persist(administrador);
+        entityManager.persist(ciudadano);
 
-        Autoridad autoridad = new Autoridad(
-                "Director Nacional",
-                "autoridad@cargauy.gub.uy",
-                LocalDate.of(1975, 6, 20),
-                20000002,
-                "autoridad123",
-                "Dirección Nacional de Transporte"
+        Chofer chofer = new Chofer(
+                "Carlos Chofer",
+                "carlos.chofer@transporte.uy",
+                LocalDate.of(1990, 8, 15),
+                11223344,
+                "chofer123"
         );
-        entityManager.persist(autoridad);
+        entityManager.persist(chofer);
 
         Funcionario funcionario = new Funcionario(
                 "Juan Funcionario",
@@ -129,23 +129,24 @@ public class DatosPruebaStartupBean {
         );
         entityManager.persist(funcionario);
 
-        Chofer chofer = new Chofer(
-                "Carlos Chofer",
-                "carlos.chofer@transporte.uy",
-                LocalDate.of(1990, 8, 15),
-                11223344,
-                "chofer123"
+        Autoridad autoridad = new Autoridad(
+                "Director Nacional",
+                "autoridad@cargauy.gub.uy",
+                LocalDate.of(1975, 6, 20),
+                20000002,
+                "autoridad123",
+                "Dirección Nacional de Transporte"
         );
-        entityManager.persist(chofer);
+        entityManager.persist(autoridad);
 
-        Ciudadano ciudadano = new Ciudadano(
-                "Pedro Empresario",
-                "pedro.empresario@transporte.uy",
-                LocalDate.of(1978, 3, 10),
-                87654321,
-                "ciudadano123"
+        Administrador administrador = new Administrador(
+                "Admin CargaUY",
+                "admin@cargauy.gub.uy",
+                LocalDate.of(1980, 1, 15),
+                10000001,
+                "admin123"
         );
-        entityManager.persist(ciudadano);
+        entityManager.persist(administrador);
 
         // 2. Rubros y tipos de carga
         Rubro rubroForestal = new Rubro("Forestal", "Transporte de madera y derivados forestales");

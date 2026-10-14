@@ -86,197 +86,211 @@ public class GuiaDeViajeBean implements Serializable {
 	@PostConstruct
     public void init() {
         try {
-          
-        	guias = GuiaDeViajeEJB.listarGuiasPorCiudadano(ID_CIUDADANO_SIMULADO);
-            // 2. Filtramos el combo de empresas disponibles para el ciudadano
+            guias = GuiaDeViajeEJB.listarGuiasPorCiudadano(ID_CIUDADANO_SIMULADO);
+            if (guias == null || guias.isEmpty()) {
+                guias = GuiaDeViajeEJB.listarGuias();
+            }
+
             empresas = vehiculoEJB.listarEmpresasPorCiudadano(ID_CIUDADANO_SIMULADO);
-            
-            //3. Filtramos el combo de guias creadas por el ciudadano de la empresa
-            
-            // Al inicio no hay una empresa seleccionada
-            vehiculos = new ArrayList<>();
-            choferes = new ArrayList<>();
-            
-           
-        } catch (Exception e) {
-         
-        	  mostrarMensaje(
-                      FacesMessage.SEVERITY_ERROR,
-                      "Error",
-                      "No se pudo ejecutar procedimiento init: " + e.getMessage()
-              );
+            if (empresas == null || empresas.isEmpty()) {
+                empresas = vehiculoEJB.listarEmpresas();
+            }
+
+        } catch (Exception excepcion) {
+            mostrarMensaje(
+                    FacesMessage.SEVERITY_ERROR,
+                    "Error",
+                    "No se pudo inicializar los datos de Guía de Viaje: " + excepcion.getMessage()
+            );
         }
+
         nuevo();
     }
 	
-	 public void nuevo() {
-	        guia = new GuiaDeViaje();
-	        editando = false;
-	        empresaId = 0;
-	        choferId = 0;
-	        vehiculos = new ArrayList<>();
-	        choferes = new ArrayList<>();
-	        matriculaVehiculo = null;
-	 }
+    public void nuevo() {
+        guia = new GuiaDeViaje();
+        guia.setFecha(java.time.LocalDate.now());
+        editando = false;
+
+        if (empresas != null && !empresas.isEmpty()) {
+            Empresa empresaPorDefecto = empresas.get(0);
+            this.empresaId = empresaPorDefecto.getNroEmpresa();
+            this.vehiculos = vehiculoEJB.listarVehiculosPorEmpresa(empresaId);
+            this.choferes = GuiaDeViajeEJB.listarChoferesPorEmpresa(empresaId);
+
+            if (vehiculos != null && !vehiculos.isEmpty()) {
+                this.matriculaVehiculo = vehiculos.get(0).getMatricula();
+            } else {
+                this.matriculaVehiculo = null;
+            }
+
+            if (choferes != null && !choferes.isEmpty()) {
+                this.choferId = choferes.get(0).getId();
+            } else {
+                this.choferId = 0;
+            }
+        } else {
+            this.empresaId = 0;
+            this.choferId = 0;
+            this.matriculaVehiculo = null;
+            this.vehiculos = new ArrayList<>();
+            this.choferes = new ArrayList<>();
+        }
+    }
 	 
+    public void guardar() {
+        try {
+            Empresa empresaSeleccionada = null;
+
+            for (Empresa empresa : empresas) {
+                if (empresa.getNroEmpresa() == empresaId) {
+                    empresaSeleccionada = empresa;
+                    break;
+                }
+            }
+
+            if (empresaSeleccionada == null) {
+                throw new IllegalArgumentException("Debe seleccionar una empresa válida.");
+            }
+
+            guia.setEmpresa(empresaSeleccionada);
+            
+            Vehiculo vehiculoSeleccionado = null;
+
+            for (Vehiculo vehiculo : vehiculos) {
+                if (vehiculo.getMatricula().equals(matriculaVehiculo)) {
+                    vehiculoSeleccionado = vehiculo;
+                    break;
+                }
+            }
+
+            if (vehiculoSeleccionado == null) {
+                throw new IllegalArgumentException("Debe seleccionar un vehículo válido.");
+            }
+
+            guia.setVehiculo(vehiculoSeleccionado);
+            
+            Chofer choferSeleccionado = null;
+
+            for (Chofer chofer : choferes) {
+                if (chofer.getId() == choferId) {
+                    choferSeleccionado = chofer;
+                    break;
+                }
+            }
+
+            if (choferSeleccionado == null) {
+                throw new IllegalArgumentException("Debe seleccionar un chofer válido.");
+            }
+
+            guia.setChofer(choferSeleccionado);
+            
+            if (editando) {
+                GuiaDeViajeEJB.modificar(guia);
+                mostrarMensaje(FacesMessage.SEVERITY_INFO, "Éxito", "Guía de viaje modificada correctamente.");
+            } else {
+                GuiaDeViajeEJB.crear(guia);
+                mostrarMensaje(FacesMessage.SEVERITY_INFO, "Éxito", "Guía de viaje registrada correctamente.");
+            }
+
+            guias = GuiaDeViajeEJB.listarGuiasPorCiudadano(ID_CIUDADANO_SIMULADO);
+            if (guias == null || guias.isEmpty()) {
+                guias = GuiaDeViajeEJB.listarGuias();
+            }
+
+            nuevo();
+
+        } catch (Exception excepcion) {
+            mostrarMensaje(
+                    FacesMessage.SEVERITY_ERROR,
+                    "Error",
+                    "No se pudo guardar la guía de viaje: " + excepcion.getMessage()
+            );
+        }
+    }
 	 
-	 public void guardar() {
-	        try {
-	            Empresa empresaSeleccionada = null;
-
-	            for (Empresa empresa : empresas) {
-	                if (empresa.getNroEmpresa() == empresaId) {
-	                    empresaSeleccionada = empresa;
-	                    break;
-	                }
-	            }
-
-	            if (empresaSeleccionada == null) {
-	                throw new IllegalArgumentException("Empresa no encontrada");
-	            }
-
-	            guia.setEmpresa(empresaSeleccionada);
-	            
-	            
-	            Vehiculo vehiculoSeleccionado = null;
-
-	            for (Vehiculo v : vehiculos) {
-	                if (v.getMatricula().equals(matriculaVehiculo)) {
-	                    vehiculoSeleccionado = v;
-	                    break;
-	                }
-	            }
-
-	            if (vehiculoSeleccionado == null) {
-	                throw new IllegalArgumentException("Debe seleccionar un vehículo válido");
-	            }
-
-	            guia.setVehiculo(vehiculoSeleccionado);
-	            
-	            /*chofer*/
-	            
-	            Chofer choferSeleccionado = null;
-
-	            for (Chofer c : choferes) {
-	                if (c.getId() == choferId) {
-	                    choferSeleccionado = c;
-	                    break;
-	                }
-	            }
-
-	            if (choferSeleccionado == null) {
-	                throw new IllegalArgumentException("Debe seleccionar un chofer válido");
-	            }
-
-	            guia.setChofer(choferSeleccionado);
-	            
-	            if (editando) {
-	                // Si estaba editando, llama a modificar
-	                GuiaDeViajeEJB.modificar(guia);
-	                mostrarMensaje(FacesMessage.SEVERITY_INFO, "Éxito", "Guia de Viaje modificada correctamente");
-	            } else {
-	                // Si era nuevo, llama a crear
-	            	GuiaDeViajeEJB.crear(guia);
-	                mostrarMensaje(FacesMessage.SEVERITY_INFO, "Éxito", "Guia de Viaje registrada correctamente");
-	            }
-
-	            // CORRECCIÓN: Al refrescar el listado de la tabla tras guardar, volvemos a filtrar por el ciudadano
-	            guias = GuiaDeViajeEJB.listarGuiasPorCiudadano(ID_CIUDADANO_SIMULADO);
-
-	            nuevo(); // Limpia el formulario para el siguiente registro
-
-	        } catch (Exception e) {
-	            mostrarMensaje(
-	                    FacesMessage.SEVERITY_ERROR,
-	                    "Error",
-	                    "No se pudo guardar el vehículo: " + e.getMessage()
-	            );
-	        }
-	    }
+    private void mostrarMensaje(FacesMessage.Severity severity, String resumen, String detalle) {
+        FacesContext.getCurrentInstance().addMessage(
+                null,
+                new FacesMessage(severity, resumen, detalle)
+        );
+    }
 	 
-	 private void mostrarMensaje(FacesMessage.Severity severity, String resumen, String detalle) {
-	        FacesContext.getCurrentInstance().addMessage(
-	                null,
-	                new FacesMessage(severity, resumen, detalle)
-	        );
-	 }
-	 
-	 // =========================
-	    // MODIFICACIÓN
-	    // =========================
+    public void editar(GuiaDeViaje guiaSeleccionada) {
+        this.guia = guiaSeleccionada;
+        this.editando = true;
 
-	    public void editar(GuiaDeViaje guia) {
-	        this.guia = guia;
-	        this.editando = true;
-	        // Cargar también la empresa asociada en el combo
-	        if (guia.getEmpresa() != null) {
-	            this.empresaId = guia.getEmpresa().getNroEmpresa();
-	        }
-	        
-	        if (guia.getVehiculo() != null) {
-	            matriculaVehiculo = guia.getVehiculo().getMatricula();
-	        }
-	        
-	        if (guia.getChofer() != null) {
-	            choferId = guia.getChofer().getId();
-	        }
-	        
-	        // Cargar los vehículos y choferes de esa empresa
-	        vehiculos = vehiculoEJB.listarVehiculosPorEmpresa(empresaId);
-	        choferes = GuiaDeViajeEJB.listarChoferesPorEmpresa(empresaId);
-	    }
+        if (guiaSeleccionada.getEmpresa() != null) {
+            this.empresaId = guiaSeleccionada.getEmpresa().getNroEmpresa();
+        }
+        
+        if (guiaSeleccionada.getVehiculo() != null) {
+            this.matriculaVehiculo = guiaSeleccionada.getVehiculo().getMatricula();
+        }
+        
+        if (guiaSeleccionada.getChofer() != null) {
+            this.choferId = guiaSeleccionada.getChofer().getId();
+        }
+        
+        this.vehiculos = vehiculoEJB.listarVehiculosPorEmpresa(empresaId);
+        this.choferes = GuiaDeViajeEJB.listarChoferesPorEmpresa(empresaId);
+    }
 
-	    // =========================
-	    // BAJA
-	    // =========================
+    public void eliminar(GuiaDeViaje guiaAEliminar) {
+        try {
+            GuiaDeViajeEJB.eliminar(guiaAEliminar);
+            guias = GuiaDeViajeEJB.listarGuiasPorCiudadano(ID_CIUDADANO_SIMULADO);
+            if (guias == null || guias.isEmpty()) {
+                guias = GuiaDeViajeEJB.listarGuias();
+            }
 
-	    public void eliminar(GuiaDeViaje guia) {
-	        try {
-	            GuiaDeViajeEJB.eliminar(guia);
-	            guias = GuiaDeViajeEJB.listarGuiasPorCiudadano(ID_CIUDADANO_SIMULADO);
+            mostrarMensaje(
+                    FacesMessage.SEVERITY_INFO,
+                    "Éxito",
+                    "Guía de viaje eliminada correctamente."
+            );
 
-	            mostrarMensaje(
-	                    FacesMessage.SEVERITY_INFO,
-	                    "Éxito",
-	                    "Guia de Viaje eliminada correctamente"
-	            );
+            nuevo();
 
-	          
+        } catch (Exception excepcion) {
+            mostrarMensaje(
+                    FacesMessage.SEVERITY_ERROR,
+                    "Error",
+                    "No se pudo eliminar la guía de viaje: " + excepcion.getMessage()
+            );
+        }
+    }
 
-	        } catch (Exception e) {
-	            mostrarMensaje(
-	                    FacesMessage.SEVERITY_ERROR,
-	                    "Error",
-	                    "No se pudo eliminar la Guia de Viaje"
-	            );
-	        }
-	    }
+    public void seleccionarEmpresa() {
+        this.vehiculos = new ArrayList<>();
+        this.choferes = new ArrayList<>();
+        this.matriculaVehiculo = null;
+        this.choferId = 0;
 
-	    
-	    public void seleccionarEmpresa() {
-	        // Limpiar los datos de la selección anterior
-	        vehiculos = new ArrayList<>();
-	        choferes = new ArrayList<>();
+        if (this.empresaId == 0) {
+            return;
+        }
 
-	        guia.setVehiculo(null);
-	        guia.setChofer(null);
+        try {
+            this.vehiculos = vehiculoEJB.listarVehiculosPorEmpresa(empresaId);
+            this.choferes = GuiaDeViajeEJB.listarChoferesPorEmpresa(empresaId);
 
-	        if (empresaId == 0) {
-	            return;
-	        }
-	        try {
-	            vehiculos = vehiculoEJB.listarVehiculosPorEmpresa(empresaId);
-	            choferes = GuiaDeViajeEJB.listarChoferesPorEmpresa(empresaId);
+            if (vehiculos != null && !vehiculos.isEmpty()) {
+                this.matriculaVehiculo = vehiculos.get(0).getMatricula();
+            }
 
-	        } catch (Exception e) {
-	            mostrarMensaje(
-	                FacesMessage.SEVERITY_ERROR,
-	                "Error",
-	                "No se pudieron cargar los vehículos y choferes: "
-	                    + e.getMessage()
-	            );
-	        }
-	    }
+            if (choferes != null && !choferes.isEmpty()) {
+                this.choferId = choferes.get(0).getId();
+            }
+
+        } catch (Exception excepcion) {
+            mostrarMensaje(
+                    FacesMessage.SEVERITY_ERROR,
+                    "Error",
+                    "No se pudieron cargar los vehículos y choferes: " + excepcion.getMessage()
+            );
+        }
+    }
 	 
 	 /*//////////////////////////////////////////////////////////////////////////////////////////////////////////*/
 	 // GETTERS Y SETTERS
