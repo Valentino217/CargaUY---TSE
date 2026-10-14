@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:p="primefaces">
+
+<h:head>
+    <title>CargaUY - Registro de Pesaje en Balanza</title>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+</h:head>
+
+<h:body>
+    <div style="margin: 20px;">
+        <div>
+            <h1>Registro de Pesaje en Balanza</h1>
+            <p>Simulación de ingesta de pesadas periféricas para guías de viaje y evaluación de fiscalización.</p>
+            <p>
+                <a href="index.xhtml">Inicio</a> | 
+                <a href="infracciones.xhtml">Bandeja de Infracciones</a> | 
+                <a href="detalle-viaje">Tracking y Eventos</a>
+            </p>
+        </div>
+
+        <hr/>
+
+        <h:form id="formPesaje">
+            <p:messages id="mensajes" showDetail="true" closable="true"/>
+
+            <p:panel header="Datos del Pesaje">
+                <h:panelGrid columns="2" cellpadding="6">
+                    <h:outputLabel for="guia" value="Guía de Viaje: *" style="font-weight: bold;"/>
+                    <h:selectOneMenu id="guia"
+                                     value="#{registrarPesajeBean.guiaIdSeleccionada}"
+                                     required="true"
+                                     requiredMessage="Debe seleccionar una guía de viaje.">
+                        <f:selectItem itemLabel="-- Seleccione una guía --" itemValue="#{null}" noSelectionOption="true"/>
+                        <f:selectItems value="#{registrarPesajeBean.guiasDisponibles}"
+                                       var="g"
+                                       itemValue="#{g.id}"
+                                       itemLabel="#{registrarPesajeBean.obtenerEtiquetaGuia(g)}"/>
+                        <f:ajax listener="#{registrarPesajeBean.onGuiaChange}" render=":formPesaje:tablaPesadas"/>
+                    </h:selectOneMenu>
+
+                    <h:outputLabel for="peso" value="Peso Registrado (kg): *" style="font-weight: bold;"/>
+                    <p:inputNumber id="peso"
+                                   value="#{registrarPesajeBean.pesoRegistrado}"
+                                   decimalPlaces="0"
+                                   required="true"
+                                   requiredMessage="El peso es obligatorio."/>
+
+                    <h:outputLabel for="fecha" value="Fecha:" style="font-weight: bold;"/>
+                    <p:datePicker id="fecha"
+                                  value="#{registrarPesajeBean.fecha}"
+                                  pattern="dd/MM/yyyy"/>
+
+                    <h:outputLabel for="hora" value="Hora:" style="font-weight: bold;"/>
+                    <p:datePicker id="hora"
+                                  value="#{registrarPesajeBean.hora}"
+                                  timeOnly="true"
+                                  pattern="HH:mm"/>
+
+                    <h:outputLabel for="evaluar" value="Opciones:" style="font-weight: bold;"/>
+                    <h:panelGroup>
+                        <h:selectBooleanCheckbox id="evaluar" value="#{registrarPesajeBean.evaluarInmediato}"/>
+                        <h:outputLabel for="evaluar" value=" Evaluar infracciones de inmediato (muestra resultado en pantalla)"/>
+                    </h:panelGroup>
+                </h:panelGrid>
+
+                <div style="margin-top: 15px;">
+                    <p:commandButton value="Registrar Pesada"
+                                     action="#{registrarPesajeBean.registrarPesaje}"
+                                     process="@form"
+                                     update="@form"
+                                     style="margin-right: 10px;"/>
+
+                    <p:button value="Ver Detalle de Guía en Tracking"
+                              href="detalle-viaje?guiaId=#{registrarPesajeBean.guiaIdSeleccionada}"
+                              target="_blank"
+                              style="margin-right: 10px;"/>
+
+                    <p:button value="Ir a Infracciones"
+                              href="infracciones.xhtml"/>
+                </div>
+            </p:panel>
+
+            <br/>
+
+            <p:panel header="Pesadas Registradas para la Guía Seleccionada">
+                <p:dataTable id="tablaPesadas"
+                             value="#{registrarPesajeBean.pesadasDeLaGuia}"
+                             var="p"
+                             emptyMessage="No hay pesadas registradas para esta guía.">
+
+                    <p:column headerText="ID Pesada">
+                        <h:outputText value="##{p.idPesada()}"/>
+                    </p:column>
+
+                    <p:column headerText="Fecha">
+                        <h:outputText value="#{p.fecha()}">
+                            <f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/>
+                        </h:outputText>
+                    </p:column>
+
+                    <p:column headerText="Hora">
+                        <h:outputText value="#{p.hora()}"/>
+                    </p:column>
+
+                    <p:column headerText="Peso Registrado">
+                        <strong><h:outputText value="#{p.pesoRegistrado()} kg"/></strong>
+                    </p:column>
+
+                    <p:column headerText="Vehículo / Matrícula">
+                        <h:outputText value="#{p.matricula() != null ? p.matricula() : 'N/A'}"/>
+                    </p:column>
+                </p:dataTable>
+            </p:panel>
+        </h:form>
+    </div>
+</h:body>
+</html>

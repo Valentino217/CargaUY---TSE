@@ -8,78 +8,7 @@
     <title>CargaUY - Plataforma de Gestión y Fiscalización</title>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f8fafc;
-            color: #1e293b;
-            margin: 0;
-            padding: 40px 20px;
-        }
-        .container {
-            max-width: 960px;
-            margin: 0 auto;
-        }
-        header {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-        h1 {
-            color: #1e3a8a;
-            font-size: 2.2rem;
-            margin-bottom: 8px;
-        }
-        p.subtitle {
-            color: #64748b;
-            font-size: 1.1rem;
-            margin: 0;
-        }
-        .modules-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 24px;
-        }
-        .module-card {
-            background: #ffffff;
-            border-radius: 8px;
-            border: 1px solid #e2e8f0;
-            padding: 24px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            transition: transform 0.15s, box-shadow 0.15s;
-        }
-        .module-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
-        }
-        .module-card h2 {
-            margin-top: 0;
-            color: #1e3a8a;
-            font-size: 1.25rem;
-        }
-        .module-card p {
-            color: #64748b;
-            font-size: 0.95rem;
-            line-height: 1.5;
-            flex-grow: 1;
-        }
-        .module-card .card-btn {
-            display: inline-block;
-            background-color: #1e3a8a;
-            color: white;
-            text-decoration: none;
-            padding: 10px 16px;
-            border-radius: 6px;
-            font-weight: 500;
-            text-align: center;
-            margin-top: 16px;
-        }
-        .module-card .card-btn:hover {
-            background-color: #3b82f6;
-        }
-    </style>
+    
 </h:head>
 
 <h:body>
@@ -112,6 +41,14 @@
                     <p>Monitoreo de guías de viaje, línea temporal de eventos de transporte y pesadas en puestos de balanza.</p>
                 </div>
                 <a href="detalle-viaje" class="card-btn">Ver Tracking</a>
+            </div>
+
+            <div class="module-card">
+                <div>
+                    <h2>Simular Pesaje / Balanza</h2>
+                    <p>Alta y registro de pesaje en balanza para un viaje en curso y simulación de fiscalización de cargas.</p>
+                </div>
+                <a href="registrarPesaje.xhtml" class="card-btn">Registrar Pesaje</a>
             </div>
 
             <div class="module-card">
