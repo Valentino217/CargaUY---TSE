@@ -76,19 +76,30 @@ public class DatosPruebaStartupBean {
     @TransactionAttribute(TransactionAttributeType.REQUIRED)
     public void inicializar() {
         try {
-            Long totalGuiasExistentes = entityManager
-                    .createQuery("SELECT COUNT(g) FROM GuiaDeViaje g", Long.class)
-                    .getSingleResult();
-
-            if (totalGuiasExistentes != null && totalGuiasExistentes > 0L) {
-                LOGGER.info("La base de datos ya contiene guías de viaje. Se omite la carga de datos de prueba.");
-                return;
-            }
-
+            limpiarBaseDeDatos();
             cargarDatosDePrueba();
             LOGGER.info("Datos de prueba inicializados correctamente.");
         } catch (RuntimeException excepcion) {
             LOGGER.log(Level.SEVERE, "No fue posible inicializar los datos de prueba iniciales", excepcion);
+        }
+    }
+
+    /**
+     * Limpia completamente las tablas de la base de datos y reinicia sus secuencias.
+     */
+    private void limpiarBaseDeDatos() {
+        try {
+            entityManager.createNativeQuery(
+                    "TRUNCATE TABLE administradores, autoridades, choferes, ciudadanos, "
+                    + "descargos, documentos_clinicos, empresa_choferes, empresa_ciudadanos, "
+                    + "empresa_rubros, empresas, eventos_viaje, funcionarios, guia_tipos_carga, "
+                    + "guias_de_viaje, incidentes_ruta, infracciones, itvs, pesadas_balanza, "
+                    + "pncs, puntos_tracking, registro_auditoria, reglas_fiscalizacion, "
+                    + "rubros, tipos_carga, usuarios, vehiculos RESTART IDENTITY CASCADE"
+            ).executeUpdate();
+            LOGGER.info("Base de datos limpiada exitosamente antes de cargar datos de prueba.");
+        } catch (Exception excepcion) {
+            LOGGER.log(Level.WARNING, "No fue posible truncar las tablas antes de cargar datos: {0}", excepcion.getMessage());
         }
     }
 
@@ -140,7 +151,7 @@ public class DatosPruebaStartupBean {
         entityManager.persist(autoridad);
 
         Administrador administrador = new Administrador(
-                "Admin CargaUY",
+                "Admin",
                 "admin@cargauy.gub.uy",
                 LocalDate.of(1980, 1, 15),
                 10000001,
@@ -149,16 +160,16 @@ public class DatosPruebaStartupBean {
         entityManager.persist(administrador);
 
         // 2. Rubros y tipos de carga
-        Rubro rubroForestal = new Rubro("Forestal", "Transporte de madera y derivados forestales");
+        Rubro rubroForestal = new Rubro("Madera", "Transporte de madera ");
         entityManager.persist(rubroForestal);
 
-        Rubro rubroGranos = new Rubro("Granos", "Transporte de cereales y oleaginosas");
+        Rubro rubroGranos = new Rubro("Granos", "Transporte de cereales");
         entityManager.persist(rubroGranos);
 
-        TipoCarga tipoCargaMadera = new TipoCarga("Troncos de Eucaliptus");
+        TipoCarga tipoCargaMadera = new TipoCarga("Eucaliptus");
         entityManager.persist(tipoCargaMadera);
 
-        TipoCarga tipoCargaGranos = new TipoCarga("Granos de Soja a granel");
+        TipoCarga tipoCargaGranos = new TipoCarga("Soja");
         entityManager.persist(tipoCargaGranos);
 
         // 3. Empresa titular y flota de vehículos
@@ -166,7 +177,7 @@ public class DatosPruebaStartupBean {
                 101,
                 "Transportes del Plata S.A.",
                 "TransPlata",
-                "Ruta 1 km 28, San José"
+                "Ruta 1 km 28, San Jose"
         );
         empresaTransporte.getCiudadanos().add(ciudadano);
         empresaTransporte.getChoferes().add(chofer);
@@ -176,8 +187,8 @@ public class DatosPruebaStartupBean {
         // Vehículo 1: Habilitado con ITV y PNC vigentes
         Vehiculo vehiculoHabilitado = new Vehiculo(
                 "STP 1234",
-                "Scania",
-                "R450",
+                "camion",
+                "123",
                 9000,
                 31000,
                 true,
@@ -191,8 +202,8 @@ public class DatosPruebaStartupBean {
         // Vehículo 2: Inhabilitado con documentos vencidos para fiscalización
         Vehiculo vehiculoInhabilitado = new Vehiculo(
                 "ABC 9876",
-                "Volvo",
-                "FH540",
+                "camion",
+                "456",
                 10000,
                 30000,
                 false,
@@ -210,9 +221,9 @@ public class DatosPruebaStartupBean {
         // 4. Guía #1: En curso con eventos, pesadas e infracción por exceso de carga detectada
         GuiaDeViaje guiaEnCurso = new GuiaDeViaje(
                 LocalDate.now(),
-                "Montevideo (Puerto)",
+                "Montevideo",
                 "Rivera",
-                "Forestal",
+                "Madera",
                 45.0f,
                 empresaTransporte,
                 vehiculoHabilitado,
@@ -283,7 +294,7 @@ public class DatosPruebaStartupBean {
                 TipoInfraccion.EXCESO_DE_CARGA,
                 EstadoInfraccion.DETECTADA,
                 guiaEnCurso,
-                "La pesada en estación periférica registró 43.500 kg superando el peso máximo permitido de 40.000 kg (tolerancia 500 kg)."
+                "La pesada  registro 43.500 kg superando el peso maximo permitido de 40.000 kg (tolerancia 500 kg)."
         );
         guiaEnCurso.getInfracciones().add(infraccionDetectada);
         entityManager.persist(guiaEnCurso);
@@ -375,11 +386,11 @@ public class DatosPruebaStartupBean {
         );
         infraccionConfirmada.setResolucion("CONFIRMADA");
         infraccionConfirmada.setFechaResolucion(LocalDate.now().minusDays(1));
-        infraccionConfirmada.setFundamento("Se desestima el descargo presentado. La balanza de pesaje contaba con verificación metrológica del LATU vigente.");
+        infraccionConfirmada.setFundamento("Se desestima el descargo presentado.");
 
         Descargo descargoGuia3 = new Descargo(
                 LocalDate.now().minusDays(2),
-                "Se solicita la anulación de la infracción alegando un posible desajuste en los sensores de la báscula de pesaje periférica.",
+                "Se solicita la anulacion. Algo debe estar mal",
                 infraccionConfirmada
         );
         infraccionConfirmada.setDescargo(descargoGuia3);
@@ -389,7 +400,7 @@ public class DatosPruebaStartupBean {
                 LocalDate.now().minusDays(1),
                 "funcionario@cargauy.gub.uy",
                 "RESOLVER_INFRACCION",
-                "Se desestima el descargo presentado. La balanza de pesaje contaba con verificación metrológica del LATU vigente."
+                "Se desestima el descargo presentado. La balanza de pesaje contaba con verificación ."
         );
         infraccionConfirmada.setRegistroAuditoria(auditoriaGuia3);
 

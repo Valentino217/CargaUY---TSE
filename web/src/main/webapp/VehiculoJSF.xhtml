@@ -5,125 +5,235 @@
       xmlns:p="primefaces">
 
 <h:head>
-    <title>Vehículos</title>
+    <title>CargaUY - Gestión de Vehículos</title>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+            margin: 0;
+            padding: 24px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+        }
+        .header-bar h1 {
+            margin: 0;
+            color: #1e3a8a;
+            font-size: 1.8rem;
+        }
+        .header-bar small {
+            color: #64748b;
+        }
+        .nav-links a {
+            margin-left: 16px;
+            text-decoration: none;
+            color: #1e3a8a;
+            font-weight: 500;
+        }
+        .nav-links a:hover {
+            text-decoration: underline;
+        }
+        .mb-4 {
+            margin-bottom: 20px;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .form-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .form-field label {
+            font-weight: 600;
+            color: #334155;
+            font-size: 0.9rem;
+        }
+        .form-field input[type="text"],
+        .form-field select {
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            background-color: #ffffff;
+            color: #1e293b;
+        }
+        .form-field input[type="text"]:focus,
+        .form-field select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .badge-habilitado { background-color: #dcfce7; color: #166534; }
+        .badge-inhabilitado { background-color: #fee2e2; color: #991b1b; }
+    </style>
 </h:head>
 
 <h:body>
+    <div class="container">
+        <div class="header-bar">
+            <div>
+                <h1>Gestión de Vehículos</h1>
+                <small>Administración de la flota de camiones y habilitaciones de transporte</small>
+            </div>
+            <div class="nav-links">
+                <a href="index.xhtml">Inicio</a>
+                <a href="GuiaDeViajeJSF.xhtml">Guías de Viaje</a>
+                <a href="ITV.xhtml">ITV</a>
+                <a href="PNC.xhtml">PNC</a>
+                <a href="infracciones.xhtml">Infracciones</a>
+            </div>
+        </div>
 
-    <h1>Gestión de Vehículos</h1>
+        <h:form id="form">
+            <p:messages id="mensajes" showDetail="true" closable="true"/>
 
-    <h:form id="form">
+            <p:panel header="#{VehiculoBean.editando ? 'Editar Vehículo' : 'Nuevo Vehículo'}" styleClass="mb-4">
+                <div class="form-grid">
+                    <div class="form-field">
+                        <h:outputLabel for="matricula" value="Matrícula: *"/>
+                        <h:inputText id="matricula" value="#{VehiculoBean.vehiculo.matricula}"/>
+                    </div>
 
-        <p:messages id="mensajes" showDetail="true"/>
+                    <div class="form-field">
+                        <h:outputLabel for="marca" value="Marca: *"/>
+                        <h:inputText id="marca" value="#{VehiculoBean.vehiculo.marca}"/>
+                    </div>
 
-        <h:outputLabel for="matricula" value="Matrícula:"/>
-        <h:inputText id="matricula" value="#{VehiculoBean.vehiculo.matricula}"/>
+                    <div class="form-field">
+                        <h:outputLabel for="modelo" value="Modelo: *"/>
+                        <h:inputText id="modelo" value="#{VehiculoBean.vehiculo.modelo}"/>
+                    </div>
 
-        <br/><br/>
+                    <div class="form-field">
+                        <h:outputLabel for="peso" value="Peso propio (Tara en kg): *"/>
+                        <h:inputText id="peso" value="#{VehiculoBean.vehiculo.peso}"/>
+                    </div>
 
-        <h:outputLabel for="marca" value="Marca:"/>
-        <h:inputText id="marca" value="#{VehiculoBean.vehiculo.marca}"/>
+                    <div class="form-field">
+                        <h:outputLabel for="capacidadCarga" value="Capacidad de Carga (kg): *"/>
+                        <h:inputText id="capacidadCarga" value="#{VehiculoBean.vehiculo.capacidadCarga}"/>
+                    </div>
 
-        <br/><br/>
-    
-        <h:outputLabel for="modelo" value="Modelo:"/>
-        <h:inputText id="modelo" value="#{VehiculoBean.vehiculo.modelo}"/>
+                    <div class="form-field">
+                        <h:outputLabel for="empresa" value="Empresa Titular: *"/>
+                        <h:selectOneMenu id="empresa"
+                                         value="#{VehiculoBean.empresaId}"
+                                         required="true"
+                                         requiredMessage="Debe seleccionar una empresa.">
+                            <f:selectItem itemLabel="Seleccione una empresa" itemValue="#{null}" noSelectionOption="true"/>
+                            <f:selectItems value="#{VehiculoBean.empresas}"
+                                           var="empresa"
+                                           itemValue="#{empresa.nroEmpresa}"
+                                           itemLabel="#{empresa.razonSocial}"/>
+                        </h:selectOneMenu>
+                    </div>
 
-        <br/><br/>
-        
-        <h:outputLabel for="peso" value="Peso:"/>
-        <h:inputText id="peso" value="#{VehiculoBean.vehiculo.peso}"/>
+                    <div class="form-field" style="justify-content: center;">
+                        <h:outputLabel for="estadoHabilitacion" value="Habilitación Administrativa:"/>
+                        <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+                            <h:selectBooleanCheckbox id="estadoHabilitacion" value="#{VehiculoBean.vehiculo.estadoHabilitacion}"/>
+                            <label for="form:estadoHabilitacion" style="font-weight: normal; cursor: pointer;">Vehículo habilitado para circular</label>
+                        </div>
+                    </div>
+                </div>
 
-        <br/><br/>
-        
-        <h:outputLabel for="capacidadCarga" value="Capacidad de carga:"/>
-        <h:inputText id="capacidadCarga" value="#{VehiculoBean.vehiculo.capacidadCarga}"/>
-        
-        <br/><br/>
+                <div style="margin-top: 16px;">
+                    <p:commandButton value="#{VehiculoBean.editando ? 'Actualizar' : 'Guardar'}"
+                                     action="#{VehiculoBean.guardar}"
+                                     process="@form"
+                                     update="@form"
+                                     style="margin-right: 10px;"/>
 
-        <h:outputLabel for="estadoHabilitacion" value="Estado de habilitación:"/>
-        <h:selectBooleanCheckbox id="estadoHabilitacion" value="#{VehiculoBean.vehiculo.estadoHabilitacion}"/>
-        
-        <br/><br/>
-        
-        <h:selectOneMenu id="empresa"
-                         value="#{VehiculoBean.empresaId}"
-                         required="true"
-                         requiredMessage="Debe seleccionar una empresa.">
-
-            <f:selectItem itemLabel="Seleccione una empresa" itemValue="#{null}" noSelectionOption="true"/>
-
-            <f:selectItems value="#{VehiculoBean.empresas}"
-                           var="empresa"
-                           itemValue="#{empresa.nroEmpresa}"
-                           itemLabel="#{empresa.razonSocial}"/>
-
-        </h:selectOneMenu>
-        
-        <br/><br/>
-
-        <p:commandButton value="#{VehiculoBean.editando ? 'Actualizar' : 'Guardar'}"
-                         action="#{VehiculoBean.guardar}"
-                         process="@form"
-                         update="@form"
-                         ajax="true"/>
-
-        <p:commandButton value="Cancelar"
-                         action="#{VehiculoBean.nuevo}"
-                         process="@this"
-                         update="@form"
-                         rendered="#{VehiculoBean.editando}"
-                         style="margin-left:10px; background-color:gray; border:none;"/>
-
-        <h3>Vehículos registrados</h3>
-
-        <p:dataTable id="tablaVehiculos"
-                     value="#{VehiculoBean.vehiculos}"
-                     var="v"
-                     emptyMessage="No hay vehículos registrados">
-
-            <p:column headerText="Matrícula">
-                <h:outputText value="#{v.matricula}"/>
-            </p:column>
-         
-            <p:column headerText="Marca">
-                <h:outputText value="#{v.marca}"/>
-            </p:column>
-
-            <p:column headerText="Modelo">
-                <h:outputText value="#{v.modelo}"/>
-            </p:column>
-
-            <p:column headerText="Peso">
-                <h:outputText value="#{v.peso}"/>
-            </p:column>
-
-            <p:column headerText="Capacidad de carga">
-                <h:outputText value="#{v.capacidadCarga}"/>
-            </p:column>
-          
-            <p:column headerText="Empresa">
-                <h:outputText value="#{v.empresa.razonSocial}"/>
-            </p:column>
-
-            <p:column headerText="Acciones" style="width:180px">
-                <div style="display:flex; flex-direction:row; gap:8px; align-items:center;">
-                    <p:commandButton value="Modificar"
-                                     action="#{VehiculoBean.editar(v)}"
-                                     process="@this"
-                                     update="@form"/>
-
-                    <p:commandButton value="Eliminar"
-                                     action="#{VehiculoBean.eliminar(v)}"
+                    <p:commandButton value="Cancelar"
+                                     action="#{VehiculoBean.nuevo}"
                                      process="@this"
                                      update="@form"
-                                     onclick="return confirm('¿Eliminar este vehículo?')"/>
+                                     rendered="#{VehiculoBean.editando}"
+                                     styleClass="ui-button-secondary"/>
                 </div>
-            </p:column>
+            </p:panel>
 
-        </p:dataTable>
+            <p:panel header="Vehículos Registrados">
+                <p:dataTable id="tablaVehiculos"
+                             value="#{VehiculoBean.vehiculos}"
+                             var="v"
+                             emptyMessage="No hay vehículos registrados"
+                             responsiveLayout="scroll">
 
-    </h:form>
+                    <p:column headerText="Matrícula" style="width: 120px; font-weight: bold;">
+                        <h:outputText value="#{v.matricula}"/>
+                    </p:column>
 
+                    <p:column headerText="Marca">
+                        <h:outputText value="#{v.marca}"/>
+                    </p:column>
+
+                    <p:column headerText="Modelo">
+                        <h:outputText value="#{v.modelo}"/>
+                    </p:column>
+
+                    <p:column headerText="Peso (kg)" style="width: 110px; text-align: right;">
+                        <h:outputText value="#{v.peso}"/>
+                    </p:column>
+
+                    <p:column headerText="Capacidad (kg)" style="width: 130px; text-align: right;">
+                        <h:outputText value="#{v.capacidadCarga}"/>
+                    </p:column>
+
+                    <p:column headerText="Empresa">
+                        <h:outputText value="#{v.empresa.razonSocial}"/>
+                    </p:column>
+
+                    <p:column headerText="Habilitación" style="width: 120px; text-align: center;">
+                        <span class="badge #{v.estadoHabilitacion ? 'badge-habilitado' : 'badge-inhabilitado'}">
+                            #{v.estadoHabilitacion ? 'HABILITADO' : 'INHABILITADO'}
+                        </span>
+                    </p:column>
+
+                    <p:column headerText="Acciones" style="width: 170px; text-align: center;">
+                        <div style="display: flex; gap: 8px; justify-content: center;">
+                            <p:commandButton value="Modificar"
+                                             action="#{VehiculoBean.editar(v)}"
+                                             process="@this"
+                                             update="@form"
+                                             icon="pi pi-pencil"/>
+
+                            <p:commandButton value="Eliminar"
+                                             action="#{VehiculoBean.eliminar(v)}"
+                                             process="@this"
+                                             update="@form"
+                                             onclick="return confirm('¿Eliminar este vehículo?')"
+                                             icon="pi pi-trash"
+                                             styleClass="ui-button-danger"/>
+                        </div>
+                    </p:column>
+                </p:dataTable>
+            </p:panel>
+        </h:form>
+    </div>
 </h:body>
 </html>

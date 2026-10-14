@@ -5,105 +5,199 @@
       xmlns:p="primefaces">
 
 <h:head>
-    <title>Inspección Técnica Vehicular</title>
+    <title>CargaUY - Inspección Técnica Vehicular (ITV)</title>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+            margin: 0;
+            padding: 24px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+        }
+        .header-bar h1 {
+            margin: 0;
+            color: #1e3a8a;
+            font-size: 1.8rem;
+        }
+        .header-bar small {
+            color: #64748b;
+        }
+        .nav-links a {
+            margin-left: 16px;
+            text-decoration: none;
+            color: #1e3a8a;
+            font-weight: 500;
+        }
+        .nav-links a:hover {
+            text-decoration: underline;
+        }
+        .mb-4 {
+            margin-bottom: 20px;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .form-field {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .form-field label {
+            font-weight: 600;
+            color: #334155;
+            font-size: 0.9rem;
+        }
+        .form-field select {
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            background-color: #ffffff;
+            color: #1e293b;
+        }
+        .form-field select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .badge-vigente { background-color: #dcfce7; color: #166534; }
+        .badge-vencido { background-color: #fee2e2; color: #991b1b; }
+    </style>
 </h:head>
 
 <h:body>
+    <div class="container">
+        <div class="header-bar">
+            <div>
+                <h1>Inspección Técnica Vehicular (ITV)</h1>
+                <small>Gestión y registro de certificaciones técnicas de la flota</small>
+            </div>
+            <div class="nav-links">
+                <a href="index.xhtml">Inicio</a>
+                <a href="VehiculoJSF.xhtml">Vehículos</a>
+                <a href="PNC.xhtml">PNC</a>
+                <a href="GuiaDeViajeJSF.xhtml">Guías de Viaje</a>
+                <a href="infracciones.xhtml">Infracciones</a>
+            </div>
+        </div>
 
-    <h1>Gestión de Inspecciones Vehiculares (ITV)</h1>
+        <h:form id="form">
+            <p:messages id="mensajes" showDetail="true" closable="true"/>
 
-    <h:form id="form">
+            <p:panel header="#{ITVBean.editando ? 'Editar Certificado ITV' : 'Nuevo Certificado ITV'}" styleClass="mb-4">
+                <div class="form-grid">
+                    <div class="form-field">
+                        <h:outputLabel for="vehiculo" value="Vehículo (Matrícula): *"/>
+                        <h:selectOneMenu id="vehiculo"
+                                         value="#{ITVBean.matricula}"
+                                         required="true"
+                                         requiredMessage="Debe seleccionar un vehículo obligatorio.">
+                            <f:selectItem itemLabel="Seleccione un vehículo" itemValue="#{null}" noSelectionOption="true"/>
+                            <f:selectItems value="#{ITVBean.vehiculos}"
+                                           var="v"
+                                           itemValue="#{v.matricula}"
+                                           itemLabel="#{v.matricula}"/>
+                        </h:selectOneMenu>
+                    </div>
 
-        <p:messages id="mensajes" showDetail="true"/>
+                    <div class="form-field">
+                        <h:outputLabel for="fechaVencimiento" value="Fecha de Vencimiento: *"/>
+                        <p:datePicker id="fechaVencimiento" 
+                                      value="#{ITVBean.itv.fechaVencimiento}"
+                                      pattern="dd/MM/yyyy"
+                                      required="true"
+                                      requiredMessage="La fecha de vencimiento es obligatoria."/>
+                    </div>
+                </div>
 
-        <h:outputLabel for="vehiculo" value="Vehículo (Matrícula):"/>
-        <br/>
-        <h:selectOneMenu id="vehiculo"
-                         value="#{ITVBean.matricula}"
-                         required="true"
-                         requiredMessage="Debe seleccionar un vehículo obligatorio.">
+                <div style="margin-top: 16px;">
+                    <p:commandButton value="#{ITVBean.editando ? 'Actualizar' : 'Guardar'}"
+                                     action="#{ITVBean.guardar}"
+                                     process="@form"
+                                     update="@form"
+                                     style="margin-right: 10px;"/>
 
-            <f:selectItem itemLabel="Seleccione un vehículo" itemValue="#{null}" noSelectionOption="true"/>
-
-            <f:selectItems value="#{ITVBean.vehiculos}"
-                           var="v"
-                           itemValue="#{v.matricula}"
-                           itemLabel="#{v.matricula}"/>
-
-        </h:selectOneMenu>
-        
-        <br/><br/>
-
-        <h:outputLabel for="fechaVencimiento" value="Fecha de vencimiento:"/>
-        <br/>
-        <!-- Componente integrado de forma nativa a la propiedad LocalDate de tu entidad -->
-        <p:datePicker id="fechaVencimiento" 
-                      value="#{ITVBean.itv.fechaVencimiento}"
-                      pattern="dd/MM/yyyy"
-                      required="true"
-                      requiredMessage="La fecha de vencimiento es obligatoria."/>
-
-        <br/><br/>
-
-        <p:commandButton value="#{ITVBean.editando ? 'Actualizar' : 'Guardar'}"
-                         action="#{ITVBean.guardar}"
-                         process="@form"
-                         update="@form"
-                         ajax="true"/>
-
-        <p:commandButton value="Cancelar"
-                         action="#{ITVBean.nuevo}"
-                         process="@this"
-                         update="@form"
-                         rendered="#{ITVBean.editando}"
-                         style="margin-left:10px; background-color:gray; border:none; color:white;"/>
-
-        <h3>Inspecciones (ITV) registradas</h3>
-
-        <p:dataTable id="tablaITVs"
-                     value="#{ITVBean.itvs}"
-                     var="t"
-                     emptyMessage="No hay ITVs registrados">
-
-            <!-- CORRECCIÓN: Se cambió t.id por t.nroCertificado para que coincida con tu clase Java -->
-            <p:column headerText="Nro Certificado">
-                <h:outputText value="#{t.nroCertificado}"/>
-            </p:column>
-         
-            <p:column headerText="Vehículo (Matrícula)">
-                <h:outputText value="#{t.vehiculo.matricula}"/>
-            </p:column>
-
-            <p:column headerText="Fecha de vencimiento">
-                <h:outputText value="#{t.fechaVencimiento}">
-                    <f:convertDateTime type="localDate" pattern="dd/MM/yyyy" />
-                </h:outputText>
-            </p:column>
-
-            <p:column headerText="Estado Vigencia">
-                <!-- CORRECCIÓN: Unificado al método directo isVigente() tanto en el texto como en el color -->
-                <h:outputText value="#{t.isVigente() ? 'Vigente' : 'Vencido'}" 
-                              style="font-weight: bold; color: #{t.isVigente() ? 'green' : 'red'};" />
-            </p:column>
-
-            <p:column headerText="Acciones" style="width:180px">
-                <div style="display:flex; flex-direction:row; gap:8px; align-items:center;">
-                    <p:commandButton value="Modificar"
-                                     action="#{ITVBean.editar(t)}"
-                                     process="@this"
-                                     update="@form"/>
-
-                    <p:commandButton value="Eliminar"
-                                     action="#{ITVBean.eliminar(t)}"
+                    <p:commandButton value="Cancelar"
+                                     action="#{ITVBean.nuevo}"
                                      process="@this"
                                      update="@form"
-                                     onclick="return confirm('¿Eliminar este registro de ITV?')"/>
+                                     rendered="#{ITVBean.editando}"
+                                     styleClass="ui-button-secondary"/>
                 </div>
-            </p:column>
+            </p:panel>
 
-        </p:dataTable>
+            <p:panel header="Inspecciones (ITV) Registradas">
+                <p:dataTable id="tablaITVs"
+                             value="#{ITVBean.itvs}"
+                             var="t"
+                             emptyMessage="No hay ITVs registrados"
+                             responsiveLayout="scroll">
 
-    </h:form>
+                    <p:column headerText="Nro Certificado" style="width: 140px; text-align: center;">
+                        <strong>##{t.nroCertificado}</strong>
+                    </p:column>
 
+                    <p:column headerText="Vehículo (Matrícula)" style="width: 180px;">
+                        <h:outputText value="#{t.vehiculo.matricula}"/>
+                    </p:column>
+
+                    <p:column headerText="Fecha de Vencimiento" style="width: 180px;">
+                        <h:outputText value="#{t.fechaVencimiento}">
+                            <f:convertDateTime type="localDate" pattern="dd/MM/yyyy" />
+                        </h:outputText>
+                    </p:column>
+
+                    <p:column headerText="Estado Vigencia" style="width: 140px; text-align: center;">
+                        <span class="badge #{t.isVigente() ? 'badge-vigente' : 'badge-vencido'}">
+                            #{t.isVigente() ? 'VIGENTE' : 'VENCIDO'}
+                        </span>
+                    </p:column>
+
+                    <p:column headerText="Acciones" style="width: 170px; text-align: center;">
+                        <div style="display: flex; gap: 8px; justify-content: center;">
+                            <p:commandButton value="Modificar"
+                                             action="#{ITVBean.editar(t)}"
+                                             process="@this"
+                                             update="@form"
+                                             icon="pi pi-pencil"/>
+
+                            <p:commandButton value="Eliminar"
+                                             action="#{ITVBean.eliminar(t)}"
+                                             process="@this"
+                                             update="@form"
+                                             onclick="return confirm('¿Eliminar este registro de ITV?')"
+                                             icon="pi pi-trash"
+                                             styleClass="ui-button-danger"/>
+                        </div>
+                    </p:column>
+                </p:dataTable>
+            </p:panel>
+        </h:form>
+    </div>
 </h:body>
 </html>
