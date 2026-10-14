@@ -192,7 +192,7 @@ class GestionEventosServiceTest {
     @Test
     @DisplayName("Debe obtener la guía asignada por choferId exitosamente")
     void testObtenerGuiaAsignadaPorChoferId() {
-        Vehiculo vehiculo = new Vehiculo(1234, "Volvo", "FH540", 8000, 30000, true, null);
+        Vehiculo vehiculo = new Vehiculo("1234", "Volvo", "FH540", 8000, 30000, true, null);
         Empresa empresa = new Empresa(101, "Transportes SA", "Trans SA", "Av Italia 1234");
         Chofer chofer = new Chofer("Juan Chofer", "juan@mail.com", LocalDate.of(1990, 1, 1), 12345678, "pass");
         chofer.setId(7);
@@ -213,7 +213,7 @@ class GestionEventosServiceTest {
         assertNotNull(resumen);
         assertEquals(1L, resumen.id());
         assertEquals("Montevideo", resumen.origen());
-        assertEquals(1234, resumen.vehiculoMatricula());
+        assertEquals("1234", resumen.vehiculoMatricula());
         assertEquals("Volvo FH540", resumen.vehiculoMarcaModelo());
         assertEquals(101, resumen.nroEmpresa());
         assertEquals("Transportes SA", resumen.empresaRazonSocial());

@@ -132,7 +132,6 @@
             <artifactId>mockito-junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
-
         <!-- RESTEasy para proveer RuntimeDelegate en tests unitarios JAX-RS -->
         <dependency>
             <groupId>org.jboss.resteasy</groupId>
@@ -140,7 +139,7 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- PrimeFaces para interfaz JSF (compatible con Maicol P2) -->
+        <!-- PrimeFaces para interfaz JSF -->
         <dependency>
             <groupId>org.primefaces</groupId>
             <artifactId>primefaces</artifactId>
@@ -148,6 +147,7 @@
             <classifier>jakarta</classifier>
         </dependency>
     </dependencies>
+    
 
     <build>
         <!-- Tell Maven that the resulting file should not have a file name containing the version -

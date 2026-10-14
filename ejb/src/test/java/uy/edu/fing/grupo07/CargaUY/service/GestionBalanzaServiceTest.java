@@ -53,7 +53,7 @@ class GestionBalanzaServiceTest {
     void setUp() {
         service = new GestionBalanzaServiceImpl(em, balanzaClient, fiscalizacionProducer);
 
-        vehiculoPrueba = new Vehiculo(123456, "Scania", "R450", 9000, 36000, true, null);
+        vehiculoPrueba = new Vehiculo("123456", "Scania", "R450", 9000, 36000, true, null);
         guiaPrueba = new GuiaDeViaje();
         guiaPrueba.setId(10L);
         guiaPrueba.setVehiculo(vehiculoPrueba);

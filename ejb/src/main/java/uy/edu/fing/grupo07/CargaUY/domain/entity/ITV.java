@@ -23,8 +23,8 @@ public class ITV implements Serializable {
     @Column(name = "fecha_vencimiento", nullable = false)
     private LocalDate fechaVencimiento;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "vehiculo_matricula", nullable = false, unique = true)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "vehiculo_matricula", nullable = false)
     private Vehiculo vehiculo;
 
     public ITV() {

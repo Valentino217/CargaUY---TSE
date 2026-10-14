@@ -18,6 +18,12 @@ public class Chofer extends Usuario {
 
     @OneToMany(mappedBy = "chofer")
     private List<GuiaDeViaje> guias = new ArrayList<>();
+    
+    //se agrega para la relacion muchos a muchos desde choferes a empresas
+    @ManyToMany(mappedBy = "choferes")
+    private List<Empresa> empresas = new ArrayList<>();
+
+    
 
     public Chofer() {
         super();
@@ -34,4 +40,13 @@ public class Chofer extends Usuario {
     public void setGuias(List<GuiaDeViaje> guias) {
         this.guias = guias;
     }
+    
+    public List<Empresa> getEmpresas() {
+        return empresas;
+    }
+
+    public void setEmpresas(List<Empresa> empresas) {
+        this.empresas = empresas;
+    }
 }
+

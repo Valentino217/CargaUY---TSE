@@ -59,7 +59,7 @@ class GestionInfraccionesServiceTest {
         guiaPrueba = new GuiaDeViaje();
         guiaPrueba.setId(100L);
 
-        Vehiculo vehiculo = new Vehiculo(987654, "Scania", "R450", 9000, 31000, true, null);
+        Vehiculo vehiculo = new Vehiculo("987654", "Scania", "R450", 9000, 31000, true, null);
         guiaPrueba.setVehiculo(vehiculo);
 
         Empresa empresa = new Empresa(50, "Logística del Sur SA", "LogiSur", "Ruta 1 km 25");

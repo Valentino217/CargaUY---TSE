@@ -122,8 +122,18 @@ public class MotorFiscalizacionImpl implements MotorFiscalizacionLocal {
             detalleFaltantes.append("El vehículo está administrativamente inhabilitado. ");
         }
 
-        ITV itv = vehiculo.getItv();
-        if (itv == null || !itv.isVigente()) {
+        boolean tieneItvVigente = false;
+        List<ITV> listaItv = vehiculo.getItv();
+        if (listaItv != null) {
+            for (ITV itv : listaItv) {
+                if (itv.isVigente()) {
+                    tieneItvVigente = true;
+                    break;
+                }
+            }
+        }
+
+        if (!tieneItvVigente) {
             detalleFaltantes.append("Inspección Técnica Vehicular (ITV) ausente o vencida. ");
         }
 

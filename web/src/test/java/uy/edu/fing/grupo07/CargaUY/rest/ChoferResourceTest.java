@@ -130,7 +130,7 @@ class ChoferResourceTest {
     void testObtenerGuiaAsignadaExitoso() {
         GuiaResumenDTO guia = new GuiaResumenDTO(
                 1L, LocalDate.now(), "Montevideo", "Rivera", "Forestal", 40.0f,
-                TipoEstado.EN_CURSO, 1, 1234, "Volvo FH", 100, "Trans SA", 5, "Carlos"
+                TipoEstado.EN_CURSO, 1, "1234", "Volvo FH", 100, "Trans SA", 5, "Carlos"
         );
         when(eventosService.obtenerGuiaAsignadaChofer(5, null)).thenReturn(guia);
 

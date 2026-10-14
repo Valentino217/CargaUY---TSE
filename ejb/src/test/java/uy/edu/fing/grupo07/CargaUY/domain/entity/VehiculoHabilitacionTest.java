@@ -17,7 +17,7 @@ class VehiculoHabilitacionTest {
     @BeforeEach
     void setUp() {
         empresa = new Empresa(1234, "Trans logistics S.A.", "TransLog", "Ruta 5 km 20");
-        vehiculo = new Vehiculo(1001, "Scania", "R450", 14000, 30000, true, empresa);
+        vehiculo = new Vehiculo("1001", "Scania", "R450", 14000, 30000, true, empresa);
     }
 
     @Test
@@ -27,7 +27,7 @@ class VehiculoHabilitacionTest {
         ITV itv = new ITV(LocalDate.now().plusMonths(3), vehiculo);
 
         vehiculo.getPncs().add(pnc);
-        vehiculo.setItv(itv);
+        vehiculo.getItv().add(itv);
 
         assertTrue(vehiculo.verificarHabilitacionVigente(),
                 "El vehículo debería estar habilitado con PNC e ITV vigentes");
@@ -40,7 +40,7 @@ class VehiculoHabilitacionTest {
         ITV itv = new ITV(LocalDate.now().plusMonths(3), vehiculo);
 
         vehiculo.getPncs().add(pnc);
-        vehiculo.setItv(itv);
+        vehiculo.getItv().add(itv);
 
         assertFalse(vehiculo.verificarHabilitacionVigente(),
                 "El vehículo NO debería estar habilitado con PNC vencido");
@@ -53,7 +53,7 @@ class VehiculoHabilitacionTest {
         ITV itv = new ITV(LocalDate.now().minusDays(1), vehiculo);
 
         vehiculo.getPncs().add(pnc);
-        vehiculo.setItv(itv);
+        vehiculo.getItv().add(itv);
 
         assertFalse(vehiculo.verificarHabilitacionVigente(),
                 "El vehículo NO debería estar habilitado con ITV vencido");
@@ -67,7 +67,7 @@ class VehiculoHabilitacionTest {
         ITV itv = new ITV(LocalDate.now().plusMonths(3), vehiculo);
 
         vehiculo.getPncs().add(pnc);
-        vehiculo.setItv(itv);
+        vehiculo.getItv().add(itv);
 
         assertFalse(vehiculo.verificarHabilitacionVigente(),
                 "El vehículo con estado administrativo falso no debe estar habilitado");

@@ -26,7 +26,7 @@ class GuiaDeViajeTest {
     @DisplayName("Debe vincular puntos de tracking, pesadas y eventos correctamente")
     void testAgregadosGuiaDeViaje() {
         Empresa empresa = new Empresa(999, "Logistica del Sur", "LogSur", "Montevideo");
-        Vehiculo vehiculo = new Vehiculo(555, "Volvo", "FH", 12000, 28000, true, empresa);
+        Vehiculo vehiculo = new Vehiculo("555", "Volvo", "FH", 12000, 28000, true, empresa);
         Chofer chofer = new Chofer("Esteban Quito", "esteban@logsur.uy",
                 LocalDate.of(1992, 3, 10), 51234567, "pass");
 

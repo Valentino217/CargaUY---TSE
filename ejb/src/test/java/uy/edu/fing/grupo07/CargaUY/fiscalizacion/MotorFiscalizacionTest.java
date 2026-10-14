@@ -85,9 +85,9 @@ class MotorFiscalizacionTest {
         GuiaDeViaje guia = new GuiaDeViaje();
         guia.setId(guiaId);
 
-        Vehiculo vehiculo = new Vehiculo(1001, "Scania", "R450", 10000, 30000, true, null);
+        Vehiculo vehiculo = new Vehiculo("1001", "Scania", "R450", 10000, 30000, true, null);
         ITV itvVigente = new ITV(LocalDate.now().plusMonths(6), vehiculo);
-        vehiculo.setItv(itvVigente);
+        vehiculo.setItv(List.of(itvVigente));
         PNC pncVigente = new PNC(LocalDate.now().plusMonths(6), vehiculo);
         vehiculo.getPncs().add(pncVigente);
         guia.setVehiculo(vehiculo);
@@ -124,9 +124,9 @@ class MotorFiscalizacionTest {
         GuiaDeViaje guia = new GuiaDeViaje();
         guia.setId(guiaId);
 
-        Vehiculo vehiculo = new Vehiculo(1002, "Volvo", "FH", 10000, 30000, true, null);
+        Vehiculo vehiculo = new Vehiculo("1002", "Volvo", "FH", 10000, 30000, true, null);
         ITV itvVigente = new ITV(LocalDate.now().plusMonths(6), vehiculo);
-        vehiculo.setItv(itvVigente);
+        vehiculo.setItv(List.of(itvVigente));
         PNC pncVigente = new PNC(LocalDate.now().plusMonths(6), vehiculo);
         vehiculo.getPncs().add(pncVigente);
         guia.setVehiculo(vehiculo);
@@ -155,9 +155,9 @@ class MotorFiscalizacionTest {
         GuiaDeViaje guia = new GuiaDeViaje();
         guia.setId(guiaId);
 
-        Vehiculo vehiculo = new Vehiculo(1003, "Mercedes", "Actros", 10000, 30000, true, null);
+        Vehiculo vehiculo = new Vehiculo("1003", "Mercedes", "Actros", 10000, 30000, true, null);
         ITV itvVigente = new ITV(LocalDate.now().plusMonths(6), vehiculo);
-        vehiculo.setItv(itvVigente);
+        vehiculo.setItv(List.of(itvVigente));
         PNC pncVigente = new PNC(LocalDate.now().plusMonths(6), vehiculo);
         vehiculo.getPncs().add(pncVigente);
         guia.setVehiculo(vehiculo);
@@ -183,9 +183,9 @@ class MotorFiscalizacionTest {
         GuiaDeViaje guia = new GuiaDeViaje();
         guia.setId(guiaId);
 
-        Vehiculo vehiculo = new Vehiculo(1004, "Scania", "P310", 8000, 20000, true, null);
+        Vehiculo vehiculo = new Vehiculo("1004", "Scania", "P310", 8000, 20000, true, null);
         ITV itvVencida = new ITV(LocalDate.now().minusDays(10), vehiculo);
-        vehiculo.setItv(itvVencida);
+        vehiculo.setItv(List.of(itvVencida));
         guia.setVehiculo(vehiculo);
 
         when(em.find(GuiaDeViaje.class, guiaId)).thenReturn(guia);
@@ -216,9 +216,9 @@ class MotorFiscalizacionTest {
         GuiaDeViaje guia = new GuiaDeViaje();
         guia.setId(guiaId);
 
-        Vehiculo vehiculo = new Vehiculo(1005, "Scania", "R450", 10000, 30000, true, null);
+        Vehiculo vehiculo = new Vehiculo("1005", "Scania", "R450", 10000, 30000, true, null);
         ITV itvVigente = new ITV(LocalDate.now().plusMonths(6), vehiculo);
-        vehiculo.setItv(itvVigente);
+        vehiculo.setItv(List.of(itvVigente));
         PNC pncVigente = new PNC(LocalDate.now().plusMonths(6), vehiculo);
         vehiculo.getPncs().add(pncVigente);
         guia.setVehiculo(vehiculo);

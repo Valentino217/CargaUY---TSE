@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:p="primefaces">
+
+<h:head>
+    <title>Inspección Técnica Vehicular</title>
+</h:head>
+
+<h:body>
+
+    <h1>Gestión de Inspecciones Vehiculares (ITV)</h1>
+
+    <h:form id="form">
+
+        <p:messages id="mensajes" showDetail="true"/>
+
+        <h:outputLabel for="vehiculo" value="Vehículo (Matrícula):"/>
+        <br/>
+        <h:selectOneMenu id="vehiculo"
+                         value="#{ITVBean.matricula}"
+                         required="true"
+                         requiredMessage="Debe seleccionar un vehículo obligatorio.">
+
+            <f:selectItem itemLabel="Seleccione un vehículo" itemValue="#{null}" noSelectionOption="true"/>
+
+            <f:selectItems value="#{ITVBean.vehiculos}"
+                           var="v"
+                           itemValue="#{v.matricula}"
+                           itemLabel="#{v.matricula}"/>
+
+        </h:selectOneMenu>
+        
+        <br/><br/>
+
+        <h:outputLabel for="fechaVencimiento" value="Fecha de vencimiento:"/>
+        <br/>
+        <!-- Componente integrado de forma nativa a la propiedad LocalDate de tu entidad -->
+        <p:datePicker id="fechaVencimiento" 
+                      value="#{ITVBean.itv.fechaVencimiento}"
+                      pattern="dd/MM/yyyy"
+                      required="true"
+                      requiredMessage="La fecha de vencimiento es obligatoria."/>
+
+        <br/><br/>
+
+        <p:commandButton value="#{ITVBean.editando ? 'Actualizar' : 'Guardar'}"
+                         action="#{ITVBean.guardar}"
+                         process="@form"
+                         update="@form"
+                         ajax="true"/>
+
+        <p:commandButton value="Cancelar"
+                         action="#{ITVBean.nuevo}"
+                         process="@this"
+                         update="@form"
+                         rendered="#{ITVBean.editando}"
+                         style="margin-left:10px; background-color:gray; border:none; color:white;"/>
+
+        <h3>Inspecciones (ITV) registradas</h3>
+
+        <p:dataTable id="tablaITVs"
+                     value="#{ITVBean.itvs}"
+                     var="t"
+                     emptyMessage="No hay ITVs registrados">
+
+            <!-- CORRECCIÓN: Se cambió t.id por t.nroCertificado para que coincida con tu clase Java -->
+            <p:column headerText="Nro Certificado">
+                <h:outputText value="#{t.nroCertificado}"/>
+            </p:column>
+         
+            <p:column headerText="Vehículo (Matrícula)">
+                <h:outputText value="#{t.vehiculo.matricula}"/>
+            </p:column>
+
+            <p:column headerText="Fecha de vencimiento">
+                <h:outputText value="#{t.fechaVencimiento}">
+                    <f:convertDateTime type="localDate" pattern="dd/MM/yyyy" />
+                </h:outputText>
+            </p:column>
+
+            <p:column headerText="Estado Vigencia">
+                <!-- CORRECCIÓN: Unificado al método directo isVigente() tanto en el texto como en el color -->
+                <h:outputText value="#{t.isVigente() ? 'Vigente' : 'Vencido'}" 
+                              style="font-weight: bold; color: #{t.isVigente() ? 'green' : 'red'};" />
+            </p:column>
+
+            <p:column headerText="Acciones" style="width:180px">
+                <div style="display:flex; flex-direction:row; gap:8px; align-items:center;">
+                    <p:commandButton value="Modificar"
+                                     action="#{ITVBean.editar(t)}"
+                                     process="@this"
+                                     update="@form"/>
+
+                    <p:commandButton value="Eliminar"
+                                     action="#{ITVBean.eliminar(t)}"
+                                     process="@this"
+                                     update="@form"
+                                     onclick="return confirm('¿Eliminar este registro de ITV?')"/>
+                </div>
+            </p:column>
+
+        </p:dataTable>
+
+    </h:form>
+
+</h:body>
+</html>

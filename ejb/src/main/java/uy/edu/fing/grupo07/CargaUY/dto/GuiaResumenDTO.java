@@ -17,7 +17,7 @@ public record GuiaResumenDTO(
         float volumenCarga,
         TipoEstado estado,
         int version,
-        Integer vehiculoMatricula,
+        String vehiculoMatricula,
         String vehiculoMarcaModelo,
         Integer nroEmpresa,
         String empresaRazonSocial,

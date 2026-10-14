@@ -53,11 +53,11 @@ public class GuiaDeViaje implements Serializable {
     private Empresa empresa;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "vehiculo_matricula", nullable = false)
+    @JoinColumn(name = "vehiculo_matricula", nullable = true)
     private Vehiculo vehiculo;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "chofer_id", nullable = false)
+    @JoinColumn(name = "chofer_id", nullable = true)
     private Chofer chofer;
 
     @ManyToMany
