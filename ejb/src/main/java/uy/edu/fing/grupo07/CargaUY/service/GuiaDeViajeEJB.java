@@ -132,7 +132,21 @@ public class GuiaDeViajeEJB implements GuiaDeViajeEJBLocal {
     //buscar guia por id
     @Override
     public GuiaDeViaje buscarGuias(Long id) {
-        return em.find(GuiaDeViaje.class, id);
+        if (id == null) {
+            return null;
+        }
+        List<GuiaDeViaje> list = em.createQuery(
+            "SELECT g FROM GuiaDeViaje g " +
+            "LEFT JOIN FETCH g.empresa " +
+            "LEFT JOIN FETCH g.vehiculo " +
+            "LEFT JOIN FETCH g.chofer " +
+            "WHERE g.id = :id",
+            GuiaDeViaje.class
+        )
+        .setParameter("id", id)
+        .getResultList();
+
+        return list.isEmpty() ? null : list.get(0);
     }
 
 }

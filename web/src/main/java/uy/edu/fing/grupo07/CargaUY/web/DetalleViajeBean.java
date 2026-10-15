@@ -271,13 +271,63 @@ public class DetalleViajeBean implements Serializable {
         if (guia == null) {
             return "";
         }
-        String vehiculoInfo = (guia.getVehiculo() != null) ? guia.getVehiculo().getMatricula() : "Sin vehículo";
+        String vehiculoInfo = "Sin vehículo";
+        try {
+            if (guia.getVehiculo() != null && guia.getVehiculo().getMatricula() != null) {
+                vehiculoInfo = guia.getVehiculo().getMatricula();
+            }
+        } catch (Throwable e) {
+            vehiculoInfo = "Sin vehículo";
+        }
         return String.format("Guía #%d - %s a %s (%s) [%s]",
                 guia.getId(),
                 guia.getOrigen() != null ? guia.getOrigen() : "-",
                 guia.getDestino() != null ? guia.getDestino() : "-",
                 vehiculoInfo,
                 guia.getEstado() != null ? guia.getEstado().name() : "N/A");
+    }
+
+    public String getChoferNombreCompleto() {
+        if (guiaActual == null) {
+            return "No asignado";
+        }
+        try {
+            if (guiaActual.getChofer() != null && guiaActual.getChofer().getNombre() != null) {
+                String ciInfo = (guiaActual.getChofer().getCi() > 0) ? " (CI: " + guiaActual.getChofer().getCi() + ")" : "";
+                return guiaActual.getChofer().getNombre() + ciInfo;
+            }
+        } catch (Throwable e) {
+            LOGGER.log(Level.FINE, "No se pudo resolver chofer de forma eager: {0}", e.getMessage());
+        }
+        return "No asignado";
+    }
+
+    public String getVehiculoMatricula() {
+        if (guiaActual == null) {
+            return "No asignado";
+        }
+        try {
+            if (guiaActual.getVehiculo() != null && guiaActual.getVehiculo().getMatricula() != null) {
+                return guiaActual.getVehiculo().getMatricula();
+            }
+        } catch (Throwable e) {
+            LOGGER.log(Level.FINE, "No se pudo resolver vehiculo de forma eager: {0}", e.getMessage());
+        }
+        return "No asignado";
+    }
+
+    public String getEmpresaRazonSocial() {
+        if (guiaActual == null) {
+            return "-";
+        }
+        try {
+            if (guiaActual.getEmpresa() != null && guiaActual.getEmpresa().getRazonSocial() != null) {
+                return guiaActual.getEmpresa().getRazonSocial();
+            }
+        } catch (Throwable e) {
+            LOGGER.log(Level.FINE, "No se pudo resolver empresa de forma eager: {0}", e.getMessage());
+        }
+        return "-";
     }
 
     /**

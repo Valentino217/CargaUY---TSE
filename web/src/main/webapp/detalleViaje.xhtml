@@ -220,10 +220,10 @@
                     <div class="stat-card success">
                         <div class="stat-lbl">Vehículo y Chofer</div>
                         <div class="stat-val" style="font-size: 1.15rem; color: #1e293b;">
-                            Matrícula: #{detalleViajeBean.guiaActual.vehiculo != null ? detalleViajeBean.guiaActual.vehiculo.matricula : 'No asignado'}
+                            Matrícula: #{detalleViajeBean.vehiculoMatricula}
                         </div>
                         <div class="stat-sub">
-                            Chofer: #{detalleViajeBean.guiaActual.chofer != null ? detalleViajeBean.guiaActual.chofer.nombre.concat(' ').concat(detalleViajeBean.guiaActual.chofer.apellido) : 'No asignado'}
+                            Chofer: #{detalleViajeBean.choferNombreCompleto}
                         </div>
                     </div>
 

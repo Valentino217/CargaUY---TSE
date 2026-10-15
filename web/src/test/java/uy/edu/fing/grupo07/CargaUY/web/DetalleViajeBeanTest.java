@@ -213,4 +213,32 @@ class DetalleViajeBeanTest {
         assertEquals("badge badge-INICIO", bean.obtenerClaseBadgeEvento(TipoEvento.INICIO));
         assertEquals("badge badge-otro", bean.obtenerClaseBadgeEvento(null));
     }
+
+    @Test
+    @DisplayName("getters seguros de chofer, vehiculo y empresa manejan nulos sin lanzar excepcion")
+    void testGettersSegurosManejanNulos() {
+        bean.setGuiaActual(null);
+        assertEquals("No asignado", bean.getChoferNombreCompleto());
+        assertEquals("No asignado", bean.getVehiculoMatricula());
+        assertEquals("-", bean.getEmpresaRazonSocial());
+
+        GuiaDeViaje guia = new GuiaDeViaje();
+        uy.edu.fing.grupo07.CargaUY.domain.entity.Chofer chofer = new uy.edu.fing.grupo07.CargaUY.domain.entity.Chofer();
+        chofer.setNombre("Carlos Pereira");
+        chofer.setCi(12345678);
+        guia.setChofer(chofer);
+
+        Vehiculo v = new Vehiculo();
+        v.setMatricula("STP 1234");
+        guia.setVehiculo(v);
+
+        uy.edu.fing.grupo07.CargaUY.domain.entity.Empresa emp = new uy.edu.fing.grupo07.CargaUY.domain.entity.Empresa();
+        emp.setRazonSocial("TransLog S.A.");
+        guia.setEmpresa(emp);
+
+        bean.setGuiaActual(guia);
+        assertEquals("Carlos Pereira (CI: 12345678)", bean.getChoferNombreCompleto());
+        assertEquals("STP 1234", bean.getVehiculoMatricula());
+        assertEquals("TransLog S.A.", bean.getEmpresaRazonSocial());
+    }
 }
