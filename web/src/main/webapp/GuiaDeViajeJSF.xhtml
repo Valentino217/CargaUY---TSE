@@ -105,7 +105,7 @@
                 <a href="VehiculoJSF.xhtml">Vehículos</a>
                 <a href="infracciones.xhtml">Infracciones</a>
                 <a href="dashboard.xhtml">Dashboard</a>
-                <a href="detalle-viaje">Tracking</a>
+                <a href="detalleViaje.xhtml">Tracking</a>
             </div>
         </div>
 
@@ -248,8 +248,13 @@
                         <span class="badge badge-#{g.estado}">#{g.estado}</span>
                     </p:column>
 
-                    <p:column headerText="Acciones" style="width: 170px; text-align: center;">
+                    <p:column headerText="Acciones" style="width: 220px; text-align: center;">
                         <div style="display: flex; gap: 8px; justify-content: center;">
+                            <p:button icon="pi pi-compass"
+                                      title="Ver Tracking y Eventos"
+                                      href="detalleViaje.xhtml?guiaId=#{g.id}"
+                                      styleClass="ui-button-info"/>
+
                             <p:commandButton value="Modificar"
                                              action="#{GuiaDeViajeBean.editar(g)}"
                                              process="@this"

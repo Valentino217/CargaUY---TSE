@@ -83,6 +83,7 @@
             </div>
             <div class="nav-links">
                 <a href="infracciones.xhtml">Volver a Bandeja</a>
+                <a href="detalleViaje.xhtml">Tracking</a>
                 <a href="dashboard.xhtml">Dashboard</a>
                 <a href="index.xhtml">Inicio</a>
             </div>
@@ -120,7 +121,8 @@
                         <h:panelGroup>
                             <strong>Guía de Viaje: </strong>
                             <br/>
-                            <h:outputText value="#{detalleInfraccionBean.infraccion.guiaId()}"/>
+                            <h:outputText value="##{detalleInfraccionBean.infraccion.guiaId()} "/>
+                            <a href="detalleViaje.xhtml?guiaId=#{detalleInfraccionBean.infraccion.guiaId()}" target="_blank" style="color: #1e3a8a; font-weight: 500; font-size: 0.85rem;">(Ver Tracking)</a>
                         </h:panelGroup>
 
                         <h:panelGroup>
