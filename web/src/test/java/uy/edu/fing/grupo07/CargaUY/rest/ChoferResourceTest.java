@@ -207,4 +207,37 @@ class ChoferResourceTest {
 
         assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), resp.getStatus());
     }
+
+    @Test
+    @DisplayName("GET /guias con choferId válido debe retornar 200 OK y la lista de guías")
+    void testListarGuiasChoferExitoso() {
+        GuiaResumenDTO guia = new GuiaResumenDTO(
+                1L, LocalDate.now(), "Montevideo", "Rivera", "Forestal", 45f,
+                TipoEstado.EN_CURSO, 0, "STP 1234", "Scania R450", 10, "Empresa 1", 5, "Juan"
+        );
+        when(eventosService.listarGuiasChofer(5, null, TipoEstado.EN_CURSO)).thenReturn(List.of(guia));
+
+        Response resp = resource.listarGuiasChofer(5, null, "EN_CURSO");
+
+        assertEquals(Response.Status.OK.getStatusCode(), resp.getStatus());
+        assertNotNull(resp.getEntity());
+        @SuppressWarnings("unchecked")
+        List<GuiaResumenDTO> list = (List<GuiaResumenDTO>) resp.getEntity();
+        assertEquals(1, list.size());
+        assertEquals(1L, list.get(0).id());
+    }
+
+    @Test
+    @DisplayName("GET /guias sin choferId ni ci debe retornar 400 Bad Request")
+    void testListarGuiasChoferParametrosNulos() {
+        Response resp = resource.listarGuiasChofer(null, null, null);
+        assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), resp.getStatus());
+    }
+
+    @Test
+    @DisplayName("GET /guias con estado inválido debe retornar 400 Bad Request")
+    void testListarGuiasChoferEstadoInvalido() {
+        Response resp = resource.listarGuiasChofer(5, null, "ESTADO_INVENTADO");
+        assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), resp.getStatus());
+    }
 }

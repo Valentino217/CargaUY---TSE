@@ -109,6 +109,36 @@ public class ChoferResource {
     }
 
     /**
+     * Retorna todas las guías asignadas a un chofer, con filtro opcional por estado (SIN_INICIAR, EN_CURSO, FINALIZADO).
+     */
+    @GET
+    @Path("/guias")
+    public Response listarGuiasChofer(
+            @QueryParam("choferId") Integer choferId,
+            @QueryParam("ci") Integer ci,
+            @QueryParam("estado") String estado) {
+        if (choferId == null && ci == null) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(Collections.singletonMap("error", "Debe indicar choferId o ci como parámetro de consulta."))
+                    .build();
+        }
+
+        uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado tipoEstado = null;
+        if (estado != null && !estado.isBlank()) {
+            try {
+                tipoEstado = uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado.valueOf(estado.trim().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .entity(Collections.singletonMap("error", "Estado no válido. Valores permitidos: SIN_INICIAR, EN_CURSO, FINALIZADO."))
+                        .build();
+            }
+        }
+
+        List<uy.edu.fing.grupo07.CargaUY.dto.GuiaResumenDTO> guias = eventosService.listarGuiasChofer(choferId, ci, tipoEstado);
+        return Response.ok(guias).build();
+    }
+
+    /**
      * Reporta un incidente en ruta asociado a la guía del chofer.
      */
     @POST

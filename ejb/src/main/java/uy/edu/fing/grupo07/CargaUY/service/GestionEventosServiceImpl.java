@@ -75,6 +75,13 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
             evento.setIncidente(incidente);
         }
 
+        // Transición de estado de la guía de viaje según los hitos de inicio y fin
+        if (dto.tipo() == TipoEvento.INICIO) {
+            guia.setEstado(TipoEstado.EN_CURSO);
+        } else if (dto.tipo() == TipoEvento.FIN) {
+            guia.setEstado(TipoEstado.FINALIZADO);
+        }
+
         em.persist(evento);
         return evento;
     }
@@ -180,7 +187,59 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
             return null;
         }
 
-        GuiaDeViaje guia = resultados.get(0);
+        return mapearAGuiaResumenDTO(resultados.get(0));
+    }
+
+    @Override
+    public List<GuiaResumenDTO> listarGuiasChofer(Integer choferId, Integer ci, TipoEstado estado) {
+        if (choferId == null && ci == null) {
+            throw new BusinessException("Debe indicar el choferId o la cédula (ci) del chofer.");
+        }
+
+        StringBuilder jpql = new StringBuilder(
+                "SELECT g FROM GuiaDeViaje g " +
+                "JOIN FETCH g.chofer " +
+                "LEFT JOIN FETCH g.empresa " +
+                "LEFT JOIN FETCH g.vehiculo " +
+                "WHERE 1=1 "
+        );
+
+        if (choferId != null) {
+            jpql.append("AND g.chofer.id = :choferId ");
+        } else {
+            jpql.append("AND g.chofer.ci = :ci ");
+        }
+
+        if (estado != null) {
+            jpql.append("AND g.estado = :estado ");
+        }
+
+        jpql.append("ORDER BY g.fecha DESC, g.id DESC");
+
+        TypedQuery<GuiaDeViaje> q = em.createQuery(jpql.toString(), GuiaDeViaje.class);
+
+        if (choferId != null) {
+            q.setParameter("choferId", choferId);
+        } else {
+            q.setParameter("ci", ci);
+        }
+
+        if (estado != null) {
+            q.setParameter("estado", estado);
+        }
+
+        List<GuiaDeViaje> guias = q.getResultList();
+        List<GuiaResumenDTO> dtos = new ArrayList<>();
+        for (GuiaDeViaje g : guias) {
+            dtos.add(mapearAGuiaResumenDTO(g));
+        }
+        return dtos;
+    }
+
+    private GuiaResumenDTO mapearAGuiaResumenDTO(GuiaDeViaje guia) {
+        if (guia == null) {
+            return null;
+        }
         return new GuiaResumenDTO(
                 guia.getId(),
                 guia.getFecha(),

@@ -303,4 +303,49 @@ class GestionEventosServiceTest {
         );
         assertThrows(BusinessException.class, () -> service.reportarIncidente(sinDescripcion));
     }
+
+    @Test
+    @DisplayName("guardarEvento con tipo INICIO transiciona la guía a EN_CURSO")
+    void testGuardarEventoInicioCambiaEstadoGuiaAEnCurso() {
+        guiaPrueba.setEstado(TipoEstado.SIN_INICIAR);
+        when(em.createQuery(anyString(), eq(Long.class))).thenReturn(queryCount);
+        when(queryCount.setParameter(eq("uuid"), anyString())).thenReturn(queryCount);
+        when(queryCount.getSingleResult()).thenReturn(0L);
+        when(em.find(GuiaDeViaje.class, 1L)).thenReturn(guiaPrueba);
+
+        EventoViajeDTO dto = new EventoViajeDTO("uuid-ini", LocalDateTime.now(), TipoEvento.INICIO, -34.9, -56.1, 1L, null);
+        service.guardarEvento(dto);
+
+        assertEquals(TipoEstado.EN_CURSO, guiaPrueba.getEstado());
+    }
+
+    @Test
+    @DisplayName("guardarEvento con tipo FIN transiciona la guía a FINALIZADO")
+    void testGuardarEventoFinCambiaEstadoGuiaAFinalizado() {
+        guiaPrueba.setEstado(TipoEstado.EN_CURSO);
+        when(em.createQuery(anyString(), eq(Long.class))).thenReturn(queryCount);
+        when(queryCount.setParameter(eq("uuid"), anyString())).thenReturn(queryCount);
+        when(queryCount.getSingleResult()).thenReturn(0L);
+        when(em.find(GuiaDeViaje.class, 1L)).thenReturn(guiaPrueba);
+
+        EventoViajeDTO dto = new EventoViajeDTO("uuid-fin", LocalDateTime.now(), TipoEvento.FIN, -31.3, -55.5, 1L, null);
+        service.guardarEvento(dto);
+
+        assertEquals(TipoEstado.FINALIZADO, guiaPrueba.getEstado());
+    }
+
+    @Test
+    @DisplayName("listarGuiasChofer retorna lista de GuiaResumenDTO y valida parámetros")
+    void testListarGuiasChofer() {
+        assertThrows(BusinessException.class, () -> service.listarGuiasChofer(null, null, null));
+
+        when(em.createQuery(anyString(), eq(GuiaDeViaje.class))).thenReturn(queryGuia);
+        when(queryGuia.setParameter(eq("choferId"), eq(10))).thenReturn(queryGuia);
+        when(queryGuia.getResultList()).thenReturn(List.of(guiaPrueba));
+
+        List<GuiaResumenDTO> list = service.listarGuiasChofer(10, null, null);
+        assertNotNull(list);
+        assertEquals(1, list.size());
+        assertEquals(1L, list.get(0).id());
+    }
 }

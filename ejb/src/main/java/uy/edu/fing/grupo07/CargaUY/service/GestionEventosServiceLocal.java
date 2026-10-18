@@ -37,6 +37,15 @@ public interface GestionEventosServiceLocal {
     uy.edu.fing.grupo07.CargaUY.dto.GuiaResumenDTO obtenerGuiaAsignadaChofer(Integer choferId, Integer ci);
 
     /**
+     * Retorna todas las guías de viaje asignadas a un chofer, con filtro opcional por estado.
+     */
+    List<uy.edu.fing.grupo07.CargaUY.dto.GuiaResumenDTO> listarGuiasChofer(
+            Integer choferId,
+            Integer ci,
+            uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado estado
+    );
+
+    /**
      * Registra un incidente en ruta asociado a un evento de tipo INCIDENTE.
      */
     EventoViajeDTO reportarIncidente(uy.edu.fing.grupo07.CargaUY.dto.ReportarIncidenteDTO dto);
