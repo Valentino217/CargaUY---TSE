@@ -150,16 +150,16 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
 
         StringBuilder jpql = new StringBuilder(
                 "SELECT g FROM GuiaDeViaje g " +
-                "JOIN FETCH g.chofer c " +
-                "JOIN FETCH g.empresa e " +
-                "JOIN FETCH g.vehiculo v " +
+                "JOIN FETCH g.chofer " +
+                "LEFT JOIN FETCH g.empresa " +
+                "LEFT JOIN FETCH g.vehiculo " +
                 "WHERE (g.estado = :enCurso OR g.estado = :sinIniciar) "
         );
 
         if (choferId != null) {
-            jpql.append("AND c.id = :choferId ");
+            jpql.append("AND g.chofer.id = :choferId ");
         } else {
-            jpql.append("AND c.ci = :ci ");
+            jpql.append("AND g.chofer.ci = :ci ");
         }
 
         jpql.append("ORDER BY CASE WHEN g.estado = :enCurso THEN 1 ELSE 2 END, g.id DESC");
