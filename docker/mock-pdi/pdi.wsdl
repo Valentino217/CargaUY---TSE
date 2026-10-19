@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://schemas.xmlsoap.org/wsdl/"
+ xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+ xmlns:wsaw="http://www.w3.org/2006/05/addressing/wsdl"
+ xmlns:tns="http://pdi.dnic.gub.uy/" xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+ targetNamespace="http://pdi.dnic.gub.uy/" name="PdiService">
+ <types><xsd:schema targetNamespace="http://pdi.dnic.gub.uy/">
+  <xsd:element name="consultarCiudadano"><xsd:complexType><xsd:sequence>
+   <xsd:element name="ci" type="xsd:int"/>
+  </xsd:sequence></xsd:complexType></xsd:element>
+  <xsd:element name="consultarCiudadanoResponse"><xsd:complexType><xsd:sequence>
+   <xsd:element name="ci" type="xsd:int"/><xsd:element name="nombre" type="xsd:string"/>
+   <xsd:element name="apellido" type="xsd:string"/><xsd:element name="fechaNacimiento" type="xsd:string"/>
+   <xsd:element name="vigente" type="xsd:boolean"/>
+  </xsd:sequence></xsd:complexType></xsd:element>
+  <xsd:element name="CiudadanoNoEncontrado"><xsd:complexType><xsd:sequence>
+   <xsd:element name="ci" type="xsd:int"/>
+  </xsd:sequence></xsd:complexType></xsd:element>
+  <xsd:element name="ContratoInvalido"><xsd:complexType><xsd:sequence>
+   <xsd:element name="mensaje" type="xsd:string"/>
+  </xsd:sequence></xsd:complexType></xsd:element>
+ </xsd:schema></types>
+ <message name="Entrada"><part name="parameters" element="tns:consultarCiudadano"/></message>
+ <message name="Salida"><part name="parameters" element="tns:consultarCiudadanoResponse"/></message>
+ <message name="NoEncontrado"><part name="fault" element="tns:CiudadanoNoEncontrado"/></message>
+ <message name="Invalido"><part name="fault" element="tns:ContratoInvalido"/></message>
+ <portType name="PdiPortType"><operation name="consultarCiudadano">
+  <input message="tns:Entrada" wsaw:Action="urn:cargauy:pdi:consultarCiudadano"/>
+  <output message="tns:Salida" wsaw:Action="urn:cargauy:pdi:consultarCiudadanoResponse"/>
+  <fault name="NoEncontrado" message="tns:NoEncontrado"
+   wsaw:Action="http://www.w3.org/2005/08/addressing/fault"/>
+  <fault name="Invalido" message="tns:Invalido"
+   wsaw:Action="http://www.w3.org/2005/08/addressing/fault"/>
+ </operation></portType>
+ <binding name="PdiBinding" type="tns:PdiPortType">
+  <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+  <wsaw:UsingAddressing wsdl:required="true"/>
+  <operation name="consultarCiudadano"><soap:operation soapAction="urn:cargauy:pdi:consultarCiudadano"/>
+   <input><soap:body use="literal"/></input><output><soap:body use="literal"/></output>
+   <fault name="NoEncontrado"><soap:fault name="NoEncontrado" use="literal"/></fault>
+   <fault name="Invalido"><soap:fault name="Invalido" use="literal"/></fault>
+  </operation>
+ </binding>
+ <service name="PdiService"><port name="PdiPort" binding="tns:PdiBinding">
+  <soap:address location="@ENDPOINT@"/>
+ </port></service>
+</definitions>

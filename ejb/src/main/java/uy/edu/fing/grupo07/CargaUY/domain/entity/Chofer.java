@@ -16,8 +16,6 @@ public class Chofer extends Usuario {
 
     private static final long serialVersionUID = 1L;
 
-    @OneToMany(mappedBy = "chofer")
-    private List<GuiaDeViaje> guias = new ArrayList<>();
 
     public Chofer() {
         super();
@@ -27,11 +25,4 @@ public class Chofer extends Usuario {
         super(nombre, mail, fechaNac, ci, password);
     }
 
-    public List<GuiaDeViaje> getGuias() {
-        return guias;
-    }
-
-    public void setGuias(List<GuiaDeViaje> guias) {
-        this.guias = guias;
-    }
 }

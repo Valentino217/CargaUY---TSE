@@ -1,5 +1,5 @@
-FROM python:3.11-alpine
+FROM python:3.12-slim
 WORKDIR /app
-COPY mock_pdi.py /app/
+COPY mock_pdi.py pdi.wsdl ./
 EXPOSE 8080
-CMD ["python", "mock_pdi.py"]
+CMD ["python", "-u", "mock_pdi.py"]

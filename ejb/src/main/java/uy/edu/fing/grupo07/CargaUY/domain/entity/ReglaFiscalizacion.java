@@ -17,18 +17,21 @@ public class ReglaFiscalizacion implements Serializable {
     @Id
     private int id = 1;
 
+    @Version
+    private long version;
+    
     @Column(name = "umbral_carga", nullable = false)
     private int umbralCarga;
 
     @Column(name = "umbral_tracking", nullable = false)
-    private int umbralTracking;
+    private double umbralTracking;
 
     public ReglaFiscalizacion() {
         this.umbralCarga = 500;    // Tolerancia por defecto en kg (ej: 500 kg)
         this.umbralTracking = 5;   // Tolerancia por defecto en puntos desviados o km
     }
 
-    public ReglaFiscalizacion(int umbralCarga, int umbralTracking) {
+    public ReglaFiscalizacion(int umbralCarga, double umbralTracking) {
         this.id = 1;
         this.umbralCarga = umbralCarga;
         this.umbralTracking = umbralTracking;
@@ -50,12 +53,16 @@ public class ReglaFiscalizacion implements Serializable {
         this.umbralCarga = umbralCarga;
     }
 
-    public int getUmbralTracking() {
+    public double getUmbralTracking() {
         return umbralTracking;
     }
 
-    public void setUmbralTracking(int umbralTracking) {
+    public void setUmbralTracking(double umbralTracking) {
         this.umbralTracking = umbralTracking;
+    }
+    
+    public long getVersion() {
+        return version;
     }
 
     @Override

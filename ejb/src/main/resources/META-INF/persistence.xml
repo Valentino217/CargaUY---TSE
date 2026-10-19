@@ -7,9 +7,9 @@
    <persistence-unit name="CargaUYPersistenceUnit" transaction-type="JTA">
       <jta-data-source>java:jboss/datasources/PostgreSQLDS</jta-data-source>
       <properties>
-         <property name="jakarta.persistence.schema-generation.database.action" value="drop-and-create"/>
-         <property name="jakarta.persistence.schema-generation.create-source" value="metadata"/>
-         <property name="jakarta.persistence.schema-generation.drop-source" value="metadata"/>
+         <property name="jakarta.persistence.schema-generation.database.action" value="none"/>
+         <property name="jakarta.persistence.schema-generation.database.create-source" value="none"/>
+         <property name="jakarta.persistence.schema-generation.drop-source" value="none"/>
 
          <!-- Propiedades Hibernate / PostgreSQL -->
          <property name="hibernate.dialect" value="org.hibernate.dialect.PostgreSQLDialect"/>

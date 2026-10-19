@@ -58,7 +58,7 @@ public class GuiaDeViaje implements Serializable {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "chofer_id", nullable = false)
-    private Chofer chofer;
+    private Usuario chofer;
 
     @ManyToMany
     @JoinTable(
@@ -85,7 +85,7 @@ public class GuiaDeViaje implements Serializable {
     }
 
     public GuiaDeViaje(LocalDate fecha, String origen, String destino, String rubroCliente,
-                       float volumenCarga, Empresa empresa, Vehiculo vehiculo, Chofer chofer) {
+                       float volumenCarga, Empresa empresa, Vehiculo vehiculo, Usuario chofer) {
         this.fecha = fecha != null ? fecha : LocalDate.now();
         this.origen = origen;
         this.destino = destino;
@@ -177,11 +177,11 @@ public class GuiaDeViaje implements Serializable {
         this.vehiculo = vehiculo;
     }
 
-    public Chofer getChofer() {
+    public Usuario getChofer() {
         return chofer;
     }
 
-    public void setChofer(Chofer chofer) {
+    public void setChofer(Usuario chofer) {
         this.chofer = chofer;
     }
 

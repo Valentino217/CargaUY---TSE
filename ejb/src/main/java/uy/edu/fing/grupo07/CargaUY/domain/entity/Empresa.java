@@ -18,6 +18,12 @@ public class Empresa implements Serializable {
     @Id
     @Column(name = "nro_empresa")
     private int nroEmpresa;
+    
+    @Version
+    private long version;
+
+    @Column(nullable = false)
+    private boolean activa = true;
 
     @Column(name = "razon_social", nullable = false, length = 150)
     private String razonSocial;
@@ -49,6 +55,8 @@ public class Empresa implements Serializable {
 
     @OneToMany(mappedBy = "empresa", cascade = CascadeType.ALL)
     private List<GuiaDeViaje> guias = new ArrayList<>();
+
+    public long getVersion() { return version; }
 
     public Empresa() {
     }
@@ -135,5 +143,13 @@ public class Empresa implements Serializable {
     @Override
     public int hashCode() {
         return Objects.hash(nroEmpresa);
+    }
+    
+    public boolean isActiva() { 
+    	return activa; 
+    }
+    
+    public void setActiva(boolean activa) { 
+    	this.activa = activa; 
     }
 }

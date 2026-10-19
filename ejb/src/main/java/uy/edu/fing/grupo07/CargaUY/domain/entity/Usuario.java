@@ -1,3 +1,4 @@
+
 package uy.edu.fing.grupo07.CargaUY.domain.entity;
 
 import jakarta.persistence.*;
@@ -9,6 +10,7 @@ import java.util.Objects;
  * Entidad base abstracta Usuario con estrategia de herencia JOINED.
  */
 @Entity
+@Cacheable(false)
 @Table(name = "usuarios")
 @Inheritance(strategy = InheritanceType.JOINED)
 @DiscriminatorColumn(name = "tipo_usuario", discriminatorType = DiscriminatorType.STRING)
@@ -19,6 +21,40 @@ public abstract class Usuario implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
+    
+    @Version
+    private long version;
+
+    @Column(nullable = false)
+    private boolean activo = true;
+
+    @Column(name="origen_identidad", nullable=false, length=10)
+    private String origenIdentidad = "LOCAL";
+    
+    @Column(name="uid_externo", length=200)
+    private String uidExterno;
+    
+    @ElementCollection(fetch=FetchType.EAGER)
+    
+    @CollectionTable(name="usuario_roles", joinColumns=@JoinColumn(name="usuario_id"))
+    
+    @Enumerated(EnumType.STRING)
+    
+    @Column(name="rol", nullable=false, length=30)
+    private java.util.Set<uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario> roles = new java.util.HashSet<>();
+    
+    @OneToMany(mappedBy="chofer")
+    private java.util.List<GuiaDeViaje> guias = new java.util.ArrayList<>();
+
+    public long getVersion() { return version; }
+    public String getOrigenIdentidad() { return origenIdentidad; }
+    public void setOrigenIdentidad(String v) { origenIdentidad=v; }
+    public String getUidExterno() { return uidExterno; }
+    public void setUidExterno(String v) { uidExterno=v; }
+    public java.util.Set<uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario> getRoles() { return roles; }
+    public java.util.List<GuiaDeViaje> getGuias() { return guias; }
+    public void setGuias(java.util.List<GuiaDeViaje> v) { guias=v; }
+
 
     @Column(nullable = false, length = 100)
     private String nombre;
@@ -113,5 +149,13 @@ public abstract class Usuario implements Serializable {
     @Override
     public int hashCode() {
         return Objects.hash(ci);
+    }
+    
+    public boolean isActivo() { 
+    	return activo; 
+    }
+    
+    public void setActivo(boolean activo) { 
+    	this.activo = activo;
     }
 }

@@ -1,0 +1,20 @@
+services:
+  ldap:
+    environment:
+      LDAP_TLS_CERT: /tls/ldap.crt
+      LDAP_TLS_KEY: /tls/ldap.key
+      LDAP_TLS_CA: /tls/ca.crt
+    ports: ["127.0.0.1:1636:1636"]
+    volumes: ["./.local-p1/tls:/tls:ro"]
+  mock-pdi:
+    environment:
+      PDI_PUBLIC_ENDPOINT: https://localhost:8081/pdi/ws
+      PDI_TLS_CERT: /tls/pdi.crt
+      PDI_TLS_KEY: /tls/pdi.key
+    volumes: ["./.local-p1/tls:/tls:ro"]
+  gub:
+    command: ["start-dev", "--import-realm", "--http-enabled=false",
+              "--https-port=8443", "--https-certificate-file=/tls/gub.crt",
+              "--https-certificate-key-file=/tls/gub.key"]
+    ports: ["127.0.0.1:8084:8443"]
+    volumes: ["./.local-p1/tls:/tls:ro"]

@@ -1,103 +1,106 @@
-from http.server import HTTPServer, BaseHTTPRequestHandler
+import json, os, time, uuid, ssl
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
+from pathlib import Path
+from urllib.parse import urlparse
+import xml.etree.ElementTree as ET
 
-WSDL_CONTENT = """<?xml version="1.0" encoding="UTF-8"?>
-<definitions xmlns="http://schemas.xmlsoap.org/wsdl/"
-             xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
-             xmlns:tns="http://pdi.dnic.gub.uy/"
-             xmlns:xsd="http://www.w3.org/2001/XMLSchema"
-             targetNamespace="http://pdi.dnic.gub.uy/"
-             name="PdiService">
-  <types>
-    <xsd:schema targetNamespace="http://pdi.dnic.gub.uy/">
-      <xsd:element name="consultarCiudadano">
-        <xsd:complexType>
-          <xsd:sequence>
-            <xsd:element name="ci" type="xsd:int"/>
-          </xsd:sequence>
-        </xsd:complexType>
-      </xsd:element>
-      <xsd:element name="consultarCiudadanoResponse">
-        <xsd:complexType>
-          <xsd:sequence>
-            <xsd:element name="ci" type="xsd:int"/>
-            <xsd:element name="nombre" type="xsd:string"/>
-            <xsd:element name="apellido" type="xsd:string"/>
-            <xsd:element name="fechaNacimiento" type="xsd:string"/>
-            <xsd:element name="vigente" type="xsd:boolean"/>
-          </xsd:sequence>
-        </xsd:complexType>
-      </xsd:element>
-    </xsd:schema>
-  </types>
-  <message name="consultarCiudadanoInput">
-    <part name="parameters" element="tns:consultarCiudadano"/>
-  </message>
-  <message name="consultarCiudadanoOutput">
-    <part name="parameters" element="tns:consultarCiudadanoResponse"/>
-  </message>
-  <portType name="PdiPortType">
-    <operation name="consultarCiudadano">
-      <input message="tns:consultarCiudadanoInput"/>
-      <output message="tns:consultarCiudadanoOutput"/>
-    </operation>
-  </portType>
-  <binding name="PdiBinding" type="tns:PdiPortType">
-    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
-    <operation name="consultarCiudadano">
-      <soap:operation soapAction=""/>
-      <input><soap:body use="literal"/></input>
-      <output><soap:body use="literal"/></output>
-    </operation>
-  </binding>
-  <service name="PdiService">
-    <port name="PdiPort" binding="tns:PdiBinding">
-      <soap:address location="http://mock-pdi:8080/pdi/ws"/>
-    </port>
-  </service>
-</definitions>
-"""
+S = "http://schemas.xmlsoap.org/soap/envelope/"
+A = "http://www.w3.org/2005/08/addressing"
+P = "http://pdi.dnic.gub.uy/"
+ACTION = "urn:cargauy:pdi:consultarCiudadano"
+for prefix, ns in [("soap", S), ("wsa", A), ("pdi", P)]:
+    ET.register_namespace(prefix, ns)
+CATALOGO = {
+    12345678: ("Juan", "Perez", "1985-05-15"),
+    80000001: ("Ana", "Prueba", "1990-01-01"),
+    80000002: ("Diego", "Chofer", "1988-01-01"),
+}
+def child(parent, tag, text=None):
+    e = ET.SubElement(parent, tag)
+    if text is not None: e.text = str(text)
+    return e
+def respuesta(mid, ci=None, datos=None, error=None):
+    e = ET.Element("{" + S + "}Envelope")
+    h = child(e, "{" + S + "}Header")
+    child(h, "{" + A + "}Action", A + "/fault" if error else ACTION + "Response")
+    child(h, "{" + A + "}RelatesTo", mid)
+    b = child(e, "{" + S + "}Body")
+    if error:
+        fault = child(b, "{" + S + "}Fault")
+        child(fault, "faultcode", "soap:Client")
+        child(fault, "faultstring", error)
+        detail = child(fault, "detail")
+        d = child(detail, "{" + P + "}" + error)
+        child(d, "ci" if error == "CiudadanoNoEncontrado" else "mensaje",
+              ci if error == "CiudadanoNoEncontrado" else "Cabeceras o cuerpo inválidos")
+    else:
+        r = child(b, "{" + P + "}consultarCiudadanoResponse")
+        for tag, value in [("ci", ci), ("nombre", datos[0]), ("apellido", datos[1]),
+                           ("fechaNacimiento", datos[2]), ("vigente", "true")]:
+            child(r, tag, value)
+    return ET.tostring(e, encoding="utf-8", xml_declaration=True)
 
-SOAP_RESPONSE_TEMPLATE = """<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:pdi="http://pdi.dnic.gub.uy/">
-  <soap:Body>
-    <pdi:consultarCiudadanoResponse>
-      <ci>{ci}</ci>
-      <nombre>Juan</nombre>
-      <apellido>Perez</apellido>
-      <fechaNacimiento>1985-05-15</fechaNacimiento>
-      <vigente>true</vigente>
-    </pdi:consultarCiudadanoResponse>
-  </soap:Body>
-</soap:Envelope>"""
-
-class PdiHandler(BaseHTTPRequestHandler):
+class Handler(BaseHTTPRequestHandler):
+    def log_message(self, *args): pass
     def do_GET(self):
-        if "wsdl" in self.path.lower():
-            self.send_response(200)
-            self.send_header("Content-Type", "text/xml; charset=utf-8")
-            self.end_headers()
-            self.wfile.write(WSDL_CONTENT.encode("utf-8"))
-        else:
-            self.send_response(200)
-            self.send_header("Content-Type", "text/plain")
-            self.end_headers()
-            self.wfile.write(b"Mock PDI SOAP Service running. Access /pdi/ws?wsdl for WSDL.")
-
+        if self.path != "/pdi/ws?wsdl":
+            self.send_error(404); return
+        wsdl = Path(__file__).with_name("pdi.wsdl").read_text(encoding="utf-8")
+        wsdl = wsdl.replace("@ENDPOINT@", os.getenv("PDI_PUBLIC_ENDPOINT", "http://localhost:8081/pdi/ws"))
+        data = wsdl.encode("utf-8")
+        self.send_response(200); self.send_header("Content-Type", "text/xml;charset=utf-8")
+        self.end_headers(); self.wfile.write(data)
     def do_POST(self):
-        content_length = int(self.headers.get("Content-Length", 0))
-        body = self.rfile.read(content_length).decode("utf-8")
-        
-        # Extraer CI si es posible, default 12345678
-        ci = "12345678"
-        if "<ci>" in body and "</ci>" in body:
-            ci = body.split("<ci>")[1].split("</ci>")[0].strip()
-
-        resp = SOAP_RESPONSE_TEMPLATE.format(ci=ci)
-        self.send_response(200)
-        self.send_header("Content-Type", "text/xml; charset=utf-8")
-        self.end_headers()
-        self.wfile.write(resp.encode("utf-8"))
+        inicio = time.monotonic()
+        mid, ci, status = "", None, 500
+        corr = self.headers.get("X-Correlation-ID", "")
+        try: corr = str(uuid.UUID(corr))
+        except ValueError: corr = str(uuid.uuid4())
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            if self.path != "/pdi/ws" or length < 1 or length > 65536: raise ValueError()
+            raw = self.rfile.read(length)
+            if b"<!DOCTYPE" in raw.upper() or b"<!ENTITY" in raw.upper(): raise ValueError()
+            doc = ET.fromstring(raw)
+            if doc.tag != "{" + S + "}Envelope": raise ValueError()
+            h, b = doc.find("{" + S + "}Header"), doc.find("{" + S + "}Body")
+            def one(parent, tag):
+                nodes = parent.findall(tag)
+                if len(nodes) != 1: raise ValueError()
+                return nodes[0]
+            mid = one(h, "{" + A + "}MessageID").text or ""
+            uuid.UUID(mid.removeprefix("urn:uuid:"))
+            if not mid.startswith("urn:uuid:"): raise ValueError()
+            expected = os.getenv("PDI_PUBLIC_ENDPOINT", "http://localhost:8081/pdi/ws")
+            if one(h, "{" + A + "}Action").text != ACTION: raise ValueError()
+            if one(h, "{" + A + "}To").text != expected: raise ValueError()
+            if self.headers.get("SOAPAction", "").strip('"') != ACTION: raise ValueError()
+            reply = one(h, "{" + A + "}ReplyTo")
+            if one(reply, "{" + A + "}Address").text != A + "/anonymous": raise ValueError()
+            operation = one(b, "{" + P + "}consultarCiudadano")
+            ci = int(one(operation, "ci").text)
+            if ci <= 0: raise ValueError()
+            delay = float(os.getenv("PDI_DELAY_SECONDS", "0"))
+            if delay > 0: time.sleep(min(delay, 10))
+            datos = CATALOGO.get(ci)
+            data = respuesta(mid, ci, datos, None if datos else "CiudadanoNoEncontrado")
+            status = 200 if datos else 500
+        except Exception:
+            data = respuesta(mid, error="ContratoInvalido")
+        self.send_response(status); self.send_header("Content-Type", "text/xml;charset=utf-8")
+        self.send_header("X-Correlation-ID", corr); self.end_headers()
+        try: self.wfile.write(data)
+        except (BrokenPipeError, ConnectionResetError): pass
+        print(json.dumps({"evento": "pdi.respuesta", "correlacion": corr,
+              "status": status, "duracionMs": round((time.monotonic()-inicio)*1000)}), flush=True)
 
 if __name__ == "__main__":
-    server = HTTPServer(("0.0.0.0", 8080), PdiHandler)
-    print("Mock PDI SOAP Server listening on port 8080...")
+    server = ThreadingHTTPServer(("0.0.0.0", 8080), Handler)
+    cert, key = os.getenv("PDI_TLS_CERT"), os.getenv("PDI_TLS_KEY")
+    if cert:
+        if not key: raise RuntimeError("Falta PDI_TLS_KEY")
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        context.minimum_version = ssl.TLSVersion.TLSv1_2
+        context.load_cert_chain(cert, key)
+        server.socket = context.wrap_socket(server.socket, server_side=True)
     server.serve_forever()

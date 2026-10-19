@@ -1,0 +1,28 @@
+services:
+  ldap:
+    build: ./docker/ldap
+    environment:
+      LDAP_ROOT_PASSWORD: ${LDAP_ROOT_PASSWORD:?Ejecutar preparar-local.ps1}
+      LDAP_APP_PASSWORD: ${LDAP_APP_PASSWORD:?Ejecutar preparar-local.ps1}
+      LDAP_APP_UID: ${LDAP_APP_UID:?Ejecutar preparar-local.ps1}
+    ports: ["127.0.0.1:1389:1389"]
+    volumes: ["ldap_p1:/data"]
+  gub:
+    image: quay.io/keycloak/keycloak:26.4.7
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD}
+    ports: ["127.0.0.1:8083:8080"]
+    volumes:
+      - ./.local-p1/gub-realm.json:/opt/keycloak/data/import/cargauy-test-realm.json:ro
+      - keycloak_p1:/opt/keycloak/data
+  mock-pdi:
+    build: ./docker/mock-pdi
+    environment:
+      PDI_PUBLIC_ENDPOINT: http://localhost:8081/pdi/ws
+      PDI_DELAY_SECONDS: "0"
+    ports: ["127.0.0.1:8081:8080"]
+volumes:
+  ldap_p1:
+  keycloak_p1:
