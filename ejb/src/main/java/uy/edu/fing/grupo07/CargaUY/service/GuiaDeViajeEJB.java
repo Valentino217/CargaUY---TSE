@@ -1,5 +1,6 @@
 package uy.edu.fing.grupo07.CargaUY.service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import jakarta.ejb.LocalBean;
@@ -10,6 +11,7 @@ import uy.edu.fing.grupo07.CargaUY.domain.entity.Chofer;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.GuiaDeViaje;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.Vehiculo;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado;
+import uy.edu.fing.grupo07.CargaUY.dto.GuiaResumenDTO;
 
 /**
  * Session Bean implementation class GuiaDeViajeEJB
@@ -134,5 +136,27 @@ public class GuiaDeViajeEJB implements GuiaDeViajeEJBLocal {
     public GuiaDeViaje buscarGuias(Long id) {
         return em.find(GuiaDeViaje.class, id);
     }
+ 
+    // Lista las guías asignadas a un chofer, con datos resumidos.
+    public List<GuiaResumenDTO> listarGuiasResumenPorCedulaChofer(int cedula) {
 
+        return em.createQuery(
+            "SELECT NEW uy.edu.fing.grupo07.CargaUY.dto.GuiaResumenDTO(" +
+            "g.id, g.fecha, g.origen, g.destino, " +
+            "g.rubroCliente, g.volumenCarga, g.estado, g.version, " +
+            "g.vehiculo.matricula, " +
+            "CONCAT(g.vehiculo.marca, CONCAT(' ', g.vehiculo.modelo)), " +
+            "g.empresa.nroEmpresa, g.empresa.razonSocial, " +
+            "g.chofer.id, g.chofer.nombre) " +
+            "FROM GuiaDeViaje g " +
+            "WHERE g.chofer.ci = :cedula " +
+            "ORDER BY g.fecha DESC",
+            GuiaResumenDTO.class
+        )
+        .setParameter("cedula", cedula)
+        .getResultList();
+    }
+    
+
+  
 }
