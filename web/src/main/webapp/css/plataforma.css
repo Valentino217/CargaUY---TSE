@@ -1,0 +1,113 @@
+:root {
+    --page: #f8fafc;
+    --ink: #1e293b;
+    --muted: #64748b;
+    --brand: #1e3a8a;
+    --border: #e2e8f0;
+}
+* { box-sizing: border-box; }
+body {
+    margin: 0;
+    padding: 24px;
+    background: var(--page);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+}
+a { color: var(--brand); text-underline-offset: 3px; }
+a:hover { color: #2563eb; }
+.container { max-width: 1200px; margin: 0 auto; }
+.header-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 20px;
+    margin-bottom: 24px;
+}
+h1 { margin: 0 0 4px; color: var(--brand); font-size: 1.8rem; line-height: 1.25; }
+h2 { margin: 0 0 8px; color: #334155; font-size: 1.15rem; }
+p { margin: 0 0 16px; }
+.subtitle, small, .help { color: var(--muted); }
+.subtitle { margin: 0; font-size: .95rem; }
+.nav-links { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+.nav-links a { text-decoration: none; font-size: .95rem; font-weight: 500; }
+.nav-links a:hover, .nav-links a[aria-current="page"] { text-decoration: underline; }
+.nav-links form { margin: 0; }
+.card, fieldset {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgb(15 23 42 / 5%);
+    min-width: 0;
+    margin: 0 0 24px;
+}
+.form-grid, fieldset {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 18px;
+}
+legend { color: #334155; font-size: 1rem; font-weight: 600; padding: 0 8px; }
+label { display: flex; flex-direction: column; gap: 6px; color: #334155; font-size: .9rem; font-weight: 600; }
+input, select, button, .button { font: inherit; }
+input:not([type="hidden"]):not([type="checkbox"]), select {
+    width: 100%;
+    min-height: 42px;
+    padding: 9px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    color: var(--ink);
+    background: #fff;
+    font-weight: 400;
+}
+input:focus-visible, select:focus-visible, button:focus-visible, a:focus-visible {
+    outline: 3px solid #93c5fd;
+    outline-offset: 2px;
+}
+label:has(input[type="checkbox"]) { flex-direction: row; align-items: center; }
+input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--brand); }
+button, .button {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    min-height: 42px;
+    padding: 9px 18px;
+    border: 1px solid var(--brand);
+    border-radius: 6px;
+    background: var(--brand);
+    color: #fff;
+    font-size: .95rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+}
+button:hover, .button:hover { background: #1e40af; color: #fff; }
+.button-secondary { background: #fff; color: var(--brand); }
+.button-secondary:hover { background: #eff6ff; color: var(--brand); }
+.button-full { width: 100%; }
+.alert { padding: 14px 18px; border: 1px solid #fecaca; border-radius: 6px; background: #fef2f2; color: #991b1b; margin-bottom: 24px; }
+.result { border-left: 4px solid #2563eb; }
+pre { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: .9rem; }
+.help { grid-column: 1 / -1; margin: 0; font-size: .85rem; font-weight: 400; }
+.form-actions { margin-bottom: 32px; }
+.login-container { max-width: 920px; margin: 48px auto; }
+.login-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: stretch; }
+.login-grid .card { margin-bottom: 0; }
+.login-form { display: grid; gap: 18px; margin-top: 24px; }
+.external-login { display: flex; flex-direction: column; }
+.external-login .button { margin-top: auto; }
+.eyebrow { margin-bottom: 8px; color: var(--muted); font-size: .8rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; }
+.login-footer { text-align: center; color: var(--muted); font-size: .85rem; margin-top: 24px; }
+@media (max-width: 680px) {
+    body { padding: 16px; }
+    .login-container { margin: 24px auto; }
+    .login-grid { grid-template-columns: 1fr; }
+    .card, fieldset { padding: 18px; }
+    .form-grid, fieldset { grid-template-columns: 1fr; }
+    .external-login .button { margin-top: 16px; }
+    h1 { font-size: 1.6rem; }
+}

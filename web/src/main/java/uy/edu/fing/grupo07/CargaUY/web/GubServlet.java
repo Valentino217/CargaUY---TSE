@@ -40,7 +40,7 @@ public class GubServlet extends HttpServlet {
         }
         try {
             WebSeguridad.iniciar(r,auth.loginGub(r.getParameter("code"),verifier,nonce));
-            s.sendRedirect(r.getContextPath()+"/app/perfil");
+            s.sendRedirect(r.getContextPath()+"/index.xhtml");
         } catch(ErrorAcceso e) { WebSeguridad.error(s,e.getEstado(),e.getMessage()); }
     }
 }

@@ -24,8 +24,7 @@ public class LoginServlet extends HttpServlet {
         try {
             var login=auth.login(r.getParameter("uid"),r.getParameter("password"));
             WebSeguridad.iniciar(r,login);
-            s.sendRedirect(r.getContextPath()+(login.usuario().tiene(
-                uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.ADMINISTRADOR)?"/app/admin":"/app/empresa"));
+            s.sendRedirect(r.getContextPath()+"/index.xhtml");
         } catch(ErrorAcceso e) {
             r.setAttribute("error",e.getMessage()); s.setStatus(e.getEstado()); doGet(r,s);
         }
