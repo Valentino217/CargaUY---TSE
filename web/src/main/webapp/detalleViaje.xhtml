@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:p="primefaces">
+
+<f:metadata>
+    <f:viewParam name="guiaId" value="#{detalleViajeBean.guiaIdSeleccionada}"/>
+    <f:viewAction action="#{detalleViajeBean.inicializar}"/>
+</f:metadata>
+
+<h:head>
+    <title>CargaUY - Detalle y Tracking de Viaje</title>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+            margin: 0;
+            padding: 24px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+        }
+        .header-bar h1 {
+            margin: 0;
+            color: #1e3a8a;
+            font-size: 1.8rem;
+        }
+        .header-bar small {
+            color: #64748b;
+        }
+        .nav-links a {
+            margin-left: 16px;
+            text-decoration: none;
+            color: #1e3a8a;
+            font-weight: 500;
+        }
+        .nav-links a:hover {
+            text-decoration: underline;
+        }
+        .mb-4 {
+            margin-bottom: 20px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        /* Estados de Guía */
+        .badge-SIN_INICIAR { background-color: #f1f5f9; color: #475569; }
+        .badge-EN_CURSO { background-color: #e0f2fe; color: #0369a1; }
+        .badge-FINALIZADO { background-color: #dcfce7; color: #166534; }
+
+        /* Tipos de Eventos */
+        .badge-INICIO { background-color: #dbeafe; color: #1e40af; }
+        .badge-FIN { background-color: #dcfce7; color: #166534; }
+        .badge-CARGA { background-color: #e0e7ff; color: #3730a3; }
+        .badge-CARGA_PARCIAL { background-color: #ede9fe; color: #5b21b6; }
+        .badge-DESCARGA { background-color: #fef3c7; color: #92400e; }
+        .badge-DESCARGA_PARCIAL { background-color: #ffedd5; color: #9a3412; }
+        .badge-INCIDENTE { background-color: #fee2e2; color: #991b1b; }
+        .badge-otro { background-color: #f1f5f9; color: #475569; }
+
+        /* Tarjetas de Resumen KPI */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 16px 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .stat-card.primary {
+            border-left: 4px solid #1e3a8a;
+        }
+        .stat-card.info {
+            border-left: 4px solid #0284c7;
+        }
+        .stat-card.success {
+            border-left: 4px solid #16a34a;
+        }
+        .stat-card.warning {
+            border-left: 4px solid #d97706;
+        }
+        .stat-lbl {
+            font-size: 0.85rem;
+            color: #64748b;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+        }
+        .stat-val {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1e3a8a;
+            margin-top: 4px;
+        }
+        .stat-sub {
+            font-size: 0.85rem;
+            color: #475569;
+            margin-top: 2px;
+        }
+        .select-bar {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .muted-text {
+            color: #64748b;
+            font-style: italic;
+        }
+    </style>
+</h:head>
+
+<h:body>
+    <div class="container">
+        <!-- Header oficial alineado con el resto de la aplicación -->
+        <div class="header-bar">
+            <div>
+                <h1>Tracking y Detalle de Viaje</h1>
+                <small>Monitoreo en tiempo real, trazabilidad de eventos en ruta y pesaje en balanza (P3)</small>
+            </div>
+            <div class="nav-links">
+                <a href="index.xhtml">Inicio</a>
+                <a href="infracciones.xhtml">Infracciones</a>
+                <a href="dashboard.xhtml">Dashboard</a>
+                <a href="registrarPesaje.xhtml">Registrar Pesaje</a>
+                <a href="GuiaDeViajeJSF.xhtml">Guías</a>
+                <a href="VehiculoJSF.xhtml">Vehículos</a>
+            </div>
+        </div>
+
+        <h:form id="formTracking">
+            <p:growl id="growl" showDetail="true" life="4000"/>
+            <p:messages id="mensajes" showDetail="true" closable="true"/>
+
+            <!-- Panel de Búsqueda y Acciones Rápidas -->
+            <p:panel header="Selección y Control de Viaje" styleClass="mb-4">
+                <div class="select-bar">
+                    <h:outputLabel for="selectGuia" value="Guía de Viaje:" style="font-weight: 600;"/>
+                    <h:selectOneMenu id="selectGuia"
+                                     value="#{detalleViajeBean.guiaIdSeleccionada}"
+                                     style="min-width: 380px; padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1;">
+                        <f:selectItem itemLabel="-- Seleccione una guía --" itemValue="#{null}" noSelectionOption="true"/>
+                        <f:selectItems value="#{detalleViajeBean.guiasDisponibles}"
+                                       var="g"
+                                       itemValue="#{g.id}"
+                                       itemLabel="#{detalleViajeBean.obtenerEtiquetaGuia(g)}"/>
+                        <f:ajax listener="#{detalleViajeBean.onGuiaChange}" render=":formTracking"/>
+                    </h:selectOneMenu>
+
+                    <p:commandButton value="Consultar"
+                                     action="#{detalleViajeBean.consultarViaje}"
+                                     update=":formTracking"
+                                     icon="pi pi-search"/>
+
+                    <p:commandButton value="Sincronizar Mock Balanza"
+                                     action="#{detalleViajeBean.sincronizarMockBalanza}"
+                                     update=":formTracking"
+                                     icon="pi pi-sync"
+                                     styleClass="ui-button-success"
+                                     title="Consulta el mock periférico de balanza y registra pesada automática"/>
+
+                    <p:commandButton value="Reportar Incidente"
+                                     type="button"
+                                     onclick="PF('dlgIncidente').show();"
+                                     icon="pi pi-exclamation-triangle"
+                                     styleClass="ui-button-warning"
+                                     title="Reportar nuevo incidente en ruta para la guía seleccionada"/>
+
+                    <p:button value="Registrar Pesaje"
+                              href="registrarPesaje.xhtml"
+                              icon="pi pi-plus"
+                              styleClass="ui-button-outlined"/>
+                </div>
+            </p:panel>
+
+            <!-- Resumen de la Guía Seleccionada -->
+            <h:panelGroup layout="block" rendered="#{detalleViajeBean.guiaActual != null}">
+                <div class="stats-grid">
+                    <div class="stat-card primary">
+                        <div class="stat-lbl">Guía Consultada</div>
+                        <div class="stat-val">##{detalleViajeBean.guiaActual.id}</div>
+                        <div class="stat-sub">
+                            Estado: <span class="#{detalleViajeBean.obtenerClaseBadgeEstado(detalleViajeBean.guiaActual.estado)}">#{detalleViajeBean.guiaActual.estado}</span>
+                        </div>
+                    </div>
+
+                    <div class="stat-card info">
+                        <div class="stat-lbl">Itinerario y Carga</div>
+                        <div class="stat-val" style="font-size: 1.15rem; color: #1e293b;">
+                            #{detalleViajeBean.guiaActual.origen} &#8594; #{detalleViajeBean.guiaActual.destino}
+                        </div>
+                        <div class="stat-sub">
+                            Volumen: #{detalleViajeBean.guiaActual.volumenCarga} m³ &#8226; Rubro: #{detalleViajeBean.guiaActual.rubroCliente}
+                        </div>
+                    </div>
+
+                    <div class="stat-card success">
+                        <div class="stat-lbl">Vehículo y Chofer</div>
+                        <div class="stat-val" style="font-size: 1.15rem; color: #1e293b;">
+                            Matrícula: #{detalleViajeBean.vehiculoMatricula}
+                        </div>
+                        <div class="stat-sub">
+                            Chofer: #{detalleViajeBean.choferNombreCompleto}
+                        </div>
+                    </div>
+
+                    <div class="stat-card warning">
+                        <div class="stat-lbl">Trazabilidad</div>
+                        <div class="stat-val">#{detalleViajeBean.totalEventos} / #{detalleViajeBean.totalPesadas}</div>
+                        <div class="stat-sub">Eventos de ruta / Pesajes en balanza</div>
+                    </div>
+                </div>
+
+                <!-- Sección 1: Línea cronológica de eventos (AC013) -->
+                <p:panel header="Línea Cronológica de Eventos de Ruta (Orden Ascendente)" styleClass="mb-4">
+                    <p:dataTable id="tablaEventos"
+                                 value="#{detalleViajeBean.eventos}"
+                                 var="ev"
+                                 rowIndexVar="idx"
+                                 emptyMessage="No se registran eventos asociados a esta guía de viaje aún."
+                                 stripedRows="true">
+
+                        <p:column headerText="#" style="width: 50px; text-align: center;">
+                            <h:outputText value="#{idx + 1}"/>
+                        </p:column>
+
+                        <p:column headerText="Tipo de Evento" style="width: 140px;">
+                            <span class="#{detalleViajeBean.obtenerClaseBadgeEvento(ev.tipo())}">
+                                #{ev.tipo()}
+                            </span>
+                        </p:column>
+
+                        <p:column headerText="Fecha y Hora" style="width: 170px;">
+                            <h:outputText value="#{ev.tiempo()}"/>
+                        </p:column>
+
+                        <p:column headerText="Coordenadas" style="width: 180px;">
+                            <h:outputText value="#{ev.latitud()}, #{ev.longitud()}"/>
+                        </p:column>
+
+                        <p:column headerText="UUID Transacción" style="width: 260px; font-family: monospace; font-size: 0.85rem;">
+                            <h:outputText value="#{ev.uuid()}"/>
+                        </p:column>
+
+                        <p:column headerText="Detalle / Incidente">
+                            <h:panelGroup rendered="#{ev.incidente() != null}">
+                                <strong style="color: #991b1b;">#{ev.incidente().descripcion()}</strong>
+                                <h:panelGroup rendered="#{ev.incidente().foto() != null and not empty ev.incidente().foto()}">
+                                    <br/><small class="muted-text">Foto: #{ev.incidente().foto()}</small>
+                                </h:panelGroup>
+                            </h:panelGroup>
+                            <h:outputText value="-" rendered="#{ev.incidente() == null}" styleClass="muted-text"/>
+                        </p:column>
+                    </p:dataTable>
+                </p:panel>
+
+                <!-- Sección 2: Control de Pesaje en Balanzas Periféricas -->
+                <p:panel header="Control de Balanzas Periféricas y Fiscalización" styleClass="mb-4">
+                    <p:dataTable id="tablaPesadas"
+                                 value="#{detalleViajeBean.pesadas}"
+                                 var="p"
+                                 emptyMessage="No se registran pesadas de balanza para esta guía de viaje."
+                                 stripedRows="true">
+
+                        <p:column headerText="ID Pesada" style="width: 100px;">
+                            <strong><h:outputText value="##{p.idPesada()}"/></strong>
+                        </p:column>
+
+                        <p:column headerText="Fecha" style="width: 140px;">
+                            <h:outputText value="#{p.fecha()}">
+                                <f:convertDateTime type="localDate" pattern="dd/MM/yyyy"/>
+                            </h:outputText>
+                        </p:column>
+
+                        <p:column headerText="Hora" style="width: 120px;">
+                            <h:outputText value="#{p.hora()}"/>
+                        </p:column>
+
+                        <p:column headerText="Peso Registrado" style="width: 160px;">
+                            <strong style="color: #1e3a8a;">
+                                <h:outputText value="#{p.pesoRegistrado()}">
+                                    <f:convertNumber pattern="#,##0"/>
+                                </h:outputText> kg
+                            </strong>
+                        </p:column>
+
+                        <p:column headerText="Matrícula del Vehículo">
+                            <h:outputText value="#{p.matricula() != null ? p.matricula() : 'N/A'}"/>
+                        </p:column>
+                    </p:dataTable>
+                </p:panel>
+            </h:panelGroup>
+        </h:form>
+
+        <!-- Dialogo modal para reportar nuevo incidente -->
+        <p:dialog header="Reportar Incidente en Ruta"
+                  widgetVar="dlgIncidente"
+                  modal="true"
+                  responsive="true"
+                  width="480">
+            <h:form id="formIncidenteModal">
+                <div style="display: flex; flex-direction: column; gap: 14px; padding-top: 10px;">
+                    <div>
+                        <h:outputLabel for="incDesc" value="Descripción del Incidente: *" style="font-weight: 600; display: block; margin-bottom: 4px;"/>
+                        <p:inputTextarea id="incDesc"
+                                         value="#{detalleViajeBean.nuevoIncidenteDescripcion}"
+                                         rows="3"
+                                         style="width: 100%;"
+                                         required="true"
+                                         requiredMessage="La descripción es obligatoria."/>
+                    </div>
+
+                    <div>
+                        <h:outputLabel for="incFoto" value="Referencia / Foto (URL o Archivo):" style="font-weight: 600; display: block; margin-bottom: 4px;"/>
+                        <p:inputText id="incFoto"
+                                     value="#{detalleViajeBean.nuevoIncidenteFoto}"
+                                     placeholder="ej. rotura_cubierta.jpg"
+                                     style="width: 100%;"/>
+                    </div>
+
+                    <div style="display: flex; gap: 12px;">
+                        <div style="flex: 1;">
+                            <h:outputLabel for="incLat" value="Latitud:" style="font-weight: 600; display: block; margin-bottom: 4px;"/>
+                            <p:inputNumber id="incLat"
+                                           value="#{detalleViajeBean.nuevoIncidenteLatitud}"
+                                           decimalPlaces="4"
+                                           placeholder="-34.9011"
+                                           style="width: 100%;"/>
+                        </div>
+                        <div style="flex: 1;">
+                            <h:outputLabel for="incLon" value="Longitud:" style="font-weight: 600; display: block; margin-bottom: 4px;"/>
+                            <p:inputNumber id="incLon"
+                                           value="#{detalleViajeBean.nuevoIncidenteLongitud}"
+                                           decimalPlaces="4"
+                                           placeholder="-56.1645"
+                                           style="width: 100%;"/>
+                        </div>
+                    </div>
+
+                    <div style="text-align: right; margin-top: 10px;">
+                        <p:commandButton value="Cancelar"
+                                         type="button"
+                                         onclick="PF('dlgIncidente').hide();"
+                                         styleClass="ui-button-secondary"
+                                         style="margin-right: 8px;"/>
+
+                        <p:commandButton value="Guardar Incidente"
+                                         action="#{detalleViajeBean.reportarIncidente}"
+                                         update=":formTracking"
+                                         oncomplete="if (!args.validationFailed) PF('dlgIncidente').hide();"
+                                         styleClass="ui-button-warning"/>
+                    </div>
+                </div>
+            </h:form>
+        </p:dialog>
+    </div>
+</h:body>
+</html>

@@ -132,7 +132,22 @@
             <artifactId>mockito-junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- RESTEasy para proveer RuntimeDelegate en tests unitarios JAX-RS -->
+        <dependency>
+            <groupId>org.jboss.resteasy</groupId>
+            <artifactId>resteasy-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- PrimeFaces para interfaz JSF -->
+        <dependency>
+            <groupId>org.primefaces</groupId>
+            <artifactId>primefaces</artifactId>
+            <version>15.0.9</version>
+            <classifier>jakarta</classifier>
+        </dependency>
     </dependencies>
+    
 
     <build>
         <!-- Tell Maven that the resulting file should not have a file name containing the version -

@@ -19,7 +19,7 @@ Arrays.asList("listarEmpresas","consultarEmpresa"); %>
 		<meta charset="UTF-8"><title>CargaUY · Gestión</title>
 	</head>
 	
-	<body>
+	<body><p><a href="<%=request.getContextPath()%>/index.xhtml">Viajes, vehículos y fiscalización</a></p>
 		<h1><%=ruta.equals("/app/admin")?"Administración":ruta.equals("/app/perfil")?"Mi perfil":"Empresas"%></h1>
 		<p>Usuario: <%=h(actor.nombre())%> · ID: <%=actor.id()%> · CI: <%=actor.ci()%></p>
 		

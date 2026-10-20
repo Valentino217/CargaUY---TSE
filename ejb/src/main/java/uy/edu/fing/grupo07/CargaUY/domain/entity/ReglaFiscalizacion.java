@@ -9,6 +9,7 @@ import java.util.Objects;
  * para la detección automática de infracciones de carga y desvío de ruta.
  */
 @Entity
+@Cacheable(false)
 @Table(name = "reglas_fiscalizacion")
 public class ReglaFiscalizacion implements Serializable {
 
@@ -28,7 +29,7 @@ public class ReglaFiscalizacion implements Serializable {
 
     public ReglaFiscalizacion() {
         this.umbralCarga = 500;    // Tolerancia por defecto en kg (ej: 500 kg)
-        this.umbralTracking = 5;   // Tolerancia por defecto en puntos desviados o km
+        this.umbralTracking = 5;   // Tolerancia en kilómetros.
     }
 
     public ReglaFiscalizacion(int umbralCarga, double umbralTracking) {

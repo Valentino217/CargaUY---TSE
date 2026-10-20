@@ -50,7 +50,7 @@
                         <webModule>
                             <groupId>${project.groupId}</groupId>
                             <artifactId>CargaUY-web</artifactId>
-                            <contextRoot>/cargauy</contextRoot>
+                            <contextRoot>/CargaUY-web</contextRoot>
                         </webModule>
                     </modules>
                     <outputFileNameMapping>@{artifactId}@@{dashClassifier?}@.@{extension}@</outputFileNameMapping>

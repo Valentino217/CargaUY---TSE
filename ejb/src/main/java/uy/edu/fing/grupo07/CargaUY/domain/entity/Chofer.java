@@ -16,6 +16,11 @@ public class Chofer extends Usuario {
 
     private static final long serialVersionUID = 1L;
 
+//se agrega para la relacion muchos a muchos desde choferes a empresas
+    @ManyToMany(mappedBy = "choferes")
+    private List<Empresa> empresas = new ArrayList<>();
+
+
 
     public Chofer() {
         super();
@@ -25,4 +30,11 @@ public class Chofer extends Usuario {
         super(nombre, mail, fechaNac, ci, password);
     }
 
+    public List<Empresa> getEmpresas() {
+        return empresas;
+    }
+
+    public void setEmpresas(List<Empresa> empresas) {
+        this.empresas = empresas;
+    }
 }

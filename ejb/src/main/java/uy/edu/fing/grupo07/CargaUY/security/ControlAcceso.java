@@ -35,4 +35,19 @@ public class ControlAcceso {
                 || v == null || !v.isChofer())
             throw new ErrorAcceso(409, "El chofer debe estar activo y vinculado a la empresa");
     }
+    public void consultarChofer(String token,Integer id,Integer ci) {
+        Acceso a=exigir(token,TipoUsuario.ADMINISTRADOR,TipoUsuario.CHOFER);
+        if(!a.tiene(TipoUsuario.ADMINISTRADOR)
+                && (id!=null&&id!=a.id() || ci!=null&&ci!=a.ci()))
+            throw new ErrorAcceso(403,"No se pueden consultar viajes de otro chofer");
+    }
+    public void guiaChofer(String token,Long id) {
+        Acceso a=exigir(token,TipoUsuario.ADMINISTRADOR,TipoUsuario.CHOFER);
+        if(id==null) throw new ErrorAcceso(400,"guiaId es obligatorio");
+        GuiaDeViaje g=em.find(GuiaDeViaje.class,id);
+        if(g==null) throw new ErrorAcceso(404,"Guía inexistente");
+        if(!a.tiene(TipoUsuario.ADMINISTRADOR)
+                && (g.getChofer()==null || g.getChofer().getId()!=a.id()))
+            throw new ErrorAcceso(403,"La guía no pertenece al chofer autenticado");
+    }
 }

@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:p="primefaces">
+
+<f:metadata>
+    <f:viewParam name="idCaso" value="#{detalleInfraccionBean.idCaso}"/>
+    <f:viewAction action="#{detalleInfraccionBean.inicializar}"/>
+</f:metadata>
+
+<h:head>
+    <title>CargaUY - Expediente de Infracción</title>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+            margin: 0;
+            padding: 24px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+        }
+        .header-bar h1 {
+            margin: 0;
+            color: #1e3a8a;
+            font-size: 1.8rem;
+        }
+        .nav-links a {
+            margin-left: 16px;
+            text-decoration: none;
+            color: #1e3a8a;
+            font-weight: 500;
+        }
+        .nav-links a:hover {
+            text-decoration: underline;
+        }
+        .mb-4 {
+            margin-bottom: 20px;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .badge-DETECTADA { background-color: #fef3c7; color: #92400e; }
+        .badge-NOTIFICADA { background-color: #e0f2fe; color: #0369a1; }
+        .badge-EN_DESCARGO { background-color: #f3e8ff; color: #6b21a8; }
+        .badge-CONFIRMADA { background-color: #fee2e2; color: #991b1b; }
+        .badge-DESESTIMADA { background-color: #dcfce7; color: #166534; }
+        .box-evidencia {
+            background-color: #f1f5f9;
+            border-left: 4px solid #3b82f6;
+            padding: 12px 16px;
+            font-family: monospace;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+    </style>
+</h:head>
+
+<h:body>
+    <div class="container">
+        <div class="header-bar">
+            <div>
+                <h1>Expediente de Infracción</h1>
+                <small style="color: #64748b;">Control y fiscalización del transporte de carga</small>
+            </div>
+            <div class="nav-links">
+                <a href="infracciones.xhtml">Volver a Bandeja</a>
+                <a href="detalleViaje.xhtml">Tracking</a>
+                <a href="dashboard.xhtml">Dashboard</a>
+                <a href="index.xhtml">Inicio</a>
+            </div>
+        </div>
+
+        <h:form id="formDetalle">
+            <p:growl id="growl" showDetail="true" life="4000"/>
+
+            <h:panelGroup rendered="#{detalleInfraccionBean.infraccion == null}">
+                <p:panel header="Infracción No Encontrada" styleClass="mb-4">
+                    <p>No se especificó un identificador de infracción válido o la infracción no existe.</p>
+                    <p:button outcome="infracciones.xhtml" value="Ir a la Bandeja" icon="pi pi-arrow-left"/>
+                </p:panel>
+            </h:panelGroup>
+
+            <h:panelGroup rendered="#{detalleInfraccionBean.infraccion != null}">
+
+                <!-- Card 1: Datos Generales -->
+                <p:panel header="Caso ##{detalleInfraccionBean.infraccion.idCaso()} - #{detalleInfraccionBean.infraccion.tipo().name()}" styleClass="mb-4">
+                    <p:panelGrid columns="4" layout="flex" columnClasses="col-12 md:col-3,col-12 md:col-3,col-12 md:col-3,col-12 md:col-3" contentStyleClass="align-items-baseline">
+                        <h:panelGroup>
+                            <strong>Estado: </strong>
+                            <br/>
+                            <span class="badge badge-#{detalleInfraccionBean.infraccion.estado().name()}">
+                                #{detalleInfraccionBean.infraccion.estado().name()}
+                            </span>
+                        </h:panelGroup>
+
+                        <h:panelGroup>
+                            <strong>Fecha Detección: </strong>
+                            <br/>
+                            <h:outputText value="#{detalleInfraccionBean.infraccion.fecha()}"/>
+                        </h:panelGroup>
+
+                        <h:panelGroup>
+                            <strong>Guía de Viaje: </strong>
+                            <br/>
+                            <h:outputText value="##{detalleInfraccionBean.infraccion.guiaId()} "/>
+                            <a href="detalleViaje.xhtml?guiaId=#{detalleInfraccionBean.infraccion.guiaId()}" target="_blank" style="color: #1e3a8a; font-weight: 500; font-size: 0.85rem;">(Ver Tracking)</a>
+                        </h:panelGroup>
+
+                        <h:panelGroup>
+                            <strong>Vehículo (Matrícula): </strong>
+                            <br/>
+                            <h:outputText value="#{detalleInfraccionBean.infraccion.matricula()}"/>
+                        </h:panelGroup>
+
+                        <h:panelGroup>
+                            <strong>Empresa: </strong>
+                            <br/>
+                            <h:outputText value="#{detalleInfraccionBean.infraccion.nombreEmpresa()}"/>
+                        </h:panelGroup>
+                    </p:panelGrid>
+                </p:panel>
+
+                <!-- Card 2: Evidencia Técnica -->
+                <p:panel header="Evidencia Técnica del Motor" styleClass="mb-4">
+                    <div class="box-evidencia">
+                        <h:outputText value="#{detalleInfraccionBean.infraccion.evidencia()}"/>
+                    </div>
+                </p:panel>
+
+                <!-- Card 3: Descargos de la Empresa -->
+                <p:panel header="Descargo de la Empresa Transportista" styleClass="mb-4">
+                    <h:panelGroup rendered="#{not empty detalleInfraccionBean.infraccion.textoDescargo()}">
+                        <p style="margin-bottom: 8px;">
+                            <strong>Fecha Presentación: </strong>
+                            <h:outputText value="#{detalleInfraccionBean.infraccion.fechaDescargo()}"/>
+                        </p>
+                        <div class="box-evidencia" style="border-left-color: #8b5cf6;">
+                            <h:outputText value="#{detalleInfraccionBean.infraccion.textoDescargo()}"/>
+                        </div>
+                    </h:panelGroup>
+
+                    <h:panelGroup rendered="#{empty detalleInfraccionBean.infraccion.textoDescargo()}">
+                        <p style="color: #64748b;">La empresa aún no ha presentado descargos para este caso.</p>
+                    </h:panelGroup>
+
+                    <h:panelGroup rendered="#{detalleInfraccionBean.puedePresentarDescargo}">
+                        <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;"/>
+                        <h3 style="font-size: 1rem; margin-bottom: 12px; color: #1e3a8a;">Registrar / Actualizar Descargo</h3>
+                        <p:outputLabel for="descargoInput" value="Argumentos o comprobantes:" style="display: block; font-weight: bold; margin-bottom: 6px;"/>
+                        <p:inputTextarea id="descargoInput" value="#{detalleInfraccionBean.textoDescargo}" rows="3" style="width: 100%; margin-bottom: 12px;" placeholder="Ingrese el descargo de la empresa transportista..."/>
+                        <p:commandButton value="Registrar Descargo" action="#{detalleInfraccionBean.presentarDescargo}" update="formDetalle growl" icon="pi pi-send"/>
+                    </h:panelGroup>
+                </p:panel>
+
+                <!-- Card 4: Acciones Resolutivas del Funcionario (No Resuelta) -->
+                <h:panelGroup rendered="#{!detalleInfraccionBean.resuelta}">
+                    <p:panel header="Gestión y Resolución (Funcionario)" styleClass="mb-4">
+
+                        <!-- Notificar -->
+                        <h:panelGroup rendered="#{detalleInfraccionBean.detectada}">
+                            <div style="margin-bottom: 24px;">
+                                <p>Notificar formalmente a la empresa para abrir el período de descargos legales:</p>
+                                <p:commandButton value="Notificar Infracción a la Empresa" action="#{detalleInfraccionBean.notificar}" update="formDetalle growl" icon="pi pi-bell"/>
+                            </div>
+                            <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;"/>
+                        </h:panelGroup>
+
+                        <!-- Confirmar -->
+                        <h:panelGroup rendered="#{detalleInfraccionBean.puedeConfirmar}">
+                            <div style="margin-bottom: 24px;">
+                                <h3 style="color: #991b1b; font-size: 1rem; margin-bottom: 12px;">Confirmar Infracción (Aplicación de Sanción)</h3>
+                                <div style="display: flex; flex-direction: column; gap: 12px; max-width: 600px;">
+                                    <div>
+                                        <p:outputLabel for="funcIdConf" value="ID Funcionario: " style="font-weight: bold;"/>
+                                        <p:inputNumber id="funcIdConf" value="#{detalleInfraccionBean.funcionarioId}" decimalPlaces="0" style="width: 120px; margin-left: 8px;"/>
+                                    </div>
+                                    <div>
+                                        <p:outputLabel for="fundamentoConf" value="Fundamento de la Sanción: " style="font-weight: bold; display: block; margin-bottom: 6px;"/>
+                                        <p:inputTextarea id="fundamentoConf" value="#{detalleInfraccionBean.fundamento}" rows="3" style="width: 100%;" placeholder="Motivación jurídica y técnica..."/>
+                                    </div>
+                                    <div>
+                                        <p:commandButton value="Confirmar Infracción y Auditar" action="#{detalleInfraccionBean.confirmar}" update="formDetalle growl" icon="pi pi-check" styleClass="ui-button-danger"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;"/>
+                        </h:panelGroup>
+
+                        <!-- Desestimar -->
+                        <div>
+                            <h3 style="color: #64748b; font-size: 1rem; margin-bottom: 12px;">Desestimar Infracción (Archivo)</h3>
+                            <div style="display: flex; flex-direction: column; gap: 12px; max-width: 600px;">
+                                <div>
+                                    <p:outputLabel for="funcIdDes" value="ID Funcionario: " style="font-weight: bold;"/>
+                                    <p:inputNumber id="funcIdDes" value="#{detalleInfraccionBean.funcionarioId}" decimalPlaces="0" style="width: 120px; margin-left: 8px;"/>
+                                </div>
+                                <div>
+                                    <p:outputLabel for="fundamentoDes" value="Motivo de la Desestimación: " style="font-weight: bold; display: block; margin-bottom: 6px;"/>
+                                    <p:inputTextarea id="fundamentoDes" value="#{detalleInfraccionBean.fundamento}" rows="3" style="width: 100%;" placeholder="Motivo de archivo..."/>
+                                </div>
+                                <div>
+                                    <p:commandButton value="Desestimar Caso y Auditar" action="#{detalleInfraccionBean.desestimar}" update="formDetalle growl" icon="pi pi-times" styleClass="ui-button-secondary"/>
+                                </div>
+                            </div>
+                        </div>
+
+                    </p:panel>
+                </h:panelGroup>
+
+                <!-- Card 5: Auditoría Inmutable (Resuelta) -->
+                <h:panelGroup rendered="#{detalleInfraccionBean.resuelta}">
+                    <p:panel header="Resolución Final y Registro de Auditoría Inmutable" styleClass="mb-4">
+                        <p:panelGrid columns="2" layout="grid">
+                            <h:panelGroup>
+                                <strong>Resolución: </strong>
+                                <span class="badge badge-#{detalleInfraccionBean.infraccion.estado().name()}">
+                                    #{detalleInfraccionBean.infraccion.estado().name()}
+                                </span>
+                            </h:panelGroup>
+
+                            <h:panelGroup>
+                                <strong>Fecha Resolución: </strong>
+                                <h:outputText value="#{detalleInfraccionBean.infraccion.fechaResolucion()}"/>
+                            </h:panelGroup>
+
+                            <h:panelGroup>
+                                <strong>Funcionario Interviniente: </strong>
+                                <h:outputText value="#{detalleInfraccionBean.infraccion.auditoria().usuario()}"/>
+                            </h:panelGroup>
+
+                            <h:panelGroup>
+                                <strong>Acción Auditada: </strong>
+                                <h:outputText value="#{detalleInfraccionBean.infraccion.auditoria().accion()}"/>
+                            </h:panelGroup>
+
+                            <h:panelGroup style="grid-column: 1 / -1;">
+                                <strong>Timestamp Inmutable de Auditoría: </strong>
+                                <code style="font-size: 0.95rem;">#{detalleInfraccionBean.infraccion.auditoria().timestampCreacion()}</code>
+                            </h:panelGroup>
+
+                            <h:panelGroup style="grid-column: 1 / -1;">
+                                <strong>Fundamento Formal: </strong>
+                                <p style="margin-top: 6px; white-space: pre-wrap;">#{detalleInfraccionBean.infraccion.auditoria().fundamento()}</p>
+                            </h:panelGroup>
+                        </p:panelGrid>
+                    </p:panel>
+                </h:panelGroup>
+
+            </h:panelGroup>
+        </h:form>
+    </div>
+</h:body>
+</html>

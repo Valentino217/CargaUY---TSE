@@ -42,6 +42,23 @@ public class Empresa implements Serializable {
     )
     private List<Ciudadano> ciudadanos = new ArrayList<>();
 
+   //se agrega para poder obtener los choferes que trabajan en la empresa
+    @ManyToMany
+    @JoinTable(
+        name = "empresa_choferes",
+        joinColumns = @JoinColumn(name = "nro_empresa"),
+        inverseJoinColumns = @JoinColumn(name = "chofer_id")
+    )
+    private List<Chofer> choferes = new ArrayList<>();
+    
+    public List<Chofer> getChoferes() {
+        return choferes;
+    }
+
+    public void setChoferes(List<Chofer> choferes) {
+        this.choferes = choferes;
+    }
+    
     @ManyToMany
     @JoinTable(
         name = "empresa_rubros",

@@ -1,7 +1,7 @@
 package uy.edu.fing.grupo07.CargaUY.web.api;
 import jakarta.ejb.EJB;
 import jakarta.ws.rs.*;
-import jakarta.ws.rs.container.ContainerRequestContext;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.core.*;
 import jakarta.json.*;
 import uy.edu.fing.grupo07.CargaUY.security.*;
@@ -12,8 +12,8 @@ public class ApiP1 {
     @EJB private AutenticacionService auth;
     @EJB private GestionPerfilesService perfiles;
     @EJB private EstadoService estado;
-    @Context private ContainerRequestContext request;
-    private String token(){return (String)request.getProperty("token");}
+    @Context private HttpServletRequest request;
+    private String token(){return (String)request.getAttribute("token");}
     @POST @Path("auth/login") @Consumes(MediaType.APPLICATION_JSON)
     public Response login(JsonObject datos) {
         try {

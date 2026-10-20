@@ -18,7 +18,7 @@ public class Vehiculo implements Serializable {
 
     @Id
     @Column(nullable = false)
-    private int matricula;
+    private String matricula;
 
     @Column(nullable = false, length = 100)
     private String marca;
@@ -42,8 +42,8 @@ public class Vehiculo implements Serializable {
     @OneToMany(mappedBy = "vehiculo", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PNC> pncs = new ArrayList<>();
 
-    @OneToOne(mappedBy = "vehiculo", cascade = CascadeType.ALL, orphanRemoval = true)
-    private ITV itv;
+    @OneToMany(mappedBy = "vehiculo", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ITV> itvs = new ArrayList<>();
 
     @OneToMany(mappedBy = "vehiculo")
     private List<GuiaDeViaje> guias = new ArrayList<>();
@@ -51,7 +51,7 @@ public class Vehiculo implements Serializable {
     public Vehiculo() {
     }
 
-    public Vehiculo(int matricula, String marca, String modelo, int peso, int capacidadCarga,
+    public Vehiculo(String matricula, String marca, String modelo, int peso, int capacidadCarga,
                     boolean estadoHabilitacion, Empresa empresa) {
         this.matricula = matricula;
         this.marca = marca;
@@ -62,11 +62,11 @@ public class Vehiculo implements Serializable {
         this.empresa = empresa;
     }
 
-    public int getMatricula() {
+    public String getMatricula() {
         return matricula;
     }
 
-    public void setMatricula(int matricula) {
+    public void setMatricula(String matricula) {
         this.matricula = matricula;
     }
 
@@ -126,12 +126,12 @@ public class Vehiculo implements Serializable {
         this.pncs = pncs;
     }
 
-    public ITV getItv() {
-        return itv;
+    public List<ITV> getItv() {
+        return itvs;
     }
 
-    public void setItv(ITV itv) {
-        this.itv = itv;
+    public void setItv(List<ITV> itvs) {
+        this.itvs = itvs;
     }
 
     public List<GuiaDeViaje> getGuias() {
@@ -146,7 +146,7 @@ public class Vehiculo implements Serializable {
      * Verifica si el vehículo cuenta con habilitación vigente (PNC e ITV al día).
      */
     public boolean verificarHabilitacionVigente() {
-        boolean itvValido = itv != null && itv.isVigente();
+        boolean itvValido = itvs != null && itvs.stream().anyMatch(ITV::isVigente);
         boolean pncValido = pncs != null && pncs.stream().anyMatch(PNC::isVigente);
         return estadoHabilitacion && itvValido && pncValido;
     }
