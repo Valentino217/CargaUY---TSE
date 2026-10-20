@@ -113,7 +113,7 @@ fun NavegationComponent() {
         pendientesCount = syncRepository.dbHelper.contarEventosPendientes()
     }
 
-    fun ejecutarSincronizacionManualOAutomatica(mostrarSiVacio: Boolean = false) {
+    fun ejecutarSincronizacion(mostrarSiVacio: Boolean = false) {
         scope.launch {
             refrescarEstadoLocal()
             val pendientesAntes = syncRepository.dbHelper.contarEventosPendientes()
@@ -148,7 +148,7 @@ fun NavegationComponent() {
         )
         refrescarEstadoLocal()
         if (enLinea && pendientesCount > 0) {
-            ejecutarSincronizacionManualOAutomatica()
+            ejecutarSincronizacion()
         }
     }
 
@@ -182,7 +182,7 @@ fun NavegationComponent() {
             pendientesCount = pendientesCount,
             sincronizando = sincronizando,
             mensajeGlobalSync = mensajeGlobalSync,
-            onSincronizarClick = { ejecutarSincronizacionManualOAutomatica(mostrarSiVacio = true) },
+            onSincronizarClick = { ejecutarSincronizacion(mostrarSiVacio = true) },
             onCerrarMensaje = { mensajeGlobalSync = null }
         )
 
@@ -200,7 +200,7 @@ fun NavegationComponent() {
                     pendientesCount = pendientesCount,
                     onEventoChange = {
                         refrescarEstadoLocal()
-                        ejecutarSincronizacionManualOAutomatica(mostrarSiVacio = true)
+                        ejecutarSincronizacion(mostrarSiVacio = true)
                     }
                 )
             }
