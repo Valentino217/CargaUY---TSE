@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:h="jakarta.faces.html" xmlns:ui="jakarta.faces.facelets" xmlns:c="jakarta.tags.core" xmlns:pt="jakarta.faces.passthrough" lang="es">
+<h:head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>CargaUY - Ingresar</title>
+    <link rel="stylesheet" href="#{request.contextPath}/css/plataforma.css"/>
+</h:head>
+<h:body>
+<main class="login-container">
+    <header class="header-bar">
+        <div>
+            <p class="eyebrow">Plataforma de gestión y fiscalización</p>
+            <h1>Ingresar a CargaUY</h1>
+        </div>
+    </header>
+    <c:if test="#{requestScope.error ne null}">
+    <div class="alert" role="alert"><h:outputText value="#{requestScope.error}"/></div>
+    </c:if>
+    <div class="login-grid">
+        <section class="card" aria-labelledby="ingreso-interno">
+            <h2 id="ingreso-interno">Administradores y autoridades</h2>
+            <form class="login-form" method="post" action="#{request.contextPath}/login">
+                <input type="hidden" name="csrf" value="#{requestScope.csrf}"/>
+                <label for="uid">Usuario del directorio
+                    <input id="uid" name="uid" required="required" autocomplete="username" placeholder="Ingresá tu usuario"/>
+                </label>
+                <label for="password">Contraseña
+                    <input id="password" name="password" type="password" required="required" autocomplete="current-password" placeholder="Ingresá tu contraseña"/>
+                </label>
+                <button type="submit" class="button-full">Ingresar</button>
+            </form>
+        </section>
+        <section class="card external-login" aria-labelledby="ingreso-ciudadano">
+            <h2 id="ingreso-ciudadano">Ciudadanos, choferes y funcionarios</h2>
+            <p>El ingreso se realiza a través de Usuario gub.uy. Al finalizar, volverás a esta plataforma.</p>
+            <a class="button button-secondary button-full" href="#{request.contextPath}/gub/iniciar">Ingresar con Usuario gub.uy</a>
+        </section>
+    </div>
+    <p class="login-footer">CargaUY · Gestión de transporte de carga</p>
+</main>
+</h:body>
+</html>

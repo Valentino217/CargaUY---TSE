@@ -9,7 +9,7 @@ import uy.edu.fing.grupo07.CargaUY.security.*;
 import uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario;
 
 /** Las pantallas JSF de viajes comparten el login y la sesión de P1. */
-@WebFilter(urlPatterns={"*.xhtml","/index.jsp","/DetalleViajeServlet","/detalle-viaje","/detalleViaje.jsp"})
+@WebFilter(urlPatterns={"*.xhtml","/DetalleViajeServlet","/detalle-viaje"})
 public class IntegracionSesionFilter implements Filter {
     @EJB private AutenticacionService auth;
     @Override public void doFilter(ServletRequest request,ServletResponse response,FilterChain chain)
@@ -27,7 +27,7 @@ public class IntegracionSesionFilter implements Filter {
             boolean gestion=p.equals("/GuiaDeViajeJSF.xhtml")||p.equals("/VehiculoJSF.xhtml")
                 ||p.equals("/ITV.xhtml")||p.equals("/PNC.xhtml");
             // Los módulos de fiscalización aún tienen operaciones globales; se reservan a operadores internos.
-            boolean permitido=p.equals("/index.xhtml")||p.equals("/index.jsp")||actor.tiene(TipoUsuario.ADMINISTRADOR)
+            boolean permitido=p.equals("/index.xhtml")||actor.tiene(TipoUsuario.ADMINISTRADOR)
                 ||gestion&&actor.tiene(TipoUsuario.CIUDADANO)
                 ||!gestion&&(actor.tiene(TipoUsuario.FUNCIONARIO)
                     ||actor.tiene(TipoUsuario.AUTORIDAD)&&(r.getMethod().equals("GET")||r.getMethod().equals("HEAD")));

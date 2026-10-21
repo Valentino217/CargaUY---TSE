@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core" xmlns:ui="jakarta.faces.facelets" lang="es">
+<h:head>
+    <title>CargaUY - Consulta de tracking</title>
+    <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <link rel="stylesheet" href="#{request.contextPath}/css/plataforma.css"/>
+</h:head>
+<h:body><main class="container">
+    <header class="header-bar"><h1>Detalle y tracking de viaje</h1><a href="#{request.contextPath}/index.xhtml">Inicio</a></header>
+    <section class="card">
+        <form method="get" action="#{request.contextPath}/detalle-viaje">
+            <label>Número de guía<input name="guiaId" type="number" min="1" required="required" value="#{param.guiaId}"/></label>
+            <button>Consultar tracking</button>
+        </form>
+    </section>
+    <ui:fragment rendered="#{not empty requestScope.error}"><div class="alert"><h:outputText value="#{requestScope.error}"/></div></ui:fragment>
+    <ui:fragment rendered="#{not empty requestScope.guiaId}">
+        <section class="card"><h2>Guía <h:outputText value="#{requestScope.guiaId}"/></h2>
+            <h3>Línea de tiempo de eventos</h3>
+            <h:dataTable value="#{requestScope.eventos}" var="evento">
+                <h:column><f:facet name="header">Tipo</f:facet><h:outputText value="#{evento.tipo()}"/></h:column>
+                <h:column><f:facet name="header">Fecha y hora</f:facet><h:outputText value="#{evento.tiempo()}"/></h:column>
+                <h:column><f:facet name="header">Coordenadas</f:facet><h:outputText value="#{evento.latitud()}, #{evento.longitud()}"/></h:column>
+                <h:column><f:facet name="header">UUID</f:facet><h:outputText value="#{evento.uuid()}"/></h:column>
+                <h:column><f:facet name="header">Incidente</f:facet>
+                    <ui:fragment rendered="#{evento.incidente() ne null}"><h:outputText value="#{evento.incidente().descripcion()}"/><br/><h:outputText value="#{evento.incidente().foto()}"/></ui:fragment>
+                </h:column>
+            </h:dataTable>
+            <ui:fragment rendered="#{empty requestScope.eventos}"><p>No se registran eventos para esta guía.</p></ui:fragment>
+        </section>
+        <section class="card"><h2>Control de balanzas periféricas</h2>
+            <h:dataTable value="#{requestScope.pesadas}" var="pesada">
+                <h:column><f:facet name="header">ID</f:facet><h:outputText value="#{pesada.idPesada()}"/></h:column>
+                <h:column><f:facet name="header">Fecha</f:facet><h:outputText value="#{pesada.fecha()}"/></h:column>
+                <h:column><f:facet name="header">Hora</f:facet><h:outputText value="#{pesada.hora()}"/></h:column>
+                <h:column><f:facet name="header">Peso (kg)</f:facet><h:outputText value="#{pesada.pesoRegistrado()}"/></h:column>
+                <h:column><f:facet name="header">Matrícula</f:facet><h:outputText value="#{pesada.matricula()}"/></h:column>
+            </h:dataTable>
+            <ui:fragment rendered="#{empty requestScope.pesadas}"><p>No se registran pesadas para esta guía.</p></ui:fragment>
+        </section>
+    </ui:fragment>
+</main></h:body>
+</html>

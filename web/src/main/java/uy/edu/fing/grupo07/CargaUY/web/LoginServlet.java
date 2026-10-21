@@ -13,7 +13,7 @@ public class LoginServlet extends HttpServlet {
             throws IOException,ServletException {
         if(!WebSeguridad.transporte(r)) { s.sendError(403); return; }
         WebSeguridad.preparar(r,s);
-        r.getRequestDispatcher("/WEB-INF/p2/login.jsp").forward(r,s);
+        r.getRequestDispatcher("/WEB-INF/p2/login.xhtml").forward(r,s);
     }
     @Override protected void doPost(HttpServletRequest r,HttpServletResponse s)
             throws IOException,ServletException {
