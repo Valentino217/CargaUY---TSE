@@ -55,6 +55,41 @@ public class GestionPerfilesService {
         return u.getId();
     }
 
+    /** Alta administrativa de perfil externo; no crea una contraseña local ni una identidad gub.uy. */
+    public int registrarCiudadano(String token,String nombre,String mail,LocalDate nacimiento,int ci) {
+        return registrarConRoles(token,new DatosUsuario(TipoUsuario.CIUDADANO,nombre,mail,nacimiento,ci,null,null,null,null),
+            java.util.Set.of(TipoUsuario.CIUDADANO));
+    }
+
+    public int registrarConRoles(String token,DatosUsuario entrada,java.util.Set<TipoUsuario> seleccion) {
+        Acceso actor=control.exigir(token,ADMINISTRADOR,FUNCIONARIO);
+        if(seleccion==null||seleccion.isEmpty()||seleccion.stream().anyMatch(java.util.Objects::isNull))throw new ErrorNegocio("Seleccioná al menos un rol");
+        java.util.Set<TipoUsuario> roles=java.util.EnumSet.copyOf(seleccion);
+        if(!actor.tiene(ADMINISTRADOR)&&!java.util.Set.of(TipoUsuario.CIUDADANO,TipoUsuario.CHOFER).containsAll(roles))
+            throw new ErrorAcceso(403,"Solo un administrador puede asignar esos roles");
+        boolean interno=roles.contains(ADMINISTRADOR)||roles.contains(TipoUsuario.AUTORIDAD);
+        if(interno&&roles.stream().anyMatch(r->r!=ADMINISTRADOR&&r!=TipoUsuario.AUTORIDAD))
+            throw new ErrorNegocio("No se pueden mezclar roles de LDAP y Usuario gub.uy");
+        if(entrada==null)throw new ErrorNegocio("Datos obligatorios");
+        TipoUsuario tipo=roles.contains(TipoUsuario.AUTORIDAD)?TipoUsuario.AUTORIDAD:roles.contains(ADMINISTRADOR)?ADMINISTRADOR:
+            roles.contains(FUNCIONARIO)?FUNCIONARIO:roles.contains(TipoUsuario.CIUDADANO)?TipoUsuario.CIUDADANO:TipoUsuario.CHOFER;
+        DatosUsuario datos=new DatosUsuario(tipo,entrada.nombre(),entrada.mail(),entrada.fechaNac(),entrada.ci(),null,
+            entrada.nroFuncionario(),entrada.departamento(),entrada.cargo());
+        validarUsuario(datos);
+        long existentes=em.createQuery("select count(u) from Usuario u where u.ci = :ci",Long.class)
+            .setParameter("ci",datos.ci()).getSingleResult();
+        if(existentes>0)throw new ErrorNegocio("Ya existe un usuario con esa CI");
+        Usuario usuario=switch(tipo){
+            case CIUDADANO -> new Ciudadano();case CHOFER -> new Chofer();case FUNCIONARIO -> new Funcionario();
+            case ADMINISTRADOR -> new Administrador();case AUTORIDAD -> new Autoridad();
+        };
+        copiarDatos(usuario,datos);
+        if(roles.contains(TipoUsuario.AUTORIDAD))Validaciones.texto(datos.cargo(),"Cargo de autoridad",100);
+        usuario.getRoles().addAll(roles);
+        usuario.setPassword(interno?"{LDAP-PENDIENTE}":"{GUB-PENDIENTE}");
+        em.persist(usuario);em.flush();return usuario.getId();
+    }
+
     public UsuarioResumen consultarUsuario(String token, int id) {
         Acceso actor=control.exigir(token); if(actor.id()!=id && !actor.tiene(ADMINISTRADOR) && !actor.tiene(FUNCIONARIO)) throw new ErrorAcceso(403,"Perfil ajeno");
         return UsuarioResumen.desde(usuario(id));

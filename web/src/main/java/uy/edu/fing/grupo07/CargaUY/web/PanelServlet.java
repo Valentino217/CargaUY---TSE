@@ -9,7 +9,7 @@ import uy.edu.fing.grupo07.CargaUY.dto.*;
 import uy.edu.fing.grupo07.CargaUY.service.*;
 import uy.edu.fing.grupo07.CargaUY.security.*;
 
-@WebServlet(urlPatterns={"/app/admin","/app/empresa","/app/perfil"})
+@WebServlet(urlPatterns={"/app/admin","/app/perfil"})
 public class PanelServlet extends HttpServlet {
     @EJB private GestionPerfilesService perfiles;
     @EJB private GestionPlataformaService plataforma;
