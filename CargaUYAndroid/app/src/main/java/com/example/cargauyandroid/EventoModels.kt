@@ -136,6 +136,6 @@ object EventoFormatter {
         empresa: String
     ): String {
         val accion = if (esDescarga) "Descarga parcial" else "Carga parcial"
-        return "$accion: ${cantidadKg.trim()} Kg | Mercaderia: ${mercaderia.trim()} | Empresa: ${empresa.trim()}"
+        return "$accion: ${cantidadKg.trim()} Kg | Mercaderia: ${mercaderia.trim()}"
     }
 }

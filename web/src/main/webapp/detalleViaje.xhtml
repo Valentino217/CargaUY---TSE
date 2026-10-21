@@ -173,15 +173,14 @@
                     <p:commandButton value="Consultar"
                                      action="#{detalleViajeBean.consultarViaje}"
                                      update=":formTracking"
-                                     icon="pi pi-search"/>
-
+                                     icon="pi pi-search"/>  
                     <p:commandButton value="Sincronizar Mock Balanza"
                                      action="#{detalleViajeBean.sincronizarMockBalanza}"
                                      update=":formTracking"
                                      icon="pi pi-sync"
+                                     rendered="false"
                                      styleClass="ui-button-success"
                                      title="Consulta el mock periférico de balanza y registra pesada automática"/>
-
                     <p:commandButton value="Reportar Incidente"
                                      type="button"
                                      onclick="PF('dlgIncidente').show();"
