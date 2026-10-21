@@ -134,7 +134,7 @@ fun NavegationComponent() {
         }
     }
 
-    // Solicitar permiso de ubicación al iniciar para tener coordenadas GPS listas
+    // Solicitar permiso de ubicacion al iniciar para tener coordenadas GPS listas
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
     ) { _ -> }
@@ -147,12 +147,13 @@ fun NavegationComponent() {
             )
         )
         refrescarEstadoLocal()
-        if (enLinea && pendientesCount > 0) {
+        if (syncRepository.baseDatosReiniciadaPorNuevaCompilacion) {
+        } else if (enLinea && pendientesCount > 0) {
             ejecutarSincronizacion()
         }
     }
 
-    // CU Crítico 2: Escuchar cuando el teléfono recupera conexión a internet para sincronizar automáticamente
+    // CU Critico 2: Escuchar cuando el telefono recupera conexion a internet para sincronizar automaticamente
     DisposableEffect(cedulaActual) {
         val callback = syncRepository.registrarCallbackConectividad {
             scope.launch {
@@ -165,7 +166,7 @@ fun NavegationComponent() {
                     sincronizando = false
                     pendientesCount = syncRepository.dbHelper.contarEventosPendientes()
                     if (resumen != null) {
-                        mensajeGlobalSync = "Conexión recuperada: ${resumen.mensaje}"
+                        mensajeGlobalSync = "Conexion recuperada: ${resumen.mensaje}"
                         syncTick++
                     }
                 }
@@ -201,6 +202,12 @@ fun NavegationComponent() {
                     onEventoChange = {
                         refrescarEstadoLocal()
                         ejecutarSincronizacion(mostrarSiVacio = true)
+                    },
+                    onLimpiarBd = {
+                        syncRepository.limpiarBaseDeDatosManual()
+                        refrescarEstadoLocal()
+                        mensajeGlobalSync = "Base de datos local reiniciada correctamente."
+                        syncTick++
                     }
                 )
             }
@@ -274,16 +281,16 @@ fun BarraEstadoConexionSync(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = if (enLinea) "● En línea con CargaUY" else "○ Modo sin conexión (Offline)",
+                    text = if (enLinea) "● En linea con CargaUY" else "○ Modo sin conexion (Offline)",
                     color = textColor,
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp
                 )
                 Text(
                     text = if (pendientesCount > 0) {
-                        "$pendientesCount evento(s) guardado(s) en el teléfono pendiente(s) de sincronizar"
+                        "$pendientesCount evento(s) guardado(s) en el telefono pendiente(s) de sincronizar"
                     } else {
-                        "Todos los eventos están sincronizados"
+                        "Todos los eventos estan sincronizados"
                     },
                     color = textColor,
                     fontSize = 12.sp
@@ -338,7 +345,8 @@ fun MainScreen(
     onCedulaChange: (String) -> Unit,
     syncRepository: SyncRepository,
     pendientesCount: Int,
-    onEventoChange: () -> Unit
+    onEventoChange: () -> Unit,
+    onLimpiarBd: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
     var mensajeError by remember { mutableStateOf<String?>(null) }
@@ -357,7 +365,7 @@ fun MainScreen(
             color = Color(0xFF1E3A8A)
         )
         Text(
-            text = "Gestión de guías de viaje y registro de eventos en ruta",
+            text = "Gestion de guias de viaje y registro de eventos en ruta",
             style = MaterialTheme.typography.bodyMedium,
             color = Color(0xFF475569)
         )
@@ -371,7 +379,7 @@ fun MainScreen(
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "Identificación del Chofer",
+                    text = "Identificacion del Chofer",
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 16.sp
                 )
@@ -381,18 +389,13 @@ fun MainScreen(
                     onValueChange = { nuevo ->
                         onCedulaChange(nuevo.filter { it.isDigit() })
                     },
-                    label = { Text("Cédula de Identidad (CI)") },
+                    label = { Text("Cedula de Identidad (CI)") },
                     placeholder = { Text("Ej: 11223344") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "Chofer de prueba precargado: 11223344 (Carlos Chofer)",
-                    fontSize = 12.sp,
-                    color = Color(0xFF64748B)
-                )
             }
         }
 
@@ -410,7 +413,7 @@ fun MainScreen(
             onClick = { navController.navigate("viajes") },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Ver Mis Guías de Viaje")
+            Text("Ver Mis Guias de Viaje")
         }
 
         Spacer(modifier = Modifier.height(10.dp))
@@ -432,7 +435,7 @@ fun MainScreen(
                     if (guiaActiva != null) {
                         navController.navigate("registrarEvento/${guiaActiva.id}")
                     } else {
-                        mensajeError = "No se encontraron guías asignadas para la CI $ci. Consulte 'Ver Mis Guías de Viaje' primero con conexión."
+                        mensajeError = "No se encontraron guias asignadas para la CI $ci. Consulte 'Ver Mis Guias de Viaje' primero con conexion."
                     }
                 }
             },
@@ -469,6 +472,16 @@ fun MainScreen(
                     fontSize = 13.sp
                 )
             }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedButton(
+            onClick = onLimpiarBd,
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF64748B)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Reiniciar base de datos local")
         }
     }
 }
@@ -515,7 +528,7 @@ fun PantallaViajes(
         ) {
             Column {
                 Text(
-                    text = "Guías de Viaje",
+                    text = "Guias de Viaje",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF1E3A8A)
@@ -565,7 +578,7 @@ fun PantallaViajes(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "No se encontraron guías de viaje para la CI $cedulaChofer.",
+                    text = "No se encontraron guias de viaje para la CI $cedulaChofer.",
                     color = Color(0xFF64748B)
                 )
             }
@@ -594,7 +607,7 @@ fun PantallaViajes(
             onClick = { navController.popBackStack() },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Volver al menú principal")
+            Text("Volver al menu principal")
         }
     }
 }
@@ -628,7 +641,7 @@ fun TarjetaGuiaViaje(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Guía #${viaje.id}",
+                    text = "Guia #${viaje.id}",
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
                     color = Color(0xFF1E3A8A)
@@ -660,7 +673,7 @@ fun TarjetaGuiaViaje(
                 color = Color(0xFF475569)
             )
             Text(
-                text = "Vehículo: ${viaje.vehiculoMatricula ?: "S/D"} (${viaje.vehiculoMarcaModelo ?: "-"})",
+                text = "Vehiculo: ${viaje.vehiculoMatricula ?: "S/D"} (${viaje.vehiculoMarcaModelo ?: "-"})",
                 fontSize = 13.sp,
                 color = Color(0xFF475569)
             )
@@ -706,7 +719,7 @@ fun PantallaRegistrarEvento(
 
     var tipoSeleccionado by rememberSaveable { mutableStateOf(TipoEventoOption.INICIO) }
 
-    // Coordenadas GPS automáticas con fallback
+    // Coordenadas GPS automaticas con fallback
     var coordenadas by remember { mutableStateOf(syncRepository.obtenerUbicacionActual()) }
 
     // Campos 2.C y 2.D (Carga parcial y Descarga parcial)
@@ -722,7 +735,7 @@ fun PantallaRegistrarEvento(
     var resultadoRegistro by remember { mutableStateOf<ResultadoOperacionEvento?>(null) }
     var guardando by remember { mutableStateOf(false) }
 
-    // Selector de foto opcional de galería (Flujo 2.E.3.A)
+    // Selector de foto opcional de galeria (Flujo 2.E.3.A)
     val selectorFotoLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -745,9 +758,9 @@ fun PantallaRegistrarEvento(
         )
         Text(
             text = if (guiaLocal != null) {
-                "Guía #${guiaLocal.id}: ${guiaLocal.origen} → ${guiaLocal.destino} (${guiaLocal.estado})"
+                "Guia #${guiaLocal.id}: ${guiaLocal.origen} → ${guiaLocal.destino} (${guiaLocal.estado})"
             } else {
-                "Guía #$guiaId"
+                "Guia #$guiaId"
             },
             fontSize = 14.sp,
             color = Color(0xFF475569)
@@ -755,7 +768,7 @@ fun PantallaRegistrarEvento(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Tarjeta de Ubicación y Hora automática
+        // Tarjeta de Ubicacion y Hora automatica
         Card(
             colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
             modifier = Modifier.fillMaxWidth()
@@ -769,7 +782,7 @@ fun PantallaRegistrarEvento(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Ubicación GPS y Hora Automática",
+                        text = "Ubicacion GPS y Hora Automatica",
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 13.sp
                     )
@@ -824,7 +837,7 @@ fun PantallaRegistrarEvento(
         HorizontalDivider()
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Formulario dinámico según el flujo alternativo (2.A, 2.B, 2.C, 2.D, 2.E)
+        // Formulario dinamico segun el flujo alternativo (2.A, 2.B, 2.C, 2.D, 2.E)
         when (tipoSeleccionado) {
             TipoEventoOption.INICIO, TipoEventoOption.FIN -> {
                 Card(
@@ -839,7 +852,7 @@ fun PantallaRegistrarEvento(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Se guardará automáticamente la fecha/hora actual, las coordenadas de ubicación (${coordenadas.first}, ${coordenadas.second}) y un identificador único UUID.",
+                            text = "Se guardara automaticamente la fecha/hora actual, las coordenadas de ubicacion (${coordenadas.first}, ${coordenadas.second}) y un identificador unico UUID.",
                             fontSize = 13.sp,
                             color = Color(0xFF1E3A8A)
                         )
@@ -868,7 +881,7 @@ fun PantallaRegistrarEvento(
                 OutlinedTextField(
                     value = queSeCargaDescarga,
                     onValueChange = { queSeCargaDescarga = it },
-                    label = { Text(if (esDescarga) "¿Qué se descargó? *" else "¿Qué se carga? *") },
+                    label = { Text(if (esDescarga) "¿Que se descargo? *" else "¿Que se carga? *") },
                     placeholder = { Text("Ej: Madera de Eucaliptus / Soja") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -890,8 +903,8 @@ fun PantallaRegistrarEvento(
                 OutlinedTextField(
                     value = descripcionIncidente,
                     onValueChange = { descripcionIncidente = it },
-                    label = { Text("Descripción del incidente *") },
-                    placeholder = { Text("Ej: Pinchadura de neumático en Ruta 5 km 98") },
+                    label = { Text("Descripcion del incidente *") },
+                    placeholder = { Text("Ej: Pinchadura de neumatico en Ruta 5 km 98") },
                     minLines = 3,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -913,7 +926,7 @@ fun PantallaRegistrarEvento(
                     OutlinedButton(
                         onClick = { selectorFotoLauncher.launch("image/*") }
                     ) {
-                        Text("Adjuntar foto de galería")
+                        Text("Adjuntar foto de galeria")
                     }
                     if (fotoIncidente.isNotBlank()) {
                         OutlinedButton(onClick = { fotoIncidente = "" }) {
@@ -980,15 +993,15 @@ fun PantallaRegistrarEvento(
 
                     TipoEventoOption.CARGA_PARCIAL, TipoEventoOption.DESCARGA_PARCIAL -> {
                         if (cantidadKg.isBlank() || (cantidadKg.toDoubleOrNull() ?: 0.0) <= 0.0) {
-                            errorValidacion = "Debe ingresar una cantidad en Kg válida mayor a 0."
+                            errorValidacion = "Debe ingresar una cantidad en Kg valida mayor a 0."
                             return@Button
                         }
                         if (queSeCargaDescarga.isBlank()) {
-                            errorValidacion = "Debe indicar qué mercadería se carga o descarga."
+                            errorValidacion = "Debe indicar que mercaderia se carga o descarga."
                             return@Button
                         }
                         if (empresaCarga.isBlank()) {
-                            errorValidacion = "Debe indicar a qué empresa pertenece la carga."
+                            errorValidacion = "Debe indicar a que empresa pertenece la carga."
                             return@Button
                         }
                         detalleFinal = EventoFormatter.formatearDetalleCargaParcial(
@@ -1001,7 +1014,7 @@ fun PantallaRegistrarEvento(
 
                     TipoEventoOption.INCIDENTE -> {
                         if (descripcionIncidente.isBlank()) {
-                            errorValidacion = "Debe ingresar la descripción del incidente."
+                            errorValidacion = "Debe ingresar la descripcion del incidente."
                             return@Button
                         }
                         detalleFinal = descripcionIncidente.trim()
@@ -1043,7 +1056,7 @@ fun PantallaRegistrarEvento(
                 onClick = { navController.navigate("eventosGuia/$guiaId") },
                 modifier = Modifier.weight(1f)
             ) {
-                Text("Ver Eventos de Guía")
+                Text("Ver Eventos de Guia")
             }
             OutlinedButton(
                 onClick = { navController.popBackStack() },
@@ -1077,13 +1090,13 @@ fun PantallaEventosGuia(
             .padding(16.dp)
     ) {
         Text(
-            text = "Eventos de la Guía #$guiaId",
+            text = "Eventos de la Guia #$guiaId",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             color = Color(0xFF1E3A8A)
         )
         Text(
-            text = "Historial cronológico (servidor + teléfono offline)",
+            text = "Historial cronologico (servidor + telefono offline)",
             fontSize = 13.sp,
             color = Color(0xFF475569)
         )
@@ -1107,7 +1120,7 @@ fun PantallaEventosGuia(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "No hay eventos registrados para esta guía aún.",
+                    text = "No hay eventos registrados para esta guia aun.",
                     color = Color(0xFF64748B)
                 )
             }
@@ -1143,7 +1156,7 @@ fun PantallaEventosGuia(
                                     shape = RoundedCornerShape(10.dp)
                                 ) {
                                     Text(
-                                        text = if (esPendiente) "PENDIENTE EN TELÉFONO" else "SINCRONIZADO",
+                                        text = if (esPendiente) "PENDIENTE EN TELEFONO" else "SINCRONIZADO",
                                         color = badgeTxt,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 11.sp,
@@ -1159,7 +1172,7 @@ fun PantallaEventosGuia(
                                 color = Color(0xFF334155)
                             )
                             Text(
-                                text = "Ubicación: ${ev.latitud}, ${ev.longitud}",
+                                text = "Ubicacion: ${ev.latitud}, ${ev.longitud}",
                                 fontSize = 12.sp,
                                 color = Color(0xFF64748B)
                             )

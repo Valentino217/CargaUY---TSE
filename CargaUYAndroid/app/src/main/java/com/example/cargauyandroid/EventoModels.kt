@@ -8,27 +8,27 @@ enum class TipoEventoOption(
     INICIO(
         codigo = "INICIO",
         etiqueta = "Inicio de viaje",
-        descripcionAyuda = "Registra la hora y ubicación del inicio del viaje."
+        descripcionAyuda = "Registra la hora y ubicacion del inicio del viaje."
     ),
     FIN(
         codigo = "FIN",
         etiqueta = "Fin de viaje",
-        descripcionAyuda = "Registra la hora y ubicación de finalización del viaje."
+        descripcionAyuda = "Registra la hora y ubicacion de finalizacion del viaje."
     ),
     CARGA_PARCIAL(
         codigo = "CARGA_PARCIAL",
         etiqueta = "Carga parcial",
-        descripcionAyuda = "Ingresa la cantidad en Kg, qué se carga y a qué empresa pertenece."
+        descripcionAyuda = "Ingresa la cantidad en Kg, que se carga y a que empresa pertenece."
     ),
     DESCARGA_PARCIAL(
         codigo = "DESCARGA_PARCIAL",
         etiqueta = "Descarga parcial",
-        descripcionAyuda = "Ingresa la cantidad en Kg, qué se descargó y a qué empresa pertenece."
+        descripcionAyuda = "Ingresa la cantidad en Kg, que se descargo y a que empresa pertenece."
     ),
     INCIDENTE(
         codigo = "INCIDENTE",
         etiqueta = "Incidente",
-        descripcionAyuda = "Ingresa la descripción del incidente y opcionalmente adjunta una foto."
+        descripcionAyuda = "Ingresa la descripcion del incidente y opcionalmente adjunta una foto."
     );
 
     companion object {
@@ -136,6 +136,6 @@ object EventoFormatter {
         empresa: String
     ): String {
         val accion = if (esDescarga) "Descarga parcial" else "Carga parcial"
-        return "$accion: ${cantidadKg.trim()} Kg | Mercadería: ${mercaderia.trim()} | Empresa: ${empresa.trim()}"
+        return "$accion: ${cantidadKg.trim()} Kg | Mercaderia: ${mercaderia.trim()} | Empresa: ${empresa.trim()}"
     }
 }

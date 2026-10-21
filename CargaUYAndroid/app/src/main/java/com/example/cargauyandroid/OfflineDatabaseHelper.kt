@@ -63,6 +63,18 @@ class OfflineDatabaseHelper(context: Context) :
         onCreate(db)
     }
 
+    fun limpiarBaseDeDatosCompleta() {
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            db.delete(TABLE_EVENTOS, null, null)
+            db.delete(TABLE_GUIAS, null, null)
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
+    }
+
     fun guardarGuiasCache(cedula: Int, guias: List<Viaje>) {
         val db = writableDatabase
         db.beginTransaction()
