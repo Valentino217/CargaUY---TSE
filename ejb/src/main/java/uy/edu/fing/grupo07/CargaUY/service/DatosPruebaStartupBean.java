@@ -118,6 +118,15 @@ public class DatosPruebaStartupBean {
         );
         entityManager.persist(chofer);
 
+        Chofer choferJuan = new Chofer(
+                "Juan Chofer",
+                "juan.chofer@transporte.uy",
+                LocalDate.of(1992, 4, 12),
+                55667788,
+                "chofer123"
+        );
+        entityManager.persist(choferJuan);
+
         Funcionario funcionario = new Funcionario(
                 "Juan Funcionario",
                 "funcionario@cargauy.gub.uy",
@@ -170,6 +179,9 @@ public class DatosPruebaStartupBean {
         );
         empresaTransporte.getCiudadanos().add(ciudadano);
         empresaTransporte.getChoferes().add(chofer);
+        empresaTransporte.getChoferes().add(choferJuan);
+        chofer.getEmpresas().add(empresaTransporte);
+        choferJuan.getEmpresas().add(empresaTransporte);
         empresaTransporte.getRubros().add(rubroForestal);
         empresaTransporte.getRubros().add(rubroGranos);
 
@@ -288,7 +300,7 @@ public class DatosPruebaStartupBean {
         guiaEnCurso.getInfracciones().add(infraccionDetectada);
         entityManager.persist(guiaEnCurso);
 
-        // 5. Guía #2: En curso con vehículo inhabilitado, disponible para probar fiscalización interactiva
+        // 5. Guia #2: Sin iniciar (Carlos Chofer)
         GuiaDeViaje guiaParaFiscalizar = new GuiaDeViaje(
                 LocalDate.now(),
                 "Nueva Palmira",
@@ -299,29 +311,9 @@ public class DatosPruebaStartupBean {
                 vehiculoInhabilitado,
                 chofer
         );
-        guiaParaFiscalizar.setEstado(TipoEstado.EN_CURSO);
+        guiaParaFiscalizar.setEstado(TipoEstado.SIN_INICIAR);
         guiaParaFiscalizar.getTiposCarga().add(tipoCargaGranos);
 
-        EventoViaje eventoInicioGuia2 = new EventoViaje(
-                UUID.randomUUID().toString(),
-                LocalDateTime.now().minusHours(2),
-                TipoEvento.INICIO,
-                -33.8700,
-                -58.4200,
-                guiaParaFiscalizar
-        );
-        guiaParaFiscalizar.agregarEvento(eventoInicioGuia2);
-
-        guiaParaFiscalizar.agregarPuntoTracking(new PuntoTracking(-33.8700, -58.4200, LocalDateTime.now().minusHours(2), guiaParaFiscalizar));
-        guiaParaFiscalizar.agregarPuntoTracking(new PuntoTracking(-34.2000, -57.5000, LocalDateTime.now().minusHours(1), guiaParaFiscalizar));
-
-        PesadaBalanza pesadaNormalGuia2 = new PesadaBalanza(
-                LocalDate.now(),
-                LocalTime.now().minusHours(1),
-                28000,
-                guiaParaFiscalizar
-        );
-        guiaParaFiscalizar.agregarPesada(pesadaNormalGuia2);
         entityManager.persist(guiaParaFiscalizar);
 
         // 6. Guía #3: Finalizada con infracción confirmada, descargo y registro de auditoría
@@ -395,6 +387,21 @@ public class DatosPruebaStartupBean {
 
         guiaFinalizada.getInfracciones().add(infraccionConfirmada);
         entityManager.persist(guiaFinalizada);
+
+        // 7. Guia #4: Sin empezar para Juan Chofer (CI 55667788)
+        GuiaDeViaje guiaSinIniciarJuan = new GuiaDeViaje(
+                LocalDate.now(),
+                "Colonia",
+                "Montevideo",
+                "Madera",
+                28.0f,
+                empresaTransporte,
+                vehiculoHabilitado,
+                choferJuan
+        );
+        guiaSinIniciarJuan.setEstado(TipoEstado.SIN_INICIAR);
+        guiaSinIniciarJuan.getTiposCarga().add(tipoCargaMadera);
+        entityManager.persist(guiaSinIniciarJuan);
     }
 
     /**
