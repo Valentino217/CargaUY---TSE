@@ -51,11 +51,11 @@ class DetalleViajeServletTest {
     @BeforeEach
     void setUp() {
         servlet = new DetalleViajeServlet(eventosService, balanzaService);
-        when(request.getRequestDispatcher("/detalleViaje.jsp")).thenReturn(dispatcher);
+        when(request.getRequestDispatcher("/WEB-INF/viaje-consulta.xhtml")).thenReturn(dispatcher);
     }
 
     @Test
-    @DisplayName("doGet sin parámetro guiaId simplemente despacha al JSP sin invocar servicios")
+    @DisplayName("doGet sin parámetro guiaId simplemente despacha a Facelets sin invocar servicios")
     void testDoGetSinParametro() throws ServletException, IOException {
         when(request.getParameter("guiaId")).thenReturn(null);
 

@@ -141,7 +141,7 @@ public class EmpresasServlet extends HttpServlet {
     }
     private void mostrar(HttpServletRequest r,HttpServletResponse s)throws IOException,ServletException{
         if(r.getAttribute("seccion")==null)r.setAttribute("seccion","listar");
-        r.getRequestDispatcher("/WEB-INF/p2/empresas.jsp").forward(r,s);
+        r.getRequestDispatcher("/WEB-INF/p2/empresas.xhtml").forward(r,s);
     }
     private int positivo(HttpServletRequest r,String campo){return entero(r,campo,null,1,Integer.MAX_VALUE);}
     private int entero(HttpServletRequest r,String campo,Integer defecto,int min,int max){

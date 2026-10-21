@@ -17,7 +17,7 @@ public class PanelServlet extends HttpServlet {
     @EJB private IdentidadesService identidades;
     @Override protected void doGet(HttpServletRequest r,HttpServletResponse s)throws IOException,ServletException{
         WebSeguridad.preparar(r,s);
-        r.getRequestDispatcher("/WEB-INF/p2/panel.jsp").forward(r,s);
+        r.getRequestDispatcher("/WEB-INF/p2/panel.xhtml").forward(r,s);
     }
     @Override protected void doPost(HttpServletRequest r,HttpServletResponse s)throws IOException,ServletException{
         r.setCharacterEncoding("UTF-8");

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:h="jakarta.faces.html" xmlns:ui="jakarta.faces.facelets" xmlns:c="jakarta.tags.core" xmlns:pt="jakarta.faces.passthrough" lang="es">
+<h:head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>CargaUY - <h:outputText value="#{plataformaVista.ruta.equals(&quot;/app/admin&quot;)?&quot;Administración&quot;:plataformaVista.ruta.equals(&quot;/app/perfil&quot;)?&quot;Mi perfil&quot;:&quot;Empresas&quot;}"/></title>
+    <link rel="stylesheet" href="#{request.contextPath}/css/plataforma.css"/>
+</h:head>
+<h:body><c:set var="empresa" value="#{requestScope.empresa}"/><c:set var="empresas" value="#{requestScope.empresas}"/><c:set var="vinculos" value="#{requestScope.vinculos}"/><c:set var="pdi" value="#{requestScope.ciudadanoPdi}"/>
+<main class="container">
+    <header class="header-bar">
+        <div>
+            <h1><h:outputText value="#{plataformaVista.ruta.equals(&quot;/app/admin&quot;)?&quot;Administración&quot;:plataformaVista.ruta.equals(&quot;/app/perfil&quot;)?&quot;Mi perfil&quot;:&quot;Gestión de Empresas&quot;}"/></h1>
+            <p class="subtitle"><h:outputText value="#{plataformaVista.ruta.equals(&quot;/app/empresa&quot;)?&quot;Administración de empresas, responsables y choferes&quot;:plataformaVista.ruta.equals(&quot;/app/perfil&quot;)?&quot;Consulta y actualización de tus datos personales&quot;:&quot;Usuarios, permisos y configuración de la plataforma&quot;}"/></p>
+        </div>
+        <nav class="nav-links" aria-label="Navegación principal">
+            <a href="#{request.contextPath}/index.xhtml">Inicio</a>
+            <a href="#{request.contextPath}/app/perfil">Mi perfil</a>
+            <a href="#{request.contextPath}/app/empresa">Empresas</a>
+            <c:if test="#{plataformaVista.tiene(&quot;ADMINISTRADOR&quot;)}">
+            <a href="#{request.contextPath}/app/admin">Administración</a>
+            </c:if>
+            <form method="post" action="#{request.contextPath}/logout">
+                <input type="hidden" name="csrf" value="#{requestScope.csrf}"/>
+                <button type="submit" class="button-secondary">Cerrar sesión</button>
+            </form>
+        </nav>
+    </header>
+    <p class="subtitle">Sesión de <strong><h:outputText value="#{plataformaVista.actor.nombre()}"/></strong> · CI: <h:outputText value="#{plataformaVista.actor.ci()}"/> · ID: <h:outputText value="#{plataformaVista.actor.id()}"/></p>
+    <c:if test="#{requestScope.error ne null}">
+    <div class="alert" role="alert"><h:outputText value="#{requestScope.error}"/></div>
+    </c:if>
+    <c:if test="#{requestScope.resultado ne null}">
+    <section class="card result" aria-label="Resultado de la operación" role="status">
+        <h2>Resultado</h2>
+        <pre><h:outputText value="#{requestScope.resultado}"/></pre>
+    </section>
+    </c:if>
+
+    <form method="post" action="#{request.contextPath.concat(plataformaVista.ruta)}">
+        <input type="hidden" name="csrf" value="#{requestScope.csrf}"/>
+        <section class="card">
+            <h2>Operación</h2>
+            <div class="form-grid">
+                <label>Operación
+                    <select name="accion">
+                        <c:forEach items="#{plataformaVista.acciones}" var="a">
+                        <c:choose><c:when test="#{a eq param.accion}"><option value="#{a}" selected="selected"><h:outputText value="#{plataformaVista.etiqueta(a)}"/></option></c:when><c:otherwise><option value="#{a}"><h:outputText value="#{plataformaVista.etiqueta(a)}"/></option></c:otherwise></c:choose>
+                        </c:forEach>
+                    </select>
+                </label>
+                <label>Página (desde 0)<input name="pagina" type="number" min="0" value="0"/></label>
+                <label>Filas por página<input name="tam" type="number" min="1" max="100" value="20"/></label>
+                <label>Versión del registro a editar<input name="version" type="number" min="0" value="0"/></label>
+            </div>
+        </section>
+
+        <c:if test="#{plataformaVista.ruta.equals(&quot;/app/admin&quot;)}">
+        <fieldset>
+            <legend>Identidad y permisos</legend>
+            <label>Origen<select name="origen"><option>LDAP</option><option>GUB</option></select></label>
+            <label>UID LDAP o referencia GUB<input name="uid"/></label>
+            <label>Roles separados por coma<input name="roles" placeholder="CIUDADANO,CHOFER"/></label>
+        </fieldset>
+        </c:if>
+
+        <c:if test="#{not plataformaVista.ruta.equals(&quot;/app/empresa&quot;)}">
+        <fieldset>
+            <legend>Datos del usuario</legend>
+            <label>ID<input name="id" type="number" value="#{plataformaVista.actor.id()}"/></label>
+            <label>Tipo<select name="tipo">
+                <option value="">Todos (solo listado)</option>
+                <option>CIUDADANO</option><option>CHOFER</option><option>FUNCIONARIO</option>
+                <option>AUTORIDAD</option><option>ADMINISTRADOR</option>
+            </select></label>
+            <label>Nombre<input name="nombre" autocomplete="name"/></label>
+            <label>Correo<input name="mail" type="email" autocomplete="email"/></label>
+            <label>Fecha de nacimiento<input name="fechaNac" type="date"/></label>
+            <label>CI sin puntos ni guiones<input name="ci" type="number"/></label>
+            <label>Contraseña, solo para el alta<input name="password" type="password" autocomplete="new-password"/></label>
+            <label>Número de funcionario<input name="nroFuncionario" type="number"/></label>
+            <label>Departamento<input name="departamento"/></label>
+            <label>Cargo de autoridad<input name="cargo"/></label>
+        </fieldset>
+        </c:if>
+
+        <c:if test="#{not plataformaVista.ruta.equals(&quot;/app/perfil&quot;)}">
+        <fieldset>
+            <legend>Datos de la empresa</legend>
+            <label>Número de empresa<input name="numero" type="number"/></label>
+            <label>Razón social<input name="razon"/></label>
+            <label>Nombre público<input name="nombrePublico"/></label>
+            <label>Dirección<input name="direccion"/></label>
+        </fieldset>
+        <fieldset>
+            <legend>Asociaciones y consulta de ciudadano</legend>
+            <c:if test="#{plataformaVista.ruta.equals(&quot;/app/empresa&quot;)}">
+            <label>ID del usuario<input name="id" type="number" value="#{plataformaVista.actor.id()}"/></label>
+            <label>CI para consultar ciudadano<input name="ci" type="number"/></label>
+            </c:if>
+            <c:if test="#{plataformaVista.tiene(&quot;ADMINISTRADOR&quot;) or plataformaVista.tiene(&quot;FUNCIONARIO&quot;)}">
+            <label><input name="responsable" type="checkbox"/> Responsable de empresa</label>
+            <label><input name="chofer" type="checkbox"/> Chofer de empresa</label>
+            </c:if>
+            <p class="help">Para asociar o desvincular una persona, indicá el número de empresa y su ID de usuario.</p>
+        </fieldset>
+        </c:if>
+
+        <c:if test="#{plataformaVista.ruta.equals(&quot;/app/admin&quot;)}">
+        <fieldset>
+            <legend>Catálogos</legend>
+            <label>Código<input name="codigo" type="number"/></label>
+            <label>Nombre del rubro<input name="nombreRubro"/></label>
+            <label>Descripción<input name="descripcion"/></label>
+        </fieldset>
+        <fieldset>
+            <legend>Reglas de fiscalización</legend>
+            <label>Tolerancia de carga (kg)<input name="cargaKg" type="number" min="0"/></label>
+            <label>Tolerancia de desvío (km)<input name="desvioKm" type="number" min="0" step="0.01"/></label>
+        </fieldset>
+        </c:if>
+        <div class="form-actions"><button type="submit">Ejecutar operación</button></div>
+    </form>
+</main>
+</h:body>
+</html>

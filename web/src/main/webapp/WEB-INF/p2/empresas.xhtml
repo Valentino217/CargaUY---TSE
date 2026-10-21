@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:h="jakarta.faces.html" xmlns:ui="jakarta.faces.facelets" xmlns:c="jakarta.tags.core" xmlns:pt="jakarta.faces.passthrough" lang="es">
+<h:head>
+    <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <title>CargaUY - <h:outputText value="#{plataformaVista.titulo(plataformaVista.seccion)}"/></title>
+    <link rel="stylesheet" href="#{request.contextPath}/css/plataforma.css"/>
+</h:head>
+<h:body><c:set var="empresa" value="#{requestScope.empresa}"/><c:set var="empresas" value="#{requestScope.empresas}"/><c:set var="vinculos" value="#{requestScope.vinculos}"/><c:set var="pdi" value="#{requestScope.ciudadanoPdi}"/><main class="container">
+<header class="header-bar">
+    <div><h1>Gestión de Empresas</h1><p class="subtitle">Empresas transportistas, responsables y choferes</p></div>
+    <nav class="nav-links" aria-label="Navegación principal">
+        <a href="#{request.contextPath}/index.xhtml">Inicio</a>
+        <a href="#{request.contextPath}/app/perfil">Mi perfil</a>
+        <c:if test="#{plataformaVista.tiene(&quot;ADMINISTRADOR&quot;)}"><a href="#{request.contextPath}/app/admin">Administración</a></c:if>
+        <form method="post" action="#{request.contextPath}/logout">
+            <input type="hidden" name="csrf" value="#{requestScope.csrf}"/><button class="button-secondary">Cerrar sesión</button>
+        </form>
+    </nav>
+</header>
+<p class="subtitle">Sesión de <strong><h:outputText value="#{plataformaVista.actor.nombre()}"/></strong></p>
+<nav class="operation-tabs" aria-label="Operaciones de empresas">
+<c:forEach items="#{plataformaVista.secciones}" var="item">
+    <a href="#{request.contextPath.concat(&quot;/app/empresa&quot;)}?seccion=#{item}"><h:outputText value="#{plataformaVista.titulo(item)}"/></a>
+</c:forEach>
+</nav>
+<c:if test="#{requestScope.error ne null}"><div class="alert" role="alert"><h:outputText value="#{requestScope.error}"/></div></c:if>
+<c:if test="#{requestScope.mensaje ne null}"><div class="alert alert-success" role="status"><h:outputText value="#{requestScope.mensaje}"/></div></c:if>
+
+<c:if test="#{plataformaVista.seccion.equals(&quot;altaCiudadano&quot;)}">
+<section class="card">
+    <h2>Registrar usuario</h2>
+    <form method="post" action="#{request.contextPath.concat(&quot;/app/empresa&quot;)}">
+        <input type="hidden" name="csrf" value="#{requestScope.csrf}"/><input type="hidden" name="seccion" value="#{plataformaVista.seccion}"/><input type="hidden" name="accion" value="#{&quot;registrarCiudadano&quot;}"/>
+        <div class="form-grid">
+            <label>Nombre completo<input name="nombre" maxlength="100" required="required" autocomplete="name" value="#{plataformaVista.valor(&quot;nombre&quot;,&quot;&quot;)}"/></label>
+            <label>Correo electrónico<input name="mail" type="email" maxlength="150" required="required" autocomplete="email" value="#{plataformaVista.valor(&quot;mail&quot;,&quot;&quot;)}"/></label>
+            <label>Fecha de nacimiento<input name="fechaNac" type="date" max="#{plataformaVista.hoy}" required="required" value="#{plataformaVista.valor(&quot;fechaNac&quot;,&quot;&quot;)}"/></label>
+            <label>CI sin puntos ni guiones<input name="ci" type="number" min="1" required="required" value="#{plataformaVista.valor(&quot;ci&quot;,&quot;&quot;)}"/></label>
+        </div>
+        <fieldset>
+            <legend>Roles del usuario: seleccioná uno o varios</legend>
+            
+<c:forEach items="#{plataformaVista.roles}" var="rol">
+            <label><c:choose><c:when test="#{plataformaVista.seleccionado(rol)}"><input type="checkbox" name="roles" value="#{rol}" checked="checked"/></c:when><c:otherwise><input type="checkbox" name="roles" value="#{rol}"/></c:otherwise></c:choose> <h:outputText value="#{rol}"/></label>
+            </c:forEach>
+        </fieldset>
+        <c:if test="#{plataformaVista.tiene(&quot;ADMINISTRADOR&quot;)}">
+        <fieldset>
+            <legend>Datos adicionales según el rol</legend>
+            <label>Número de funcionario<input name="nroFuncionario" type="number" min="1" value="#{plataformaVista.valor(&quot;nroFuncionario&quot;,&quot;&quot;)}"/></label>
+            <label>Departamento del funcionario<input name="departamento" maxlength="100" value="#{plataformaVista.valor(&quot;departamento&quot;,&quot;&quot;)}"/></label>
+            <label>Cargo de autoridad<input name="cargo" maxlength="100" value="#{plataformaVista.valor(&quot;cargo&quot;,&quot;&quot;)}"/></label>
+            <p class="help">Funcionario requiere número y departamento. Autoridad requiere cargo.</p>
+        </fieldset>
+        </c:if>
+        <button>Registrar usuario</button>
+    </form>
+</section>
+</c:if>
+
+<c:if test="#{plataformaVista.seccion.equals(&quot;listar&quot;)}">
+<section class="card">
+    <h2>Listado de empresas</h2>
+    <form method="get" action="#{request.contextPath.concat(&quot;/app/empresa&quot;)}" class="form-grid compact-form">
+        <input type="hidden" name="seccion" value="listar"/>
+        <label>Página (desde 0)<input name="pagina" type="number" min="0" value="#{plataformaVista.valor(&quot;pagina&quot;,0)}"/></label>
+        <label>Empresas por página<input name="tam" type="number" min="1" max="100" value="#{plataformaVista.valor(&quot;tam&quot;,20)}"/></label>
+        <div class="field-action"><button>Consultar listado</button></div>
+    </form>
+    <div class="table-scroll"><table><thead><tr><th>Número</th><th>Razón social</th><th>Nombre público</th><th>Estado</th><th>Consulta</th></tr></thead><tbody>
+    <c:forEach items="#{empresas}" var="e">
+    <tr><td><h:outputText value="#{e.numero()}"/></td><td><h:outputText value="#{e.razonSocial()}"/></td><td><h:outputText value="#{e.nombrePublico()}"/></td>
+        <td><span class="status-badge #{e.activa()?&quot;is-active&quot;:&quot;is-inactive&quot;}"><h:outputText value="#{e.activa()?&quot;Activa&quot;:&quot;Inactiva&quot;}"/></span></td>
+        <td><a href="#{request.contextPath.concat(&quot;/app/empresa&quot;)}?seccion=consultar&amp;numero=#{e.numero()}">Ver empresa</a></td></tr>
+    </c:forEach>
+    <c:if test="#{empresas eq null or empty empresas}"><tr><td colspan="5" class="empty-state">No hay empresas para mostrar en esta página.</td></tr></c:if>
+    </tbody></table></div>
+</section>
+</c:if>
+
+<c:if test="#{plataformaVista.buscarEmpresa}">
+<section class="card">
+    <h2><h:outputText value="#{plataformaVista.titulo(plataformaVista.seccion)}"/></h2>
+    <form method="get" action="#{request.contextPath.concat(&quot;/app/empresa&quot;)}" class="form-grid compact-form">
+        <input type="hidden" name="seccion" value="#{plataformaVista.seccion}"/>
+        <label>Número de empresa<input name="numero" type="number" min="1" required="required" value="#{plataformaVista.valor(&quot;numero&quot;,&quot;&quot;)}"/></label>
+        <div class="field-action"><button>Buscar empresa</button></div>
+    </form>
+</section>
+</c:if>
+
+<c:if test="#{empresa ne null}">
+<section class="card">
+    <h2><h:outputText value="#{empresa.nombrePublico()}"/></h2>
+    <dl class="company-details">
+        <div><dt>Número</dt><dd><h:outputText value="#{empresa.numero()}"/></dd></div>
+        <div><dt>Razón social</dt><dd><h:outputText value="#{empresa.razonSocial()}"/></dd></div>
+        <div><dt>Dirección</dt><dd><h:outputText value="#{empresa.direccion()}"/></dd></div>
+        <div><dt>Estado</dt><dd><h:outputText value="#{empresa.activa()?&quot;Activa&quot;:&quot;Inactiva&quot;}"/></dd></div>
+    </dl>
+    <c:if test="#{plataformaVista.seccion.equals(&quot;consultar&quot;)}">
+    <div class="nav-links">
+        <a href="#{request.contextPath.concat(&quot;/app/empresa&quot;)}?seccion=vinculos&amp;numero=#{empresa.numero()}">Ver responsables y choferes</a>
+        <c:if test="#{plataformaVista.editar}"><a href="#{request.contextPath.concat(&quot;/app/empresa&quot;)}?seccion=editar&amp;numero=#{empresa.numero()}">Editar datos</a></c:if>
+    </div></c:if>
+</section>
+</c:if>
+
+<c:if test="#{plataformaVista.seccion.equals(&quot;registrar&quot;) or plataformaVista.seccion.equals(&quot;editar&quot;) and empresa ne null}">
+<section class="card">
+    <h2><h:outputText value="#{plataformaVista.seccion.equals(&quot;registrar&quot;)?&quot;Registrar una nueva empresa&quot;:&quot;Editar datos de la empresa&quot;}"/></h2>
+    <form method="post" action="#{request.contextPath.concat(&quot;/app/empresa&quot;)}">
+        <input type="hidden" name="csrf" value="#{requestScope.csrf}"/><input type="hidden" name="seccion" value="#{plataformaVista.seccion}"/><input type="hidden" name="accion" value="#{plataformaVista.seccion.equals(&quot;registrar&quot;)?&quot;crearEmpresa&quot;:&quot;modificarEmpresa&quot;}"/>
+        <c:if test="#{empresa ne null}">
+        <input type="hidden" name="numero" value="#{empresa.numero()}"/>
+        <input type="hidden" name="version" value="#{plataformaVista.valor(&quot;version&quot;,empresa.version())}"/>
+        </c:if>
+        <div class="form-grid">
+        <c:if test="#{plataformaVista.seccion.equals(&quot;registrar&quot;)}"><label>Número de empresa<input name="numero" type="number" min="1" required="required" value="#{plataformaVista.valor(&quot;numero&quot;,&quot;&quot;)}"/></label></c:if>
+        <label>Razón social<input name="razon" maxlength="150" required="required" value="#{plataformaVista.valor(&quot;razon&quot;,empresa eq null?&quot;&quot;:empresa.razonSocial())}"/></label>
+        <label>Nombre público<input name="nombrePublico" maxlength="150" required="required" value="#{plataformaVista.valor(&quot;nombrePublico&quot;,empresa eq null?&quot;&quot;:empresa.nombrePublico())}"/></label>
+        <label>Dirección<input name="direccion" maxlength="255" required="required" value="#{plataformaVista.valor(&quot;direccion&quot;,empresa eq null?&quot;&quot;:empresa.direccion())}"/></label>
+        </div>
+        <button><h:outputText value="#{plataformaVista.seccion.equals(&quot;registrar&quot;)?&quot;Registrar empresa&quot;:&quot;Guardar cambios&quot;}"/></button>
+    </form>
+</section>
+</c:if>
+
+<c:if test="#{(plataformaVista.seccion.equals(&quot;ciudadanos&quot;) or plataformaVista.seccion.equals(&quot;choferes&quot;)) and empresa ne null}">
+<section class="card">
+    <h2><h:outputText value="#{(plataformaVista.seccion eq &quot;ciudadanos&quot;)?&quot;Gestionar responsable ciudadano&quot;:&quot;Gestionar chofer&quot;}"/></h2>
+    <p><h:outputText value="#{(plataformaVista.seccion eq &quot;ciudadanos&quot;)?&quot;El usuario debe tener rol CIUDADANO. Al vincularlo podrá actuar como responsable de esta empresa.&quot;:&quot;El usuario debe tener rol CHOFER. El vínculo lo habilita para ser asignado a guías de esta empresa.&quot;}"/></p>
+    <form method="post" action="#{request.contextPath.concat(&quot;/app/empresa&quot;)}">
+        <input type="hidden" name="csrf" value="#{requestScope.csrf}"/><input type="hidden" name="seccion" value="#{plataformaVista.seccion}"/><input type="hidden" name="numero" value="#{empresa.numero()}"/>
+        <div class="form-grid"><label>ID del usuario (no su CI)<input name="id" type="number" min="1" required="required" value="#{plataformaVista.valor(&quot;id&quot;,&quot;&quot;)}"/></label></div>
+        <div class="operation-buttons">
+            <button name="accion" value="#{(plataformaVista.seccion eq &quot;ciudadanos&quot;)?&quot;vincularCiudadano&quot;:&quot;vincularChofer&quot;}"><h:outputText value="#{(plataformaVista.seccion eq &quot;ciudadanos&quot;)?&quot;Vincular ciudadano&quot;:&quot;Vincular chofer&quot;}"/></button>
+            <button class="button-secondary" name="accion" value="#{(plataformaVista.seccion eq &quot;ciudadanos&quot;)?&quot;desvincularCiudadano&quot;:&quot;desvincularChofer&quot;}">Desvincular esta función</button>
+        </div>
+    </form>
+</section>
+</c:if>
+
+<c:if test="#{vinculos ne null}">
+<section class="card">
+    <h2>Responsables y choferes de la empresa</h2>
+    <div class="table-scroll"><table><thead><tr><th>ID de usuario</th><th>Nombre</th><th>Responsable</th><th>Chofer</th><th>Estado del vínculo</th></tr></thead><tbody>
+    <c:forEach items="#{vinculos}" var="v">
+    <tr><td><h:outputText value="#{v.usuario()}"/></td><td><h:outputText value="#{v.nombre()}"/></td><td><h:outputText value="#{v.responsable()?&quot;Sí&quot;:&quot;No&quot;}"/></td><td><h:outputText value="#{v.chofer()?&quot;Sí&quot;:&quot;No&quot;}"/></td><td><h:outputText value="#{v.responsable() or v.chofer()?&quot;Con funciones&quot;:&quot;Revocado&quot;}"/></td></tr>
+    </c:forEach>
+    <c:if test="#{empty vinculos}"><tr><td colspan="5" class="empty-state">Esta empresa no tiene vínculos registrados.</td></tr></c:if>
+    </tbody></table></div>
+    <c:if test="#{vinculos.size()==100}"><p class="help">Se muestran hasta 100 vínculos.</p></c:if>
+</section>
+</c:if>
+
+<c:if test="#{plataformaVista.seccion.equals(&quot;estado&quot;) and empresa ne null}">
+<section class="card"><h2>Estado de la empresa</h2>
+    <p>La baja es lógica: conserva los datos y el historial.</p>
+    <form method="post" action="#{request.contextPath.concat(&quot;/app/empresa&quot;)}">
+        <input type="hidden" name="csrf" value="#{requestScope.csrf}"/><input type="hidden" name="seccion" value="#{plataformaVista.seccion}"/><input type="hidden" name="accion" value="#{empresa.activa()?&quot;desactivarEmpresa&quot;:&quot;activarEmpresa&quot;}"/>
+        <input type="hidden" name="numero" value="#{empresa.numero()}"/>
+        <button><h:outputText value="#{empresa.activa()?&quot;Dar de baja la empresa&quot;:&quot;Reactivar empresa&quot;}"/></button>
+    </form>
+</section>
+</c:if>
+
+<c:if test="#{plataformaVista.seccion.equals(&quot;pdi&quot;)}">
+<section class="card"><h2>Consultar datos de un ciudadano</h2>
+    <form method="post" action="#{request.contextPath.concat(&quot;/app/empresa&quot;)}" class="form-grid compact-form">
+        <input type="hidden" name="csrf" value="#{requestScope.csrf}"/><input type="hidden" name="seccion" value="#{plataformaVista.seccion}"/><input type="hidden" name="accion" value="#{&quot;consultarPdi&quot;}"/>
+        <label>CI sin puntos ni guiones<input name="ci" type="number" min="1" required="required" value="#{plataformaVista.valor(&quot;ci&quot;,&quot;&quot;)}"/></label>
+        <div class="field-action"><button>Consultar ciudadano</button></div>
+    </form>
+    <c:if test="#{pdi ne null}">
+    <div class="result card"><h2><h:outputText value="#{pdi.estado()}"/></h2><p><h:outputText value="#{pdi.mensaje()}"/></p>
+    <c:if test="#{pdi.ci() ne null}"><p>CI: <h:outputText value="#{pdi.ci()}"/></p><p>Nombre: <h:outputText value="#{pdi.nombre()}"/> <h:outputText value="#{pdi.apellido()}"/></p></c:if>
+    </div></c:if>
+</section>
+</c:if>
+</main></h:body></html>

@@ -43,7 +43,7 @@ public class DetalleViajeServlet extends HttpServlet {
         String guiaIdParam = request.getParameter("guiaId");
 
         if (guiaIdParam == null || guiaIdParam.isBlank()) {
-            request.getRequestDispatcher("/detalleViaje.jsp").forward(request, response);
+            request.getRequestDispatcher("/WEB-INF/viaje-consulta.xhtml").forward(request, response);
             return;
         }
 
@@ -61,6 +61,6 @@ public class DetalleViajeServlet extends HttpServlet {
             request.setAttribute("error", "Error al consultar viaje: " + e.getMessage());
         }
 
-        request.getRequestDispatcher("/detalleViaje.jsp").forward(request, response);
+        request.getRequestDispatcher("/WEB-INF/viaje-consulta.xhtml").forward(request, response);
     }
 }

@@ -14,6 +14,7 @@
         <module>ejb</module>
         <module>web</module>
         <module>ear</module>
+        <module>gub-callback-root</module>
     </modules>
 
     <properties>
