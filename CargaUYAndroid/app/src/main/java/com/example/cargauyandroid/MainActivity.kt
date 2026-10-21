@@ -155,23 +155,31 @@ fun NavegationComponent() {
 
     // CU Critico 2: Escuchar cuando el telefono recupera conexion a internet para sincronizar automaticamente
     DisposableEffect(cedulaActual) {
-        val callback = syncRepository.registrarCallbackConectividad {
-            scope.launch {
-                enLinea = true
-                val pendientes = syncRepository.dbHelper.contarEventosPendientes()
-                pendientesCount = pendientes
-                if (pendientes > 0) {
-                    sincronizando = true
-                    val resumen = syncRepository.sincronizarPendientes(cedulaActual)
-                    sincronizando = false
-                    pendientesCount = syncRepository.dbHelper.contarEventosPendientes()
-                    if (resumen != null) {
-                        mensajeGlobalSync = "Conexion recuperada: ${resumen.mensaje}"
-                        syncTick++
+        val callback = syncRepository.registrarCallbackConectividad(
+            onNetworkAvailable = {
+                scope.launch {
+                    refrescarEstadoLocal()
+                    val pendientes = syncRepository.dbHelper.contarEventosPendientes()
+                    pendientesCount = pendientes
+                    if (pendientes > 0) {
+                        sincronizando = true
+                        val resumen = syncRepository.sincronizarPendientes(cedulaActual)
+                        sincronizando = false
+                        pendientesCount = syncRepository.dbHelper.contarEventosPendientes()
+                        if (resumen != null) {
+                            mensajeGlobalSync = "Conexion recuperada: ${resumen.mensaje}"
+                            syncTick++
+                        }
                     }
                 }
+            },
+            onNetworkLost = {
+                scope.launch {
+                    enLinea = false
+                    refrescarEstadoLocal()
+                }
             }
-        }
+        )
         onDispose {
             syncRepository.desregistrarCallbackConectividad(callback)
         }
@@ -399,12 +407,12 @@ fun MainScreen(
                 OutlinedTextField(
                     value = tokenTexto,
                     onValueChange = { tokenTexto = it.trim(); SesionMovil.token = tokenTexto },
-                    label = { Text("Token de integración (Bearer)") },
+                    label = { Text("Token de integracion") },
                     visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-                Text("Token temporal para pruebas; al cerrar la app se descarta. El login gub.uy móvil requiere completar su integración.")
+                Text("Token temporal para pruebas")
                 Spacer(modifier = Modifier.height(4.dp))
             }
         }
@@ -427,7 +435,7 @@ fun MainScreen(
         }
 
         Spacer(modifier = Modifier.height(10.dp))
-
+/*
         Button(
             onClick = {
                 val ci = cedulaTexto.toIntOrNull() ?: Constants.DEFAULT_CEDULA
@@ -457,7 +465,7 @@ fun MainScreen(
                 if (buscandoViajeActivo) "Buscando viaje asignado..."
                 else "Registrar Evento en Viaje Asignado"
             )
-        }
+        }*/
 
         if (pendientesCount > 0) {
             Spacer(modifier = Modifier.height(10.dp))
@@ -892,7 +900,7 @@ fun PantallaRegistrarEvento(
                     value = queSeCargaDescarga,
                     onValueChange = { queSeCargaDescarga = it },
                     label = { Text(if (esDescarga) "¿Que se descargo? *" else "¿Que se carga? *") },
-                    placeholder = { Text("Ej: Madera de Eucaliptus / Soja") },
+                    placeholder = { Text("Ej: Madera") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -914,7 +922,7 @@ fun PantallaRegistrarEvento(
                     value = descripcionIncidente,
                     onValueChange = { descripcionIncidente = it },
                     label = { Text("Descripcion del incidente *") },
-                    placeholder = { Text("Ej: Pinchadura de neumatico en Ruta 5 km 98") },
+                    placeholder = { Text("Ej: Pinchadura de neumatico") },
                     minLines = 3,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -924,26 +932,25 @@ fun PantallaRegistrarEvento(
                 OutlinedTextField(
                     value = fotoIncidente,
                     onValueChange = { fotoIncidente = it },
-                    label = { Text("Foto adjunta (opcional)") },
-                    placeholder = { Text("Seleccione una foto o ingrese referencia (ej: foto_incidente.jpg)") },
+                    label = { Text("Foto adjunta (TODO)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(
-                        onClick = { selectorFotoLauncher.launch("image/*") }
-                    ) {
-                        Text("Adjuntar foto de galeria")
-                    }
-                    if (fotoIncidente.isNotBlank()) {
-                        OutlinedButton(onClick = { fotoIncidente = "" }) {
-                            Text("Quitar foto")
-                        }
-                    }
-                }
+//                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+//                    OutlinedButton(
+//                        onClick = { selectorFotoLauncher.launch("image/*") }
+//                    ) {
+//                        Text("Adjuntar foto de galeria")
+//                    }
+//                    if (fotoIncidente.isNotBlank()) {
+//                        OutlinedButton(onClick = { fotoIncidente = "" }) {
+//                            Text("Quitar foto")
+//                        }
+//                    }
+//                }
             }
         }
 

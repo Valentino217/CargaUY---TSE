@@ -82,12 +82,19 @@ class SyncRepository(context: Context) {
         return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 
-    fun registrarCallbackConectividad(onNetworkAvailable: () -> Unit): ConnectivityManager.NetworkCallback? {
+    fun registrarCallbackConectividad(
+        onNetworkAvailable: () -> Unit,
+        onNetworkLost: (() -> Unit)? = null
+    ): ConnectivityManager.NetworkCallback? {
         val cm = appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
             ?: return null
         val callback = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
                 onNetworkAvailable()
+            }
+
+            override fun onLost(network: Network) {
+                onNetworkLost?.invoke()
             }
         }
         return try {
@@ -166,6 +173,17 @@ class SyncRepository(context: Context) {
     }
 
     suspend fun consultarGuiasChofer(cedula: Int): ConsultaGuiasResult = withContext(Dispatchers.IO) {
+        if (!hayConexionInternet()) {
+            servidorAlcanzable = false
+            Log.d("CARGAUY", "Sin conexion a internet detectada. Mostrando cache offline.")
+            val cache = dbHelper.obtenerGuiasCache(cedula)
+            return@withContext ConsultaGuiasResult(
+                guias = cache,
+                desdeCacheOffline = true,
+                mensajeAviso = "Modo sin conexion: mostrando guias guardadas en el telefono."
+            )
+        }
+
         try {
             Log.d("CARGAUY", "Consultando guias para CI=$cedula")
             asegurarTokenLocal(cedula)
@@ -243,6 +261,17 @@ class SyncRepository(context: Context) {
             dbHelper.actualizarEstadoGuiaLocal(guiaId, "FINALIZADO")
         }
 
+        // Si no hay conexión (Flujo 3.A): guardar solo localmente y no enviar al servidor
+        if (!hayConexionInternet()) {
+            servidorAlcanzable = false
+            Log.d("CARGAUY", "Sin conexion a internet detectada por el sistema. Guardado offline (Flujo 3.A).")
+            return@withContext ResultadoOperacionEvento(
+                evento = eventoLocal,
+                guardadoOffline = true,
+                mensajeUsuario = "Modo sin conexion: Evento '${tipo.etiqueta}' guardado en el telefono (UUID: ${uuid.take(8)}...) para sincronizar al recuperar conexion."
+            )
+        }
+
         // Intentar sincronizar directamente con el backend; si no hay red, cae en el catch (Flujo 3.A)
         return@withContext try {
             Log.d("CARGAUY", "Enviando evento $uuid (${tipo.codigo}) al servidor...")
@@ -311,6 +340,19 @@ class SyncRepository(context: Context) {
         val pendientes = dbHelper.listarEventosPendientes()
         if (pendientes.isEmpty()) {
             return@withContext null
+        }
+
+        if (!hayConexionInternet()) {
+            servidorAlcanzable = false
+            Log.d("CARGAUY", "Intento de sincronizar sin conexion a internet activa. Cancelado.")
+            return@withContext ResumenSincronizacion(
+                totalEnviados = pendientes.size,
+                aceptados = 0,
+                duplicados = 0,
+                errores = pendientes.size,
+                rutaActualizada = false,
+                mensaje = "Sin conexion (${pendientes.size} eventos siguen guardados en el telefono esperando red)."
+            )
         }
 
         return@withContext try {
@@ -403,7 +445,7 @@ class SyncRepository(context: Context) {
                 duplicados = 0,
                 errores = pendientes.size,
                 rutaActualizada = false,
-                mensaje = "Ofline (${pendientes.size} eventos siguen guardados en el telefono esperando red)."
+                mensaje = "Offline (${pendientes.size} eventos siguen guardados en el telefono esperando red)."
             )
         }
     }
@@ -411,6 +453,11 @@ class SyncRepository(context: Context) {
     suspend fun listarEventosCombinadosGuia(guiaId: Long): List<EventoLocal> = withContext(Dispatchers.IO) {
         val locales = dbHelper.listarEventosPorGuiaLocal(guiaId)
         val mapaPorUuid = LinkedHashMap<String, EventoLocal>()
+
+        if (!hayConexionInternet()) {
+            servidorAlcanzable = false
+            return@withContext locales.sortedBy { it.tiempo }
+        }
 
         try {
             val remotos = RetrofitClient.executeWithFallback { api ->
