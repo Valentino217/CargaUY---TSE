@@ -46,16 +46,29 @@ public class IdentidadesService {
     }
     
     public void vinculo(String token, int empresa, int usuario, boolean responsable, boolean chofer) {
+        guardarVinculo(token,empresa,usuario,responsable,chofer);
+    }
+
+    /** Modifica una sola función sin quitar la otra; ambas se pueden ejercer a la vez. */
+    public void funcionEmpresa(String token,int empresa,int usuario,TipoUsuario funcion,boolean habilitar) {
+        if(funcion!=TipoUsuario.CIUDADANO && funcion!=TipoUsuario.CHOFER)
+            throw new ErrorAcceso(400,"Función de empresa inválida");
+        guardarVinculo(token,empresa,usuario,funcion==TipoUsuario.CIUDADANO?habilitar:null,
+            funcion==TipoUsuario.CHOFER?habilitar:null);
+    }
+
+    private void guardarVinculo(String token,int empresa,int usuario,Boolean responsable,Boolean chofer) {
         control.exigir(token,TipoUsuario.ADMINISTRADOR,TipoUsuario.FUNCIONARIO);
         Empresa e = em.find(Empresa.class,empresa); Usuario u = requerido(usuario);
         if (e==null || !e.isActiva() || !u.isActivo()) throw new ErrorAcceso(409,"Cuenta o empresa inactiva");
-        if (responsable && !u.getRoles().contains(TipoUsuario.CIUDADANO)
-                || chofer && !u.getRoles().contains(TipoUsuario.CHOFER))
+        if (Boolean.TRUE.equals(responsable) && !u.getRoles().contains(TipoUsuario.CIUDADANO)
+                || Boolean.TRUE.equals(chofer) && !u.getRoles().contains(TipoUsuario.CHOFER))
             throw new ErrorAcceso(409,"El usuario no tiene el rol requerido");
         em.lock(e,LockModeType.PESSIMISTIC_WRITE);
         VinculoEmpresa v = em.find(VinculoEmpresa.class,VinculoEmpresa.clave(empresa,usuario));
         if (v==null) { v=new VinculoEmpresa(u,e); em.persist(v); }
-        v.setResponsable(responsable); v.setChofer(chofer);
+        if(responsable!=null) v.setResponsable(responsable);
+        if(chofer!=null) v.setChofer(chofer);
         // false/false conserva el vínculo sin permisos, útil para trazabilidad.
     }
     

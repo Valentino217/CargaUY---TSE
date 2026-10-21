@@ -10,6 +10,56 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class GestionPerfilesServiceTest {
+    private DatosUsuario datosRoles(){return new DatosUsuario(TipoUsuario.ADMINISTRADOR,"Ana","ana@example.com",LocalDate.of(1990,1,1),12345678,null,50,"Montevideo","Dirección");}
+    @Test void altaConVariosRolesNoAgregaElTipoRecibidoEnDatos()throws Exception{
+        EntityManager em=mock(EntityManager.class);
+        @SuppressWarnings("unchecked") jakarta.persistence.TypedQuery<Long> q=mock(jakarta.persistence.TypedQuery.class,RETURNS_SELF);
+        when(em.createQuery(anyString(),eq(Long.class))).thenReturn(q);when(q.getSingleResult()).thenReturn(0L);
+        servicio(em).registrarConRoles("token",datosRoles(),java.util.Set.of(TipoUsuario.CIUDADANO,TipoUsuario.CHOFER));
+        var captor=org.mockito.ArgumentCaptor.forClass(Usuario.class);verify(em).persist(captor.capture());
+        assertEquals(java.util.Set.of(TipoUsuario.CIUDADANO,TipoUsuario.CHOFER),captor.getValue().getRoles());
+        assertInstanceOf(Ciudadano.class,captor.getValue());
+    }
+    @Test void altaSinSeleccionNoAsignaCiudadanoPorDefecto()throws Exception{
+        EntityManager em=mock(EntityManager.class);
+        assertThrows(ErrorNegocio.class,()->servicio(em).registrarConRoles("token",datosRoles(),java.util.Set.of()));
+        verifyNoInteractions(em);
+    }
+    @Test void altaRechazaMezclarRolesDeDosProveedores()throws Exception{
+        EntityManager em=mock(EntityManager.class);
+        assertThrows(ErrorNegocio.class,()->servicio(em).registrarConRoles("token",datosRoles(),java.util.Set.of(TipoUsuario.ADMINISTRADOR,TipoUsuario.CHOFER)));
+        verifyNoInteractions(em);
+    }
+    @Test void funcionarioNoPuedeCrearUnAdministrador()throws Exception{
+        EntityManager em=mock(EntityManager.class);var s=servicio(em);
+        Field campo=GestionPerfilesService.class.getDeclaredField("control");campo.setAccessible(true);
+        var control=(uy.edu.fing.grupo07.CargaUY.security.ControlAcceso)campo.get(s);
+        when(control.exigir("token",TipoUsuario.ADMINISTRADOR,TipoUsuario.FUNCIONARIO)).thenReturn(
+            new uy.edu.fing.grupo07.CargaUY.security.Acceso(8,80000001,"Funcionario",java.util.Set.of(TipoUsuario.FUNCIONARIO)));
+        assertThrows(uy.edu.fing.grupo07.CargaUY.security.ErrorAcceso.class,()->s.registrarConRoles("token",datosRoles(),java.util.Set.of(TipoUsuario.ADMINISTRADOR)));
+        verifyNoInteractions(em);
+    }
+    @Test void altaCiudadanoAsignaSoloSuRolYSinPasswordLocal()throws Exception {
+        EntityManager em=mock(EntityManager.class);
+        @SuppressWarnings("unchecked") jakarta.persistence.TypedQuery<Long> consulta=mock(jakarta.persistence.TypedQuery.class);
+        when(em.createQuery(anyString(),eq(Long.class))).thenReturn(consulta);
+        when(consulta.setParameter("ci",12345678)).thenReturn(consulta);when(consulta.getSingleResult()).thenReturn(0L);
+        GestionPerfilesService servicio=servicio(em);
+        servicio.registrarCiudadano("token","Ana Ciudadana","ANA@example.com",LocalDate.of(1990,1,1),12345678);
+        var captor=org.mockito.ArgumentCaptor.forClass(Ciudadano.class);verify(em).persist(captor.capture());
+        assertEquals(java.util.Set.of(TipoUsuario.CIUDADANO),captor.getValue().getRoles());
+        assertEquals("ana@example.com",captor.getValue().getMail());
+        assertEquals("{GUB-PENDIENTE}",captor.getValue().getPassword());
+        assertNull(captor.getValue().getUidExterno());
+    }
+    @Test void altaCiudadanoRechazaUnaCiYaRegistrada()throws Exception {
+        EntityManager em=mock(EntityManager.class);
+        @SuppressWarnings("unchecked") jakarta.persistence.TypedQuery<Long> consulta=mock(jakarta.persistence.TypedQuery.class);
+        when(em.createQuery(anyString(),eq(Long.class))).thenReturn(consulta);
+        when(consulta.setParameter("ci",12345678)).thenReturn(consulta);when(consulta.getSingleResult()).thenReturn(1L);
+        assertThrows(ErrorNegocio.class,()->servicio(em).registrarCiudadano("token","Ana","ana@example.com",LocalDate.of(1990,1,1),12345678));
+        verify(em,never()).persist(any());
+    }
     private GestionPerfilesService servicio(EntityManager em) throws Exception {
         GestionPerfilesService s = new GestionPerfilesService();
         Field f = GestionPerfilesService.class.getDeclaredField("em");
@@ -20,6 +70,7 @@ class GestionPerfilesServiceTest {
         var control=mock(uy.edu.fing.grupo07.CargaUY.security.ControlAcceso.class);
         when(control.admin("token")).thenReturn(new uy.edu.fing.grupo07.CargaUY.security.Acceso(
             99,90000001,"Admin",java.util.Set.of(TipoUsuario.ADMINISTRADOR)));
+        when(control.exigir("token",TipoUsuario.ADMINISTRADOR,TipoUsuario.FUNCIONARIO)).thenReturn(new uy.edu.fing.grupo07.CargaUY.security.Acceso(99,90000001,"Admin",java.util.Set.of(TipoUsuario.ADMINISTRADOR)));
         seguridad.set(s,control);
         Field sesiones=GestionPerfilesService.class.getDeclaredField("sesiones");
         sesiones.setAccessible(true);sesiones.set(s,mock(uy.edu.fing.grupo07.CargaUY.security.SesionesService.class));

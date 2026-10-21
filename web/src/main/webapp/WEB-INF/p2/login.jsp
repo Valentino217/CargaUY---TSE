@@ -14,7 +14,6 @@
         <div>
             <p class="eyebrow">Plataforma de gestión y fiscalización</p>
             <h1>Ingresar a CargaUY</h1>
-            <p class="subtitle">Accedé con la cuenta correspondiente a tu perfil.</p>
         </div>
     </header>
     <% if(request.getAttribute("error")!=null){ %>
@@ -23,7 +22,6 @@
     <div class="login-grid">
         <section class="card" aria-labelledby="ingreso-interno">
             <h2 id="ingreso-interno">Administradores y autoridades</h2>
-            <p class="subtitle">Ingresá con tu usuario del directorio institucional.</p>
             <form class="login-form" method="post" action="<%=request.getContextPath()%>/login">
                 <input type="hidden" name="csrf" value="<%=h(request.getAttribute("csrf"))%>">
                 <label for="uid">Usuario del directorio
@@ -37,7 +35,6 @@
         </section>
         <section class="card external-login" aria-labelledby="ingreso-ciudadano">
             <h2 id="ingreso-ciudadano">Ciudadanos, choferes y funcionarios</h2>
-            <p class="subtitle">Utilizá tu identidad digital para acceder a los servicios de CargaUY.</p>
             <p>El ingreso se realiza a través de Usuario gub.uy. Al finalizar, volverás a esta plataforma.</p>
             <a class="button button-secondary button-full" href="<%=request.getContextPath()%>/gub/iniciar">Ingresar con Usuario gub.uy</a>
         </section>

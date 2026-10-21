@@ -56,7 +56,6 @@ Arrays.asList("listarEmpresas","consultarEmpresa"); %>
         <input type="hidden" name="csrf" value="<%=h(request.getAttribute("csrf"))%>">
         <section class="card">
             <h2>Operación</h2>
-            <p class="subtitle">Elegí qué necesitás hacer y completá los datos correspondientes. Para editar, consultá primero el registro y su versión.</p>
             <div class="form-grid">
                 <label>Operación
                     <select name="accion">
