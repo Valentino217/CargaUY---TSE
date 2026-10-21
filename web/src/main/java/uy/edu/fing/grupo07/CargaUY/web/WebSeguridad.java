@@ -32,8 +32,10 @@ public final class WebSeguridad {
         r.getSession().setMaxInactiveInterval(15*60);
     }
     public static boolean transporte(HttpServletRequest r) throws IOException {
-        return r.isSecure() || Boolean.parseBoolean(Config.valor("p1.entorno.local","false"))
-            && InetAddress.getByName(r.getRemoteAddr()).isLoopbackAddress();
+        if (r.isSecure()) return true;
+        if (!Boolean.parseBoolean(Config.valor("p1.entorno.local","false"))) return false;
+        InetAddress addr = InetAddress.getByName(r.getRemoteAddr());
+        return addr.isLoopbackAddress() || addr.isSiteLocalAddress();
     }
     public static void error(HttpServletResponse s, int codigo,String texto) throws IOException {
         s.setStatus(codigo); s.setContentType("text/plain;charset=UTF-8"); s.getWriter().println(texto);

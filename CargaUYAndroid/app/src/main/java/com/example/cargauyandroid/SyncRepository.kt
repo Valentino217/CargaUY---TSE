@@ -146,10 +146,37 @@ class SyncRepository(context: Context) {
         return sdf.format(Date())
     }
 
+    private suspend fun asegurarTokenLocal(cedula: Int, forzarRenovacion: Boolean = false) {
+        if (!forzarRenovacion && SesionMovil.token.isNotBlank() && (SesionMovil.cedulaAsociada == null || SesionMovil.cedulaAsociada == cedula)) {
+            return
+        }
+        try {
+            val resp = RetrofitClient.executeWithFallback { api ->
+                api.obtenerDevToken(mapOf("ci" to cedula))
+            }
+            val tk = resp["token"] as? String
+            if (!tk.isNullOrBlank()) {
+                SesionMovil.token = tk
+                SesionMovil.cedulaAsociada = cedula
+                Log.d("CARGAUY", "Token dev obtenido automaticamente para CI=$cedula")
+            }
+        } catch (e: Exception) {
+            Log.w("CARGAUY", "No se pudo obtener token dev automatico para CI=$cedula: ${e.message}")
+        }
+    }
+
     suspend fun consultarGuiasChofer(cedula: Int): ConsultaGuiasResult = withContext(Dispatchers.IO) {
         try {
             Log.d("CARGAUY", "Consultando guias para CI=$cedula")
-            val remotas = RetrofitClient.executeWithFallback { api -> api.obtenerViajes(cedula) }
+            asegurarTokenLocal(cedula)
+            val remotas = try {
+                RetrofitClient.executeWithFallback { api -> api.obtenerViajes(cedula) }
+            } catch (e: retrofit2.HttpException) {
+                if (e.code() == 401 || e.code() == 403) {
+                    asegurarTokenLocal(cedula, forzarRenovacion = true)
+                    RetrofitClient.executeWithFallback { api -> api.obtenerViajes(cedula) }
+                } else throw e
+            }
             servidorAlcanzable = true
             Log.d("CARGAUY", "Guias recibidas de ${RetrofitClient.activeBaseUrl}: ${remotas.size}")
             dbHelper.guardarGuiasCache(cedula, remotas)
@@ -219,6 +246,7 @@ class SyncRepository(context: Context) {
         // Intentar sincronizar directamente con el backend; si no hay red, cae en el catch (Flujo 3.A)
         return@withContext try {
             Log.d("CARGAUY", "Enviando evento $uuid (${tipo.codigo}) al servidor...")
+            asegurarTokenLocal(cedulaChofer)
             val resultados = RetrofitClient.executeWithFallback { api ->
                 api.sincronizarEventos(listOf(eventoLocal.toDto()))
             }
@@ -287,6 +315,7 @@ class SyncRepository(context: Context) {
 
         return@withContext try {
             Log.d("CARGAUY", "Sincronizando lote de ${pendientes.size} eventos pendientes...")
+            asegurarTokenLocal(cedulaChofer)
             val dtos = pendientes.map { it.toDto() }
             val respuestas = RetrofitClient.executeWithFallback { api ->
                 api.sincronizarEventos(dtos)

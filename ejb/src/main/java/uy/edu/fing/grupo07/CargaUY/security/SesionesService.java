@@ -47,6 +47,21 @@ public class SesionesService {
             throw new ErrorAcceso(403, "Las cuentas internas deben utilizar LDAP");
         return emitir(u);
     }
+    public Login emitirDevChofer(int ci) {
+        if (!Boolean.parseBoolean(Config.valor("p1.entorno.local", "false")))
+            throw new ErrorAcceso(403, "Endpoint solo disponible en entorno local");
+        Usuario u = em.createQuery("select u from Usuario u where u.ci=:ci", Usuario.class)
+            .setParameter("ci", ci).getResultStream().findFirst()
+            .orElseThrow(() -> new ErrorAcceso(404, "No existe usuario con CI " + ci));
+        if (!u.getRoles().contains(TipoUsuario.CHOFER)) {
+            if (u instanceof Chofer) {
+                u.getRoles().add(TipoUsuario.CHOFER);
+            } else {
+                throw new ErrorAcceso(403, "El usuario con CI " + ci + " no tiene rol CHOFER");
+            }
+        }
+        return emitir(u);
+    }
     private Login emitir(Usuario u) {
         if (!u.isActivo()) throw new ErrorAcceso(401, "Cuenta no habilitada");
         String token = Cripto.aleatorio();

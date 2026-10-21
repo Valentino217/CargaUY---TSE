@@ -34,6 +34,22 @@ public class ApiP1 {
         return Response.ok(Json.createObjectBuilder().add("token",l.token()).add("vence",l.vence().toString()).build())
             .header("Cache-Control","no-store").build();
     }
+    @POST @Path("auth/dev-chofer") @Consumes(MediaType.APPLICATION_JSON)
+    public Response loginDevChofer(JsonObject entrada) {
+        try {
+            int ci = entrada != null && entrada.containsKey("ci") ? entrada.getInt("ci") : 11223344;
+            var l = auth.loginDevChofer(ci);
+            return Response.ok(Json.createObjectBuilder()
+                .add("token", l.token())
+                .add("ci", l.usuario().ci())
+                .add("nombre", l.usuario().nombre())
+                .add("vence", l.vence().toString()).build())
+                .header("Cache-Control", "no-store").build();
+        } catch (ErrorAcceso e) {
+            return Response.status(e.getEstado()).entity(
+                Json.createObjectBuilder().add("error", e.getMessage()).build()).build();
+        }
+    }
     @GET @Path("auth/me")
     public JsonObject me(){
         Acceso a=auth.validarToken(token()); JsonArrayBuilder roles=Json.createArrayBuilder();
