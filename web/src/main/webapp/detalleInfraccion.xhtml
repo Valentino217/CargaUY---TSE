@@ -164,7 +164,7 @@
 
                     <h:panelGroup rendered="#{detalleInfraccionBean.puedePresentarDescargo}">
                         <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;"/>
-                        <h3 style="font-size: 1rem; margin-bottom: 12px; color: #1e3a8a;">Registrar / Actualizar Descargo</h3>
+                        <h3 style="font-size: 1rem; margin-bottom: 12px; color: #1e3a8a;">Registrar</h3>
                         <p:outputLabel for="descargoInput" value="Argumentos o comprobantes:" style="display: block; font-weight: bold; margin-bottom: 6px;"/>
                         <p:inputTextarea id="descargoInput" value="#{detalleInfraccionBean.textoDescargo}" rows="3" style="width: 100%; margin-bottom: 12px;" placeholder="Ingrese el descargo de la empresa transportista..."/>
                         <p:commandButton value="Registrar Descargo" action="#{detalleInfraccionBean.presentarDescargo}" update="formDetalle growl" icon="pi pi-send"/>
@@ -184,10 +184,10 @@
                             <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;"/>
                         </h:panelGroup>
 
-                        <!-- Confirmar -->
+                        <!-- Confirmar
                         <h:panelGroup rendered="#{detalleInfraccionBean.puedeConfirmar}">
                             <div style="margin-bottom: 24px;">
-                                <h3 style="color: #991b1b; font-size: 1rem; margin-bottom: 12px;">Confirmar Infracción (Aplicación de Sanción)</h3>
+                                <h3 style="color: #991b1b; font-size: 1rem; margin-bottom: 12px;">Confirmar Infracción</h3>
                                 <div style="display: flex; flex-direction: column; gap: 12px; max-width: 600px;">
                                     <div>
                                         <p:outputLabel for="funcIdConf" value="ID Funcionario: " style="font-weight: bold;"/>
@@ -195,19 +195,17 @@
                                     </div>
                                     <div>
                                         <p:outputLabel for="fundamentoConf" value="Fundamento de la Sanción: " style="font-weight: bold; display: block; margin-bottom: 6px;"/>
-                                        <p:inputTextarea id="fundamentoConf" value="#{detalleInfraccionBean.fundamento}" rows="3" style="width: 100%;" placeholder="Motivación jurídica y técnica..."/>
+                                        <p:inputTextarea id="fundamentoConf" value="#{detalleInfraccionBean.fundamento}" rows="3" style="width: 100%;" placeholder="Motivación..."/>
                                     </div>
-                                    <div>
-                                        <p:commandButton value="Confirmar Infracción y Auditar" action="#{detalleInfraccionBean.confirmar}" update="formDetalle growl" icon="pi pi-check" styleClass="ui-button-danger"/>
-                                    </div>
+
                                 </div>
                             </div>
                             <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;"/>
                         </h:panelGroup>
-
+ -->
                         <!-- Desestimar -->
                         <div>
-                            <h3 style="color: #64748b; font-size: 1rem; margin-bottom: 12px;">Desestimar Infracción (Archivo)</h3>
+                            <h3 style="color: #64748b; font-size: 1rem; margin-bottom: 12px;">Desestimar Infracción</h3>
                             <div style="display: flex; flex-direction: column; gap: 12px; max-width: 600px;">
                                 <div>
                                     <p:outputLabel for="funcIdDes" value="ID Funcionario: " style="font-weight: bold;"/>
@@ -218,7 +216,9 @@
                                     <p:inputTextarea id="fundamentoDes" value="#{detalleInfraccionBean.fundamento}" rows="3" style="width: 100%;" placeholder="Motivo de archivo..."/>
                                 </div>
                                 <div>
-                                    <p:commandButton value="Desestimar Caso y Auditar" action="#{detalleInfraccionBean.desestimar}" update="formDetalle growl" icon="pi pi-times" styleClass="ui-button-secondary"/>
+                                
+                                    <p:commandButton value="Desestimar Caso y Auditar" action="#{detalleInfraccionBean.desestimar}" update="formDetalle growl" icon="pi pi-times" styleClass="ui-button-secondary" style="margin-right: 0.5rem;" />
+                                    <p:commandButton value="Confirmar Infracción y Auditar" action="#{detalleInfraccionBean.confirmar}" update="formDetalle growl" icon="pi pi-check" styleClass="ui-button-danger"/>
                                 </div>
                             </div>
                         </div>
