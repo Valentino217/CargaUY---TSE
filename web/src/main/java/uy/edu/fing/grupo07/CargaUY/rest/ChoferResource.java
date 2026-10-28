@@ -71,6 +71,35 @@ public class ChoferResource {
     }
 
     /**
+     * Recibe un evento de tracking ya procesado y enriquecido con distanciaDesvioKm
+     * por la función Serverless (FaaS) y lo encola en TrackingQueue para persistencia y fiscalización.
+     */
+    @POST
+    @Path("/eventos/faas")
+    public Response recibirEventoProcesadoFaas(EventoViajeDTO evento) {
+        if (evento == null || evento.guiaId() == null || evento.uuid() == null || evento.uuid().isBlank()) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(Collections.singletonMap("error", "uuid y guiaId son obligatorios en el evento procesado por FaaS."))
+                    .build();
+        }
+
+        if (eventosService.existeEvento(evento.uuid())) {
+            return Response.ok(SyncResultDTO.duplicate(evento.uuid())).build();
+        }
+
+        if (trackingProducer != null) {
+            trackingProducer.enviarEvento(evento);
+            return Response.ok(SyncResultDTO.accepted(evento.uuid())).build();
+        }
+
+        List<SyncResultDTO> resultados = eventosService.guardarEventosLote(Collections.singletonList(evento));
+        if (!resultados.isEmpty()) {
+            return Response.ok(resultados.get(0)).build();
+        }
+        return Response.ok(SyncResultDTO.accepted(evento.uuid())).build();
+    }
+
+    /**
      * Retorna los eventos registrados para una guía, ordenados cronológicamente por tiempo.
      */
     @GET

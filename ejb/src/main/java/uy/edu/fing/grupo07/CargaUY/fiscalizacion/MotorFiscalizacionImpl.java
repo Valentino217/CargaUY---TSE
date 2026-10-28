@@ -4,6 +4,7 @@ import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
+import uy.edu.fing.grupo07.CargaUY.domain.entity.EventoViaje;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.GuiaDeViaje;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.ITV;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.Infraccion;
@@ -31,7 +32,7 @@ public class MotorFiscalizacionImpl implements MotorFiscalizacionLocal {
     private static final Logger LOGGER = Logger.getLogger(MotorFiscalizacionImpl.class.getName());
 
     private static final int UMBRAL_CARGA_POR_DEFECTO = 500;
-    private static final int UMBRAL_TRACKING_POR_DEFECTO = 3;
+    private static final double UMBRAL_TRACKING_POR_DEFECTO = 5.0;
 
     @PersistenceContext(unitName = "CargaUYPersistenceUnit")
     private EntityManager em;
@@ -60,6 +61,7 @@ public class MotorFiscalizacionImpl implements MotorFiscalizacionLocal {
 
         evaluarExcesoDeCarga(guia, reglas, infraccionesGeneradas);
         evaluarHabilitacionDelVehiculo(guia, infraccionesGeneradas);
+        evaluarDesvioDeRuta(guia, reglas, infraccionesGeneradas);
 
         return infraccionesGeneradas;
     }
@@ -164,6 +166,49 @@ public class MotorFiscalizacionImpl implements MotorFiscalizacionLocal {
         );
     }
 
+    private void evaluarDesvioDeRuta(
+            GuiaDeViaje guia,
+            ReglaFiscalizacion reglas,
+            List<TipoInfraccion> infraccionesGeneradas
+    ) {
+        EventoViaje eventoDesviado = buscarEventoConMayorDesvio(guia);
+        if (eventoDesviado == null || eventoDesviado.getDistanciaDesvioKm() == null) {
+            return;
+        }
+
+        double distanciaKm = eventoDesviado.getDistanciaDesvioKm();
+        double umbralKm = reglas.getUmbralTracking();
+        boolean superaTolerancia = distanciaKm > umbralKm;
+
+        if (!superaTolerancia) {
+            return;
+        }
+
+        String origenTexto = "No especificado";
+        if (guia.getOrigen() != null && !guia.getOrigen().isBlank()) {
+            origenTexto = guia.getOrigen();
+        }
+
+        String destinoTexto = "No especificado";
+        if (guia.getDestino() != null && !guia.getDestino().isBlank()) {
+            destinoTexto = guia.getDestino();
+        }
+
+        String evidencia = "El evento de tracking UUID " + eventoDesviado.getUuid()
+                + " en las coordenadas (lat: " + eventoDesviado.getLatitud()
+                + ", lon: " + eventoDesviado.getLongitud() + ") procesado vía FaaS "
+                + "registró un desvío de " + distanciaKm + " km respecto a la ruta asignada ("
+                + origenTexto + " -> " + destinoTexto + "), superando la tolerancia máxima permitida de "
+                + umbralKm + " km.";
+
+        registrarInfraccionSiNoExiste(
+                guia,
+                TipoInfraccion.DESVIO_DE_RUTA,
+                evidencia,
+                infraccionesGeneradas
+        );
+    }
+
     private void registrarInfraccionSiNoExiste(
             GuiaDeViaje guia,
             TipoInfraccion tipo,
@@ -205,15 +250,50 @@ public class MotorFiscalizacionImpl implements MotorFiscalizacionLocal {
                 "SELECT p FROM PesadaBalanza p WHERE p.guia.id = :guiaId ORDER BY p.pesoRegistrado DESC",
                 PesadaBalanza.class
         );
+        if (query == null) {
+            return null;
+        }
         query.setParameter("guiaId", guiaId);
         query.setMaxResults(1);
 
         List<PesadaBalanza> resultados = query.getResultList();
-        if (resultados.isEmpty()) {
+        if (resultados == null || resultados.isEmpty()) {
             return null;
         }
 
         return resultados.get(0);
+    }
+
+    private EventoViaje buscarEventoConMayorDesvio(GuiaDeViaje guia) {
+        TypedQuery<EventoViaje> query = em.createQuery(
+                "SELECT e FROM EventoViaje e WHERE e.guia.id = :guiaId AND e.distanciaDesvioKm IS NOT NULL ORDER BY e.distanciaDesvioKm DESC",
+                EventoViaje.class
+        );
+        if (query != null) {
+            query.setParameter("guiaId", guia.getId());
+            query.setMaxResults(1);
+
+            List<EventoViaje> resultados = query.getResultList();
+            if (resultados != null && !resultados.isEmpty()) {
+                return resultados.get(0);
+            }
+        }
+
+        List<EventoViaje> eventosEnMemoria = guia.getEventos();
+        if (eventosEnMemoria == null || eventosEnMemoria.isEmpty()) {
+            return null;
+        }
+
+        EventoViaje mayor = null;
+        for (EventoViaje ev : eventosEnMemoria) {
+            if (ev != null && ev.getDistanciaDesvioKm() != null) {
+                if (mayor == null || ev.getDistanciaDesvioKm() > mayor.getDistanciaDesvioKm()) {
+                    mayor = ev;
+                }
+            }
+        }
+
+        return mayor;
     }
 
     private ReglaFiscalizacion obtenerReglasVigentes() {

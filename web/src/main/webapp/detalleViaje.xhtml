@@ -130,6 +130,12 @@
             color: #64748b;
             font-style: italic;
         }
+        .faas-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 14px;
+            margin-bottom: 14px;
+        }
     </style>
 </h:head>
 
@@ -139,7 +145,7 @@
         <div class="header-bar">
             <div>
                 <h1>Tracking y Detalle de Viaje</h1>
-                <small>Monitoreo en tiempo real, trazabilidad de eventos en ruta y pesaje en balanza (P3)</small>
+                <small>Monitoreo en tiempo real, procesamiento FaaS de desvío en ruta y pesaje en balanza (P3/P4)</small>
             </div>
             <div class="nav-links">
                 <a href="index.xhtml">Inicio</a>
@@ -152,7 +158,7 @@
         </div>
 
         <h:form id="formTracking">
-            <p:growl id="growl" showDetail="true" life="4000"/>
+            <p:growl id="growl" showDetail="true" life="5000"/>
             <p:messages id="mensajes" showDetail="true" closable="true"/>
 
             <!-- Panel de Búsqueda y Acciones Rápidas -->
@@ -173,7 +179,7 @@
                     <p:commandButton value="Consultar"
                                      action="#{detalleViajeBean.consultarViaje}"
                                      update=":formTracking"
-                                     icon="pi pi-search"/>  
+                                     icon="pi pi-search"/>
                     <p:commandButton value="Sincronizar Mock Balanza"
                                      action="#{detalleViajeBean.sincronizarMockBalanza}"
                                      update=":formTracking"
@@ -233,6 +239,77 @@
                     </div>
                 </div>
 
+                <!-- Panel FaaS: Telemetría GPS y Fiscalización Automática por Desvío -->
+                <p:panel header="Procesamiento de Tracking vía FaaS (Cloud HTTPS) y Fiscalización de Desvío"
+                         toggleable="true"
+                         styleClass="mb-4">
+                    <div style="margin-bottom: 12px;">
+                        <h:outputLabel for="faasUrl" value="Endpoint HTTPS de la Función FaaS (AWS Lambda / Google Cloud Function):"
+                                       style="font-weight: 600; display: block; margin-bottom: 4px;"/>
+                        <p:inputText id="faasUrl"
+                                     value="#{detalleViajeBean.faasEndpointUrl}"
+                                     placeholder="https://xxxxxxxx.lambda-url.us-east-1.on.aws/"
+                                     style="width: 100%; font-family: monospace;"/>
+                    </div>
+
+                    <div class="faas-grid">
+                        <div>
+                            <h:outputLabel for="telLat" value="Latitud GPS:" style="font-weight: 600; display: block; margin-bottom: 4px;"/>
+                            <p:inputNumber id="telLat"
+                                           value="#{detalleViajeBean.telemetriaLatitud}"
+                                           decimalPlaces="4"
+                                           placeholder="-32.9000"
+                                           style="width: 100%;"/>
+                        </div>
+                        <div>
+                            <h:outputLabel for="telLon" value="Longitud GPS:" style="font-weight: 600; display: block; margin-bottom: 4px;"/>
+                            <p:inputNumber id="telLon"
+                                           value="#{detalleViajeBean.telemetriaLongitud}"
+                                           decimalPlaces="4"
+                                           placeholder="-55.8500"
+                                           style="width: 100%;"/>
+                        </div>
+                        <div>
+                            <h:outputLabel for="telDesc" value="Detalle de Telemetría:" style="font-weight: 600; display: block; margin-bottom: 4px;"/>
+                            <p:inputText id="telDesc"
+                                         value="#{detalleViajeBean.telemetriaDescripcion}"
+                                         placeholder="Reporte de posición GPS en ruta"
+                                         style="width: 100%;"/>
+                        </div>
+                    </div>
+
+                    <div class="select-bar">
+                        <p:commandButton value="Precargar Punto en Ruta (Normal)"
+                                         action="#{detalleViajeBean.cargarCoordenadasEnRuta}"
+                                         update=":formTracking"
+                                         icon="pi pi-map-marker"
+                                         styleClass="ui-button-secondary ui-button-outlined"/>
+
+                        <p:commandButton value="Precargar Punto con Desvío (Fuera de Ruta)"
+                                         action="#{detalleViajeBean.cargarCoordenadasDesviadas}"
+                                         update=":formTracking"
+                                         icon="pi pi-compass"
+                                         styleClass="ui-button-danger ui-button-outlined"/>
+
+                        <p:selectBooleanCheckbox id="chkEvalDesvio"
+                                                 value="#{detalleViajeBean.evaluarDesvioInmediato}"
+                                                 itemLabel="Evaluar infracciones de inmediato"/>
+
+                        <p:commandButton value="Invocar FaaS y Procesar Evento"
+                                         action="#{detalleViajeBean.enviarTelemetriaFaas}"
+                                         update=":formTracking"
+                                         icon="pi pi-cloud-upload"
+                                         styleClass="ui-button-primary"/>
+                    </div>
+
+                    <h:panelGroup layout="block"
+                                  rendered="#{detalleViajeBean.ultimoResultadoFaas != null}"
+                                  style="margin-top: 12px; padding: 10px 14px; background: #eff6ff; border-left: 4px solid #2563eb; border-radius: 4px;">
+                        <strong>Resultado FaaS: </strong>
+                        <h:outputText value="#{detalleViajeBean.ultimoResultadoFaas}"/>
+                    </h:panelGroup>
+                </p:panel>
+
                 <!-- Sección 1: Línea cronológica de eventos (AC013) -->
                 <p:panel header="Línea Cronológica de Eventos de Ruta " styleClass="mb-4">
                     <p:dataTable id="tablaEventos"
@@ -256,11 +333,20 @@
                             <h:outputText value="#{ev.tiempo()}"/>
                         </p:column>
 
-                        <p:column headerText="Coordenadas" style="width: 180px;">
+                        <p:column headerText="Coordenadas" style="width: 170px;">
                             <h:outputText value="#{ev.latitud()}, #{ev.longitud()}"/>
                         </p:column>
 
-                        <p:column headerText="UUID Transacción" style="width: 260px; font-family: monospace; font-size: 0.85rem;">
+                        <p:column headerText="Desvío FaaS (km)" style="width: 140px;">
+                            <h:panelGroup rendered="#{ev.distanciaDesvioKm() != null}">
+                                <span class="badge #{ev.distanciaDesvioKm() > 5.0 ? 'badge-INCIDENTE' : 'badge-FINALIZADO'}">
+                                    #{ev.distanciaDesvioKm()} km
+                                </span>
+                            </h:panelGroup>
+                            <h:outputText value="-" rendered="#{ev.distanciaDesvioKm() == null}" styleClass="muted-text"/>
+                        </p:column>
+
+                        <p:column headerText="UUID Transacción" style="width: 240px; font-family: monospace; font-size: 0.85rem;">
                             <h:outputText value="#{ev.uuid()}"/>
                         </p:column>
 

@@ -1,6 +1,7 @@
 package uy.edu.fing.grupo07.CargaUY.service;
 
 import jakarta.ejb.Stateless;
+import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
@@ -11,6 +12,7 @@ import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEvento;
 import uy.edu.fing.grupo07.CargaUY.dto.*;
 import uy.edu.fing.grupo07.CargaUY.exception.BusinessException;
+import uy.edu.fing.grupo07.CargaUY.integration.FaasTrackingClient;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -23,12 +25,20 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
     @PersistenceContext(unitName = "CargaUYPersistenceUnit")
     private EntityManager em;
 
+    @Inject
+    private FaasTrackingClient faasTrackingClient;
+
     public GestionEventosServiceImpl() {
     }
 
     // Constructor para tests con mock
     GestionEventosServiceImpl(EntityManager em) {
         this.em = em;
+    }
+
+    GestionEventosServiceImpl(EntityManager em, FaasTrackingClient faasTrackingClient) {
+        this.em = em;
+        this.faasTrackingClient = faasTrackingClient;
     }
 
     @Override
@@ -63,8 +73,22 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
             throw new BusinessException("No se encontró la guía de viaje con ID " + dto.guiaId());
         }
 
-        LocalDateTime tiempo = dto.tiempo() != null ? dto.tiempo() : LocalDateTime.now();
+        LocalDateTime tiempo = LocalDateTime.now();
+        if (dto.tiempo() != null) {
+            tiempo = dto.tiempo();
+        }
         EventoViaje evento = new EventoViaje(dto.uuid(), tiempo, dto.tipo(), dto.latitud(), dto.longitud(), guia);
+
+        if (dto.distanciaDesvioKm() != null) {
+            evento.setDistanciaDesvioKm(dto.distanciaDesvioKm());
+        } else if (faasTrackingClient != null) {
+            FaasTrackingClient.ResultadoFaas resultadoFaas = faasTrackingClient.procesarEvento(
+                    dto,
+                    guia.getOrigen(),
+                    guia.getDestino()
+            );
+            evento.setDistanciaDesvioKm(resultadoFaas.distanciaDesvioKm());
+        }
 
         if (dto.incidente() != null) {
             IncidenteRuta incidente = new IncidenteRuta(
@@ -95,7 +119,11 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
 
         for (EventoViajeDTO dto : eventos) {
             if (dto == null || dto.uuid() == null || dto.uuid().isBlank()) {
-                resultados.add(SyncResultDTO.error(dto != null ? dto.uuid() : null, "UUID no puede ser nulo o vacío"));
+                String uuidError = null;
+                if (dto != null) {
+                    uuidError = dto.uuid();
+                }
+                resultados.add(SyncResultDTO.error(uuidError, "UUID no puede ser nulo o vacío"));
                 continue;
             }
 
@@ -135,14 +163,19 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
             if (ev.getIncidente() != null) {
                 incDto = new IncidenteDTO(ev.getIncidente().getFoto(), ev.getIncidente().getDescripcion());
             }
+            Long idGuia = null;
+            if (ev.getGuia() != null) {
+                idGuia = ev.getGuia().getId();
+            }
             dtos.add(new EventoViajeDTO(
                     ev.getUuid(),
                     ev.getTiempo(),
                     ev.getTipo(),
                     ev.getLatitud(),
                     ev.getLongitud(),
-                    ev.getGuia() != null ? ev.getGuia().getId() : null,
-                    incDto
+                    idGuia,
+                    incDto,
+                    ev.getDistanciaDesvioKm()
             ));
         }
 
@@ -240,6 +273,24 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
         if (guia == null) {
             return null;
         }
+        String matricula = null;
+        String marcaModelo = null;
+        if (guia.getVehiculo() != null) {
+            matricula = guia.getVehiculo().getMatricula();
+            marcaModelo = guia.getVehiculo().getMarca() + " " + guia.getVehiculo().getModelo();
+        }
+        Integer nroEmpresa = null;
+        String razonSocial = null;
+        if (guia.getEmpresa() != null) {
+            nroEmpresa = guia.getEmpresa().getNroEmpresa();
+            razonSocial = guia.getEmpresa().getRazonSocial();
+        }
+        Integer idChofer = null;
+        String nombreChofer = null;
+        if (guia.getChofer() != null) {
+            idChofer = guia.getChofer().getId();
+            nombreChofer = guia.getChofer().getNombre();
+        }
         return new GuiaResumenDTO(
                 guia.getId(),
                 guia.getFecha(),
@@ -249,12 +300,12 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
                 guia.getVolumenCarga(),
                 guia.getEstado(),
                 guia.getVersion(),
-                guia.getVehiculo() != null ? guia.getVehiculo().getMatricula() : null,
-                guia.getVehiculo() != null ? (guia.getVehiculo().getMarca() + " " + guia.getVehiculo().getModelo()) : null,
-                guia.getEmpresa() != null ? guia.getEmpresa().getNroEmpresa() : null,
-                guia.getEmpresa() != null ? guia.getEmpresa().getRazonSocial() : null,
-                guia.getChofer() != null ? guia.getChofer().getId() : null,
-                guia.getChofer() != null ? guia.getChofer().getNombre() : null
+                matricula,
+                marcaModelo,
+                nroEmpresa,
+                razonSocial,
+                idChofer,
+                nombreChofer
         );
     }
 
@@ -270,8 +321,14 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
             throw new BusinessException("La descripción del incidente es obligatoria.");
         }
 
-        String uuid = (dto.uuid() != null && !dto.uuid().isBlank()) ? dto.uuid() : UUID.randomUUID().toString();
-        LocalDateTime tiempo = dto.tiempo() != null ? dto.tiempo() : LocalDateTime.now();
+        String uuid = UUID.randomUUID().toString();
+        if (dto.uuid() != null && !dto.uuid().isBlank()) {
+            uuid = dto.uuid();
+        }
+        LocalDateTime tiempo = LocalDateTime.now();
+        if (dto.tiempo() != null) {
+            tiempo = dto.tiempo();
+        }
 
         IncidenteDTO incDto = new IncidenteDTO(dto.foto(), dto.descripcion());
         EventoViajeDTO evDto = new EventoViajeDTO(
@@ -286,14 +343,20 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
 
         EventoViaje guardado = guardarEvento(evDto);
 
+        Long idGuiaGuardada = null;
+        if (guardado.getGuia() != null) {
+            idGuiaGuardada = guardado.getGuia().getId();
+        }
+
         return new EventoViajeDTO(
                 guardado.getUuid(),
                 guardado.getTiempo(),
                 guardado.getTipo(),
                 guardado.getLatitud(),
                 guardado.getLongitud(),
-                guardado.getGuia() != null ? guardado.getGuia().getId() : null,
-                incDto
+                idGuiaGuardada,
+                incDto,
+                guardado.getDistanciaDesvioKm()
         );
     }
 }

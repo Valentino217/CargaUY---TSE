@@ -201,8 +201,8 @@ public class RegistrarPesajeBean implements Serializable {
                             FacesMessage.SEVERITY_INFO,
                             "Pesaje Registrado",
                             "Se registró la pesada #" + pesadaGuardada.idPesada()
-                                    + " de " + pesoRegistrado + " kg. La guía #" + guiaIdSeleccionada
-                                    + " no presenta infracciones."
+                                    + " de " + pesoRegistrado + " kg. No se generaron nuevas infracciones en esta evaluación "
+                                    + "(si la guía #" + guiaIdSeleccionada + " ya posee infracción previa, no se duplica por viaje)."
                     );
                 } else {
                     mostrarMensaje(
