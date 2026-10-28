@@ -1,0 +1,295 @@
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/templates/template.xhtml">
+
+    <ui:define name="title">Bandeja de Fiscalización</ui:define>
+
+    <ui:define name="content">
+        <div class="cuy-page-header">
+            <div>
+                <h1 class="cuy-page-title">
+                    <i class="pi pi-inbox" style="color: #1d4ed8;" />
+                    Bandeja de Trabajo de Fiscalización e Infracciones
+                </h1>
+                <p class="cuy-page-subtitle">
+                    Evaluación de evidencia técnica, revisión de descargos de empresas y resolución administrativa con pista de auditoría inmutable
+                </p>
+            </div>
+            <div style="display: flex; gap: 0.6rem;">
+                <h:form id="bandejaTopForm" style="margin: 0; display: flex; gap: 0.6rem;">
+                    <p:commandButton value="Evaluar Guía en Motor"
+                                     icon="pi pi-bolt"
+                                     type="button"
+                                     onclick="PF('dlgMotorWidget').show()"
+                                     styleClass="ui-button-warning" />
+                    <p:commandButton value="Actualizar Bandeja"
+                                     icon="pi pi-refresh"
+                                     actionListener="#{bandejaFiscalizacionBean.cargarCasos}"
+                                     update=":bandejaForm :kpiBandejaGroup"
+                                     styleClass="ui-button-outlined ui-button-secondary" />
+                </h:form>
+            </div>
+        </div>
+
+        <!-- KPIs -->
+        <h:panelGroup id="kpiBandejaGroup" layout="block" styleClass="cuy-kpi-grid">
+            <div class="cuy-kpi-card">
+                <div class="cuy-kpi-label"><i class="pi pi-folder" /> Total Casos Detectados</div>
+                <div class="cuy-kpi-value">#{bandejaFiscalizacionBean.totalCasos}</div>
+            </div>
+            <div class="cuy-kpi-card warning">
+                <div class="cuy-kpi-label"><i class="pi pi-clock" /> Pendientes de Resolución</div>
+                <div class="cuy-kpi-value">#{bandejaFiscalizacionBean.totalPendientesRevision}</div>
+            </div>
+            <div class="cuy-kpi-card danger">
+                <div class="cuy-kpi-label"><i class="pi pi-ban" /> Sanciones Confirmadas</div>
+                <div class="cuy-kpi-value">#{bandejaFiscalizacionBean.totalConfirmadas}</div>
+            </div>
+            <div class="cuy-kpi-card success">
+                <div class="cuy-kpi-label"><i class="pi pi-check-circle" /> Casos Desestimados</div>
+                <div class="cuy-kpi-value">#{bandejaFiscalizacionBean.totalDesestimadas}</div>
+            </div>
+        </h:panelGroup>
+
+        <h:form id="bandejaForm">
+            <div class="cuy-card">
+                <p:dataTable id="tablaBandeja"
+                             var="caso"
+                             value="#{bandejaFiscalizacionBean.casos}"
+                             filteredValue="#{bandejaFiscalizacionBean.casosFiltrados}"
+                             widgetVar="dtBandeja"
+                             paginator="true"
+                             rows="10"
+                             paginatorPosition="bottom"
+                             stripedRows="true"
+                             size="small"
+                             emptyMessage="No existen casos de fiscalización registrados.">
+
+                    <f:facet name="header">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                            <span style="font-weight: 700; color: #0f2942;">
+                                <i class="pi pi-briefcase" style="margin-right: 0.4rem;" /> Expedientes Activos e Históricos
+                            </span>
+                            <span class="ui-input-icon-left">
+                                <i class="pi pi-search" />
+                                <p:inputText id="globalFilter"
+                                             onkeyup="PF('dtBandeja').filter()"
+                                             placeholder="Buscar por empresa, matrícula, tipo o estado..."
+                                             style="width: 300px;" />
+                            </span>
+                        </div>
+                    </f:facet>
+
+                    <p:column headerText="Caso #" sortBy="#{caso.idCaso()}" style="width: 85px; text-align: center;">
+                        <span class="cuy-mono">#<h:outputText value="#{caso.idCaso()}" /></span>
+                    </p:column>
+
+                    <p:column headerText="Fecha" sortBy="#{caso.fecha()}" style="width: 110px;">
+                        <h:outputText value="#{caso.fecha()}" />
+                    </p:column>
+
+                    <p:column headerText="Empresa / Unidad" sortBy="#{caso.nombreEmpresa()}" filterBy="#{caso.nombreEmpresa()}" filterMatchMode="contains">
+                        <strong style="color: #0f2942;">#{caso.nombreEmpresa() != null ? caso.nombreEmpresa() : 'Empresa N/D'}</strong>
+                        <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.15rem;">
+                            Matrícula: <span class="cuy-mono">#{caso.matricula() != null ? caso.matricula() : 'S/D'}</span> | Guía ##{caso.guiaId()}
+                        </div>
+                    </p:column>
+
+                    <p:column headerText="Tipo Infracción" sortBy="#{caso.tipo()}" filterBy="#{caso.tipo()}" filterMatchMode="contains" style="width: 185px;">
+                        <p:tag value="#{caso.tipo()}"
+                               severity="#{caso.tipo().name() eq 'EXCESO_PESO' ? 'danger' : (caso.tipo().name() eq 'DESVIO_RUTA' ? 'warning' : 'info')}"
+                               icon="pi pi-exclamation-triangle"
+                               rounded="true" />
+                    </p:column>
+
+                    <p:column headerText="Descargo Empresa" style="width: 150px; text-align: center;">
+                        <p:tag value="#{not empty caso.textoDescargo() ? 'CON DESCARGO' : 'SIN DESCARGO'}"
+                               severity="#{not empty caso.textoDescargo() ? 'warning' : 'secondary'}"
+                               icon="#{not empty caso.textoDescargo() ? 'pi pi-comment' : 'pi pi-minus'}"
+                               rounded="true" />
+                    </p:column>
+
+                    <p:column headerText="Estado" sortBy="#{caso.estado()}" filterBy="#{caso.estado()}" filterMatchMode="contains" style="width: 150px; text-align: center;">
+                        <p:tag value="#{caso.estado()}"
+                               severity="#{caso.estado().name() eq 'CONFIRMADA' ? 'danger' : (caso.estado().name() eq 'DESESTIMADA' ? 'success' : (caso.estado().name() eq 'EN_DESCARGO' ? 'warning' : 'info'))}"
+                               rounded="true" />
+                    </p:column>
+
+                    <p:column headerText="Gestión" style="width: 165px; text-align: center;" exportable="false">
+                        <p:commandButton value="#{(caso.estado().name() eq 'CONFIRMADA' or caso.estado().name() eq 'DESESTIMADA') ? 'Ver Auditoría' : 'Evaluar / Resolver'}"
+                                         icon="#{(caso.estado().name() eq 'CONFIRMADA' or caso.estado().name() eq 'DESESTIMADA') ? 'pi pi-eye' : 'pi pi-check-square'}"
+                                         actionListener="#{bandejaFiscalizacionBean.seleccionarCaso(caso)}"
+                                         update=":dlgResolverForm"
+                                         oncomplete="PF('dlgResolverWidget').show()"
+                                         styleClass="#{(caso.estado().name() eq 'CONFIRMADA' or caso.estado().name() eq 'DESESTIMADA') ? 'ui-button-outlined ui-button-secondary' : 'ui-button-primary'}"
+                                         style="font-size: 0.82rem;" />
+                    </p:column>
+                </p:dataTable>
+            </div>
+        </h:form>
+
+        <!-- Modal Evaluar / Resolver Expediente -->
+        <p:dialog header="Evaluación de Evidencia, Revisión de Descargo y Resolución"
+                  widgetVar="dlgResolverWidget"
+                  modal="true"
+                  responsive="true"
+                  width="740"
+                  closeOnEscape="true">
+            <h:form id="dlgResolverForm">
+                <h:panelGroup rendered="#{bandejaFiscalizacionBean.casoSeleccionado != null}">
+                    <div class="ui-fluid">
+                        <!-- Resumen superior -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 1rem;">
+                            <div>
+                                <div style="font-size: 0.78rem; color: #64748b; text-transform: uppercase; font-weight: 700;">
+                                    Expediente ##{bandejaFiscalizacionBean.casoSeleccionado.idCaso()} &#8226; Guía ##{bandejaFiscalizacionBean.casoSeleccionado.guiaId()}
+                                </div>
+                                <div style="font-size: 1.05rem; font-weight: 800; color: #0f2942;">
+                                    #{bandejaFiscalizacionBean.casoSeleccionado.nombreEmpresa()} &#8226; Matrícula <span class="cuy-mono">#{bandejaFiscalizacionBean.casoSeleccionado.matricula()}</span>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <p:tag value="#{bandejaFiscalizacionBean.casoSeleccionado.tipo()}" severity="danger" rounded="true" />
+                                <p:tag value="#{bandejaFiscalizacionBean.casoSeleccionado.estado()}" severity="info" rounded="true" />
+                            </div>
+                        </div>
+
+                        <!-- Evidencia técnica -->
+                        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid #2563eb; border-radius: 8px; padding: 0.9rem 1rem; margin-bottom: 1rem;">
+                            <div style="font-weight: 700; color: #1e3a8a; font-size: 0.85rem; margin-bottom: 0.3rem;">
+                                <i class="pi pi-microchip" /> Evidencia Técnica del Motor de Fiscalización (#{bandejaFiscalizacionBean.casoSeleccionado.fecha()})
+                            </div>
+                            <div style="font-family: monospace; font-size: 0.88rem; color: #1e40af; white-space: pre-wrap;">#{bandejaFiscalizacionBean.casoSeleccionado.evidencia()}</div>
+                        </div>
+
+                        <!-- Descargo presentado por la empresa -->
+                        <div style="background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #d97706; border-radius: 8px; padding: 0.9rem 1rem; margin-bottom: 1rem;">
+                            <div style="font-weight: 700; color: #92400e; font-size: 0.85rem; margin-bottom: 0.3rem;">
+                                <i class="pi pi-comments" /> Descargo Presentado por la Empresa Transportista
+                            </div>
+                            <h:panelGroup rendered="#{not empty bandejaFiscalizacionBean.casoSeleccionado.textoDescargo()}">
+                                <div style="font-size: 0.9rem; color: #78350f;">
+                                    "#{bandejaFiscalizacionBean.casoSeleccionado.textoDescargo()}"
+                                </div>
+                                <div style="font-size: 0.76rem; color: #92400e; margin-top: 0.3rem;">
+                                    Presentado el #{bandejaFiscalizacionBean.casoSeleccionado.fechaDescargo()}
+                                </div>
+                            </h:panelGroup>
+                            <h:panelGroup rendered="#{empty bandejaFiscalizacionBean.casoSeleccionado.textoDescargo()}">
+                                <div style="font-size: 0.85rem; color: #92400e; font-style: italic;">
+                                    La empresa aún no ha presentado descargo administrativo para este expediente.
+                                </div>
+                            </h:panelGroup>
+                        </div>
+
+                        <!-- Pista de Auditoría Inmutable si ya fue resuelto -->
+                        <h:panelGroup rendered="#{bandejaFiscalizacionBean.casoSeleccionado.auditoria() != null}">
+                            <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-left: 4px solid #059669; border-radius: 8px; padding: 0.9rem 1rem; margin-bottom: 1rem;">
+                                <div style="font-weight: 700; color: #065f46; font-size: 0.85rem; margin-bottom: 0.3rem;">
+                                    <i class="pi pi-lock" /> Registro de Auditoría Inmutable Sellado
+                                </div>
+                                <div style="font-size: 0.84rem; color: #047857;">
+                                    <strong>Acción:</strong> #{bandejaFiscalizacionBean.casoSeleccionado.auditoria().accion()} |
+                                    <strong>Autor:</strong> #{bandejaFiscalizacionBean.casoSeleccionado.auditoria().usuario()} |
+                                    <strong>Timestamp:</strong> #{bandejaFiscalizacionBean.casoSeleccionado.auditoria().timestampCreacion()}
+                                </div>
+                            </div>
+                        </h:panelGroup>
+
+                        <!-- InputTextarea de Fundamentos de Resolución -->
+                        <div style="margin-bottom: 1rem;">
+                            <p:outputLabel for="txtFundamentos"
+                                           value="Fundamentos Técnicos y Administrativos de la Resolución *"
+                                           style="font-weight: 700; color: #0f2942;" />
+                            <p:inputTextarea id="txtFundamentos"
+                                             value="#{bandejaFiscalizacionBean.fundamentosResolucion}"
+                                             rows="4"
+                                             autoResize="false"
+                                             readonly="#{bandejaFiscalizacionBean.casoResuelto}"
+                                             placeholder="Redacte los fundamentos que respaldan la confirmación de la sanción o la desestimación del caso..."
+                                             style="margin-top: 0.35rem;" />
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1.25rem;">
+                        <div>
+                            <p:commandButton value="Notificar a la Empresa"
+                                             icon="pi pi-bell"
+                                             rendered="#{bandejaFiscalizacionBean.casoSeleccionado.estado().name() eq 'DETECTADA'}"
+                                             actionListener="#{bandejaFiscalizacionBean.notificarEmpresa}"
+                                             update=":dlgResolverForm :bandejaForm:tablaBandeja :kpiBandejaGroup"
+                                             styleClass="ui-button-outlined ui-button-info" />
+                        </div>
+                        <div style="display: flex; gap: 0.6rem;">
+                            <p:commandButton value="Cerrar"
+                                             type="button"
+                                             icon="pi pi-times"
+                                             onclick="PF('dlgResolverWidget').hide()"
+                                             styleClass="ui-button-outlined ui-button-secondary" />
+
+                            <p:commandButton value="Desestimar Caso"
+                                             icon="pi pi-check-circle"
+                                             rendered="#{not bandejaFiscalizacionBean.casoResuelto}"
+                                             actionListener="#{bandejaFiscalizacionBean.desestimarCaso}"
+                                             update=":bandejaForm:tablaBandeja :kpiBandejaGroup"
+                                             oncomplete="if (!args.validationFailed) PF('dlgResolverWidget').hide()"
+                                             styleClass="ui-button-success">
+                                <p:confirm header="Confirmar Desestimación"
+                                           message="¿Confirma la desestimación y archivo definitivo del caso ##{bandejaFiscalizacionBean.casoSeleccionado.idCaso()}?"
+                                           icon="pi pi-question-circle" />
+                            </p:commandButton>
+
+                            <p:commandButton value="Confirmar Sanción"
+                                             icon="pi pi-ban"
+                                             rendered="#{not bandejaFiscalizacionBean.casoResuelto}"
+                                             actionListener="#{bandejaFiscalizacionBean.confirmarSancion}"
+                                             update=":bandejaForm:tablaBandeja :kpiBandejaGroup"
+                                             oncomplete="if (!args.validationFailed) PF('dlgResolverWidget').hide()"
+                                             styleClass="ui-button-danger">
+                                <p:confirm header="Confirmar Sanción Administrativa"
+                                           message="¿Confirma la aplicación de sanción firme sobre el expediente ##{bandejaFiscalizacionBean.casoSeleccionado.idCaso()}? Esta acción sella un registro de auditoría inmutable."
+                                           icon="pi pi-exclamation-triangle" />
+                            </p:commandButton>
+                        </div>
+                    </div>
+                </h:panelGroup>
+            </h:form>
+        </p:dialog>
+
+        <!-- Modal Evaluar Guía en Motor de Fiscalización -->
+        <p:dialog header="Disparar Evaluación del Motor de Fiscalización"
+                  widgetVar="dlgMotorWidget"
+                  modal="true"
+                  responsive="true"
+                  width="480"
+                  closeOnEscape="true">
+            <h:form id="dlgMotorForm">
+                <div class="ui-fluid">
+                    <div style="margin-bottom: 0.9rem;">
+                        <p:outputLabel for="guiaEvalInput" value="ID de Guía de Viaje a Evaluar *" />
+                        <p:inputNumber id="guiaEvalInput" value="#{bandejaFiscalizacionBean.guiaIdFiscalizar}" decimalPlaces="0" thousandSeparator="" required="true" />
+                    </div>
+                    <div style="margin-bottom: 1rem;">
+                        <p:outputLabel for="modoEvalSel" value="Modo de Ejecución" />
+                        <p:selectOneRadio id="modoEvalSel" value="#{bandejaFiscalizacionBean.modoFiscalizacion}">
+                            <f:selectItem itemLabel="Sincrónico Directo (EJB)" itemValue="sync" />
+                            <f:selectItem itemLabel="Asíncrono (Cola JMS FiscalizacionQueue)" itemValue="async" />
+                        </p:selectOneRadio>
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.6rem;">
+                    <p:commandButton value="Cancelar" type="button" onclick="PF('dlgMotorWidget').hide()" styleClass="ui-button-outlined ui-button-secondary" />
+                    <p:commandButton value="Ejecutar Evaluación"
+                                     icon="pi pi-bolt"
+                                     actionListener="#{bandejaFiscalizacionBean.ejecutarFiscalizacionGuia}"
+                                     update=":bandejaForm:tablaBandeja :kpiBandejaGroup"
+                                     oncomplete="if (!args.validationFailed) PF('dlgMotorWidget').hide()"
+                                     styleClass="ui-button-warning" />
+                </div>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>

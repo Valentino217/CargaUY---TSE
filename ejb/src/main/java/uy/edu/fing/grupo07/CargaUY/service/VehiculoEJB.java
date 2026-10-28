@@ -40,7 +40,15 @@ public class VehiculoEJB implements VehiculoEJBLocal {
         return v;
     }
     public void crear(String token,Vehiculo v) {
-        control.empresa(token,v.getEmpresa().getNroEmpresa(),true); crear(v);
+        if (v == null || v.getMatricula() == null || v.getMatricula().isBlank()) {
+            throw new IllegalArgumentException("La matrícula del vehículo es obligatoria.");
+        }
+        v.setMatricula(v.getMatricula().trim().toUpperCase());
+        control.empresa(token,v.getEmpresa().getNroEmpresa(),true);
+        if (buscar(v.getMatricula()) != null) {
+            throw new IllegalArgumentException("Ya existe un vehículo registrado con la matrícula " + v.getMatricula() + ".");
+        }
+        crear(v);
     }
     public void modificar(String token,Vehiculo v) {
         Vehiculo anterior=buscar(token,v.getMatricula());
@@ -54,13 +62,10 @@ public class VehiculoEJB implements VehiculoEJBLocal {
         control.empresa(token,actual.getEmpresa().getNroEmpresa(),true); eliminar(actual);
     }
 
-	@PersistenceContext(unitName = "CargaUYPersistenceUnit")
+    @PersistenceContext(unitName = "CargaUYPersistenceUnit")
     private EntityManager em;
-    /**
-     * Default constructor. 
-     */
+
     public VehiculoEJB() {
-        // TODO Auto-generated constructor stub
     }
     
     @Override
@@ -80,8 +85,6 @@ public class VehiculoEJB implements VehiculoEJBLocal {
         ).getResultList();
     }
     
-
-    
     @Override
     public void crear(Vehiculo vehiculo) {
         em.persist(vehiculo);
@@ -94,6 +97,17 @@ public class VehiculoEJB implements VehiculoEJBLocal {
 
     @Override
     public void eliminar(Vehiculo vehiculo) {
+        Long cantGuias = em.createQuery(
+                "SELECT COUNT(g) FROM GuiaDeViaje g WHERE g.vehiculo.matricula = :mat",
+                Long.class
+        ).setParameter("mat", vehiculo.getMatricula()).getSingleResult();
+
+        if (cantGuias != null && cantGuias > 0) {
+            throw new IllegalStateException(
+                "No se puede eliminar el vehículo " + vehiculo.getMatricula() +
+                " porque tiene " + cantGuias + " guía(s) de viaje asociada(s). Puede suspender su habilitación en su lugar."
+            );
+        }
         em.remove(em.merge(vehiculo));
     }
 
@@ -101,7 +115,7 @@ public class VehiculoEJB implements VehiculoEJBLocal {
     public Vehiculo buscar(String matricula) {
         return em.find(Vehiculo.class, matricula);
     }
-     //permite encontrar los vehiculos dada una empresa
+
     @Override
     public List<Vehiculo> listarVehiculosPorCiudadano(int ciudadanoId) {
         return em.createQuery(

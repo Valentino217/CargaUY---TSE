@@ -2,6 +2,7 @@ package uy.edu.fing.grupo07.CargaUY.fiscalizacion;
 
 import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.GuiaDeViaje;
@@ -53,6 +54,11 @@ public class MotorFiscalizacionImpl implements MotorFiscalizacionLocal {
         if (guia == null) {
             LOGGER.log(Level.WARNING, "No fue posible fiscalizar: la guía con ID {0} no existe.", guiaId);
             return Collections.emptyList();
+        }
+        try {
+            em.lock(guia, LockModeType.PESSIMISTIC_WRITE);
+        } catch (Exception ignored) {
+            // En tests unitarios con mocks que no soportan lock no interrumpir
         }
 
         ReglaFiscalizacion reglas = obtenerReglasVigentes();

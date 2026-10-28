@@ -1,0 +1,98 @@
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/templates/template.xhtml">
+
+    <ui:define name="title">Parámetros de Fiscalización</ui:define>
+
+    <ui:define name="content">
+        <div class="cuy-page-header">
+            <div>
+                <h1 class="cuy-page-title">
+                    <i class="pi pi-sliders-h" style="color: #1d4ed8;" />
+                    Parámetros y Umbrales de Fiscalización
+                </h1>
+                <p class="cuy-page-subtitle">
+                    Ajuste dinámico de tolerancias de carga y desvío de ruta aplicadas por el motor de fiscalización
+                </p>
+            </div>
+        </div>
+
+        <h:form id="reglasForm">
+            <!-- KPIs del estado actual -->
+            <div class="cuy-kpi-grid">
+                <div class="cuy-kpi-card warning">
+                    <div class="cuy-kpi-label"><i class="pi pi-box" /> Umbral Tolerancia de Carga</div>
+                    <div class="cuy-kpi-value">+#{adminReglasBean.cargaKg} kg</div>
+                </div>
+                <div class="cuy-kpi-card">
+                    <div class="cuy-kpi-label"><i class="pi pi-compass" /> Umbral Tolerancia Desvío de Ruta</div>
+                    <div class="cuy-kpi-value">#{adminReglasBean.desvioKm} km</div>
+                </div>
+                <div class="cuy-kpi-card success">
+                    <div class="cuy-kpi-label"><i class="pi pi-code" /> Versión de Regla Activa (@Version)</div>
+                    <div class="cuy-kpi-value">v#{adminReglasBean.version}</div>
+                </div>
+            </div>
+
+            <div class="cuy-card" style="max-width: 780px;">
+                <h3 class="cuy-card-title">
+                    <i class="pi pi-cog" style="color: #2563eb;" /> Ajuste de Umbrales del Motor Automático
+                </h3>
+                <p style="font-size: 0.9rem; color: #475569; margin-top: 0; margin-bottom: 1.25rem;">
+                    Todo pesaje o reporte de posición que supere estos márgenes generará automáticamente un expediente en estado
+                    <strong>DETECTADA</strong> en la Bandeja de Fiscalización.
+                </p>
+
+                <div class="cuy-form-grid-2 ui-fluid">
+                    <div class="cuy-field">
+                        <p:outputLabel for="umbralCargaInput" value="Tolerancia de Exceso de Peso (kg) *" />
+                        <p:inputNumber id="umbralCargaInput"
+                                       value="#{adminReglasBean.cargaKg}"
+                                       decimalPlaces="0"
+                                       thousandSeparator="."
+                                       suffix=" kg"
+                                       minValue="0"
+                                       required="true" />
+                        <small style="color: #64748b; display: block;">
+                            Margen permitido por encima de la capacidad del vehículo o peso declarado en guía.
+                        </small>
+                    </div>
+
+                    <div class="cuy-field">
+                        <p:outputLabel for="umbralDesvioInput" value="Tolerancia de Desvío Geográfico (km) *" />
+                        <p:inputNumber id="umbralDesvioInput"
+                                       value="#{adminReglasBean.desvioKm}"
+                                       decimalPlaces="2"
+                                       suffix=" km"
+                                       minValue="0"
+                                       required="true" />
+                        <small style="color: #64748b; display: block;">
+                            Distancia máxima admisible respecto al corredor geográfico planificado.
+                        </small>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #e2e8f0;">
+                    <p:commandButton value="Recargar Valores Actuales"
+                                     icon="pi pi-refresh"
+                                     actionListener="#{adminReglasBean.cargarReglaActual}"
+                                     update=":reglasForm"
+                                     styleClass="ui-button-outlined ui-button-secondary" />
+
+                    <p:commandButton value="Aplicar Umbrales en Caliente"
+                                     icon="pi pi-bolt"
+                                     actionListener="#{adminReglasBean.guardarReglas}"
+                                     update=":reglasForm"
+                                     styleClass="ui-button-primary">
+                        <p:confirm header="Confirmar Cambio de Umbrales"
+                                   message="¿Confirma aplicar inmediatamente los nuevos umbrales en el Motor de Fiscalización?"
+                                   icon="pi pi-exclamation-triangle" />
+                    </p:commandButton>
+                </div>
+            </div>
+        </h:form>
+    </ui:define>
+</ui:composition>

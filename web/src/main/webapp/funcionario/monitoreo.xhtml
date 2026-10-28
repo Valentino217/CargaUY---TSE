@@ -1,0 +1,198 @@
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/templates/template.xhtml">
+
+    <ui:define name="title">Monitoreo de Viajes y Balanzas</ui:define>
+
+    <ui:define name="content">
+        <div class="cuy-page-header">
+            <div>
+                <h1 class="cuy-page-title">
+                    <i class="pi pi-map-marker" style="color: #1d4ed8;" />
+                    Monitoreo de Viajes en Curso y Pesajes en Balanzas
+                </h1>
+                <p class="cuy-page-subtitle">
+                    Seguimiento cronológico de eventos GPS/móviles, ingesta de balanzas periféricas y simulación de pesaje en ruta
+                </p>
+            </div>
+            <div style="display: flex; gap: 0.6rem;">
+                <h:form id="monitoreoTopForm" style="margin: 0; display: flex; gap: 0.6rem;">
+                    <p:commandButton value="Sincronizar Mock Balanza"
+                                     icon="pi pi-cloud-download"
+                                     actionListener="#{detalleViajeBean.sincronizarMockBalanza}"
+                                     update=":monitoreoForm"
+                                     styleClass="ui-button-outlined ui-button-info" />
+                    <p:commandButton value="Registrar Pesaje Manual"
+                                     icon="pi pi-sliders-h"
+                                     type="button"
+                                     onclick="PF('dlgPesajeWidget').show()"
+                                     styleClass="ui-button-primary" />
+                </h:form>
+            </div>
+        </div>
+
+        <h:form id="monitoreoForm">
+            <!-- Selector de Guía de Viaje -->
+            <div class="cuy-card" style="background: #f8fafc;">
+                <div class="cuy-grid-3" style="align-items: center;">
+                    <div class="cuy-field ui-fluid">
+                        <p:outputLabel for="selGuiaMon" value="Seleccionar Guía de Viaje a Monitorear" />
+                        <p:selectOneMenu id="selGuiaMon" value="#{detalleViajeBean.guiaIdSeleccionada}">
+                            <f:selectItem itemLabel="-- Seleccione una Guía --" itemValue="#{null}" noSelectionOption="true" />
+                            <f:selectItems value="#{detalleViajeBean.guiasDisponibles}"
+                                           var="g"
+                                           itemLabel="#{detalleViajeBean.obtenerEtiquetaGuia(g)}"
+                                           itemValue="#{g.id}" />
+                            <p:ajax listener="#{detalleViajeBean.onGuiaChange}" update=":monitoreoForm" />
+                        </p:selectOneMenu>
+                    </div>
+
+                    <h:panelGroup rendered="#{detalleViajeBean.guiaActual != null}">
+                        <div style="font-size: 0.78rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Ruta y Unidad Asignada</div>
+                        <div style="font-size: 1.05rem; font-weight: 700; color: #0f2942; margin-top: 0.25rem;">
+                            #{detalleViajeBean.guiaActual.origen} &#8594; #{detalleViajeBean.guiaActual.destino}
+                        </div>
+                        <div style="font-size: 0.85rem; color: #475569; margin-top: 0.2rem;">
+                            Matrícula: <span class="cuy-mono">#{detalleViajeBean.vehiculoMatricula}</span> | Chofer: <strong>#{detalleViajeBean.choferNombreCompleto}</strong>
+                        </div>
+                    </h:panelGroup>
+
+                    <h:panelGroup rendered="#{detalleViajeBean.guiaActual != null}" style="text-align: right;">
+                        <p:tag value="#{detalleViajeBean.guiaActual.estado}"
+                               severity="#{detalleViajeBean.guiaActual.estado.name() eq 'EN_CURSO' ? 'info' : (detalleViajeBean.guiaActual.estado.name() eq 'FINALIZADO' ? 'success' : 'warning')}"
+                               rounded="true" />
+                        <div style="font-size: 0.9rem; color: #0f2942; font-weight: 700; margin-top: 0.4rem;">
+                            Volumen / Peso Declarado: #{detalleViajeBean.guiaActual.volumenCarga} kg
+                        </div>
+                    </h:panelGroup>
+                </div>
+            </div>
+
+            <!-- Tablas de Eventos de Ruta y Pesajes de Balanza en CSS Grid de 2 columnas -->
+            <div class="cuy-grid-2">
+                <!-- Columna 1: Eventos de Tracking -->
+                <div class="cuy-card" style="margin-bottom: 0;">
+                    <h3 class="cuy-card-title">
+                        <i class="pi pi-compass" style="color: #2563eb;" />
+                        Línea Temporal de Eventos (#{detalleViajeBean.totalEventos})
+                    </h3>
+                    <p:dataTable id="tablaEventosViaje"
+                                 var="ev"
+                                 value="#{detalleViajeBean.eventos}"
+                                 paginator="true"
+                                 rows="8"
+                                 paginatorPosition="bottom"
+                                 stripedRows="true"
+                                 size="small"
+                                 emptyMessage="Sin eventos de tracking registrados para esta guía.">
+
+                        <p:column headerText="Fecha / Hora" sortBy="#{ev.tiempo()}" style="width: 145px;">
+                            <h:outputText value="#{ev.tiempo()}" style="font-size: 0.82rem;" />
+                        </p:column>
+
+                        <p:column headerText="Tipo" sortBy="#{ev.tipo()}" style="width: 135px;">
+                            <p:tag value="#{ev.tipo()}"
+                                   severity="#{ev.tipo().name() eq 'INCIDENTE' ? 'danger' : (ev.tipo().name() eq 'INICIO_VIAJE' ? 'success' : (ev.tipo().name() eq 'FIN_VIAJE' ? 'info' : 'secondary'))}"
+                                   rounded="true" />
+                        </p:column>
+
+                        <p:column headerText="Coordenadas / Detalle">
+                            <span class="cuy-mono" style="font-size: 0.78rem;">#{ev.latitud()}, #{ev.longitud()}</span>
+                            <h:panelGroup rendered="#{ev.incidente() != null}">
+                                <div style="font-size: 0.8rem; color: #dc2626; font-weight: 600; margin-top: 0.2rem;">
+                                    <i class="pi pi-exclamation-circle" /> #{ev.incidente().descripcion()}
+                                </div>
+                            </h:panelGroup>
+                        </p:column>
+                    </p:dataTable>
+                </div>
+
+                <!-- Columna 2: Pesajes en Balanzas -->
+                <div class="cuy-card" style="margin-bottom: 0;">
+                    <h3 class="cuy-card-title">
+                        <i class="pi pi-sliders-h" style="color: #059669;" />
+                        Pesajes en Balanzas de Ruta (#{detalleViajeBean.totalPesadas})
+                    </h3>
+                    <p:dataTable id="tablaPesadasViaje"
+                                 var="pes"
+                                 value="#{detalleViajeBean.pesadas}"
+                                 paginator="true"
+                                 rows="8"
+                                 paginatorPosition="bottom"
+                                 stripedRows="true"
+                                 size="small"
+                                 emptyMessage="Sin registros de balanza para la guía seleccionada.">
+
+                        <p:column headerText="Pesada #" sortBy="#{pes.idPesada()}" style="width: 85px;">
+                            <span class="cuy-mono">##{pes.idPesada()}</span>
+                        </p:column>
+
+                        <p:column headerText="Fecha y Hora" sortBy="#{pes.fecha()}" style="width: 145px;">
+                            <h:outputText value="#{pes.fecha()} #{pes.hora()}" style="font-size: 0.84rem;" />
+                        </p:column>
+
+                        <p:column headerText="Matrícula" style="width: 110px;">
+                            <span class="cuy-mono">#{pes.matricula() != null ? pes.matricula() : detalleViajeBean.vehiculoMatricula}</span>
+                        </p:column>
+
+                        <p:column headerText="Peso Medido" sortBy="#{pes.pesoRegistrado()}" style="text-align: right;">
+                            <strong style="color: #0f2942; font-size: 0.95rem;">#{pes.pesoRegistrado()} kg</strong>
+                        </p:column>
+                    </p:dataTable>
+                </div>
+            </div>
+        </h:form>
+
+        <!-- Modal Registrar Pesaje de Balanza y Fiscalizar -->
+        <p:dialog header="Registrar Pesaje en Balanza y Evaluar Reglas"
+                  widgetVar="dlgPesajeWidget"
+                  modal="true"
+                  responsive="true"
+                  width="540"
+                  closeOnEscape="true">
+            <h:form id="dlgPesajeForm" styleClass="ui-fluid">
+                <div class="cuy-field" style="margin-bottom: 1rem;">
+                    <p:outputLabel for="guiaPesajeSel" value="Guía de Viaje *" />
+                    <p:selectOneMenu id="guiaPesajeSel" value="#{registrarPesajeBean.guiaIdSeleccionada}" required="true">
+                        <f:selectItems value="#{registrarPesajeBean.guiasDisponibles}"
+                                       var="gp"
+                                       itemLabel="#{registrarPesajeBean.obtenerEtiquetaGuia(gp)}"
+                                       itemValue="#{gp.id}" />
+                    </p:selectOneMenu>
+                </div>
+                <div class="cuy-field" style="margin-bottom: 1rem;">
+                    <p:outputLabel for="pesoMedidoInput" value="Peso Bruto Medido en Balanza (kg) *" />
+                    <p:inputNumber id="pesoMedidoInput"
+                                   value="#{registrarPesajeBean.pesoRegistrado}"
+                                   decimalPlaces="0"
+                                   thousandSeparator="."
+                                   suffix=" kg"
+                                   required="true" />
+                </div>
+                <div style="margin-bottom: 1.25rem; padding: 0.75rem 1rem; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <p:selectBooleanCheckbox value="#{registrarPesajeBean.evaluarInmediato}"
+                                             itemLabel="Ejecutar Motor de Fiscalización inmediatamente tras el pesaje" />
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.6rem;">
+                    <p:commandButton value="Cancelar"
+                                     type="button"
+                                     icon="pi pi-times"
+                                     onclick="PF('dlgPesajeWidget').hide()"
+                                     styleClass="ui-button-outlined ui-button-secondary"
+                                     style="width: auto;" />
+                    <p:commandButton value="Registrar Pesada"
+                                     icon="pi pi-check"
+                                     actionListener="#{registrarPesajeBean.registrarPesaje}"
+                                     action="#{detalleViajeBean.consultarViaje}"
+                                     update=":monitoreoForm"
+                                     oncomplete="if (!args.validationFailed) PF('dlgPesajeWidget').hide()"
+                                     styleClass="ui-button-primary"
+                                     style="width: auto;" />
+                </div>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>

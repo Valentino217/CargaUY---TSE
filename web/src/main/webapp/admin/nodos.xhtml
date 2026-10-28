@@ -1,0 +1,143 @@
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/templates/template.xhtml">
+
+    <ui:define name="title">Nodos Periféricos y Catálogos</ui:define>
+
+    <ui:define name="content">
+        <div class="cuy-page-header">
+            <div>
+                <h1 class="cuy-page-title">
+                    <i class="pi pi-server" style="color: #1d4ed8;" />
+                    Nodos Periféricos y Catálogos de Plataforma
+                </h1>
+                <p class="cuy-page-subtitle">
+                    Monitoreo de conectividad con nodos externos (Balanzas, PDI, LDAP, gub.uy, Colas JMS) y gestión de catálogos maestros
+                </p>
+            </div>
+            <div>
+                <h:form id="sondarNodosForm" style="margin: 0;">
+                    <p:commandButton value="Sondar Nodos Periféricos"
+                                     icon="pi pi-sync"
+                                     actionListener="#{adminNodosBean.sondarNodos}"
+                                     update=":nodosForm"
+                                     styleClass="ui-button-primary" />
+                </h:form>
+            </div>
+        </div>
+
+        <!-- Tabla de Nodos Periféricos -->
+        <h:form id="nodosForm">
+            <div class="cuy-card">
+                <h3 class="cuy-card-title">
+                    <i class="pi pi-sitemap" style="color: #2563eb;" /> Estado de Conectividad de Nodos e Integraciones
+                </h3>
+                <p:dataTable id="tablaNodos"
+                             var="nodo"
+                             value="#{adminNodosBean.nodos}"
+                             stripedRows="true"
+                             size="small">
+
+                    <p:column headerText="Código" style="width: 135px;">
+                        <span class="cuy-mono">#{nodo.codigo()}</span>
+                    </p:column>
+
+                    <p:column headerText="Nodo / Subsistema">
+                        <strong style="color: #0f2942;">#{nodo.nombre()}</strong>
+                    </p:column>
+
+                    <p:column headerText="Protocolo" style="width: 195px;">
+                        <p:tag value="#{nodo.tipo()}" severity="info" rounded="true" />
+                    </p:column>
+
+                    <p:column headerText="Endpoint / Destino JNDI">
+                        <span class="cuy-mono" style="font-size: 0.78rem;">#{nodo.endpoint()}</span>
+                    </p:column>
+
+                    <p:column headerText="Estado" style="width: 135px; text-align: center;">
+                        <p:tag value="#{nodo.online() ? 'ONLINE' : 'MODO DIRECTO'}"
+                               severity="#{nodo.online() ? 'success' : 'warning'}"
+                               icon="#{nodo.online() ? 'pi pi-check-circle' : 'pi pi-info-circle'}"
+                               rounded="true" />
+                    </p:column>
+
+                    <p:column headerText="Diagnóstico">
+                        <span style="font-size: 0.84rem; color: #475569;">#{nodo.detalleEstado()}</span>
+                    </p:column>
+                </p:dataTable>
+            </div>
+        </h:form>
+
+        <!-- Catálogos Maestros: Rubros y Tipos de Carga en CSS Grid de 2 columnas -->
+        <h:form id="catalogosForm">
+            <div class="cuy-grid-2">
+                <!-- Rubros -->
+                <div class="cuy-card" style="margin-bottom: 0;">
+                    <h3 class="cuy-card-title">
+                        <i class="pi pi-tags" style="color: #2563eb;" /> Catálogo de Rubros de Actividad
+                    </h3>
+                    <div style="display: flex; gap: 0.5rem; margin-bottom: 0.85rem;">
+                        <p:inputText value="#{adminNodosBean.nuevoRubroNombre}" placeholder="Nombre del rubro..." style="flex: 1;" />
+                        <p:inputText value="#{adminNodosBean.nuevoRubroDesc}" placeholder="Descripción..." style="flex: 1;" />
+                        <p:commandButton value="Agregar"
+                                         icon="pi pi-plus"
+                                         actionListener="#{adminNodosBean.crearRubro}"
+                                         update="tablaRubrosAdmin"
+                                         styleClass="ui-button-primary" />
+                    </div>
+                    <p:dataTable id="tablaRubrosAdmin" var="rub" value="#{adminNodosBean.rubros}" size="small" stripedRows="true" paginator="true" rows="6">
+                        <p:column headerText="Cód." style="width: 70px;">
+                            <span class="cuy-mono">##{rub.codigo()}</span>
+                        </p:column>
+                        <p:column headerText="Rubro">
+                            <strong>#{rub.nombre()}</strong>
+                            <div style="font-size: 0.78rem; color: #64748b;">#{rub.descripcion()}</div>
+                        </p:column>
+                        <p:column headerText="Baja" style="width: 70px; text-align: center;">
+                            <p:commandButton icon="pi pi-trash"
+                                             actionListener="#{adminNodosBean.eliminarRubro(rub.codigo())}"
+                                             update="tablaRubrosAdmin"
+                                             styleClass="ui-button-outlined ui-button-danger ui-button-sm">
+                                <p:confirm header="Eliminar Rubro" message="¿Eliminar el rubro #{rub.nombre()}?" icon="pi pi-exclamation-triangle" />
+                            </p:commandButton>
+                        </p:column>
+                    </p:dataTable>
+                </div>
+
+                <!-- Tipos de Carga -->
+                <div class="cuy-card" style="margin-bottom: 0;">
+                    <h3 class="cuy-card-title">
+                        <i class="pi pi-box" style="color: #059669;" /> Catálogo de Tipos de Carga
+                    </h3>
+                    <div style="display: flex; gap: 0.5rem; margin-bottom: 0.85rem;">
+                        <p:inputText value="#{adminNodosBean.nuevoTipoCargaDesc}" placeholder="Descripción del tipo de carga (ej. Granel, Forestal)..." style="flex: 1;" />
+                        <p:commandButton value="Agregar"
+                                         icon="pi pi-plus"
+                                         actionListener="#{adminNodosBean.crearTipoCarga}"
+                                         update="tablaTiposCargaAdmin"
+                                         styleClass="ui-button-primary" />
+                    </div>
+                    <p:dataTable id="tablaTiposCargaAdmin" var="tc" value="#{adminNodosBean.tiposCarga}" size="small" stripedRows="true" paginator="true" rows="6">
+                        <p:column headerText="Cód." style="width: 70px;">
+                            <span class="cuy-mono">##{tc.codigo()}</span>
+                        </p:column>
+                        <p:column headerText="Descripción">
+                            <strong>#{tc.descripcion()}</strong>
+                        </p:column>
+                        <p:column headerText="Baja" style="width: 70px; text-align: center;">
+                            <p:commandButton icon="pi pi-trash"
+                                             actionListener="#{adminNodosBean.eliminarTipoCarga(tc.codigo())}"
+                                             update="tablaTiposCargaAdmin"
+                                             styleClass="ui-button-outlined ui-button-danger ui-button-sm">
+                                <p:confirm header="Eliminar Tipo de Carga" message="¿Eliminar #{tc.descripcion()}?" icon="pi pi-exclamation-triangle" />
+                            </p:commandButton>
+                        </p:column>
+                    </p:dataTable>
+                </div>
+            </div>
+        </h:form>
+    </ui:define>
+</ui:composition>

@@ -1,0 +1,191 @@
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/templates/template.xhtml">
+
+    <ui:define name="title">Flota de Vehículos</ui:define>
+
+    <ui:define name="content">
+
+        <div class="cuy-page-header">
+            <div>
+                <h1 class="cuy-page-title">
+                    <i class="pi pi-car" style="color: var(--cuy-accent);" />
+                    Gestión de Flota de Vehículos
+                </h1>
+                <p class="cuy-page-subtitle">
+                    Administre las unidades de transporte asociadas a sus empresas, capacidades de carga y estado de habilitación.
+                </p>
+            </div>
+            <h:form id="headerVehiculoActions" style="margin: 0;">
+                <p:commandButton value="Registrar Nuevo Vehículo"
+                                 icon="pi pi-plus"
+                                 actionListener="#{VehiculoBean.nuevo}"
+                                 update=":dialogVehiculoForm"
+                                 oncomplete="PF('wvDialogVehiculo').show()"
+                                 styleClass="ui-button-primary" />
+            </h:form>
+        </div>
+
+        <!-- Tabla de Flota -->
+        <div class="cuy-card">
+            <h:form id="formTablaVehiculos">
+                <p:dataTable id="tablaVehiculos"
+                             widgetVar="wvTablaVehiculos"
+                             value="#{VehiculoBean.vehiculos}"
+                             var="v"
+                             paginator="true"
+                             rows="10"
+                             paginatorPosition="bottom"
+                             rowsPerPageTemplate="10,20,50"
+                             emptyMessage="No hay vehículos registrados para sus empresas."
+                             stripedRows="true"
+                             size="small"
+                             reflow="true">
+
+                    <p:column headerText="Matrícula" sortBy="#{v.matricula}" filterBy="#{v.matricula}" filterMatchMode="contains" style="width: 150px;">
+                        <span class="cuy-mono">#{v.matricula}</span>
+                    </p:column>
+
+                    <p:column headerText="Empresa Propietaria" sortBy="#{v.empresa.razonSocial}" filterBy="#{v.empresa.razonSocial}" filterMatchMode="contains">
+                        <strong>#{v.empresa.razonSocial}</strong>
+                        <small style="display: block; color: var(--cuy-muted);">Nro. #{v.empresa.nroEmpresa}</small>
+                    </p:column>
+
+                    <p:column headerText="Marca y Modelo" sortBy="#{v.marca}" filterBy="#{v.marca}" filterMatchMode="contains">
+                        #{v.marca} &#8226; #{v.modelo}
+                    </p:column>
+
+                    <p:column headerText="Tara / Peso Propio" sortBy="#{v.peso}" style="width: 150px; text-align: right;">
+                        <h:outputText value="#{v.peso}">
+                            <f:convertNumber pattern="#,##0" />
+                        </h:outputText>
+                        <span> kg</span>
+                    </p:column>
+
+                    <p:column headerText="Capacidad de Carga" sortBy="#{v.capacidadCarga}" style="width: 165px; text-align: right;">
+                        <strong>
+                            <h:outputText value="#{v.capacidadCarga}">
+                                <f:convertNumber pattern="#,##0" />
+                            </h:outputText>
+                            <span> kg</span>
+                        </strong>
+                    </p:column>
+
+                    <p:column headerText="Estado" sortBy="#{v.estadoHabilitacion}" style="width: 155px; text-align: center;">
+                        <p:tag value="#{v.estadoHabilitacion ? 'HABILITADO' : 'SUSPENDIDO'}"
+                               severity="#{v.estadoHabilitacion ? 'success' : 'danger'}"
+                               icon="#{v.estadoHabilitacion ? 'pi pi-check-circle' : 'pi pi-ban'}"
+                               rounded="true" />
+                    </p:column>
+
+                    <p:column headerText="Acciones" style="width: 150px; text-align: center;">
+                        <p:commandButton icon="pi pi-pencil"
+                                         title="Editar unidad"
+                                         actionListener="#{VehiculoBean.editar(v)}"
+                                         update=":dialogVehiculoForm"
+                                         oncomplete="PF('wvDialogVehiculo').show()"
+                                         styleClass="ui-button-outlined ui-button-info ui-button-sm"
+                                         style="margin-right: 0.4rem;" />
+
+                        <p:commandButton icon="pi pi-trash"
+                                         title="Dar de baja unidad"
+                                         actionListener="#{VehiculoBean.eliminar(v)}"
+                                         update="tablaVehiculos"
+                                         styleClass="ui-button-outlined ui-button-danger ui-button-sm">
+                            <p:confirm header="Confirmar Baja de Vehículo"
+                                       message="¿Está seguro de eliminar el vehículo con matrícula #{v.matricula}? Esta acción no se puede deshacer."
+                                       icon="pi pi-exclamation-triangle" />
+                        </p:commandButton>
+                    </p:column>
+
+                </p:dataTable>
+            </h:form>
+        </div>
+
+        <!-- Diálogo Modal Crear / Editar Vehículo -->
+        <p:dialog id="dialogVehiculo"
+                  widgetVar="wvDialogVehiculo"
+                  header="#{VehiculoBean.editando ? 'Editar Vehículo' : 'Registrar Nuevo Vehículo'}"
+                  modal="true"
+                  responsive="true"
+                  width="580"
+                  closeOnEscape="true">
+
+            <h:form id="dialogVehiculoForm" styleClass="ui-fluid">
+                <div class="cuy-form-grid-2">
+                    <div class="cuy-field">
+                        <p:outputLabel for="matriculaInput" value="Matrícula *" />
+                        <p:inputText id="matriculaInput"
+                                     value="#{VehiculoBean.vehiculo.matricula}"
+                                     readonly="#{VehiculoBean.editando}"
+                                     required="true"
+                                     placeholder="Ej: STP 1234" />
+                    </div>
+
+                    <div class="cuy-field">
+                        <p:outputLabel for="empresaSelect" value="Empresa *" />
+                        <p:selectOneMenu id="empresaSelect" value="#{VehiculoBean.empresaId}" required="true">
+                            <f:selectItem itemLabel="Seleccione empresa..." itemValue="0" noSelectionOption="true" />
+                            <f:selectItems value="#{VehiculoBean.empresas}"
+                                           var="emp"
+                                           itemLabel="#{emp.razonSocial} (##{emp.nroEmpresa})"
+                                           itemValue="#{emp.nroEmpresa}" />
+                        </p:selectOneMenu>
+                    </div>
+
+                    <div class="cuy-field">
+                        <p:outputLabel for="marcaSelect" value="Marca *" />
+                        <p:selectOneMenu id="marcaSelect" value="#{VehiculoBean.vehiculo.marca}" required="true">
+                            <f:selectItems value="#{VehiculoBean.marcasDisponibles}" var="m" itemLabel="#{m}" itemValue="#{m}" />
+                            <p:ajax listener="#{VehiculoBean.onMarcaChange}" update="modeloSelect pesoInput capInput" />
+                        </p:selectOneMenu>
+                    </div>
+
+                    <div class="cuy-field">
+                        <p:outputLabel for="modeloSelect" value="Modelo *" />
+                        <p:selectOneMenu id="modeloSelect" value="#{VehiculoBean.vehiculo.modelo}" required="true">
+                            <f:selectItems value="#{VehiculoBean.modelosDisponibles}" var="mdl" itemLabel="#{mdl}" itemValue="#{mdl}" />
+                            <p:ajax listener="#{VehiculoBean.onModeloChange}" update="pesoInput capInput" />
+                        </p:selectOneMenu>
+                    </div>
+
+                    <div class="cuy-field">
+                        <p:outputLabel for="pesoInput" value="Peso Propio / Tara (kg) *" />
+                        <p:inputNumber id="pesoInput" value="#{VehiculoBean.vehiculo.peso}" decimalPlaces="0" required="true" />
+                    </div>
+
+                    <div class="cuy-field">
+                        <p:outputLabel for="capInput" value="Capacidad Máx. Carga (kg) *" />
+                        <p:inputNumber id="capInput" value="#{VehiculoBean.vehiculo.capacidadCarga}" decimalPlaces="0" required="true" />
+                    </div>
+                </div>
+
+                <div style="margin: 1.15rem 0 1.35rem 0; padding: 0.75rem 1rem; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 0.6rem;">
+                    <p:selectBooleanCheckbox id="habCheck" value="#{VehiculoBean.vehiculo.estadoHabilitacion}" />
+                    <p:outputLabel for="habCheck" value="Unidad habilitada operativamente para asignación de viajes" style="font-weight: 600; color: #0f2942; margin: 0;" />
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+                    <p:commandButton value="Cancelar"
+                                     type="button"
+                                     icon="pi pi-times"
+                                     onclick="PF('wvDialogVehiculo').hide()"
+                                     styleClass="ui-button-secondary ui-button-outlined"
+                                     style="width: auto;" />
+                    <p:commandButton value="Guardar Unidad"
+                                     icon="pi pi-check"
+                                     actionListener="#{VehiculoBean.guardar}"
+                                     process="@form"
+                                     update=":formTablaVehiculos:tablaVehiculos"
+                                     oncomplete="if (!args.validationFailed) PF('wvDialogVehiculo').hide()"
+                                     styleClass="ui-button-primary"
+                                     style="width: auto;" />
+                </div>
+            </h:form>
+        </p:dialog>
+
+    </ui:define>
+</ui:composition>

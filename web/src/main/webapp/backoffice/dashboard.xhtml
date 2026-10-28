@@ -1,0 +1,168 @@
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/templates/template.xhtml">
+
+    <ui:define name="title">Dashboard Analítico de Autoridades</ui:define>
+
+    <ui:define name="content">
+        <div class="cuy-page-header">
+            <div>
+                <h1 class="cuy-page-title">
+                    <i class="pi pi-chart-bar" style="color: #1d4ed8;" />
+                    Dashboard Ejecutivo y Analítico de Fiscalización
+                </h1>
+                <p class="cuy-page-subtitle">
+                    Métricas en tiempo real del transporte nacional de carga y exportación de reportes oficiales (CSV / PDF)
+                </p>
+            </div>
+            <div>
+                <h:form id="dashRefreshForm" style="margin: 0; display: flex; gap: 0.6rem;">
+                    <p:commandButton value="Exportar CSV"
+                                     icon="pi pi-file-excel"
+                                     ajax="false"
+                                     styleClass="ui-button-outlined ui-button-success">
+                        <p:dataExporter type="csv" target=":dashExportForm:tablaConsolidadaInfracciones" fileName="reporte-infracciones-cargauy" />
+                    </p:commandButton>
+                    <p:commandButton value="Exportar PDF"
+                                     icon="pi pi-file-pdf"
+                                     ajax="false"
+                                     styleClass="ui-button-outlined ui-button-danger">
+                        <p:dataExporter type="pdf" target=":dashExportForm:tablaConsolidadaInfracciones" fileName="reporte-infracciones-cargauy" />
+                    </p:commandButton>
+                    <p:commandButton value="Actualizar Métricas"
+                                     icon="pi pi-refresh"
+                                     actionListener="#{dashboardBean.inicializar}"
+                                     action="#{bandejaFiscalizacionBean.cargarCasos}"
+                                     update=":kpiDashGroup :dashTablasForm :dashExportForm"
+                                     styleClass="ui-button-primary" />
+                </h:form>
+            </div>
+        </div>
+
+        <!-- KPIs de Resumen Ejecutivo -->
+        <h:panelGroup id="kpiDashGroup" layout="block" styleClass="cuy-kpi-grid">
+            <div class="cuy-kpi-card">
+                <div class="cuy-kpi-label"><i class="pi pi-sliders-h" /> Total Pesadas en Balanzas</div>
+                <div class="cuy-kpi-value">#{dashboardBean.totalPesadas}</div>
+            </div>
+            <div class="cuy-kpi-card warning">
+                <div class="cuy-kpi-label"><i class="pi pi-folder-open" /> Total Casos Fiscalizados</div>
+                <div class="cuy-kpi-value">#{bandejaFiscalizacionBean.totalCasos}</div>
+            </div>
+            <div class="cuy-kpi-card danger">
+                <div class="cuy-kpi-label"><i class="pi pi-ban" /> Sanciones Confirmadas</div>
+                <div class="cuy-kpi-value">#{bandejaFiscalizacionBean.totalConfirmadas}</div>
+            </div>
+            <div class="cuy-kpi-card success">
+                <div class="cuy-kpi-label"><i class="pi pi-check-circle" /> Casos Desestimados</div>
+                <div class="cuy-kpi-value">#{bandejaFiscalizacionBean.totalDesestimadas}</div>
+            </div>
+        </h:panelGroup>
+
+        <!-- Desglose por Estado de Guías, Estado de Infracción y Tipo de Infracción en CSS Grid de 3 columnas -->
+        <h:form id="dashTablasForm">
+            <div class="cuy-grid-3">
+                <div class="cuy-card" style="margin-bottom: 0;">
+                    <h3 class="cuy-card-title">
+                        <i class="pi pi-compass" style="color: #2563eb;" /> Guías por Estado Operativo
+                    </h3>
+                    <p:dataTable id="dtGuiasEst" var="guiaEst" value="#{dashboardBean.listaGuiasPorEstado}" size="small" stripedRows="true">
+                        <p:column headerText="Estado de Guía">
+                            <h:outputText value="#{guiaEst.key}" />
+                        </p:column>
+                        <p:column headerText="Cantidad" style="width: 100px; text-align: right;">
+                            <strong><h:outputText value="#{guiaEst.value}" /></strong>
+                        </p:column>
+                    </p:dataTable>
+                </div>
+
+                <div class="cuy-card" style="margin-bottom: 0;">
+                    <h3 class="cuy-card-title">
+                        <i class="pi pi-flag" style="color: #d97706;" /> Infracciones por Estado
+                    </h3>
+                    <p:dataTable id="dtInfEst" var="ie" value="#{dashboardBean.listaInfraccionesPorEstado}" size="small" stripedRows="true">
+                        <p:column headerText="Estado del Caso">
+                            <h:outputText value="#{ie.key}" />
+                        </p:column>
+                        <p:column headerText="Cantidad" style="width: 100px; text-align: right;">
+                            <strong><h:outputText value="#{ie.value}" /></strong>
+                        </p:column>
+                    </p:dataTable>
+                </div>
+
+                <div class="cuy-card" style="margin-bottom: 0;">
+                    <h3 class="cuy-card-title">
+                        <i class="pi pi-exclamation-triangle" style="color: #dc2626;" /> Infracciones por Tipología
+                    </h3>
+                    <p:dataTable id="dtInfTipo" var="it" value="#{dashboardBean.listaInfraccionesPorTipo}" size="small" stripedRows="true">
+                        <p:column headerText="Tipología">
+                            <h:outputText value="#{it.key}" />
+                        </p:column>
+                        <p:column headerText="Cantidad" style="width: 100px; text-align: right;">
+                            <strong><h:outputText value="#{it.value}" /></strong>
+                        </p:column>
+                    </p:dataTable>
+                </div>
+            </div>
+        </h:form>
+
+        <!-- Tabla Consolidada Exportable a CSV y PDF -->
+        <h:form id="dashExportForm" style="margin-top: 1.25rem;">
+            <div class="cuy-card">
+                <p:dataTable id="tablaConsolidadaInfracciones"
+                             var="inf"
+                             value="#{bandejaFiscalizacionBean.casos}"
+                             paginator="true"
+                             rows="10"
+                             paginatorPosition="bottom"
+                             stripedRows="true"
+                             size="small"
+                             emptyMessage="No hay registros de fiscalización para exportar.">
+
+                    <f:facet name="header">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: 700; color: #0f2942;">
+                                <i class="pi pi-table" style="margin-right: 0.4rem;" /> Padrón Consolidado de Expedientes (Exportable CSV / PDF)
+                            </span>
+                        </div>
+                    </f:facet>
+
+                    <p:column headerText="Expediente" sortBy="#{inf.idCaso()}" style="width: 100px;">
+                        <h:outputText value="#{inf.idCaso()}" />
+                    </p:column>
+
+                    <p:column headerText="Fecha" sortBy="#{inf.fecha()}" style="width: 115px;">
+                        <h:outputText value="#{inf.fecha()}" />
+                    </p:column>
+
+                    <p:column headerText="Empresa" sortBy="#{inf.nombreEmpresa()}">
+                        <h:outputText value="#{inf.nombreEmpresa()}" />
+                    </p:column>
+
+                    <p:column headerText="Matrícula" sortBy="#{inf.matricula()}" style="width: 120px;">
+                        <h:outputText value="#{inf.matricula()}" />
+                    </p:column>
+
+                    <p:column headerText="Guía #" sortBy="#{inf.guiaId()}" style="width: 90px;">
+                        <h:outputText value="#{inf.guiaId()}" />
+                    </p:column>
+
+                    <p:column headerText="Tipología" sortBy="#{inf.tipo()}" style="width: 170px;">
+                        <h:outputText value="#{inf.tipo()}" />
+                    </p:column>
+
+                    <p:column headerText="Estado" sortBy="#{inf.estado()}" style="width: 140px;">
+                        <h:outputText value="#{inf.estado()}" />
+                    </p:column>
+
+                    <p:column headerText="Evidencia">
+                        <h:outputText value="#{inf.evidencia()}" />
+                    </p:column>
+                </p:dataTable>
+            </div>
+        </h:form>
+    </ui:define>
+</ui:composition>

@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:ui="jakarta.faces.facelets"
+      xmlns:p="http://primefaces.org/ui"
+      lang="es">
+
+<h:head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><ui:insert name="title">CargaUY</ui:insert> | Sistema Nacional de Transporte de Carga</title>
+
+    <style>
+        :root {
+            --cuy-primary: #0f2942;
+            --cuy-secondary: #1e4976;
+            --cuy-accent: #0284c7;
+            --cuy-bg: #f1f5f9;
+            --cuy-surface: #ffffff;
+            --cuy-text: #1e293b;
+            --cuy-muted: #64748b;
+            --cuy-border: #e2e8f0;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--cuy-bg);
+            color: var(--cuy-text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .cuy-header {
+            background: linear-gradient(135deg, var(--cuy-primary) 0%, var(--cuy-secondary) 100%);
+            color: #ffffff;
+            padding: 0.75rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 8px rgba(15, 41, 66, 0.18);
+        }
+        .cuy-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            text-decoration: none;
+            color: #ffffff;
+        }
+        .cuy-brand-icon {
+            background: rgba(255, 255, 255, 0.14);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.35rem;
+        }
+        .cuy-brand-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            margin: 0;
+            line-height: 1.2;
+        }
+        .cuy-brand-subtitle {
+            font-size: 0.75rem;
+            color: #cbd5e1;
+            margin: 0;
+        }
+        .cuy-user-box {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .cuy-user-info {
+            text-align: right;
+            line-height: 1.25;
+        }
+        .cuy-user-name {
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: block;
+        }
+        .cuy-user-role {
+            font-size: 0.72rem;
+            color: #93c5fd;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .cuy-nav-wrapper .ui-menubar {
+            border-radius: 0;
+            border-left: none;
+            border-right: none;
+            border-top: none;
+            border-bottom: 1px solid var(--cuy-border);
+            padding: 0.25rem 1.75rem;
+            background: var(--cuy-surface);
+        }
+        .cuy-main {
+            flex: 1;
+            width: 100%;
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 1.5rem 2rem;
+        }
+        .cuy-page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .cuy-page-title {
+            margin: 0;
+            font-size: 1.5rem;
+            color: var(--cuy-primary);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .cuy-page-subtitle {
+            margin: 0.3rem 0 0 0;
+            color: var(--cuy-muted);
+            font-size: 0.92rem;
+        }
+        .cuy-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.15rem;
+            margin-bottom: 1.5rem;
+        }
+        .cuy-card {
+            background: var(--cuy-surface);
+            border-radius: 10px;
+            border: 1px solid var(--cuy-border);
+            padding: 1.35rem;
+            box-shadow: 0 1px 4px rgba(15, 41, 66, 0.05);
+            margin-bottom: 1.25rem;
+        }
+        .cuy-card-title {
+            margin: 0 0 1rem 0;
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--cuy-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .cuy-kpi-card {
+            background: var(--cuy-surface);
+            border-radius: 10px;
+            border: 1px solid var(--cuy-border);
+            border-left: 4px solid var(--cuy-accent);
+            padding: 1.1rem 1.35rem;
+            box-shadow: 0 1px 4px rgba(15, 41, 66, 0.05);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            margin-bottom: 0;
+        }
+        .cuy-kpi-card.warning { border-left-color: #d97706; }
+        .cuy-kpi-card.danger  { border-left-color: #dc2626; }
+        .cuy-kpi-card.success { border-left-color: #059669; }
+        .cuy-kpi-label {
+            font-size: 0.78rem;
+            color: var(--cuy-muted);
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        .cuy-kpi-value {
+            font-size: 1.75rem;
+            font-weight: 800;
+            color: var(--cuy-primary);
+            margin-top: 0.35rem;
+            line-height: 1.1;
+        }
+        /* Layouts CSS Grid nativos (evitan fragmentación de UIInstructions en p:panelGrid) */
+        .cuy-grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 1.25rem;
+            align-items: start;
+        }
+        .cuy-grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 1.25rem;
+            align-items: start;
+        }
+        .cuy-grid-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.25rem;
+            align-items: stretch;
+        }
+        .cuy-form-grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 1rem 1.25rem;
+        }
+        .cuy-form-grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 1rem 1.25rem;
+        }
+        .cuy-field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+        .cuy-field .ui-outputlabel,
+        .cuy-field label {
+            font-weight: 600;
+            font-size: 0.86rem;
+            color: var(--cuy-primary);
+        }
+        .cuy-mono {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-weight: 600;
+            background: #f1f5f9;
+            padding: 0.15rem 0.45rem;
+            border-radius: 5px;
+            color: var(--cuy-primary);
+            border: 1px solid #e2e8f0;
+        }
+        .cuy-footer {
+            background: var(--cuy-surface);
+            border-top: 1px solid var(--cuy-border);
+            padding: 1rem 2rem;
+            text-align: center;
+            font-size: 0.82rem;
+            color: var(--cuy-muted);
+        }
+        @media (max-width: 992px) {
+            .cuy-grid-2, .cuy-grid-3, .cuy-form-grid-2, .cuy-form-grid-3 {
+                grid-template-columns: 1fr;
+            }
+        }
+        @media (max-width: 768px) {
+            .cuy-header { padding: 0.75rem 1rem; }
+            .cuy-main { padding: 1rem; }
+            .cuy-user-info { display: none; }
+        }
+    </style>
+    <ui:insert name="head" />
+</h:head>
+
+<h:body>
+
+    <!-- Componente Global de Notificaciones -->
+    <p:growl id="growl" showDetail="true" skipDetailIfEqualsSummary="true" life="4500">
+        <p:autoUpdate />
+    </p:growl>
+
+    <!-- Header Institucional -->
+    <header class="cuy-header">
+        <h:link outcome="/portal/inicio.xhtml" styleClass="cuy-brand">
+            <div class="cuy-brand-icon">
+                <i class="pi pi-truck" />
+            </div>
+            <div>
+                <p class="cuy-brand-title">CargaUY</p>
+            </div>
+        </h:link>
+
+        <h:form id="headerAuthForm" styleClass="cuy-user-box">
+            <ui:fragment rendered="#{authBean.esAnonimo()}">
+                <a href="#{request.contextPath}/login" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-icon-left ui-button-info" style="text-decoration: none; padding: 0.45rem 0.9rem; color: #fff; font-weight: 600; border-radius: 6px; background: #0284c7;">
+                    <i class="pi pi-sign-in" style="margin-right: 0.4rem;" />
+                    <span>Iniciar Sesión</span>
+                </a>
+            </ui:fragment>
+
+            <ui:fragment rendered="#{not authBean.esAnonimo()}">
+                <div class="cuy-user-info">
+                    <span class="cuy-user-name">#{authBean.usuarioActivo.nombre}</span>
+                    <span class="cuy-user-role">CI: #{authBean.usuarioActivo.ci} &#8226; #{authBean.rolPrincipalLabel}</span>
+                </div>
+                <p:commandButton value="Salir"
+                                 icon="pi pi-power-off"
+                                 action="#{authBean.cerrarSesion}"
+                                 ajax="false"
+                                 styleClass="ui-button-danger ui-button-sm" />
+            </ui:fragment>
+        </h:form>
+    </header>
+
+    <!-- Barra de Navegación Condicionada por Roles (RBAC) -->
+    <nav class="cuy-nav-wrapper">
+        <h:form id="menuForm">
+            <p:menubar>
+
+                <!-- Panel General (si está autenticado) -->
+                <p:menuitem value="Panel Principal"
+                            icon="pi pi-th-large"
+                            outcome="/index.xhtml"
+                            rendered="#{not authBean.esAnonimo()}" />
+
+                <!-- 1. PORTAL PÚBLICO -->
+                <p:menuitem value="Validar Empresa" icon="pi pi-verified" outcome="/portal/validar-empresa.xhtml" />
+                <p:menuitem value="Información Pública" icon="pi pi-chart-bar" outcome="/portal/info-publica.xhtml" />
+
+                <!-- 2. CIUDADANO EMPRESA -->
+                <p:submenu label="Mi Empresa" icon="pi pi-building" rendered="#{authBean.esCiudadanoEmpresa()}">
+                    <p:menuitem value="Perfil y Empresas" icon="pi pi-id-card" outcome="/empresa/perfil.xhtml" />
+                    <p:menuitem value="Flota de Vehículos" icon="pi pi-car" outcome="/empresa/vehiculos.xhtml" />
+                    <p:menuitem value="Guías de Viaje" icon="pi pi-map" outcome="/empresa/viajes.xhtml" />
+                    <p:separator />
+                    <p:menuitem value="Infracciones y Descargos" icon="pi pi-exclamation-circle" outcome="/empresa/infracciones.xhtml" />
+                </p:submenu>
+
+                <!-- 3. FUNCIONARIO -->
+                <p:submenu label="Fiscalización y Ruta" icon="pi pi-shield" rendered="#{authBean.esFuncionario()}">
+                    <p:menuitem value="Empresas Registradas" icon="pi pi-building" outcome="/funcionario/empresas.xhtml" />
+                    <p:menuitem value="Fiscalización de Flota (ITV / PNC)" icon="pi pi-check-square" outcome="/funcionario/fiscalizacion-vehiculos.xhtml" />
+                    <p:menuitem value="Monitoreo de Viajes y Balanzas" icon="pi pi-compass" outcome="/funcionario/monitoreo.xhtml" />
+                    <p:separator />
+                    <p:menuitem value="Bandeja de Fiscalización" icon="pi pi-inbox" outcome="/funcionario/bandeja-fiscalizacion.xhtml" />
+                </p:submenu>
+
+                <!-- 4. AUTORIDADES (BACKOFFICE ANALÍTICO) -->
+                <p:menuitem value="Dashboard Analítico"
+                            icon="pi pi-chart-line"
+                            outcome="/backoffice/dashboard.xhtml"
+                            rendered="#{authBean.esAutoridad()}" />
+
+                <!-- 5. ADMINISTRADORES -->
+                <p:submenu label="Administración" icon="pi pi-cog" rendered="#{authBean.esAdministrador()}">
+                    <p:menuitem value="Usuarios y Roles" icon="pi pi-users" outcome="/admin/usuarios.xhtml" />
+                    <p:menuitem value="Nodos Periféricos y Catálogos" icon="pi pi-server" outcome="/admin/nodos.xhtml" />
+                    <p:menuitem value="Parámetros de Fiscalización" icon="pi pi-sliders-h" outcome="/admin/reglas-fiscalizacion.xhtml" />
+                </p:submenu>
+
+            </p:menubar>
+        </h:form>
+    </nav>
+
+    <!-- Área Central de Contenido -->
+    <main class="cuy-main">
+        <ui:insert name="content" />
+    </main>
+
+    <!-- Diálogo de Confirmación Global Reutilizable -->
+    <h:form id="globalConfirmForm">
+        <p:confirmDialog global="true" showEffect="fade" hideEffect="fade" responsive="true" width="430">
+            <p:commandButton value="Cancelar" type="button" styleClass="ui-confirmdialog-no ui-button-flat ui-button-secondary" icon="pi pi-times" />
+            <p:commandButton value="Confirmar" type="button" styleClass="ui-confirmdialog-yes ui-button-danger" icon="pi pi-check" />
+        </p:confirmDialog>
+    </h:form>
+
+    <!-- Pie de Página -->
+    <footer class="cuy-footer">
+        <span>&#169; 2026 CargaUY &#8226; Ministerio de Transporte y Obras Públicas &#8226; Taller de Sistemas Empresariales</span>
+    </footer>
+
+</h:body>
+</html>

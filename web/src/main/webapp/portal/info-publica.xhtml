@@ -1,0 +1,140 @@
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/templates/template.xhtml">
+
+    <ui:define name="title">Información Pública Agregada</ui:define>
+
+    <ui:define name="content">
+
+        <div class="cuy-page-header">
+            <div>
+                <h1 class="cuy-page-title">
+                    <i class="pi pi-chart-bar" style="margin-right: 0.5rem; color: var(--cuy-accent);" />
+                    Información Pública y Estadísticas Agregadas
+                </h1>
+                <p class="cuy-page-subtitle">
+                    Transparencia activa sobre viajes declarados, distribución de flota nacional y controles de peso en balanzas.
+                </p>
+            </div>
+        </div>
+
+        <div class="cuy-kpi-grid">
+            <div class="cuy-card cuy-kpi-card" style="border-left-color: #0284c7;">
+                <div>
+                    <div class="cuy-kpi-label">Total Guías Emitidas</div>
+                    <div class="cuy-kpi-value">#{portalPublicoBean.totalViajesRegistrados}</div>
+                </div>
+                <i class="pi pi-map" style="font-size: 2rem; color: #0284c7;" />
+            </div>
+
+            <div class="cuy-card cuy-kpi-card" style="border-left-color: #16a34a;">
+                <div>
+                    <div class="cuy-kpi-label">Empresas Activas</div>
+                    <div class="cuy-kpi-value">#{portalPublicoBean.totalEmpresasActivas}</div>
+                </div>
+                <i class="pi pi-building" style="font-size: 2rem; color: #16a34a;" />
+            </div>
+
+            <div class="cuy-card cuy-kpi-card" style="border-left-color: #f59e0b;">
+                <div>
+                    <div class="cuy-kpi-label">Unidades en Padrón</div>
+                    <div class="cuy-kpi-value">#{portalPublicoBean.totalVehiculosRegistrados}</div>
+                </div>
+                <i class="pi pi-car" style="font-size: 2rem; color: #f59e0b;" />
+            </div>
+
+            <div class="cuy-card cuy-kpi-card" style="border-left-color: #7c3aed;">
+                <div>
+                    <div class="cuy-kpi-label">Controles de Balanza</div>
+                    <div class="cuy-kpi-value">#{portalPublicoBean.totalPesadas}</div>
+                </div>
+                <i class="pi pi-sliders-h" style="font-size: 2rem; color: #7c3aed;" />
+            </div>
+        </div>
+
+        <div class="cuy-card">
+            <h:form id="formInfoPublica">
+                <p:tabView>
+                    <!-- Tab 1: Listado Público de Actividad de Transporte -->
+                    <p:tab title="Actividad de Transporte por Corredor">
+                        <p:dataTable value="#{portalPublicoBean.guiasPublicas}"
+                                     var="g"
+                                     paginator="true"
+                                     rows="10"
+                                     paginatorPosition="bottom"
+                                     emptyMessage="No hay registros públicos de viajes disponibles."
+                                     stripedRows="true"
+                                     size="small">
+
+                            <p:column headerText="Guía #" sortBy="#{g.id}" style="width: 95px; text-align: center;">
+                                <strong>##{g.id}</strong>
+                            </p:column>
+
+                            <p:column headerText="Fecha Operativa" sortBy="#{g.fecha}" style="width: 140px;">
+                                <h:outputText value="#{g.fecha}" />
+                            </p:column>
+
+                            <p:column headerText="Corredor (Origen &#8594; Destino)" sortBy="#{g.origen}" filterBy="#{g.origen}" filterMatchMode="contains">
+                                <strong>#{g.origen}</strong> &#8594; <strong>#{g.destino}</strong>
+                            </p:column>
+
+                            <p:column headerText="Rubro Declarado" sortBy="#{g.rubroCliente}" filterBy="#{g.rubroCliente}" filterMatchMode="contains">
+                                <h:outputText value="#{g.rubroCliente}" />
+                            </p:column>
+
+                            <p:column headerText="Volumen de Carga" sortBy="#{g.volumenCarga}" style="width: 150px; text-align: right;">
+                                <h:outputText value="#{g.volumenCarga}">
+                                    <f:convertNumber pattern="#,##0.0" />
+                                </h:outputText>
+                                <span> t/m&#179;</span>
+                            </p:column>
+
+                            <p:column headerText="Estado" sortBy="#{g.estado}" style="width: 150px; text-align: center;">
+                                <p:tag value="#{g.estado}"
+                                       severity="#{g.estado eq 'FINALIZADO' ? 'success' : (g.estado eq 'EN_CURSO' ? 'info' : 'warning')}" />
+                            </p:column>
+                        </p:dataTable>
+                    </p:tab>
+
+                    <!-- Tab 2: Padrón Agregado de Flota Nacional -->
+                    <p:tab title="Padrón Público de Unidades de Carga">
+                        <p:dataTable value="#{portalPublicoBean.vehiculosPublicos}"
+                                     var="v"
+                                     paginator="true"
+                                     rows="10"
+                                     paginatorPosition="bottom"
+                                     emptyMessage="No hay vehículos registrados en el padrón público."
+                                     stripedRows="true"
+                                     size="small">
+
+                            <p:column headerText="Matrícula" sortBy="#{v.matricula}" filterBy="#{v.matricula}" filterMatchMode="contains" style="width: 140px;">
+                                <strong>#{v.matricula}</strong>
+                            </p:column>
+
+                            <p:column headerText="Marca / Modelo" sortBy="#{v.marca}" filterBy="#{v.marca}" filterMatchMode="contains">
+                                #{v.marca} &#8226; #{v.modelo}
+                            </p:column>
+
+                            <p:column headerText="Tara (kg)" sortBy="#{v.peso}" style="width: 130px; text-align: right;">
+                                #{v.peso} kg
+                            </p:column>
+
+                            <p:column headerText="Capacidad Máxima (kg)" sortBy="#{v.capacidadCarga}" style="width: 165px; text-align: right;">
+                                <strong>#{v.capacidadCarga} kg</strong>
+                            </p:column>
+
+                            <p:column headerText="Habilitación Operativa" sortBy="#{v.estadoHabilitacion}" style="width: 170px; text-align: center;">
+                                <p:tag value="#{v.estadoHabilitacion ? 'HABILITADO' : 'NO HABILITADO'}"
+                                       severity="#{v.estadoHabilitacion ? 'success' : 'danger'}" />
+                            </p:column>
+                        </p:dataTable>
+                    </p:tab>
+                </p:tabView>
+            </h:form>
+        </div>
+
+    </ui:define>
+</ui:composition>

@@ -1,0 +1,160 @@
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/templates/template.xhtml">
+
+    <ui:define name="title">Perfil de Ciudadano y Empresa</ui:define>
+
+    <ui:define name="content">
+
+        <div class="cuy-page-header">
+            <div>
+                <h1 class="cuy-page-title">
+                    <i class="pi pi-id-card" style="color: var(--cuy-accent);" />
+                    Mi Perfil y Empresas Representadas
+                </h1>
+                <p class="cuy-page-subtitle">
+                    Gestione los datos de su cuenta personal federada y la información registral de sus empresas transportistas.
+                </p>
+            </div>
+        </div>
+
+        <p:tabView id="perfilTabView">
+
+            <!-- TAB 1: DATOS DEL CIUDADANO -->
+            <p:tab title="1. Datos Personales del Ciudadano">
+                <h:form id="formPerfilPersonal" styleClass="ui-fluid" style="max-width: 760px; padding: 0.75rem 0;">
+                    <div class="cuy-form-grid-2">
+                        <div class="cuy-field">
+                            <p:outputLabel value="Cédula de Identidad (Inmutable)" />
+                            <p:inputText value="#{empresaPerfilBean.perfilUsuario.ci}" readonly="true" disabled="true" />
+                        </div>
+
+                        <div class="cuy-field">
+                            <p:outputLabel value="Tipo de Perfil" />
+                            <p:inputText value="#{empresaPerfilBean.perfilUsuario.tipo}" readonly="true" disabled="true" />
+                        </div>
+
+                        <div class="cuy-field">
+                            <p:outputLabel for="nombre" value="Nombre Completo *" />
+                            <p:inputText id="nombre" value="#{empresaPerfilBean.nombreEdit}" required="true" />
+                        </div>
+
+                        <div class="cuy-field">
+                            <p:outputLabel for="mail" value="Correo Electrónico de Notificación *" />
+                            <p:inputText id="mail" value="#{empresaPerfilBean.mailEdit}" required="true" />
+                        </div>
+
+                        <div class="cuy-field">
+                            <p:outputLabel for="fechaNac" value="Fecha de Nacimiento *" />
+                            <p:datePicker id="fechaNac" value="#{empresaPerfilBean.fechaNacEdit}" pattern="yyyy-MM-dd" showIcon="true" />
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end;">
+                        <p:commandButton value="Guardar Datos Personales"
+                                         icon="pi pi-save"
+                                         actionListener="#{empresaPerfilBean.actualizarPerfilPersonal}"
+                                         update="@form"
+                                         styleClass="ui-button-primary"
+                                         style="width: auto;" />
+                    </div>
+                </h:form>
+            </p:tab>
+
+            <!-- TAB 2: EMPRESAS VINCULADAS -->
+            <p:tab title="2. Empresas Transportistas a mi Cargo">
+                <h:form id="formMisEmpresas">
+                    <p:dataTable id="tablaMisEmpresas"
+                                 value="#{empresaPerfilBean.misEmpresas}"
+                                 var="emp"
+                                 paginator="true"
+                                 rows="10"
+                                 paginatorPosition="bottom"
+                                 emptyMessage="No tiene empresas vinculadas como responsable."
+                                 stripedRows="true"
+                                 size="small">
+
+                        <p:column headerText="Nro. Empresa" sortBy="#{emp.numero()}" style="width: 130px; text-align: center;">
+                            <span class="cuy-mono">##{emp.numero()}</span>
+                        </p:column>
+
+                        <p:column headerText="Razón Social" sortBy="#{emp.razonSocial()}" filterBy="#{emp.razonSocial()}" filterMatchMode="contains">
+                            <strong>#{emp.razonSocial()}</strong>
+                        </p:column>
+
+                        <p:column headerText="Nombre Público" sortBy="#{emp.nombrePublico()}">
+                            #{emp.nombrePublico()}
+                        </p:column>
+
+                        <p:column headerText="Dirección Fiscal" sortBy="#{emp.direccion()}">
+                            #{emp.direccion()}
+                        </p:column>
+
+                        <p:column headerText="Estado" style="width: 140px; text-align: center;">
+                            <p:tag value="#{emp.activa() ? 'HABILITADA' : 'INACTIVA'}"
+                                   severity="#{emp.activa() ? 'success' : 'danger'}"
+                                   rounded="true" />
+                        </p:column>
+
+                        <p:column headerText="Acciones" style="width: 140px; text-align: center;">
+                            <p:commandButton value="Editar"
+                                             icon="pi pi-pencil"
+                                             actionListener="#{empresaPerfilBean.prepararEdicionEmpresa(emp)}"
+                                             update=":dialogEditarEmpresaForm"
+                                             oncomplete="PF('wvDialogEditarEmpresa').show()"
+                                             styleClass="ui-button-outlined ui-button-sm" />
+                        </p:column>
+                    </p:dataTable>
+                </h:form>
+            </p:tab>
+
+        </p:tabView>
+
+        <!-- Modal para Editar Empresa -->
+        <p:dialog id="dialogEditarEmpresa"
+                  widgetVar="wvDialogEditarEmpresa"
+                  header="Editar Datos de la Empresa"
+                  modal="true"
+                  responsive="true"
+                  width="520"
+                  closeOnEscape="true">
+            <h:form id="dialogEditarEmpresaForm" styleClass="ui-fluid">
+                <p:outputPanel rendered="#{not empty empresaPerfilBean.empresaSeleccionada}">
+                    <div class="cuy-field" style="margin-bottom: 1rem;">
+                        <p:outputLabel for="razonEdit" value="Razón Social *" />
+                        <p:inputText id="razonEdit" value="#{empresaPerfilBean.razonSocialEdit}" required="true" />
+                    </div>
+                    <div class="cuy-field" style="margin-bottom: 1rem;">
+                        <p:outputLabel for="pubEdit" value="Nombre Público / Comercial *" />
+                        <p:inputText id="pubEdit" value="#{empresaPerfilBean.nombrePublicoEdit}" required="true" />
+                    </div>
+                    <div class="cuy-field" style="margin-bottom: 1.25rem;">
+                        <p:outputLabel for="dirEdit" value="Dirección Fiscal *" />
+                        <p:inputText id="dirEdit" value="#{empresaPerfilBean.direccionEdit}" required="true" />
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+                        <p:commandButton value="Cancelar"
+                                         type="button"
+                                         icon="pi pi-times"
+                                         onclick="PF('wvDialogEditarEmpresa').hide()"
+                                         styleClass="ui-button-secondary ui-button-outlined"
+                                         style="width: auto;" />
+                        <p:commandButton value="Guardar Cambios"
+                                         icon="pi pi-check"
+                                         actionListener="#{empresaPerfilBean.guardarEmpresa}"
+                                         process="@form"
+                                         update=":perfilTabView:formMisEmpresas:tablaMisEmpresas"
+                                         oncomplete="if (!args.validationFailed) PF('wvDialogEditarEmpresa').hide()"
+                                         styleClass="ui-button-primary"
+                                         style="width: auto;" />
+                    </div>
+                </p:outputPanel>
+            </h:form>
+        </p:dialog>
+
+    </ui:define>
+</ui:composition>

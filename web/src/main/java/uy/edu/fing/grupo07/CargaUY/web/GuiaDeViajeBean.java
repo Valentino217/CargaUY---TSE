@@ -10,23 +10,58 @@ import jakarta.faces.application.FacesMessage;
 import jakarta.faces.context.FacesContext;
 import jakarta.faces.view.ViewScoped;
 import jakarta.inject.Named;
-import uy.edu.fing.grupo07.CargaUY.domain.entity.Usuario;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.Empresa;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.GuiaDeViaje;
+import uy.edu.fing.grupo07.CargaUY.domain.entity.Usuario;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.Vehiculo;
 import uy.edu.fing.grupo07.CargaUY.service.GuiaDeViajeEJB;
 import uy.edu.fing.grupo07.CargaUY.service.VehiculoEJB;
 
 @Named("GuiaDeViajeBean")
-@ViewScoped // <--- Permite mantener el estado del formulario entre AJAX requests
+@ViewScoped
 public class GuiaDeViajeBean implements Serializable {
-	private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
 
-	@EJB
+    private static final List<String> LOCALIDADES_CARGA_URUGUAY = List.of(
+            "Puerto de Montevideo (Montevideo)",
+            "Ruta 5 Km 24 - Polo Logístico (Canelones)",
+            "Puerto de Nueva Palmira (Colonia)",
+            "Fray Bentos - Planta UPM I (Río Negro)",
+            "Paso de los Toros - Planta UPM II (Tacuarembó)",
+            "Tacuarembó - Polo Forestal (Tacuarembó)",
+            "Rivera - Frontera Seca / Puerto Seco (Rivera)",
+            "Paysandú - Zona Industrial / Puerto (Paysandú)",
+            "Salto - Central Hortícola del Norte (Salto)",
+            "Durazno - Nodo Logístico Ruta 5 (Durazno)",
+            "Young - Acopio Agrícola (Río Negro)",
+            "Dolores - Polo Granelero (Soriano)",
+            "Mercedes - Ruta 2 (Soriano)",
+            "Melo - Ruta 8 (Cerro Largo)",
+            "Río Branco - Frontera Yaguarón (Cerro Largo)",
+            "Treinta y Tres - Cuenca Arrocera (Treinta y Tres)",
+            "Rocha - Ruta 9 (Rocha)",
+            "Chuy - Frontera Brasil (Rocha)",
+            "Minas - Planta Cementera Ruta 8 (Lavalleja)",
+            "San José de Mayo - Ruta 3 (San José)",
+            "Colonia del Sacramento (Colonia)"
+    );
+
+    private static final List<String> RUBROS_CARGA = List.of(
+            "Forestal / Madera para Celulosa",
+            "Granos y Oleaginosas (Soja / Trigo / Arroz)",
+            "Contenedores de Exportación / Importación",
+            "Ganado en Pie / Frigorífico",
+            "Cemento y Materiales de Construcción",
+            "Combustibles y Sustancias Peligrosas",
+            "Lácteos y Alimentos Refrigerados",
+            "Carga General y Distribución"
+    );
+
+    @EJB
     private VehiculoEJB vehiculoEJB;
-	
-	@EJB
-	private GuiaDeViajeEJB GuiaDeViajeEJB;
+
+    @EJB
+    private GuiaDeViajeEJB GuiaDeViajeEJB;
 
     private List<Vehiculo> vehiculos;
     private List<Empresa> empresas;
@@ -34,78 +69,47 @@ public class GuiaDeViajeBean implements Serializable {
     private List<Usuario> choferes;
 
     private GuiaDeViaje guia;
-    
-    public GuiaDeViaje getGuia() {
-        return guia;
-    }
-
-    public void setGuia(GuiaDeViaje guia) {
-        this.guia = guia;
-    }
-    
     private String matriculaVehiculo;
-
-    public String getMatriculaVehiculo() {
-        return matriculaVehiculo;
-    }
-
-    public void setMatriculaVehiculo(String matriculaVehiculo) {
-        this.matriculaVehiculo = matriculaVehiculo;
-    }
-    
     private int choferId;
-
-    public int getChoferId() {
-        return choferId;
-    }
-
-    public void setChoferId(int choferId) {
-        this.choferId = choferId;
-    }
-    
-    
     private boolean editando;
-	
     private int empresaId;
 
-    public int getEmpresaId() {
-        return empresaId;
+    public GuiaDeViajeBean() {
     }
 
-    public void setEmpresaId(int empresaId) {
-        this.empresaId = empresaId;
-    }
-	
- // Creamos una constante o variable de clase temporal para la simulación
-    private int ciudadanoActual() { return SesionActual.actor().id(); }
-    
-	public GuiaDeViajeBean() {
-		// TODO Auto-generated constructor stub
-	}
-
-	@PostConstruct
+    @PostConstruct
     public void init() {
         try {
             guias = GuiaDeViajeEJB.listarParaActor(SesionActual.token());
-
-
             empresas = vehiculoEJB.listarEmpresasParaActor(SesionActual.token());
-
-
         } catch (Exception excepcion) {
+            guias = new ArrayList<>();
+            empresas = new ArrayList<>();
             mostrarMensaje(
                     FacesMessage.SEVERITY_ERROR,
                     "Error",
-                    "No se pudo inicializar los datos de Guía de Viaje: " + excepcion.getMessage()
+                    "No se pudo inicializar los datos de Guía de Viaje: " + extraerMensaje(excepcion)
             );
         }
 
         nuevo();
     }
-	
+
+    public List<String> getLocalidadesUruguay() {
+        return LOCALIDADES_CARGA_URUGUAY;
+    }
+
+    public List<String> getRubrosDisponibles() {
+        return RUBROS_CARGA;
+    }
+
     public void nuevo() {
         guia = new GuiaDeViaje();
         guia.setFecha(java.time.LocalDate.now());
+        guia.setOrigen(LOCALIDADES_CARGA_URUGUAY.get(2)); // Nueva Palmira por defecto
+        guia.setDestino(LOCALIDADES_CARGA_URUGUAY.get(0)); // Puerto de Montevideo por defecto
+        guia.setRubroCliente(RUBROS_CARGA.get(1));
+        guia.setVolumenCarga(28000.0f);
         editando = false;
 
         if (empresas != null && !empresas.isEmpty()) {
@@ -133,11 +137,14 @@ public class GuiaDeViajeBean implements Serializable {
             this.choferes = new ArrayList<>();
         }
     }
-	 
+
     public void guardar() {
         try {
-            Empresa empresaSeleccionada = null;
+            if (guia.getOrigen() != null && guia.getOrigen().equals(guia.getDestino())) {
+                throw new IllegalArgumentException("La localidad de origen y la localidad de destino deben ser distintas.");
+            }
 
+            Empresa empresaSeleccionada = null;
             for (Empresa empresa : empresas) {
                 if (empresa.getNroEmpresa() == empresaId) {
                     empresaSeleccionada = empresa;
@@ -150,9 +157,8 @@ public class GuiaDeViajeBean implements Serializable {
             }
 
             guia.setEmpresa(empresaSeleccionada);
-            
-            Vehiculo vehiculoSeleccionado = null;
 
+            Vehiculo vehiculoSeleccionado = null;
             for (Vehiculo vehiculo : vehiculos) {
                 if (vehiculo.getMatricula().equals(matriculaVehiculo)) {
                     vehiculoSeleccionado = vehiculo;
@@ -165,9 +171,8 @@ public class GuiaDeViajeBean implements Serializable {
             }
 
             guia.setVehiculo(vehiculoSeleccionado);
-            
-            Usuario choferSeleccionado = null;
 
+            Usuario choferSeleccionado = null;
             for (Usuario chofer : choferes) {
                 if (chofer.getId() == choferId) {
                     choferSeleccionado = chofer;
@@ -180,7 +185,7 @@ public class GuiaDeViajeBean implements Serializable {
             }
 
             guia.setChofer(choferSeleccionado);
-            
+
             if (editando) {
                 GuiaDeViajeEJB.modificar(SesionActual.token(), guia);
                 mostrarMensaje(FacesMessage.SEVERITY_INFO, "Éxito", "Guía de viaje modificada correctamente.");
@@ -190,26 +195,33 @@ public class GuiaDeViajeBean implements Serializable {
             }
 
             guias = GuiaDeViajeEJB.listarParaActor(SesionActual.token());
-
-
             nuevo();
 
         } catch (Exception excepcion) {
+            FacesContext.getCurrentInstance().validationFailed();
             mostrarMensaje(
                     FacesMessage.SEVERITY_ERROR,
                     "Error",
-                    "No se pudo guardar la guía de viaje: " + excepcion.getMessage()
+                    "No se pudo guardar la guía de viaje: " + extraerMensaje(excepcion)
             );
         }
     }
-	 
+
+    private String extraerMensaje(Throwable t) {
+        Throwable curr = t;
+        while (curr.getCause() != null && curr.getCause() != curr) {
+            curr = curr.getCause();
+        }
+        return curr.getMessage() != null ? curr.getMessage() : t.getMessage();
+    }
+
     private void mostrarMensaje(FacesMessage.Severity severity, String resumen, String detalle) {
         FacesContext.getCurrentInstance().addMessage(
                 null,
                 new FacesMessage(severity, resumen, detalle)
         );
     }
-	 
+
     public void editar(GuiaDeViaje guiaSeleccionada) {
         this.guia = guiaSeleccionada;
         this.editando = true;
@@ -217,15 +229,15 @@ public class GuiaDeViajeBean implements Serializable {
         if (guiaSeleccionada.getEmpresa() != null) {
             this.empresaId = guiaSeleccionada.getEmpresa().getNroEmpresa();
         }
-        
+
         if (guiaSeleccionada.getVehiculo() != null) {
             this.matriculaVehiculo = guiaSeleccionada.getVehiculo().getMatricula();
         }
-        
+
         if (guiaSeleccionada.getChofer() != null) {
             this.choferId = guiaSeleccionada.getChofer().getId();
         }
-        
+
         this.vehiculos = vehiculoEJB.listarVehiculosPorEmpresa(SesionActual.token(), empresaId);
         this.choferes = GuiaDeViajeEJB.listarChoferesPorEmpresa(SesionActual.token(), empresaId);
     }
@@ -234,7 +246,6 @@ public class GuiaDeViajeBean implements Serializable {
         try {
             GuiaDeViajeEJB.eliminar(SesionActual.token(), guiaAEliminar);
             guias = GuiaDeViajeEJB.listarParaActor(SesionActual.token());
-
 
             mostrarMensaje(
                     FacesMessage.SEVERITY_INFO,
@@ -248,7 +259,7 @@ public class GuiaDeViajeBean implements Serializable {
             mostrarMensaje(
                     FacesMessage.SEVERITY_ERROR,
                     "Error",
-                    "No se pudo eliminar la guía de viaje: " + excepcion.getMessage()
+                    "No se pudo eliminar la guía de viaje: " + extraerMensaje(excepcion)
             );
         }
     }
@@ -279,38 +290,68 @@ public class GuiaDeViajeBean implements Serializable {
             mostrarMensaje(
                     FacesMessage.SEVERITY_ERROR,
                     "Error",
-                    "No se pudieron cargar los vehículos y choferes: " + excepcion.getMessage()
+                    "No se pudieron cargar los vehículos y choferes: " + extraerMensaje(excepcion)
             );
         }
     }
-	 
-	 /*//////////////////////////////////////////////////////////////////////////////////////////////////////////*/
-	 // GETTERS Y SETTERS
-	    public List<Vehiculo> getVehiculos() {
-	        return vehiculos;
-	    }
 
-	    public List<Empresa> getEmpresas() {
-	        return empresas;
-	    }
-        
-	    public List<Usuario> getChoferes() {
-	        return choferes;
-	    }
-	    
-	    public List<GuiaDeViaje> getGuiaDeViajes() {
-	        return guias;
-	    }
-	    
-	    public GuiaDeViaje getGuiaDeViaje() {
-	        return guia;
-	    }
+    public GuiaDeViaje getGuia() {
+        return guia;
+    }
 
-	    public void setGuiaDeViaje(GuiaDeViaje guia) {
-	        this.guia = guia;
-	    }
+    public void setGuia(GuiaDeViaje guia) {
+        this.guia = guia;
+    }
 
-	    public boolean isEditando() {
-	        return editando;
-	    }
+    public String getMatriculaVehiculo() {
+        return matriculaVehiculo;
+    }
+
+    public void setMatriculaVehiculo(String matriculaVehiculo) {
+        this.matriculaVehiculo = matriculaVehiculo;
+    }
+
+    public int getChoferId() {
+        return choferId;
+    }
+
+    public void setChoferId(int choferId) {
+        this.choferId = choferId;
+    }
+
+    public int getEmpresaId() {
+        return empresaId;
+    }
+
+    public void setEmpresaId(int empresaId) {
+        this.empresaId = empresaId;
+    }
+
+    public List<Vehiculo> getVehiculos() {
+        return vehiculos;
+    }
+
+    public List<Empresa> getEmpresas() {
+        return empresas;
+    }
+
+    public List<Usuario> getChoferes() {
+        return choferes;
+    }
+
+    public List<GuiaDeViaje> getGuiaDeViajes() {
+        return guias;
+    }
+
+    public GuiaDeViaje getGuiaDeViaje() {
+        return guia;
+    }
+
+    public void setGuiaDeViaje(GuiaDeViaje guia) {
+        this.guia = guia;
+    }
+
+    public boolean isEditando() {
+        return editando;
+    }
 }

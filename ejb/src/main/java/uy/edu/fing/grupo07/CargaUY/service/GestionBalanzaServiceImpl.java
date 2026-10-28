@@ -77,9 +77,10 @@ public class GestionBalanzaServiceImpl implements GestionBalanzaServiceLocal {
                 throw new BusinessException("Debe indicar la guíaId o la matrícula del vehículo para asociar la pesada.");
             }
 
-            int matriculaInt;
+            String matriculaRaw = dto.matricula().trim();
+            Object matriculaParam;
             try {
-                matriculaInt = Integer.parseInt(dto.matricula().trim());
+                matriculaParam = Integer.parseInt(matriculaRaw);
             } catch (NumberFormatException nfe) {
                 throw new BusinessException("La matrícula debe tener formato numérico: " + dto.matricula());
             }
@@ -90,7 +91,11 @@ public class GestionBalanzaServiceImpl implements GestionBalanzaServiceLocal {
                     "ORDER BY g.id DESC",
                     GuiaDeViaje.class
             );
-            q.setParameter("matricula", matriculaInt);
+            try {
+                q.setParameter("matricula", matriculaParam);
+            } catch (IllegalArgumentException iae) {
+                q.setParameter("matricula", matriculaRaw);
+            }
             q.setParameter("enCurso", TipoEstado.EN_CURSO);
             q.setMaxResults(1);
 
@@ -130,11 +135,31 @@ public class GestionBalanzaServiceImpl implements GestionBalanzaServiceLocal {
 
     @Override
     public PesadaBalanzaDTO registrarPesadaDesdeMock() {
+        return registrarPesadaDesdeMock(null);
+    }
+
+    @Override
+    public PesadaBalanzaDTO registrarPesadaDesdeMock(Long guiaIdFallback) {
         if (balanzaClient == null) {
             throw new BusinessException("El cliente de balanza no está configurado.");
         }
         PesadaBalanzaDTO mockDto = balanzaClient.consultarPesadaMock();
-        return registrarPesada(mockDto);
+        try {
+            return registrarPesada(mockDto);
+        } catch (BusinessException be) {
+            if (guiaIdFallback != null) {
+                PesadaBalanzaDTO conGuia = new PesadaBalanzaDTO(
+                        mockDto.idPesada(),
+                        mockDto.fecha(),
+                        mockDto.hora(),
+                        mockDto.pesoRegistrado(),
+                        mockDto.matricula(),
+                        guiaIdFallback
+                );
+                return registrarPesada(conGuia);
+            }
+            throw be;
+        }
     }
 
     @Override

@@ -1,0 +1,310 @@
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/templates/template.xhtml">
+
+    <ui:define name="title">Gestión de Empresas y PDI</ui:define>
+
+    <ui:define name="content">
+        <div class="cuy-page-header">
+            <div>
+                <h1 class="cuy-page-title">
+                    <i class="pi pi-building" style="color: #1d4ed8;" />
+                    Padrón de Empresas Transportistas e Interoperabilidad PDI
+                </h1>
+                <p class="cuy-page-subtitle">
+                    Alta, edición, control de vigencia, vinculación de responsables/choferes y validación en línea con DNIC (PDI)
+                </p>
+            </div>
+            <div style="display: flex; gap: 0.6rem;">
+                <h:form id="headerEmpFuncForm" style="margin: 0; display: flex; gap: 0.6rem;">
+                    <p:commandButton value="Consultar Ciudadano PDI"
+                                     icon="pi pi-id-card"
+                                     type="button"
+                                     onclick="PF('dlgPdiWidget').show()"
+                                     styleClass="ui-button-outlined ui-button-info" />
+                    <p:commandButton value="Nueva Empresa"
+                                     icon="pi pi-plus"
+                                     actionListener="#{funcionarioEmpresasBean.prepararNuevaEmpresa}"
+                                     update=":dlgEmpresaForm"
+                                     oncomplete="PF('dlgEmpresaWidget').show()"
+                                     styleClass="ui-button-primary" />
+                </h:form>
+            </div>
+        </div>
+
+        <!-- KPIs -->
+        <h:panelGroup id="kpiEmpGroup" layout="block" styleClass="cuy-kpi-grid">
+            <div class="cuy-kpi-card">
+                <div class="cuy-kpi-label"><i class="pi pi-building" /> Total Empresas</div>
+                <div class="cuy-kpi-value">#{funcionarioEmpresasBean.empresas.size()}</div>
+            </div>
+            <div class="cuy-kpi-card success">
+                <div class="cuy-kpi-label"><i class="pi pi-check-circle" /> Empresas Habilitadas</div>
+                <div class="cuy-kpi-value">#{funcionarioEmpresasBean.totalActivas}</div>
+            </div>
+            <div class="cuy-kpi-card danger">
+                <div class="cuy-kpi-label"><i class="pi pi-ban" /> Empresas Inactivas</div>
+                <div class="cuy-kpi-value">#{funcionarioEmpresasBean.totalInactivas}</div>
+            </div>
+        </h:panelGroup>
+
+        <h:form id="empresasFuncForm">
+            <div class="cuy-card">
+                <p:dataTable id="tablaEmpresas"
+                             var="emp"
+                             value="#{funcionarioEmpresasBean.empresas}"
+                             filteredValue="#{funcionarioEmpresasBean.empresasFiltradas}"
+                             widgetVar="dtEmpFunc"
+                             paginator="true"
+                             rows="10"
+                             paginatorPosition="bottom"
+                             stripedRows="true"
+                             size="small"
+                             emptyMessage="No se encontraron empresas registradas.">
+
+                    <f:facet name="header">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                            <span style="font-weight: 700; color: #0f2942;">
+                                <i class="pi pi-list" style="margin-right: 0.4rem;" /> Registro Nacional de Empresas de Transporte
+                            </span>
+                            <span class="ui-input-icon-left">
+                                <i class="pi pi-search" />
+                                <p:inputText id="globalFilter"
+                                             onkeyup="PF('dtEmpFunc').filter()"
+                                             placeholder="Filtrar por N°, razón social o nombre..."
+                                             style="width: 280px;" />
+                            </span>
+                        </div>
+                    </f:facet>
+
+                    <p:column headerText="N° Empresa" sortBy="#{emp.numero()}" filterBy="#{emp.numero()}" filterMatchMode="contains" style="width: 120px;">
+                        <span class="cuy-mono">#<h:outputText value="#{emp.numero()}" /></span>
+                    </p:column>
+
+                    <p:column headerText="Razón Social" sortBy="#{emp.razonSocial()}" filterBy="#{emp.razonSocial()}" filterMatchMode="contains">
+                        <strong style="color: #0f2942;">#{emp.razonSocial()}</strong>
+                    </p:column>
+
+                    <p:column headerText="Nombre Comercial" sortBy="#{emp.nombrePublico()}" filterBy="#{emp.nombrePublico()}" filterMatchMode="contains">
+                        <h:outputText value="#{emp.nombrePublico()}" />
+                    </p:column>
+
+                    <p:column headerText="Dirección Fiscal" sortBy="#{emp.direccion()}">
+                        <h:outputText value="#{emp.direccion()}" />
+                    </p:column>
+
+                    <p:column headerText="Estado" sortBy="#{emp.activa()}" style="width: 135px; text-align: center;">
+                        <p:tag value="#{emp.activa() ? 'HABILITADA' : 'INACTIVA'}"
+                               severity="#{emp.activa() ? 'success' : 'danger'}"
+                               icon="#{emp.activa() ? 'pi pi-check' : 'pi pi-ban'}"
+                               rounded="true" />
+                    </p:column>
+
+                    <p:column headerText="Acciones" style="width: 190px; text-align: center;" exportable="false">
+                        <div style="display: flex; justify-content: center; gap: 0.35rem;">
+                            <p:commandButton icon="pi pi-pencil"
+                                             title="Editar Empresa"
+                                             actionListener="#{funcionarioEmpresasBean.prepararEdicionEmpresa(emp)}"
+                                             update=":dlgEmpresaForm"
+                                             oncomplete="PF('dlgEmpresaWidget').show()"
+                                             styleClass="ui-button-outlined ui-button-info ui-button-sm" />
+
+                            <p:commandButton icon="pi pi-users"
+                                             title="Gestionar Vínculos (Responsables y Choferes)"
+                                             actionListener="#{funcionarioEmpresasBean.abrirVinculos(emp)}"
+                                             update=":dlgVinculosForm"
+                                             oncomplete="PF('dlgVinculosWidget').show()"
+                                             styleClass="ui-button-outlined ui-button-secondary ui-button-sm" />
+
+                            <p:commandButton icon="pi pi-trash"
+                                             title="Dar de Baja"
+                                             rendered="#{emp.activa()}"
+                                             actionListener="#{funcionarioEmpresasBean.cambiarEstado(emp, false)}"
+                                             update="tablaEmpresas :kpiEmpGroup"
+                                             styleClass="ui-button-outlined ui-button-danger ui-button-sm">
+                                <p:confirm header="Confirmar Baja de Empresa"
+                                           message="¿Confirma la baja operativa de #{emp.razonSocial()} (N° #{emp.numero()})?"
+                                           icon="pi pi-exclamation-triangle" />
+                            </p:commandButton>
+
+                            <p:commandButton icon="pi pi-refresh"
+                                             title="Reactivar Empresa"
+                                             rendered="#{not emp.activa()}"
+                                             actionListener="#{funcionarioEmpresasBean.cambiarEstado(emp, true)}"
+                                             update="tablaEmpresas :kpiEmpGroup"
+                                             styleClass="ui-button-outlined ui-button-success ui-button-sm" />
+                        </div>
+                    </p:column>
+                </p:dataTable>
+            </div>
+        </h:form>
+
+        <!-- Modal Crear / Editar Empresa -->
+        <p:dialog header="#{funcionarioEmpresasBean.modoEdicion ? 'Editar Empresa Transportista' : 'Registrar Nueva Empresa'}"
+                  widgetVar="dlgEmpresaWidget"
+                  modal="true"
+                  responsive="true"
+                  width="540"
+                  closeOnEscape="true">
+            <h:form id="dlgEmpresaForm" styleClass="ui-fluid">
+                <div class="cuy-form-grid-2" style="margin-bottom: 1rem;">
+                    <div class="cuy-field">
+                        <p:outputLabel for="numEmp" value="Número de Registro / RUT *" />
+                        <p:inputNumber id="numEmp"
+                                       value="#{funcionarioEmpresasBean.numeroForm}"
+                                       decimalPlaces="0"
+                                       thousandSeparator=""
+                                       disabled="#{funcionarioEmpresasBean.modoEdicion}"
+                                       required="true" />
+                    </div>
+                    <div class="cuy-field">
+                        <p:outputLabel for="nomPubEmp" value="Nombre Comercial / Público *" />
+                        <p:inputText id="nomPubEmp"
+                                     value="#{funcionarioEmpresasBean.nombrePublicoForm}"
+                                     required="true"
+                                     placeholder="Ej. TransSur Logística" />
+                    </div>
+                </div>
+                <div class="cuy-field" style="margin-bottom: 1rem;">
+                    <p:outputLabel for="razonEmp" value="Razón Social *" />
+                    <p:inputText id="razonEmp"
+                                 value="#{funcionarioEmpresasBean.razonSocialForm}"
+                                 required="true"
+                                 placeholder="Ej. Transportes del Sur S.A." />
+                </div>
+                <div class="cuy-field" style="margin-bottom: 1.25rem;">
+                    <p:outputLabel for="dirEmp" value="Dirección Fiscal *" />
+                    <p:inputText id="dirEmp"
+                                 value="#{funcionarioEmpresasBean.direccionForm}"
+                                 required="true"
+                                 placeholder="Ej. Ruta 5 Km 24, Canelones" />
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.6rem;">
+                    <p:commandButton value="Cancelar"
+                                     type="button"
+                                     icon="pi pi-times"
+                                     onclick="PF('dlgEmpresaWidget').hide()"
+                                     styleClass="ui-button-outlined ui-button-secondary"
+                                     style="width: auto;" />
+                    <p:commandButton value="Guardar Empresa"
+                                     icon="pi pi-check"
+                                     actionListener="#{funcionarioEmpresasBean.guardarEmpresa}"
+                                     update=":empresasFuncForm:tablaEmpresas :kpiEmpGroup"
+                                     oncomplete="if (!args.validationFailed) PF('dlgEmpresaWidget').hide()"
+                                     styleClass="ui-button-primary"
+                                     style="width: auto;" />
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <!-- Modal Vínculos de Empresa (Responsables / Choferes) -->
+        <p:dialog header="Vínculos de Usuarios con Empresa"
+                  widgetVar="dlgVinculosWidget"
+                  modal="true"
+                  responsive="true"
+                  width="680"
+                  closeOnEscape="true">
+            <h:form id="dlgVinculosForm">
+                <h:panelGroup rendered="#{funcionarioEmpresasBean.empresaSeleccionada != null}">
+                    <div style="background: #f8fafc; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 1rem;">
+                        <strong style="color: #0f2942;">#{funcionarioEmpresasBean.empresaSeleccionada.razonSocial()}</strong>
+                        <span style="color: #64748b; margin-left: 0.5rem;">(N° #{funcionarioEmpresasBean.empresaSeleccionada.numero()})</span>
+                    </div>
+
+                    <div style="background: #fff; border: 1px solid #e2e8f0; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                        <div class="cuy-form-grid-2 ui-fluid" style="margin-bottom: 0.85rem;">
+                            <div class="cuy-field">
+                                <p:outputLabel for="usrVincId" value="ID Usuario *" />
+                                <p:inputNumber id="usrVincId" value="#{funcionarioEmpresasBean.usuarioIdVinculo}" decimalPlaces="0" thousandSeparator="" placeholder="Ej: 3" />
+                            </div>
+                            <div class="cuy-field">
+                                <p:outputLabel for="funcVincRadio" value="Función en la Empresa (Excluyente) *" />
+                                <p:selectOneRadio id="funcVincRadio" value="#{funcionarioEmpresasBean.funcionVinculo}" unselectable="false">
+                                    <f:selectItem itemLabel="Responsable" itemValue="RESPONSABLE" />
+                                    <f:selectItem itemLabel="Chofer" itemValue="CHOFER" />
+                                    <f:selectItem itemLabel="Revocar Vínculo" itemValue="NINGUNO" />
+                                </p:selectOneRadio>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end;">
+                            <p:commandButton value="Vincular Usuario"
+                                             icon="pi pi-link"
+                                             actionListener="#{funcionarioEmpresasBean.guardarVinculo}"
+                                             update="tablaVinculos"
+                                             styleClass="ui-button-primary" />
+                        </div>
+                    </div>
+
+                    <p:dataTable id="tablaVinculos"
+                                 var="v"
+                                 value="#{funcionarioEmpresasBean.vinculosEmpresa}"
+                                 size="small"
+                                 stripedRows="true"
+                                 emptyMessage="Sin usuarios vinculados a esta empresa.">
+                        <p:column headerText="ID Usuario" style="width: 90px;">
+                            <span class="cuy-mono">##{v.usuario()}</span>
+                        </p:column>
+                        <p:column headerText="Nombre Completo">
+                            #{v.nombre()}
+                        </p:column>
+                        <p:column headerText="Responsable" style="width: 120px; text-align: center;">
+                            <p:tag value="#{v.responsable() ? 'SÍ' : 'NO'}" severity="#{v.responsable() ? 'success' : 'secondary'}" rounded="true" />
+                        </p:column>
+                        <p:column headerText="Chofer" style="width: 120px; text-align: center;">
+                            <p:tag value="#{v.chofer() ? 'SÍ' : 'NO'}" severity="#{v.chofer() ? 'info' : 'secondary'}" rounded="true" />
+                        </p:column>
+                    </p:dataTable>
+                </h:panelGroup>
+            </h:form>
+        </p:dialog>
+
+        <!-- Modal Consulta Ciudadano en PDI (DNIC SOAP) -->
+        <p:dialog header="Consulta de Identidad en PDI (DNIC - SOAP)"
+                  widgetVar="dlgPdiWidget"
+                  modal="true"
+                  responsive="true"
+                  width="520"
+                  closeOnEscape="true">
+            <h:form id="dlgPdiForm">
+                <div class="ui-fluid">
+                    <p style="margin-top: 0; font-size: 0.88rem; color: #475569;">
+                        Verifique datos patronímicos de ciudadanos directamente contra el servicio web SOAP de la Plataforma de Interoperabilidad (PDI).
+                    </p>
+                    <div style="display: flex; gap: 0.75rem; align-items: flex-end; margin-bottom: 1rem;">
+                        <div class="cuy-field" style="flex: 1;">
+                            <p:outputLabel for="ciPdiInput" value="Cédula de Identidad (sin puntos ni guión)" />
+                            <p:inputNumber id="ciPdiInput" value="#{funcionarioEmpresasBean.ciConsultaPdi}" decimalPlaces="0" thousandSeparator="" placeholder="Ej. 41234567" />
+                        </div>
+                        <p:commandButton value="Consultar PDI"
+                                         icon="pi pi-search"
+                                         actionListener="#{funcionarioEmpresasBean.consultarEnPdi}"
+                                         update="panelResultadoPdi"
+                                         style="width: auto;" />
+                    </div>
+
+                    <h:panelGroup id="panelResultadoPdi">
+                        <h:panelGroup rendered="#{funcionarioEmpresasBean.resultadoPdi != null}">
+                            <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 1rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                    <span style="font-weight: 700; color: #0f2942;">Resultado DNIC / PDI</span>
+                                    <p:tag value="#{funcionarioEmpresasBean.resultadoPdi.estado()}"
+                                           severity="#{funcionarioEmpresasBean.resultadoPdi.estado().name() eq 'DISPONIBLE' ? 'success' : 'warning'}"
+                                           rounded="true" />
+                                </div>
+                                <div style="font-size: 0.9rem; color: #334155; display: grid; gap: 0.35rem;">
+                                    <div><strong>Cédula:</strong> #{funcionarioEmpresasBean.resultadoPdi.ci()}</div>
+                                    <div><strong>Nombre:</strong> #{funcionarioEmpresasBean.resultadoPdi.nombre()} #{funcionarioEmpresasBean.resultadoPdi.apellido()}</div>
+                                    <div><strong>Fecha Nacimiento:</strong> #{funcionarioEmpresasBean.resultadoPdi.fechaNacimiento()}</div>
+                                    <div><strong>Mensaje:</strong> #{funcionarioEmpresasBean.resultadoPdi.mensaje()}</div>
+                                </div>
+                            </div>
+                        </h:panelGroup>
+                    </h:panelGroup>
+                </div>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>

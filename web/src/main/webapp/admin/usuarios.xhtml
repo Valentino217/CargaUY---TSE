@@ -1,0 +1,277 @@
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/templates/template.xhtml">
+
+    <ui:define name="title">Administración de Usuarios y Roles</ui:define>
+
+    <ui:define name="content">
+        <div class="cuy-page-header">
+            <div>
+                <h1 class="cuy-page-title">
+                    <i class="pi pi-users" style="color: #1d4ed8;" />
+                    Gestión de Usuarios, Roles RBAC e Identidades Federadas
+                </h1>
+                <p class="cuy-page-subtitle">
+                    ABM de cuentas del sistema, asignación de roles internos/externos y federación con OpenLDAP y Usuario gub.uy
+                </p>
+            </div>
+            <div>
+                <h:form id="usrTopForm" style="margin: 0;">
+                    <p:commandButton value="Nuevo Usuario"
+                                     icon="pi pi-user-plus"
+                                     actionListener="#{adminUsuariosBean.prepararNuevoUsuario}"
+                                     update=":dlgUsuarioForm"
+                                     oncomplete="PF('dlgUsuarioWidget').show()"
+                                     styleClass="ui-button-primary" />
+                </h:form>
+            </div>
+        </div>
+
+        <!-- KPIs -->
+        <h:panelGroup id="kpiUsrGroup" layout="block" styleClass="cuy-kpi-grid">
+            <div class="cuy-kpi-card">
+                <div class="cuy-kpi-label"><i class="pi pi-users" /> Total Cuentas</div>
+                <div class="cuy-kpi-value">#{adminUsuariosBean.usuarios.size()}</div>
+            </div>
+            <div class="cuy-kpi-card success">
+                <div class="cuy-kpi-label"><i class="pi pi-check-circle" /> Cuentas Activas</div>
+                <div class="cuy-kpi-value">#{adminUsuariosBean.totalActivos}</div>
+            </div>
+            <div class="cuy-kpi-card">
+                <div class="cuy-kpi-label"><i class="pi pi-shield" /> Staff Interno (MTOP)</div>
+                <div class="cuy-kpi-value">#{adminUsuariosBean.totalInternos}</div>
+            </div>
+        </h:panelGroup>
+
+        <h:form id="usuariosForm">
+            <div class="cuy-card">
+                <p:dataTable id="tablaUsuarios"
+                             var="u"
+                             value="#{adminUsuariosBean.usuarios}"
+                             filteredValue="#{adminUsuariosBean.usuariosFiltrados}"
+                             widgetVar="dtUsuarios"
+                             paginator="true"
+                             rows="10"
+                             paginatorPosition="bottom"
+                             stripedRows="true"
+                             size="small"
+                             emptyMessage="No se encontraron usuarios registrados.">
+
+                    <f:facet name="header">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                            <span style="font-weight: 700; color: #0f2942;">
+                                <i class="pi pi-id-card" style="margin-right: 0.4rem;" /> Padrón de Usuarios y Permisos
+                            </span>
+                            <span class="ui-input-icon-left">
+                                <i class="pi pi-search" />
+                                <p:inputText id="globalFilter"
+                                             onkeyup="PF('dtUsuarios').filter()"
+                                             placeholder="Buscar por nombre, correo, CI o rol..."
+                                             style="width: 280px;" />
+                            </span>
+                        </div>
+                    </f:facet>
+
+                    <p:column headerText="ID" sortBy="#{u.id()}" style="width: 70px; text-align: center;">
+                        <span class="cuy-mono">##{u.id()}</span>
+                    </p:column>
+
+                    <p:column headerText="Nombre Completo" sortBy="#{u.nombre()}" filterBy="#{u.nombre()}" filterMatchMode="contains">
+                        <strong style="color: #0f2942;">#{u.nombre()}</strong>
+                        <div style="font-size: 0.78rem; color: #64748b;">#{u.mail()}</div>
+                    </p:column>
+
+                    <p:column headerText="Cédula (CI)" sortBy="#{u.ci()}" filterBy="#{u.ci()}" filterMatchMode="contains" style="width: 120px;">
+                        <span class="cuy-mono">#{u.ci()}</span>
+                    </p:column>
+
+                    <p:column headerText="Rol Principal" sortBy="#{u.tipo()}" filterBy="#{u.tipo()}" filterMatchMode="contains" style="width: 150px;">
+                        <p:tag value="#{u.tipo()}"
+                               severity="#{u.tipo() eq 'ADMINISTRADOR' ? 'danger' : (u.tipo() eq 'AUTORIDAD' ? 'warning' : (u.tipo() eq 'FUNCIONARIO' ? 'info' : 'success'))}"
+                               rounded="true" />
+                    </p:column>
+
+                    <p:column headerText="Roles Asignados" style="width: 200px;">
+                        <div style="font-size: 0.8rem; color: #334155;">
+                            #{u.roles()}
+                        </div>
+                    </p:column>
+
+                    <p:column headerText="Estado" sortBy="#{u.activo()}" style="width: 115px; text-align: center;">
+                        <p:tag value="#{u.activo() ? 'ACTIVO' : 'INACTIVO'}"
+                               severity="#{u.activo() ? 'success' : 'danger'}"
+                               rounded="true" />
+                    </p:column>
+
+                    <p:column headerText="Acciones" style="width: 180px; text-align: center;" exportable="false">
+                        <div style="display: flex; justify-content: center; gap: 0.35rem;">
+                            <p:commandButton icon="pi pi-pencil"
+                                             title="Editar Datos del Usuario"
+                                             actionListener="#{adminUsuariosBean.prepararEdicionUsuario(u)}"
+                                             update=":dlgUsuarioForm"
+                                             oncomplete="PF('dlgUsuarioWidget').show()"
+                                             styleClass="ui-button-outlined ui-button-info ui-button-sm" />
+
+                            <p:commandButton icon="pi pi-key"
+                                             title="Asignar Roles y Vincular Identidad LDAP / gub.uy"
+                                             actionListener="#{adminUsuariosBean.prepararRolesEIdentidad(u)}"
+                                             update=":dlgIdentidadForm"
+                                             oncomplete="PF('dlgIdentidadWidget').show()"
+                                             styleClass="ui-button-outlined ui-button-warning ui-button-sm" />
+
+                            <p:commandButton icon="pi pi-ban"
+                                             title="Desactivar Cuenta"
+                                             rendered="#{u.activo()}"
+                                             actionListener="#{adminUsuariosBean.cambiarEstado(u, false)}"
+                                             update="tablaUsuarios :kpiUsrGroup"
+                                             styleClass="ui-button-outlined ui-button-danger ui-button-sm">
+                                <p:confirm header="Confirmar Baja de Usuario"
+                                           message="¿Confirma desactivar el acceso de #{u.nombre()}?"
+                                           icon="pi pi-exclamation-triangle" />
+                            </p:commandButton>
+
+                            <p:commandButton icon="pi pi-check"
+                                             title="Reactivar Cuenta"
+                                             rendered="#{not u.activo()}"
+                                             actionListener="#{adminUsuariosBean.cambiarEstado(u, true)}"
+                                             update="tablaUsuarios :kpiUsrGroup"
+                                             styleClass="ui-button-outlined ui-button-success ui-button-sm" />
+                        </div>
+                    </p:column>
+                </p:dataTable>
+            </div>
+        </h:form>
+
+        <!-- Modal Crear / Editar Usuario -->
+        <p:dialog header="#{adminUsuariosBean.modoEdicion ? 'Editar Usuario' : 'Registrar Nuevo Usuario'}"
+                  widgetVar="dlgUsuarioWidget"
+                  modal="true"
+                  responsive="true"
+                  width="580"
+                  closeOnEscape="true">
+            <h:form id="dlgUsuarioForm" styleClass="ui-fluid">
+                <div class="cuy-form-grid-2">
+                    <div class="cuy-field">
+                        <p:outputLabel for="tipoUsr" value="Tipo / Rol Base *" />
+                        <p:selectOneMenu id="tipoUsr" value="#{adminUsuariosBean.tipoForm}" disabled="#{adminUsuariosBean.modoEdicion}">
+                            <f:selectItem itemLabel="CIUDADANO (Empresa)" itemValue="CIUDADANO" />
+                            <f:selectItem itemLabel="CHOFER" itemValue="CHOFER" />
+                            <f:selectItem itemLabel="FUNCIONARIO" itemValue="FUNCIONARIO" />
+                            <f:selectItem itemLabel="AUTORIDAD" itemValue="AUTORIDAD" />
+                            <f:selectItem itemLabel="ADMINISTRADOR" itemValue="ADMINISTRADOR" />
+                        </p:selectOneMenu>
+                    </div>
+                    <div class="cuy-field">
+                        <p:outputLabel for="ciUsr" value="Cédula de Identidad *" />
+                        <p:inputNumber id="ciUsr" value="#{adminUsuariosBean.ciForm}" decimalPlaces="0" thousandSeparator="" required="true" />
+                    </div>
+                    <div class="cuy-field">
+                        <p:outputLabel for="nomUsr" value="Nombre Completo *" />
+                        <p:inputText id="nomUsr" value="#{adminUsuariosBean.nombreForm}" required="true" />
+                    </div>
+                    <div class="cuy-field">
+                        <p:outputLabel for="mailUsr" value="Correo Electrónico *" />
+                        <p:inputText id="mailUsr" value="#{adminUsuariosBean.mailForm}" required="true" />
+                    </div>
+                    <div class="cuy-field">
+                        <p:outputLabel for="fnacUsr" value="Fecha de Nacimiento *" />
+                        <p:datePicker id="fnacUsr" value="#{adminUsuariosBean.fechaNacForm}" pattern="yyyy-MM-dd" showIcon="true" required="true" />
+                    </div>
+                    <ui:fragment rendered="#{not adminUsuariosBean.modoEdicion}">
+                        <div class="cuy-field">
+                            <p:outputLabel for="pwdUsr" value="Contraseña Inicial *" />
+                            <p:password id="pwdUsr" value="#{adminUsuariosBean.passwordForm}" redisplay="true" />
+                        </div>
+                    </ui:fragment>
+                    <div class="cuy-field">
+                        <p:outputLabel for="nroFuncUsr" value="N° Funcionario (Si aplica)" />
+                        <p:inputNumber id="nroFuncUsr" value="#{adminUsuariosBean.nroFuncionarioForm}" decimalPlaces="0" thousandSeparator="" />
+                    </div>
+                    <div class="cuy-field">
+                        <p:outputLabel for="depUsr" value="Departamento / Cargo (Si aplica)" />
+                        <p:inputText id="depUsr" value="#{adminUsuariosBean.departamentoForm}" placeholder="Ej. Fiscalización Vial" />
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.25rem;">
+                    <p:commandButton value="Cancelar" type="button" onclick="PF('dlgUsuarioWidget').hide()" styleClass="ui-button-outlined ui-button-secondary" style="width: auto;" />
+                    <p:commandButton value="Guardar Usuario"
+                                     icon="pi pi-check"
+                                     actionListener="#{adminUsuariosBean.guardarUsuario}"
+                                     update=":usuariosForm:tablaUsuarios :kpiUsrGroup"
+                                     oncomplete="if (!args.validationFailed) PF('dlgUsuarioWidget').hide()"
+                                     styleClass="ui-button-primary"
+                                     style="width: auto;" />
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <!-- Modal Roles e Identidad Federada (LDAP / gub.uy) -->
+        <p:dialog header="Asignación de Roles RBAC y Federación de Identidad"
+                  widgetVar="dlgIdentidadWidget"
+                  modal="true"
+                  responsive="true"
+                  width="560"
+                  closeOnEscape="true">
+            <h:form id="dlgIdentidadForm" styleClass="ui-fluid">
+                <h:panelGroup rendered="#{adminUsuariosBean.usuarioIdentidadSel != null}">
+                    <div style="background: #f8fafc; padding: 0.8rem 1rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 1rem;">
+                        <strong>#{adminUsuariosBean.usuarioIdentidadSel.nombre()}</strong> (ID ##{adminUsuariosBean.usuarioIdentidadSel.id()})
+                    </div>
+
+                    <!-- Bloque 1: Roles -->
+                    <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                        <div style="font-weight: 700; color: #0f2942; margin-bottom: 0.5rem;">
+                            <i class="pi pi-shield" style="color: #2563eb;" /> Roles Habilitados
+                        </div>
+                        <p:selectManyCheckbox value="#{adminUsuariosBean.rolesSeleccionados}" layout="responsive" columns="2">
+                            <f:selectItem itemLabel="CIUDADANO" itemValue="CIUDADANO" />
+                            <f:selectItem itemLabel="CHOFER" itemValue="CHOFER" />
+                            <f:selectItem itemLabel="FUNCIONARIO" itemValue="FUNCIONARIO" />
+                            <f:selectItem itemLabel="AUTORIDAD" itemValue="AUTORIDAD" />
+                            <f:selectItem itemLabel="ADMINISTRADOR" itemValue="ADMINISTRADOR" />
+                        </p:selectManyCheckbox>
+                        <div style="margin-top: 0.75rem; text-align: right;">
+                            <p:commandButton value="Actualizar Roles"
+                                             icon="pi pi-save"
+                                             actionListener="#{adminUsuariosBean.guardarRoles}"
+                                             update=":usuariosForm:tablaUsuarios"
+                                             styleClass="ui-button-primary"
+                                             style="width: auto;" />
+                        </div>
+                    </div>
+
+                    <!-- Bloque 2: Identidad Federada -->
+                    <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem;">
+                        <div style="font-weight: 700; color: #0f2942; margin-bottom: 0.75rem;">
+                            <i class="pi pi-key" style="color: #d97706;" /> Vincular Proveedor Externo (OpenLDAP / gub.uy)
+                        </div>
+                        <div class="cuy-form-grid-2">
+                            <div class="cuy-field">
+                                <p:outputLabel for="origIdSel" value="Proveedor" />
+                                <p:selectOneMenu id="origIdSel" value="#{adminUsuariosBean.origenIdentidadForm}">
+                                    <f:selectItem itemLabel="OpenLDAP (Staff)" itemValue="LDAP" />
+                                    <f:selectItem itemLabel="Usuario gub.uy (OIDC)" itemValue="GUB" />
+                                </p:selectOneMenu>
+                            </div>
+                            <div class="cuy-field">
+                                <p:outputLabel for="uidExtInput" value="UID / Subject Externo" />
+                                <p:inputText id="uidExtInput" value="#{adminUsuariosBean.uidExternoForm}" placeholder="Ej. martin.admin" />
+                            </div>
+                        </div>
+                        <div style="margin-top: 0.85rem; text-align: right;">
+                            <p:commandButton value="Vincular Identidad"
+                                             icon="pi pi-link"
+                                             actionListener="#{adminUsuariosBean.vincularIdentidadExterna}"
+                                             update=":usuariosForm:tablaUsuarios"
+                                             styleClass="ui-button-warning"
+                                             style="width: auto;" />
+                        </div>
+                    </div>
+                </h:panelGroup>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>

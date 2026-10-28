@@ -1,0 +1,205 @@
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/templates/template.xhtml">
+
+    <ui:define name="title">Fiscalización de Flota e ITV/PNC</ui:define>
+
+    <ui:define name="content">
+        <div class="cuy-page-header">
+            <div>
+                <h1 class="cuy-page-title">
+                    <i class="pi pi-car" style="color: #1d4ed8;" />
+                    Fiscalización Documental de Flotas (ITV y PNC)
+                </h1>
+                <p class="cuy-page-subtitle">
+                    Control de vigencia de Inspección Técnica Vehicular (ITV) y Permiso Nacional de Circulación (PNC) con alertas tempranas de vencimiento
+                </p>
+            </div>
+            <div>
+                <h:form id="refreshFlotaForm" style="margin: 0;">
+                    <p:commandButton value="Actualizar Estado Documental"
+                                     icon="pi pi-refresh"
+                                     actionListener="#{fiscalizacionFlotaBean.cargarFlota}"
+                                     update=":flotaFiscForm :kpiFlotaFisc"
+                                     styleClass="ui-button-outlined ui-button-secondary" />
+                </h:form>
+            </div>
+        </div>
+
+        <!-- KPIs -->
+        <h:panelGroup id="kpiFlotaFisc" layout="block" styleClass="cuy-kpi-grid">
+            <div class="cuy-kpi-card">
+                <div class="cuy-kpi-label"><i class="pi pi-truck" /> Total Unidades en Padrón</div>
+                <div class="cuy-kpi-value">#{fiscalizacionFlotaBean.totalUnidades}</div>
+            </div>
+            <div class="cuy-kpi-card success">
+                <div class="cuy-kpi-label"><i class="pi pi-verified" /> Documentación en Regla</div>
+                <div class="cuy-kpi-value">#{fiscalizacionFlotaBean.totalEnRegla}</div>
+            </div>
+            <div class="cuy-kpi-card danger">
+                <div class="cuy-kpi-label"><i class="pi pi-exclamation-triangle" /> Con Alerta / Vencimiento</div>
+                <div class="cuy-kpi-value">#{fiscalizacionFlotaBean.totalConAlerta}</div>
+            </div>
+        </h:panelGroup>
+
+        <h:form id="flotaFiscForm">
+            <div class="cuy-card">
+                <p:dataTable id="tablaFlotaFisc"
+                             var="veh"
+                             value="#{fiscalizacionFlotaBean.vehiculos}"
+                             filteredValue="#{fiscalizacionFlotaBean.vehiculosFiltrados}"
+                             widgetVar="dtFlotaFisc"
+                             paginator="true"
+                             rows="10"
+                             paginatorPosition="bottom"
+                             stripedRows="true"
+                             size="small"
+                             emptyMessage="No hay unidades vehiculares registradas en el sistema.">
+
+                    <f:facet name="header">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                            <span style="font-weight: 700; color: #0f2942;">
+                                <i class="pi pi-shield" style="margin-right: 0.4rem;" /> Matriz de Vigencia Documental por Unidad
+                            </span>
+                            <span class="ui-input-icon-left">
+                                <i class="pi pi-search" />
+                                <p:inputText id="globalFilter"
+                                             onkeyup="PF('dtFlotaFisc').filter()"
+                                             placeholder="Buscar por matrícula, marca o modelo..."
+                                             style="width: 280px;" />
+                            </span>
+                        </div>
+                    </f:facet>
+
+                    <p:column headerText="Matrícula" sortBy="#{veh.matricula}" filterBy="#{veh.matricula}" filterMatchMode="contains" style="width: 130px;">
+                        <span class="cuy-mono"><i class="pi pi-car" /> #{veh.matricula}</span>
+                    </p:column>
+
+                    <p:column headerText="Unidad (Marca / Modelo)" sortBy="#{veh.marca}" filterBy="#{veh.marca}" filterMatchMode="contains">
+                        <strong style="color: #0f2942;">#{veh.marca} #{veh.modelo}</strong>
+                        <div style="font-size: 0.78rem; color: #64748b;">
+                            Capacidad: #{veh.capacidadCarga} kg | Peso: #{veh.peso} kg
+                        </div>
+                    </p:column>
+
+                    <p:column headerText="Habilitación Base" sortBy="#{veh.estadoHabilitacion}" style="width: 140px; text-align: center;">
+                        <p:tag value="#{veh.estadoHabilitacion ? 'HABILITADO' : 'SUSPENDIDO'}"
+                               severity="#{veh.estadoHabilitacion ? 'success' : 'danger'}"
+                               rounded="true" />
+                    </p:column>
+
+                    <p:column headerText="Vigencia ITV" style="width: 185px; text-align: center;">
+                        <ui:param name="vencItv" value="#{fiscalizacionFlotaBean.obtenerVencimientoItv(veh.matricula)}" />
+                        <p:tag value="#{fiscalizacionFlotaBean.obtenerEstadoVigencia(vencItv)}"
+                               severity="#{fiscalizacionFlotaBean.obtenerSeveridadVigencia(vencItv)}"
+                               icon="#{fiscalizacionFlotaBean.obtenerSeveridadVigencia(vencItv) eq 'success' ? 'pi pi-check-circle' : 'pi pi-exclamation-triangle'}"
+                               rounded="true" />
+                        <div style="font-size: 0.76rem; color: #475569; margin-top: 0.2rem;">
+                            #{vencItv != null ? 'Vence: '.concat(vencItv.toString()) : 'Sin registro ITV'}
+                        </div>
+                    </p:column>
+
+                    <p:column headerText="Vigencia Permiso (PNC)" style="width: 185px; text-align: center;">
+                        <ui:param name="vencPnc" value="#{fiscalizacionFlotaBean.obtenerVencimientoPnc(veh.matricula)}" />
+                        <p:tag value="#{fiscalizacionFlotaBean.obtenerEstadoVigencia(vencPnc)}"
+                               severity="#{fiscalizacionFlotaBean.obtenerSeveridadVigencia(vencPnc)}"
+                               icon="#{fiscalizacionFlotaBean.obtenerSeveridadVigencia(vencPnc) eq 'success' ? 'pi pi-check-circle' : 'pi pi-exclamation-triangle'}"
+                               rounded="true" />
+                        <div style="font-size: 0.76rem; color: #475569; margin-top: 0.2rem;">
+                            #{vencPnc != null ? 'Vence: '.concat(vencPnc.toString()) : 'Sin registro PNC'}
+                        </div>
+                    </p:column>
+
+                    <p:column headerText="Aptitud Operativa" style="width: 150px; text-align: center;">
+                        <p:tag value="#{fiscalizacionFlotaBean.tieneDocumentacionEnRegla(veh) ? 'APTO RUTA' : 'BLOQUEADO / ALERTA'}"
+                               severity="#{fiscalizacionFlotaBean.tieneDocumentacionEnRegla(veh) ? 'success' : 'danger'}"
+                               rounded="true" />
+                    </p:column>
+
+                    <p:column headerText="Certificados / Estado" style="width: 195px; text-align: center;" exportable="false">
+                        <div style="display: flex; justify-content: center; gap: 0.35rem;">
+                            <p:commandButton value="Emitir / Renovar"
+                                             icon="pi pi-calendar-plus"
+                                             actionListener="#{fiscalizacionFlotaBean.seleccionarVehiculo(veh)}"
+                                             update=":dlgCertificadosForm"
+                                             oncomplete="PF('dlgCertificadosWidget').show()"
+                                             styleClass="ui-button-outlined ui-button-primary ui-button-sm" />
+                            <p:commandButton icon="#{veh.estadoHabilitacion ? 'pi pi-ban' : 'pi pi-check'}"
+                                             title="#{veh.estadoHabilitacion ? 'Suspender Unidad' : 'Habilitar Unidad'}"
+                                             actionListener="#{fiscalizacionFlotaBean.alternarHabilitacionBase(veh)}"
+                                             update="tablaFlotaFisc :kpiFlotaFisc"
+                                             styleClass="ui-button-outlined #{veh.estadoHabilitacion ? 'ui-button-danger' : 'ui-button-success'} ui-button-sm" />
+                        </div>
+                    </p:column>
+                </p:dataTable>
+            </div>
+        </h:form>
+
+        <!-- Modal de Renovación de ITV y PNC -->
+        <p:dialog header="Emisión y Renovación de Certificados (ITV / PNC)"
+                  widgetVar="dlgCertificadosWidget"
+                  modal="true"
+                  responsive="true"
+                  width="540"
+                  closeOnEscape="true">
+            <h:form id="dlgCertificadosForm">
+                <h:panelGroup rendered="#{fiscalizacionFlotaBean.vehiculoSeleccionado != null}">
+                    <div style="background: #f8fafc; padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 1.1rem;">
+                        <div style="font-size: 0.78rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Unidad Seleccionada</div>
+                        <div style="font-size: 1.1rem; font-weight: 800; color: #0f2942;">
+                            <span class="cuy-mono">#{fiscalizacionFlotaBean.vehiculoSeleccionado.matricula}</span>
+                            &#8226; #{fiscalizacionFlotaBean.vehiculoSeleccionado.marca} #{fiscalizacionFlotaBean.vehiculoSeleccionado.modelo}
+                        </div>
+                    </div>
+
+                    <div class="ui-fluid">
+                        <!-- Bloque ITV -->
+                        <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                            <div style="font-weight: 700; color: #0f2942; margin-bottom: 0.5rem;">
+                                <i class="pi pi-wrench" style="color: #2563eb;" /> Inspección Técnica Vehicular (ITV)
+                            </div>
+                            <p:outputLabel for="fecItv" value="Nueva Fecha de Vencimiento ITV" />
+                            <div style="display: flex; gap: 0.6rem; margin-top: 0.35rem;">
+                                <p:datePicker id="fecItv" value="#{fiscalizacionFlotaBean.nuevaFechaItv}" pattern="yyyy-MM-dd" showIcon="true" />
+                                <p:commandButton value="Emitir ITV"
+                                                 icon="pi pi-check"
+                                                 actionListener="#{fiscalizacionFlotaBean.registrarRenovacionItv}"
+                                                 update=":flotaFiscForm:tablaFlotaFisc :kpiFlotaFisc"
+                                                 styleClass="ui-button-success"
+                                                 style="width: auto;" />
+                            </div>
+                        </div>
+
+                        <!-- Bloque PNC -->
+                        <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem;">
+                            <div style="font-weight: 700; color: #0f2942; margin-bottom: 0.5rem;">
+                                <i class="pi pi-id-card" style="color: #2563eb;" /> Permiso Nacional de Circulación (PNC)
+                            </div>
+                            <p:outputLabel for="fecPnc" value="Nueva Fecha de Vencimiento PNC" />
+                            <div style="display: flex; gap: 0.6rem; margin-top: 0.35rem;">
+                                <p:datePicker id="fecPnc" value="#{fiscalizacionFlotaBean.nuevaFechaPnc}" pattern="yyyy-MM-dd" showIcon="true" />
+                                <p:commandButton value="Emitir PNC"
+                                                 icon="pi pi-check"
+                                                 actionListener="#{fiscalizacionFlotaBean.registrarRenovacionPnc}"
+                                                 update=":flotaFiscForm:tablaFlotaFisc :kpiFlotaFisc"
+                                                 styleClass="ui-button-primary"
+                                                 style="width: auto;" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; margin-top: 1.1rem;">
+                        <p:commandButton value="Cerrar"
+                                         type="button"
+                                         icon="pi pi-times"
+                                         onclick="PF('dlgCertificadosWidget').hide()"
+                                         styleClass="ui-button-outlined ui-button-secondary" />
+                    </div>
+                </h:panelGroup>
+            </h:form>
+        </p:dialog>
+    </ui:define>
+</ui:composition>

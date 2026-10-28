@@ -1,0 +1,146 @@
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/templates/template.xhtml">
+
+    <ui:define name="title">Validación Pública de Empresas</ui:define>
+
+    <ui:define name="content">
+
+        <div class="cuy-page-header">
+            <div>
+                <h1 class="cuy-page-title">
+                    <i class="pi pi-verified" style="color: var(--cuy-accent);" />
+                    Consulta y Validación Pública de Empresas
+                </h1>
+                <p class="cuy-page-subtitle">
+                    Verifique el estado registral y la cantidad de unidades habilitadas de cualquier empresa transportista.
+                </p>
+            </div>
+        </div>
+
+        <!-- Buscador Público -->
+        <div class="cuy-card">
+            <h:form id="formBusquedaPublica">
+                <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                    <span class="ui-input-icon-left" style="flex: 1; min-width: 260px;">
+                        <i class="pi pi-search" />
+                        <p:inputText value="#{portalPublicoBean.criterioBusquedaEmpresa}"
+                                     placeholder="Ingrese Nro. de Empresa, Razón Social o Nombre Público..."
+                                     style="width: 100%;" />
+                    </span>
+                    <p:commandButton value="Validar en Padrón"
+                                     icon="pi pi-search"
+                                     actionListener="#{portalPublicoBean.buscarEmpresa}"
+                                     update=":formTablaValidacion"
+                                     styleClass="ui-button-primary" />
+                    <p:commandButton value="Ver Todas"
+                                     icon="pi pi-refresh"
+                                     actionListener="#{portalPublicoBean.limpiarBusqueda}"
+                                     update="@form :formTablaValidacion"
+                                     styleClass="ui-button-secondary ui-button-outlined" />
+                </div>
+            </h:form>
+        </div>
+
+        <!-- Resultados en p:dataTable -->
+        <div class="cuy-card">
+            <h:form id="formTablaValidacion">
+                <p:dataTable id="tablaEmpresasPublicas"
+                             value="#{portalPublicoBean.empresasResultado}"
+                             var="emp"
+                             paginator="true"
+                             rows="10"
+                             paginatorPosition="bottom"
+                             emptyMessage="No se encontraron empresas que coincidan con el criterio de validación."
+                             stripedRows="true"
+                             size="small"
+                             reflow="true">
+
+                    <p:column headerText="Nro. Registro" sortBy="#{emp.nroEmpresa}" style="width: 130px; text-align: center;">
+                        <span class="cuy-mono">##{emp.nroEmpresa}</span>
+                    </p:column>
+
+                    <p:column headerText="Razón Social" sortBy="#{emp.razonSocial}" filterBy="#{emp.razonSocial}" filterMatchMode="contains">
+                        <strong>#{emp.razonSocial}</strong>
+                    </p:column>
+
+                    <p:column headerText="Nombre Comercial" sortBy="#{emp.nombrePublico}" filterBy="#{emp.nombrePublico}" filterMatchMode="contains">
+                        <h:outputText value="#{emp.nombrePublico}" />
+                    </p:column>
+
+                    <p:column headerText="Domicilio Fiscal" sortBy="#{emp.direccion}">
+                        <h:outputText value="#{emp.direccion}" />
+                    </p:column>
+
+                    <p:column headerText="Unidades Habilitadas" style="width: 170px; text-align: center;">
+                        <p:tag value="#{portalPublicoBean.contarVehiculosHabilitadosEmpresa(emp.nroEmpresa)} / #{portalPublicoBean.contarVehiculosEmpresa(emp.nroEmpresa)} activas"
+                               severity="info"
+                               icon="pi pi-car"
+                               rounded="true" />
+                    </p:column>
+
+                    <p:column headerText="Estado Registral" sortBy="#{emp.activa}" style="width: 150px; text-align: center;">
+                        <p:tag value="#{emp.activa ? 'HABILITADA' : 'INACTIVA / BAJA'}"
+                               severity="#{emp.activa ? 'success' : 'danger'}"
+                               icon="#{emp.activa ? 'pi pi-check-circle' : 'pi pi-times-circle'}"
+                               rounded="true" />
+                    </p:column>
+
+                    <p:column headerText="Certificado" style="width: 130px; text-align: center;">
+                        <p:commandButton value="Ver Ficha"
+                                         icon="pi pi-id-card"
+                                         actionListener="#{portalPublicoBean.seleccionarEmpresa(emp)}"
+                                         update=":dialogFichaPublica"
+                                         oncomplete="PF('wvFichaPublica').show()"
+                                         styleClass="ui-button-outlined ui-button-sm" />
+                    </p:column>
+
+                </p:dataTable>
+            </h:form>
+        </div>
+
+        <!-- Diálogo de Constancia de Validación Pública -->
+        <p:dialog id="dialogFichaPublica"
+                  widgetVar="wvFichaPublica"
+                  header="Constancia de Situación Registral"
+                  modal="true"
+                  responsive="true"
+                  width="520"
+                  closeOnEscape="true">
+            <p:outputPanel rendered="#{not empty portalPublicoBean.empresaInspeccionada}">
+                <div style="text-align: center; padding: 0.75rem 0 1.25rem 0;">
+                    <p:tag value="#{portalPublicoBean.empresaInspeccionada.activa ? 'EMPRESA HABILITADA POR DNT / MTOP' : 'EMPRESA NO HABILITADA'}"
+                           severity="#{portalPublicoBean.empresaInspeccionada.activa ? 'success' : 'danger'}"
+                           style="font-size: 0.9rem; padding: 0.4rem 0.85rem;"
+                           rounded="true" />
+                    <h2 style="margin: 0.75rem 0 0.25rem 0; color: var(--cuy-primary);">
+                        #{portalPublicoBean.empresaInspeccionada.razonSocial}
+                    </h2>
+                    <span style="color: var(--cuy-muted);">Registro Nro. #{portalPublicoBean.empresaInspeccionada.nroEmpresa}</span>
+                </div>
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem;" class="cuy-form-grid-2">
+                    <div>
+                        <div style="font-size: 0.78rem; color: var(--cuy-muted); text-transform: uppercase; font-weight: 700;">Nombre Público</div>
+                        <div style="font-weight: 700; color: var(--cuy-primary); margin-top: 0.2rem;">#{portalPublicoBean.empresaInspeccionada.nombrePublico}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.78rem; color: var(--cuy-muted); text-transform: uppercase; font-weight: 700;">Domicilio Declarado</div>
+                        <div style="font-weight: 700; color: var(--cuy-primary); margin-top: 0.2rem;">#{portalPublicoBean.empresaInspeccionada.direccion}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.78rem; color: var(--cuy-muted); text-transform: uppercase; font-weight: 700;">Unidades Registradas</div>
+                        <div style="font-weight: 700; color: var(--cuy-primary); margin-top: 0.2rem;">#{portalPublicoBean.contarVehiculosEmpresa(portalPublicoBean.empresaInspeccionada.nroEmpresa)} vehículos</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 0.78rem; color: var(--cuy-muted); text-transform: uppercase; font-weight: 700;">Unidades Habilitadas</div>
+                        <div style="font-weight: 700; color: #059669; margin-top: 0.2rem;">#{portalPublicoBean.contarVehiculosHabilitadosEmpresa(portalPublicoBean.empresaInspeccionada.nroEmpresa)} unidades operativas</div>
+                    </div>
+                </div>
+            </p:outputPanel>
+        </p:dialog>
+
+    </ui:define>
+</ui:composition>
