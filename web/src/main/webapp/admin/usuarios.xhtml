@@ -14,9 +14,6 @@
                     <i class="pi pi-users" style="color: #1d4ed8;" />
                     Gestión de Usuarios, Roles RBAC e Identidades Federadas
                 </h1>
-                <p class="cuy-page-subtitle">
-                    ABM de cuentas del sistema, asignación de roles internos/externos y federación con OpenLDAP y Usuario gub.uy
-                </p>
             </div>
             <div>
                 <h:form id="usrTopForm" style="margin: 0;">
@@ -88,7 +85,13 @@
                         <span class="cuy-mono">#{u.ci()}</span>
                     </p:column>
 
-                    <p:column headerText="Rol Principal" sortBy="#{u.tipo()}" filterBy="#{u.tipo()}" filterMatchMode="contains" style="width: 150px;">
+                    <p:column headerText="Rol Principal" sortBy="#{u.tipo()}" filterBy="#{u.tipo()}" filterMatchMode="exact" style="width: 160px; text-align: center;">
+                        <f:facet name="filter">
+                            <p:selectOneMenu onchange="PF('dtUsuarios').filter()" styleClass="ui-custom-filter" style="width: 100%;">
+                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItems value="#{adminUsuariosBean.tiposUsuario}" />
+                            </p:selectOneMenu>
+                        </f:facet>
                         <p:tag value="#{u.tipo()}"
                                severity="#{u.tipo() eq 'ADMINISTRADOR' ? 'danger' : (u.tipo() eq 'AUTORIDAD' ? 'warning' : (u.tipo() eq 'FUNCIONARIO' ? 'info' : 'success'))}"
                                rounded="true" />
@@ -100,7 +103,14 @@
                         </div>
                     </p:column>
 
-                    <p:column headerText="Estado" sortBy="#{u.activo()}" style="width: 115px; text-align: center;">
+                    <p:column headerText="Estado" sortBy="#{u.activo()}" filterBy="#{u.activo()}" filterMatchMode="exact" style="width: 140px; text-align: center;">
+                        <f:facet name="filter">
+                            <p:selectOneMenu onchange="PF('dtUsuarios').filter()" styleClass="ui-custom-filter" style="width: 100%;">
+                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItem itemLabel="ACTIVO" itemValue="true" />
+                                <f:selectItem itemLabel="INACTIVO" itemValue="false" />
+                            </p:selectOneMenu>
+                        </f:facet>
                         <p:tag value="#{u.activo() ? 'ACTIVO' : 'INACTIVO'}"
                                severity="#{u.activo() ? 'success' : 'danger'}"
                                rounded="true" />
@@ -155,7 +165,7 @@
             <h:form id="dlgUsuarioForm" styleClass="ui-fluid">
                 <div class="cuy-form-grid-2">
                     <div class="cuy-field">
-                        <p:outputLabel for="tipoUsr" value="Tipo / Rol Base *" />
+                        <p:outputLabel for="tipoUsr" value="Tipo / Rol Base" />
                         <p:selectOneMenu id="tipoUsr" value="#{adminUsuariosBean.tipoForm}" disabled="#{adminUsuariosBean.modoEdicion}">
                             <f:selectItem itemLabel="CIUDADANO (Empresa)" itemValue="CIUDADANO" />
                             <f:selectItem itemLabel="CHOFER" itemValue="CHOFER" />
@@ -165,24 +175,24 @@
                         </p:selectOneMenu>
                     </div>
                     <div class="cuy-field">
-                        <p:outputLabel for="ciUsr" value="Cédula de Identidad *" />
-                        <p:inputNumber id="ciUsr" value="#{adminUsuariosBean.ciForm}" decimalPlaces="0" thousandSeparator="" required="true" />
+                        <p:outputLabel for="ciUsr" value="Cédula de Identidad" />
+                        <p:inputNumber id="ciUsr" value="#{adminUsuariosBean.ciForm}" decimalPlaces="0" thousandSeparator="" required="true" disabled="#{adminUsuariosBean.modoEdicion}" />
                     </div>
                     <div class="cuy-field">
-                        <p:outputLabel for="nomUsr" value="Nombre Completo *" />
+                        <p:outputLabel for="nomUsr" value="Nombre Completo" />
                         <p:inputText id="nomUsr" value="#{adminUsuariosBean.nombreForm}" required="true" />
                     </div>
                     <div class="cuy-field">
-                        <p:outputLabel for="mailUsr" value="Correo Electrónico *" />
+                        <p:outputLabel for="mailUsr" value="Correo Electrónico" />
                         <p:inputText id="mailUsr" value="#{adminUsuariosBean.mailForm}" required="true" />
                     </div>
                     <div class="cuy-field">
-                        <p:outputLabel for="fnacUsr" value="Fecha de Nacimiento *" />
+                        <p:outputLabel for="fnacUsr" value="Fecha de Nacimiento" />
                         <p:datePicker id="fnacUsr" value="#{adminUsuariosBean.fechaNacForm}" pattern="yyyy-MM-dd" showIcon="true" required="true" />
                     </div>
                     <ui:fragment rendered="#{not adminUsuariosBean.modoEdicion}">
                         <div class="cuy-field">
-                            <p:outputLabel for="pwdUsr" value="Contraseña Inicial *" />
+                            <p:outputLabel for="pwdUsr" value="Contraseña Inicial" />
                             <p:password id="pwdUsr" value="#{adminUsuariosBean.passwordForm}" redisplay="true" />
                         </div>
                     </ui:fragment>

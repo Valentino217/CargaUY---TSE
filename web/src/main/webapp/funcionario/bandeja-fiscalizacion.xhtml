@@ -20,11 +20,6 @@
             </div>
             <div style="display: flex; gap: 0.6rem;">
                 <h:form id="bandejaTopForm" style="margin: 0; display: flex; gap: 0.6rem;">
-                    <p:commandButton value="Evaluar Guía en Motor"
-                                     icon="pi pi-bolt"
-                                     type="button"
-                                     onclick="PF('dlgMotorWidget').show()"
-                                     styleClass="ui-button-warning" />
                     <p:commandButton value="Actualizar Bandeja"
                                      icon="pi pi-refresh"
                                      actionListener="#{bandejaFiscalizacionBean.cargarCasos}"
@@ -87,7 +82,7 @@
                         <span class="cuy-mono">#<h:outputText value="#{caso.idCaso()}" /></span>
                     </p:column>
 
-                    <p:column headerText="Fecha" sortBy="#{caso.fecha()}" style="width: 110px;">
+                    <p:column headerText="Fecha" sortBy="#{caso.fecha()}" filterBy="#{caso.fecha()}" filterMatchMode="contains" style="width: 130px;">
                         <h:outputText value="#{caso.fecha()}" />
                     </p:column>
 
@@ -98,7 +93,13 @@
                         </div>
                     </p:column>
 
-                    <p:column headerText="Tipo Infracción" sortBy="#{caso.tipo()}" filterBy="#{caso.tipo()}" filterMatchMode="contains" style="width: 185px;">
+                    <p:column headerText="Tipo Infracción" sortBy="#{caso.tipo()}" filterBy="#{caso.tipo()}" filterMatchMode="exact" style="width: 185px;">
+                        <f:facet name="filter">
+                            <p:selectOneMenu onchange="PF('dtBandeja').filter()" styleClass="ui-custom-filter" style="width: 100%;">
+                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItems value="#{bandejaFiscalizacionBean.tiposInfraccion}" />
+                            </p:selectOneMenu>
+                        </f:facet>
                         <p:tag value="#{caso.tipo()}"
                                severity="#{caso.tipo().name() eq 'EXCESO_PESO' ? 'danger' : (caso.tipo().name() eq 'DESVIO_RUTA' ? 'warning' : 'info')}"
                                icon="pi pi-exclamation-triangle"
@@ -112,7 +113,13 @@
                                rounded="true" />
                     </p:column>
 
-                    <p:column headerText="Estado" sortBy="#{caso.estado()}" filterBy="#{caso.estado()}" filterMatchMode="contains" style="width: 150px; text-align: center;">
+                    <p:column headerText="Estado" sortBy="#{caso.estado()}" filterBy="#{caso.estado()}" filterMatchMode="exact" style="width: 150px; text-align: center;">
+                        <f:facet name="filter">
+                            <p:selectOneMenu onchange="PF('dtBandeja').filter()" styleClass="ui-custom-filter" style="width: 100%;">
+                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItems value="#{bandejaFiscalizacionBean.estadosInfraccion}" />
+                            </p:selectOneMenu>
+                        </f:facet>
                         <p:tag value="#{caso.estado()}"
                                severity="#{caso.estado().name() eq 'CONFIRMADA' ? 'danger' : (caso.estado().name() eq 'DESESTIMADA' ? 'success' : (caso.estado().name() eq 'EN_DESCARGO' ? 'warning' : 'info'))}"
                                rounded="true" />
@@ -132,7 +139,7 @@
         </h:form>
 
         <!-- Modal Evaluar / Resolver Expediente -->
-        <p:dialog header="Evaluación de Evidencia, Revisión de Descargo y Resolución"
+        <p:dialog header="Expediente"
                   widgetVar="dlgResolverWidget"
                   modal="true"
                   responsive="true"
@@ -168,7 +175,7 @@
                         <!-- Descargo presentado por la empresa -->
                         <div style="background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #d97706; border-radius: 8px; padding: 0.9rem 1rem; margin-bottom: 1rem;">
                             <div style="font-weight: 700; color: #92400e; font-size: 0.85rem; margin-bottom: 0.3rem;">
-                                <i class="pi pi-comments" /> Descargo Presentado por la Empresa Transportista
+                                <i class="pi pi-comments" /> Descargo de la empresa
                             </div>
                             <h:panelGroup rendered="#{not empty bandejaFiscalizacionBean.casoSeleccionado.textoDescargo()}">
                                 <div style="font-size: 0.9rem; color: #78350f;">
@@ -202,14 +209,13 @@
                         <!-- InputTextarea de Fundamentos de Resolución -->
                         <div style="margin-bottom: 1rem;">
                             <p:outputLabel for="txtFundamentos"
-                                           value="Fundamentos Técnicos y Administrativos de la Resolución *"
+                                           value="Resolución"
                                            style="font-weight: 700; color: #0f2942;" />
                             <p:inputTextarea id="txtFundamentos"
                                              value="#{bandejaFiscalizacionBean.fundamentosResolucion}"
                                              rows="4"
                                              autoResize="false"
                                              readonly="#{bandejaFiscalizacionBean.casoResuelto}"
-                                             placeholder="Redacte los fundamentos que respaldan la confirmación de la sanción o la desestimación del caso..."
                                              style="margin-top: 0.35rem;" />
                         </div>
                     </div>
@@ -244,7 +250,7 @@
 
                             <p:commandButton value="Confirmar Sanción"
                                              icon="pi pi-ban"
-                                             rendered="#{not bandejaFiscalizacionBean.casoResuelto}"
+                                             rendered="#{not bandejaFiscalizacionBean.casoResuelto and (bandejaFiscalizacionBean.casoSeleccionado.estado().name() eq 'NOTIFICADA' or bandejaFiscalizacionBean.casoSeleccionado.estado().name() eq 'EN_DESCARGO')}"
                                              actionListener="#{bandejaFiscalizacionBean.confirmarSancion}"
                                              update=":bandejaForm:tablaBandeja :kpiBandejaGroup"
                                              oncomplete="if (!args.validationFailed) PF('dlgResolverWidget').hide()"
@@ -259,37 +265,5 @@
             </h:form>
         </p:dialog>
 
-        <!-- Modal Evaluar Guía en Motor de Fiscalización -->
-        <p:dialog header="Disparar Evaluación del Motor de Fiscalización"
-                  widgetVar="dlgMotorWidget"
-                  modal="true"
-                  responsive="true"
-                  width="480"
-                  closeOnEscape="true">
-            <h:form id="dlgMotorForm">
-                <div class="ui-fluid">
-                    <div style="margin-bottom: 0.9rem;">
-                        <p:outputLabel for="guiaEvalInput" value="ID de Guía de Viaje a Evaluar *" />
-                        <p:inputNumber id="guiaEvalInput" value="#{bandejaFiscalizacionBean.guiaIdFiscalizar}" decimalPlaces="0" thousandSeparator="" required="true" />
-                    </div>
-                    <div style="margin-bottom: 1rem;">
-                        <p:outputLabel for="modoEvalSel" value="Modo de Ejecución" />
-                        <p:selectOneRadio id="modoEvalSel" value="#{bandejaFiscalizacionBean.modoFiscalizacion}">
-                            <f:selectItem itemLabel="Sincrónico Directo (EJB)" itemValue="sync" />
-                            <f:selectItem itemLabel="Asíncrono (Cola JMS FiscalizacionQueue)" itemValue="async" />
-                        </p:selectOneRadio>
-                    </div>
-                </div>
-                <div style="display: flex; justify-content: flex-end; gap: 0.6rem;">
-                    <p:commandButton value="Cancelar" type="button" onclick="PF('dlgMotorWidget').hide()" styleClass="ui-button-outlined ui-button-secondary" />
-                    <p:commandButton value="Ejecutar Evaluación"
-                                     icon="pi pi-bolt"
-                                     actionListener="#{bandejaFiscalizacionBean.ejecutarFiscalizacionGuia}"
-                                     update=":bandejaForm:tablaBandeja :kpiBandejaGroup"
-                                     oncomplete="if (!args.validationFailed) PF('dlgMotorWidget').hide()"
-                                     styleClass="ui-button-warning" />
-                </div>
-            </h:form>
-        </p:dialog>
     </ui:define>
 </ui:composition>

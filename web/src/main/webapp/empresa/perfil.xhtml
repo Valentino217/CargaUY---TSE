@@ -38,17 +38,17 @@
                         </div>
 
                         <div class="cuy-field">
-                            <p:outputLabel for="nombre" value="Nombre Completo *" />
+                            <p:outputLabel for="nombre" value="Nombre Completo" />
                             <p:inputText id="nombre" value="#{empresaPerfilBean.nombreEdit}" required="true" />
                         </div>
 
                         <div class="cuy-field">
-                            <p:outputLabel for="mail" value="Correo Electrónico de Notificación *" />
+                            <p:outputLabel for="mail" value="Correo Electrónico de Notificación" />
                             <p:inputText id="mail" value="#{empresaPerfilBean.mailEdit}" required="true" />
                         </div>
 
                         <div class="cuy-field">
-                            <p:outputLabel for="fechaNac" value="Fecha de Nacimiento *" />
+                            <p:outputLabel for="fechaNac" value="Fecha de Nacimiento" />
                             <p:datePicker id="fechaNac" value="#{empresaPerfilBean.fechaNacEdit}" pattern="yyyy-MM-dd" showIcon="true" />
                         </div>
                     </div>
@@ -124,15 +124,15 @@
             <h:form id="dialogEditarEmpresaForm" styleClass="ui-fluid">
                 <p:outputPanel rendered="#{not empty empresaPerfilBean.empresaSeleccionada}">
                     <div class="cuy-field" style="margin-bottom: 1rem;">
-                        <p:outputLabel for="razonEdit" value="Razón Social *" />
+                        <p:outputLabel for="razonEdit" value="Razón Social" />
                         <p:inputText id="razonEdit" value="#{empresaPerfilBean.razonSocialEdit}" required="true" />
                     </div>
                     <div class="cuy-field" style="margin-bottom: 1rem;">
-                        <p:outputLabel for="pubEdit" value="Nombre Público / Comercial *" />
+                        <p:outputLabel for="pubEdit" value="Nombre Público / Comercial" />
                         <p:inputText id="pubEdit" value="#{empresaPerfilBean.nombrePublicoEdit}" required="true" />
                     </div>
                     <div class="cuy-field" style="margin-bottom: 1.25rem;">
-                        <p:outputLabel for="dirEdit" value="Dirección Fiscal *" />
+                        <p:outputLabel for="dirEdit" value="Dirección Fiscal" />
                         <p:inputText id="dirEdit" value="#{empresaPerfilBean.direccionEdit}" required="true" />
                     </div>
 

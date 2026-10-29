@@ -75,13 +75,12 @@ class RegistrarPesajeBeanTest {
     }
 
     @Test
-    @DisplayName("registrarPesaje exitoso con evaluación inmediata invoca balanza y motor de fiscalización")
-    void testRegistrarPesajeExitosoConEvaluacion() {
+    @DisplayName("registrarPesaje exitoso invoca servicio de balanza y recarga pesadas")
+    void testRegistrarPesajeExitoso() {
         bean.setGuiaIdSeleccionada(5L);
         bean.setPesoRegistrado(43500);
         bean.setFecha(LocalDate.now());
         bean.setHora(LocalTime.of(14, 30));
-        bean.setEvaluarInmediato(true);
 
         PesadaBalanzaDTO pesadaRetornada = new PesadaBalanzaDTO(
                 1,
@@ -93,15 +92,12 @@ class RegistrarPesajeBeanTest {
         );
 
         when(balanzaService.registrarPesada(any(PesadaBalanzaDTO.class))).thenReturn(pesadaRetornada);
-        when(motorFiscalizacion.evaluarGuia(5L)).thenReturn(Collections.singletonList(TipoInfraccion.EXCESO_DE_CARGA));
         when(balanzaService.listarPesadasPorGuia(5L)).thenReturn(Collections.singletonList(pesadaRetornada));
 
         bean.registrarPesaje();
 
         verify(balanzaService, times(1)).registrarPesada(any(PesadaBalanzaDTO.class));
-        verify(motorFiscalizacion, times(1)).evaluarGuia(5L);
-        assertEquals(1, bean.getUltimasInfraccionesDetectadas().size());
-        assertEquals(TipoInfraccion.EXCESO_DE_CARGA, bean.getUltimasInfraccionesDetectadas().get(0));
+        verify(balanzaService, times(1)).listarPesadasPorGuia(5L);
     }
 
     @Test

@@ -12,12 +12,8 @@
         <div class="cuy-page-header">
             <div>
                 <h1 class="cuy-page-title">
-                    <i class="pi pi-verified" style="color: var(--cuy-accent);" />
                     Consulta y Validación Pública de Empresas
                 </h1>
-                <p class="cuy-page-subtitle">
-                    Verifique el estado registral y la cantidad de unidades habilitadas de cualquier empresa transportista.
-                </p>
             </div>
         </div>
 
@@ -71,7 +67,7 @@
                         <h:outputText value="#{emp.nombrePublico}" />
                     </p:column>
 
-                    <p:column headerText="Domicilio Fiscal" sortBy="#{emp.direccion}">
+                    <p:column headerText="Cede" sortBy="#{emp.direccion}">
                         <h:outputText value="#{emp.direccion}" />
                     </p:column>
 
@@ -82,7 +78,7 @@
                                rounded="true" />
                     </p:column>
 
-                    <p:column headerText="Estado Registral" sortBy="#{emp.activa}" style="width: 150px; text-align: center;">
+                    <p:column headerText="Estado" sortBy="#{emp.activa}" style="width: 150px; text-align: center;">
                         <p:tag value="#{emp.activa ? 'HABILITADA' : 'INACTIVA / BAJA'}"
                                severity="#{emp.activa ? 'success' : 'danger'}"
                                icon="#{emp.activa ? 'pi pi-check-circle' : 'pi pi-times-circle'}"

@@ -10,7 +10,6 @@
 <main class="login-container">
     <header class="header-bar">
         <div>
-            <p class="eyebrow">Plataforma de gestión y fiscalización</p>
             <h1>Ingresar a CargaUY</h1>
         </div>
     </header>
@@ -22,7 +21,7 @@
             <h2 id="ingreso-interno">Administradores y autoridades</h2>
             <form class="login-form" method="post" action="#{request.contextPath}/login">
                 <input type="hidden" name="csrf" value="#{requestScope.csrf}"/>
-                <label for="uid">Usuario del directorio
+                <label for="uid">Usuario
                     <input id="uid" name="uid" required="required" autocomplete="username" placeholder="Ingresá tu usuario"/>
                 </label>
                 <label for="password">Contraseña

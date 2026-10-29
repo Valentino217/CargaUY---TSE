@@ -12,7 +12,6 @@
         <!-- Hero Institucional -->
         <div class="cuy-card" style="background: linear-gradient(135deg, #0f2942 0%, #1e4976 100%); color: #ffffff; padding: 2.25rem; border: none;">
             <div style="max-width: 820px;">
-                <p:tag value="PORTAL DE TRANSPARENCIA Y CONSULTA PÚBLICA" severity="info" style="margin-bottom: 0.75rem;" />
                 <h1 style="margin: 0 0 0.75rem 0; font-size: 2rem; font-weight: 700;">
                     Sistema Nacional de Gestión y Fiscalización del Transporte de Carga
                 </h1>
@@ -45,7 +44,6 @@
                     <div class="cuy-kpi-label">Empresas Habilitadas</div>
                     <div class="cuy-kpi-value">#{portalPublicoBean.totalEmpresasActivas}</div>
                 </div>
-                <i class="pi pi-building" style="font-size: 2rem; color: #0284c7;" />
             </div>
 
             <div class="cuy-card cuy-kpi-card" style="border-left-color: #16a34a;">
@@ -53,7 +51,6 @@
                     <div class="cuy-kpi-label">Flota Nacional Registrada</div>
                     <div class="cuy-kpi-value">#{portalPublicoBean.totalVehiculosRegistrados}</div>
                 </div>
-                <i class="pi pi-car" style="font-size: 2rem; color: #16a34a;" />
             </div>
 
             <div class="cuy-card cuy-kpi-card" style="border-left-color: #f59e0b;">
@@ -61,7 +58,6 @@
                     <div class="cuy-kpi-label">Viajes en Curso Ahora</div>
                     <div class="cuy-kpi-value">#{portalPublicoBean.totalViajesEnCurso}</div>
                 </div>
-                <i class="pi pi-compass" style="font-size: 2rem; color: #f59e0b;" />
             </div>
 
             <div class="cuy-card cuy-kpi-card" style="border-left-color: #7c3aed;">
@@ -69,56 +65,6 @@
                     <div class="cuy-kpi-label">Pesajes Auditados en Ruta</div>
                     <div class="cuy-kpi-value">#{portalPublicoBean.totalPesadas}</div>
                 </div>
-                <i class="pi pi-sliders-h" style="font-size: 2rem; color: #7c3aed;" />
-            </div>
-        </div>
-
-        <!-- Tarjetas de Servicios del Portal -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 1.25rem;">
-            <div class="cuy-card">
-                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
-                    <i class="pi pi-verified" style="font-size: 1.5rem; color: #0284c7;" />
-                    <h3 style="margin: 0; color: var(--cuy-primary);">Validación Pública de Empresas</h3>
-                </div>
-                <p style="color: var(--cuy-muted); font-size: 0.92rem; line-height: 1.5;">
-                    Verifique en tiempo real si una empresa de transporte de carga se encuentra activa y cuenta con unidades habilitadas ante el MTOP.
-                </p>
-                <p:button value="Consultar Padrón de Empresas"
-                          icon="pi pi-search"
-                          outcome="/portal/validar-empresa.xhtml"
-                          styleClass="ui-button-outlined ui-button-sm" />
-            </div>
-
-            <div class="cuy-card">
-                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
-                    <i class="pi pi-chart-bar" style="font-size: 1.5rem; color: #16a34a;" />
-                    <h3 style="margin: 0; color: var(--cuy-primary);">Datos Abiertos y Estadísticas</h3>
-                </div>
-                <p style="color: var(--cuy-muted); font-size: 0.92rem; line-height: 1.5;">
-                    Acceda al listado público agregado de volumen de viajes, actividad por corredores logísticos y controles de peso en balanzas nacionales.
-                </p>
-                <p:button value="Explorar Información Pública"
-                          icon="pi pi-table"
-                          outcome="/portal/info-publica.xhtml"
-                          styleClass="ui-button-outlined ui-button-success ui-button-sm" />
-            </div>
-
-            <div class="cuy-card">
-                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
-                    <i class="pi pi-shield" style="font-size: 1.5rem; color: #7c3aed;" />
-                    <h3 style="margin: 0; color: var(--cuy-primary);">Acceso Federado por Rol</h3>
-                </div>
-                <p style="color: var(--cuy-muted); font-size: 0.92rem; line-height: 1.5;">
-                    Ciudadanos representantes de empresas ingresan mediante Usuario gub.uy. Funcionarios, autoridades y administradores operan con directorio interno.
-                </p>
-                <ui:fragment rendered="#{authBean.esAnonimo()}">
-                    <a href="#{request.contextPath}/login" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-only" style="text-decoration: none; padding: 0.4rem 0.85rem; font-size: 0.88rem; display: inline-block;">
-                        <span>Autenticarse en la Plataforma</span>
-                    </a>
-                </ui:fragment>
-                <ui:fragment rendered="#{not authBean.esAnonimo()}">
-                    <p:tag value="Sesión Activa: #{authBean.rolPrincipalLabel}" severity="success" icon="pi pi-check" />
-                </ui:fragment>
             </div>
         </div>
 

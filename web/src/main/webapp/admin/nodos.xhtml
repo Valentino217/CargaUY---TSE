@@ -14,9 +14,6 @@
                     <i class="pi pi-server" style="color: #1d4ed8;" />
                     Nodos Periféricos y Catálogos de Plataforma
                 </h1>
-                <p class="cuy-page-subtitle">
-                    Monitoreo de conectividad con nodos externos (Balanzas, PDI, LDAP, gub.uy, Colas JMS) y gestión de catálogos maestros
-                </p>
             </div>
             <div>
                 <h:form id="sondarNodosForm" style="margin: 0;">
@@ -33,7 +30,7 @@
         <h:form id="nodosForm">
             <div class="cuy-card">
                 <h3 class="cuy-card-title">
-                    <i class="pi pi-sitemap" style="color: #2563eb;" /> Estado de Conectividad de Nodos e Integraciones
+                    <i class="pi pi-sitemap" style="color: #2563eb;" /> Estado
                 </h3>
                 <p:dataTable id="tablaNodos"
                              var="nodo"
@@ -62,10 +59,6 @@
                                severity="#{nodo.online() ? 'success' : 'warning'}"
                                icon="#{nodo.online() ? 'pi pi-check-circle' : 'pi pi-info-circle'}"
                                rounded="true" />
-                    </p:column>
-
-                    <p:column headerText="Diagnóstico">
-                        <span style="font-size: 0.84rem; color: #475569;">#{nodo.detalleEstado()}</span>
                     </p:column>
                 </p:dataTable>
             </div>

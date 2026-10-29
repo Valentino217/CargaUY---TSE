@@ -14,9 +14,6 @@
                     <i class="pi pi-sliders-h" style="color: #1d4ed8;" />
                     Parámetros y Umbrales de Fiscalización
                 </h1>
-                <p class="cuy-page-subtitle">
-                    Ajuste dinámico de tolerancias de carga y desvío de ruta aplicadas por el motor de fiscalización
-                </p>
             </div>
         </div>
 
@@ -31,10 +28,6 @@
                     <div class="cuy-kpi-label"><i class="pi pi-compass" /> Umbral Tolerancia Desvío de Ruta</div>
                     <div class="cuy-kpi-value">#{adminReglasBean.desvioKm} km</div>
                 </div>
-                <div class="cuy-kpi-card success">
-                    <div class="cuy-kpi-label"><i class="pi pi-code" /> Versión de Regla Activa (@Version)</div>
-                    <div class="cuy-kpi-value">v#{adminReglasBean.version}</div>
-                </div>
             </div>
 
             <div class="cuy-card" style="max-width: 780px;">
@@ -48,7 +41,7 @@
 
                 <div class="cuy-form-grid-2 ui-fluid">
                     <div class="cuy-field">
-                        <p:outputLabel for="umbralCargaInput" value="Tolerancia de Exceso de Peso (kg) *" />
+                        <p:outputLabel for="umbralCargaInput" value="Tolerancia de Exceso de Peso (kg)" />
                         <p:inputNumber id="umbralCargaInput"
                                        value="#{adminReglasBean.cargaKg}"
                                        decimalPlaces="0"
@@ -62,7 +55,7 @@
                     </div>
 
                     <div class="cuy-field">
-                        <p:outputLabel for="umbralDesvioInput" value="Tolerancia de Desvío Geográfico (km) *" />
+                        <p:outputLabel for="umbralDesvioInput" value="Tolerancia de Desvío Geográfico (km)" />
                         <p:inputNumber id="umbralDesvioInput"
                                        value="#{adminReglasBean.desvioKm}"
                                        decimalPlaces="2"
@@ -82,7 +75,7 @@
                                      update=":reglasForm"
                                      styleClass="ui-button-outlined ui-button-secondary" />
 
-                    <p:commandButton value="Aplicar Umbrales en Caliente"
+                    <p:commandButton value="Aplicar umbrales"
                                      icon="pi pi-bolt"
                                      actionListener="#{adminReglasBean.guardarReglas}"
                                      update=":reglasForm"

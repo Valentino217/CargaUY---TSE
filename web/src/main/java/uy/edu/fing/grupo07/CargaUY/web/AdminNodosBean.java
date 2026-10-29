@@ -60,7 +60,7 @@ public class AdminNodosBean implements Serializable {
 
         nodos.add(new NodoPerifericoVista(
                 "NODO-BAL-01",
-                "Simulador Periférico de Balanzas en Ruta (Mock Balanza)",
+                "Simulador Periférico de Balanzas en Ruta",
                 "HTTP / JSON",
                 "http://localhost:8082",
                 balanzaUp,
@@ -69,7 +69,7 @@ public class AdminNodosBean implements Serializable {
 
         nodos.add(new NodoPerifericoVista(
                 "NODO-PDI-01",
-                "Plataforma de Interoperabilidad (PDI - DNIC)",
+                "Plataforma de Interoperabilidad",
                 "SOAP / XML",
                 Config.valor("pdi.endpoint", "http://localhost:8081/pdi/ws"),
                 true,
@@ -78,7 +78,7 @@ public class AdminNodosBean implements Serializable {
 
         nodos.add(new NodoPerifericoVista(
                 "NODO-LDAP-01",
-                "Directorio Interno OpenLDAP (Staff MTOP)",
+                "Directorio Interno OpenLDAP",
                 "LDAPv3",
                 Config.valor("ldap.url", "ldap://127.0.0.1:1389"),
                 true,
@@ -87,7 +87,7 @@ public class AdminNodosBean implements Serializable {
 
         nodos.add(new NodoPerifericoVista(
                 "NODO-OIDC-01",
-                "Proveedor de Identidad Usuario gub.uy (Keycloak)",
+                "Proveedor de Identidad Usuario gub.uy",
                 "OIDC / OAuth 2.0 PKCE",
                 Config.valor("gub.issuer", "http://localhost:8083/realms/cargauy-test"),
                 true,
@@ -96,7 +96,7 @@ public class AdminNodosBean implements Serializable {
 
         nodos.add(new NodoPerifericoVista(
                 "JMS-TRACKING",
-                "Cola Asíncrona de Eventos de Viaje (TrackingQueue)",
+                "Cola Asíncrona de Eventos de Viaje",
                 "Jakarta Messaging (Artemis)",
                 "java:/jms/queue/TrackingQueue",
                 true,
@@ -105,7 +105,7 @@ public class AdminNodosBean implements Serializable {
 
         nodos.add(new NodoPerifericoVista(
                 "JMS-FISC",
-                "Cola Asíncrona del Motor de Fiscalización (FiscalizacionQueue)",
+                "Cola Asíncrona del Motor de Fiscalización",
                 "Jakarta Messaging (Artemis)",
                 "java:/jms/queue/FiscalizacionQueue",
                 true,

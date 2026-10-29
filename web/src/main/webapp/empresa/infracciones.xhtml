@@ -14,9 +14,6 @@
                     <i class="pi pi-exclamation-triangle" style="color: #dc2626;" />
                     Infracciones y Presentación de Descargos
                 </h1>
-                <p class="cuy-page-subtitle">
-                    Consulte la evidencia técnica registrada sobre su flota y presente descargos administrativos en línea
-                </p>
             </div>
             <div>
                 <h:form id="toolbarInfForm" style="margin: 0;">
@@ -42,6 +39,18 @@
             <div class="cuy-kpi-card danger">
                 <div class="cuy-kpi-label"><i class="pi pi-ban" /> Sanciones Confirmadas</div>
                 <div class="cuy-kpi-value">#{empresaInfraccionesBean.totalConfirmadas}</div>
+            </div>
+        </h:panelGroup>
+
+        <h:panelGroup layout="block" rendered="#{empresaInfraccionesBean.totalActivas > 0}" style="margin-bottom: 1rem;">
+            <div style="background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #f59e0b; border-radius: 8px; padding: 0.9rem 1.25rem; display: flex; align-items: center; gap: 0.75rem;">
+                <i class="pi pi-bell" style="font-size: 1.4rem; color: #d97706;" />
+                <div>
+                    <strong style="color: #92400e; font-size: 0.95rem;">Notificación de Fiscalización</strong>
+                    <div style="color: #78350f; font-size: 0.85rem; margin-top: 0.15rem;">
+                        Su empresa tiene <strong>#{empresaInfraccionesBean.totalActivas}</strong> infracción(es) notificada(s) formalmente por la autoridad administrativa pendiente(s) de presentar descargo.
+                    </div>
+                </div>
             </div>
         </h:panelGroup>
 
@@ -78,11 +87,17 @@
                         <span class="cuy-mono">#<h:outputText value="#{inf.idCaso()}" /></span>
                     </p:column>
 
-                    <p:column headerText="Fecha" sortBy="#{inf.fecha()}" style="width: 115px;">
+                    <p:column headerText="Fecha" sortBy="#{inf.fecha()}" filterBy="#{inf.fecha()}" filterMatchMode="contains" style="width: 140px;">
                         <h:outputText value="#{inf.fecha()}" />
                     </p:column>
 
-                    <p:column headerText="Tipo de Infracción" sortBy="#{inf.tipo()}" filterBy="#{inf.tipo()}" filterMatchMode="contains" style="width: 190px;">
+                    <p:column headerText="Tipo de Infracción" sortBy="#{inf.tipo()}" filterBy="#{inf.tipo()}" filterMatchMode="exact" style="width: 190px;">
+                        <f:facet name="filter">
+                            <p:selectOneMenu onchange="PF('dtInfEmp').filter()" styleClass="ui-custom-filter" style="width: 100%;">
+                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItems value="#{empresaInfraccionesBean.tiposInfraccion}" />
+                            </p:selectOneMenu>
+                        </f:facet>
                         <p:tag value="#{inf.tipo()}"
                                severity="#{inf.tipo().name() eq 'EXCESO_PESO' ? 'danger' : (inf.tipo().name() eq 'DESVIO_RUTA' ? 'warning' : 'info')}"
                                icon="pi pi-exclamation-circle"
@@ -96,13 +111,19 @@
                         </div>
                     </p:column>
 
-                    <p:column headerText="Evidencia Técnica Resumida" filterBy="#{inf.evidencia()}" filterMatchMode="contains">
+                    <p:column headerText="Evidencia" filterBy="#{inf.evidencia()}" filterMatchMode="contains">
                         <div style="font-size: 0.86rem; color: #334155;">
                             #{inf.evidencia()}
                         </div>
                     </p:column>
 
                     <p:column headerText="Estado" sortBy="#{inf.estado()}" filterBy="#{inf.estado()}" filterMatchMode="exact" style="width: 150px; text-align: center;">
+                        <f:facet name="filter">
+                            <p:selectOneMenu onchange="PF('dtInfEmp').filter()" styleClass="ui-custom-filter" style="width: 100%;">
+                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItems value="#{empresaInfraccionesBean.estadosInfraccion}" />
+                            </p:selectOneMenu>
+                        </f:facet>
                         <p:tag value="#{inf.estado()}"
                                severity="#{inf.estado().name() eq 'CONFIRMADA' ? 'danger' : (inf.estado().name() eq 'DESESTIMADA' ? 'success' : (inf.estado().name() eq 'EN_DESCARGO' ? 'warning' : 'info'))}"
                                rounded="true" />
@@ -122,7 +143,7 @@
         </h:form>
 
         <!-- Modal de Evidencia Técnica y Presentación de Descargo -->
-        <p:dialog header="Expediente de Infracción y Presentación de Descargo"
+        <p:dialog header="Expediente"
                   widgetVar="dlgDescargoWidget"
                   modal="true"
                   responsive="true"
@@ -135,7 +156,7 @@
                         <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 1rem;">
                             <div>
                                 <div style="font-size: 0.78rem; color: #64748b; text-transform: uppercase; font-weight: 700;">
-                                    Expediente Administrativo ##{empresaInfraccionesBean.seleccionada.idCaso()}
+                                    Expediente ##{empresaInfraccionesBean.seleccionada.idCaso()}
                                 </div>
                                 <div style="font-size: 1.05rem; font-weight: 800; color: #0f2942;">
                                     #{empresaInfraccionesBean.seleccionada.nombreEmpresa()} &#8226; Unidad #{empresaInfraccionesBean.seleccionada.matricula()}
@@ -161,7 +182,7 @@
                         <h:panelGroup rendered="#{not empty empresaInfraccionesBean.seleccionada.fundamento()}">
                             <div style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0.9rem 1rem; margin-bottom: 1rem;">
                                 <div style="font-weight: 700; color: #0f2942; margin-bottom: 0.25rem; font-size: 0.85rem;">
-                                    <i class="pi pi-verified" /> Fundamento de Resolución Administrativa (#{empresaInfraccionesBean.seleccionada.fechaResolucion()})
+                                    <i class="pi pi-verified" /> Resolución (#{empresaInfraccionesBean.seleccionada.fechaResolucion()})
                                 </div>
                                 <div style="font-size: 0.88rem; color: #334155;">
                                     #{empresaInfraccionesBean.seleccionada.fundamento()}
@@ -171,13 +192,12 @@
 
                         <!-- Formulario de Descargo -->
                         <div style="margin-bottom: 1rem;">
-                            <p:outputLabel for="txtDescargo" value="Alegato / Fundamento de Descargo de la Empresa *" style="font-weight: 700; color: #0f2942;" />
+                            <p:outputLabel for="txtDescargo" value="Descargo de la empresa" style="font-weight: 700; color: #0f2942;" />
                             <p:inputTextarea id="txtDescargo"
                                              value="#{empresaInfraccionesBean.textoDescargo}"
                                              rows="4"
                                              autoResize="false"
                                              readonly="#{not empresaInfraccionesBean.puedePresentarDescargo(empresaInfraccionesBean.seleccionada)}"
-                                             placeholder="Exponga los argumentos técnicos o documentales que justifican el desvío de ruta o la diferencia de pesaje..."
                                              style="margin-top: 0.35rem;" />
                             <h:panelGroup rendered="#{empresaInfraccionesBean.seleccionada.fechaDescargo() != null}">
                                 <small style="color: #64748b; display: block; margin-top: 0.25rem;">

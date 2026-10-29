@@ -12,12 +12,8 @@
         <div class="cuy-page-header">
             <div>
                 <h1 class="cuy-page-title">
-                    <i class="pi pi-chart-bar" style="margin-right: 0.5rem; color: var(--cuy-accent);" />
                     Información Pública y Estadísticas Agregadas
                 </h1>
-                <p class="cuy-page-subtitle">
-                    Transparencia activa sobre viajes declarados, distribución de flota nacional y controles de peso en balanzas.
-                </p>
             </div>
         </div>
 
@@ -27,7 +23,6 @@
                     <div class="cuy-kpi-label">Total Guías Emitidas</div>
                     <div class="cuy-kpi-value">#{portalPublicoBean.totalViajesRegistrados}</div>
                 </div>
-                <i class="pi pi-map" style="font-size: 2rem; color: #0284c7;" />
             </div>
 
             <div class="cuy-card cuy-kpi-card" style="border-left-color: #16a34a;">
@@ -35,7 +30,6 @@
                     <div class="cuy-kpi-label">Empresas Activas</div>
                     <div class="cuy-kpi-value">#{portalPublicoBean.totalEmpresasActivas}</div>
                 </div>
-                <i class="pi pi-building" style="font-size: 2rem; color: #16a34a;" />
             </div>
 
             <div class="cuy-card cuy-kpi-card" style="border-left-color: #f59e0b;">
@@ -43,7 +37,6 @@
                     <div class="cuy-kpi-label">Unidades en Padrón</div>
                     <div class="cuy-kpi-value">#{portalPublicoBean.totalVehiculosRegistrados}</div>
                 </div>
-                <i class="pi pi-car" style="font-size: 2rem; color: #f59e0b;" />
             </div>
 
             <div class="cuy-card cuy-kpi-card" style="border-left-color: #7c3aed;">
@@ -51,7 +44,6 @@
                     <div class="cuy-kpi-label">Controles de Balanza</div>
                     <div class="cuy-kpi-value">#{portalPublicoBean.totalPesadas}</div>
                 </div>
-                <i class="pi pi-sliders-h" style="font-size: 2rem; color: #7c3aed;" />
             </div>
         </div>
 
@@ -59,7 +51,7 @@
             <h:form id="formInfoPublica">
                 <p:tabView>
                     <!-- Tab 1: Listado Público de Actividad de Transporte -->
-                    <p:tab title="Actividad de Transporte por Corredor">
+                    <p:tab title="Actividad de transporte">
                         <p:dataTable value="#{portalPublicoBean.guiasPublicas}"
                                      var="g"
                                      paginator="true"
@@ -73,15 +65,15 @@
                                 <strong>##{g.id}</strong>
                             </p:column>
 
-                            <p:column headerText="Fecha Operativa" sortBy="#{g.fecha}" style="width: 140px;">
+                            <p:column headerText="Fecha" sortBy="#{g.fecha}" style="width: 140px;">
                                 <h:outputText value="#{g.fecha}" />
                             </p:column>
 
-                            <p:column headerText="Corredor (Origen &#8594; Destino)" sortBy="#{g.origen}" filterBy="#{g.origen}" filterMatchMode="contains">
+                            <p:column headerText="Origen Destino" sortBy="#{g.origen}" filterBy="#{g.origen}" filterMatchMode="contains">
                                 <strong>#{g.origen}</strong> &#8594; <strong>#{g.destino}</strong>
                             </p:column>
 
-                            <p:column headerText="Rubro Declarado" sortBy="#{g.rubroCliente}" filterBy="#{g.rubroCliente}" filterMatchMode="contains">
+                            <p:column headerText="Rubro" sortBy="#{g.rubroCliente}" filterBy="#{g.rubroCliente}" filterMatchMode="contains">
                                 <h:outputText value="#{g.rubroCliente}" />
                             </p:column>
 
@@ -100,7 +92,7 @@
                     </p:tab>
 
                     <!-- Tab 2: Padrón Agregado de Flota Nacional -->
-                    <p:tab title="Padrón Público de Unidades de Carga">
+                    <p:tab title="Padrón de unidades de carga">
                         <p:dataTable value="#{portalPublicoBean.vehiculosPublicos}"
                                      var="v"
                                      paginator="true"

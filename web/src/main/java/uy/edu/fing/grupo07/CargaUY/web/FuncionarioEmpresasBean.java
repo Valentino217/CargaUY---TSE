@@ -48,7 +48,9 @@ public class FuncionarioEmpresasBean implements Serializable {
 
     private EmpresaResumen empresaSeleccionada;
     private List<IdentidadesService.VinculoVista> vinculosEmpresa;
-    private int usuarioIdVinculo;
+    private Integer usuarioIdVinculo;
+    private Integer usuarioCiVinculo;
+    private String tipoBusquedaVinculo = "ID";
     private String funcionVinculo = "RESPONSABLE";
 
     private Integer ciConsultaPdi;
@@ -117,7 +119,9 @@ public class FuncionarioEmpresasBean implements Serializable {
 
     public void abrirVinculos(EmpresaResumen emp) {
         this.empresaSeleccionada = emp;
-        this.usuarioIdVinculo = 0;
+        this.usuarioIdVinculo = null;
+        this.usuarioCiVinculo = null;
+        this.tipoBusquedaVinculo = "ID";
         this.funcionVinculo = "RESPONSABLE";
         cargarVinculos();
     }
@@ -136,18 +140,39 @@ public class FuncionarioEmpresasBean implements Serializable {
     }
 
     public void guardarVinculo() {
-        if (empresaSeleccionada == null || usuarioIdVinculo <= 0) {
-            mostrarMensaje(FacesMessage.SEVERITY_WARN, "Validación", "Indique un ID de usuario válido.");
+        if (empresaSeleccionada == null) {
+            mostrarMensaje(FacesMessage.SEVERITY_WARN, "Validación", "Seleccione una empresa.");
             return;
+        }
+        int targetId;
+        if ("CI".equals(tipoBusquedaVinculo)) {
+            if (usuarioCiVinculo == null || usuarioCiVinculo <= 0) {
+                mostrarMensaje(FacesMessage.SEVERITY_WARN, "Validación", "Indique una Cédula de Identidad válida.");
+                return;
+            }
+            Integer idResuelto = identidadesService.buscarIdPorCi(usuarioCiVinculo);
+            if (idResuelto == null) {
+                mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Usuario no encontrado", "No existe ningún usuario registrado con la CI " + usuarioCiVinculo);
+                return;
+            }
+            targetId = idResuelto;
+        } else {
+            if (usuarioIdVinculo == null || usuarioIdVinculo <= 0) {
+                mostrarMensaje(FacesMessage.SEVERITY_WARN, "Validación", "Indique un ID de usuario válido.");
+                return;
+            }
+            targetId = usuarioIdVinculo;
         }
         boolean esResponsable = "RESPONSABLE".equals(funcionVinculo);
         boolean esChofer = "CHOFER".equals(funcionVinculo);
         try {
-            identidadesService.vinculo(SesionActual.token(), empresaSeleccionada.numero(), usuarioIdVinculo, esResponsable, esChofer);
+            identidadesService.vinculo(SesionActual.token(), empresaSeleccionada.numero(), targetId, esResponsable, esChofer);
+            this.usuarioIdVinculo = null;
+            this.usuarioCiVinculo = null;
             cargarVinculos();
             cargarEmpresas();
             mostrarMensaje(FacesMessage.SEVERITY_INFO, "Vínculo Guardado",
-                    "Se actualizó el vínculo del usuario #" + usuarioIdVinculo + " como "
+                    "Se actualizó el vínculo del usuario (ID #" + targetId + ") como "
                             + (esResponsable ? "Responsable" : (esChofer ? "Chofer" : "Desvinculado"))
                             + " en la empresa #" + empresaSeleccionada.numero());
         } catch (Exception e) {
@@ -241,11 +266,11 @@ public class FuncionarioEmpresasBean implements Serializable {
         return vinculosEmpresa;
     }
 
-    public int getUsuarioIdVinculo() {
+    public Integer getUsuarioIdVinculo() {
         return usuarioIdVinculo;
     }
 
-    public void setUsuarioIdVinculo(int usuarioIdVinculo) {
+    public void setUsuarioIdVinculo(Integer usuarioIdVinculo) {
         this.usuarioIdVinculo = usuarioIdVinculo;
     }
 
@@ -255,6 +280,22 @@ public class FuncionarioEmpresasBean implements Serializable {
 
     public void setFuncionVinculo(String funcionVinculo) {
         this.funcionVinculo = funcionVinculo;
+    }
+
+    public String getTipoBusquedaVinculo() {
+        return tipoBusquedaVinculo;
+    }
+
+    public void setTipoBusquedaVinculo(String tipoBusquedaVinculo) {
+        this.tipoBusquedaVinculo = tipoBusquedaVinculo;
+    }
+
+    public Integer getUsuarioCiVinculo() {
+        return usuarioCiVinculo;
+    }
+
+    public void setUsuarioCiVinculo(Integer usuarioCiVinculo) {
+        this.usuarioCiVinculo = usuarioCiVinculo;
     }
 
     public Integer getCiConsultaPdi() {

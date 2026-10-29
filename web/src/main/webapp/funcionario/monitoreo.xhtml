@@ -14,21 +14,22 @@
                     <i class="pi pi-map-marker" style="color: #1d4ed8;" />
                     Monitoreo de Viajes en Curso y Pesajes en Balanzas
                 </h1>
-                <p class="cuy-page-subtitle">
-                    Seguimiento cronológico de eventos GPS/móviles, ingesta de balanzas periféricas y simulación de pesaje en ruta
-                </p>
             </div>
             <div style="display: flex; gap: 0.6rem;">
                 <h:form id="monitoreoTopForm" style="margin: 0; display: flex; gap: 0.6rem;">
                     <p:commandButton value="Sincronizar Mock Balanza"
                                      icon="pi pi-cloud-download"
                                      actionListener="#{detalleViajeBean.sincronizarMockBalanza}"
-                                     update=":monitoreoForm"
+                                     update=":monitoreoForm :growl"
+                                     disabled="#{detalleViajeBean.guiaActual == null or detalleViajeBean.guiaActual.estado.name() ne 'EN_CURSO'}"
+                                     title="#{detalleViajeBean.guiaActual == null or detalleViajeBean.guiaActual.estado.name() ne 'EN_CURSO' ? 'Solo habilitado para viajes EN_CURSO' : 'Sincronizar pesada del mock periférico'}"
                                      styleClass="ui-button-outlined ui-button-info" />
                     <p:commandButton value="Registrar Pesaje Manual"
                                      icon="pi pi-sliders-h"
                                      type="button"
                                      onclick="PF('dlgPesajeWidget').show()"
+                                     disabled="#{empty registrarPesajeBean.guiasDisponibles}"
+                                     title="#{empty registrarPesajeBean.guiasDisponibles ? 'No hay guías EN_CURSO para pesar' : 'Registrar pesaje manual'}"
                                      styleClass="ui-button-primary" />
                 </h:form>
             </div>
@@ -46,7 +47,7 @@
                                            var="g"
                                            itemLabel="#{detalleViajeBean.obtenerEtiquetaGuia(g)}"
                                            itemValue="#{g.id}" />
-                            <p:ajax listener="#{detalleViajeBean.onGuiaChange}" update=":monitoreoForm" />
+                            <p:ajax listener="#{detalleViajeBean.onGuiaChange}" update=":monitoreoForm :monitoreoTopForm" />
                         </p:selectOneMenu>
                     </div>
 
@@ -155,7 +156,7 @@
                   closeOnEscape="true">
             <h:form id="dlgPesajeForm" styleClass="ui-fluid">
                 <div class="cuy-field" style="margin-bottom: 1rem;">
-                    <p:outputLabel for="guiaPesajeSel" value="Guía de Viaje *" />
+                    <p:outputLabel for="guiaPesajeSel" value="Guía de Viaje" />
                     <p:selectOneMenu id="guiaPesajeSel" value="#{registrarPesajeBean.guiaIdSeleccionada}" required="true">
                         <f:selectItems value="#{registrarPesajeBean.guiasDisponibles}"
                                        var="gp"
@@ -164,7 +165,7 @@
                     </p:selectOneMenu>
                 </div>
                 <div class="cuy-field" style="margin-bottom: 1rem;">
-                    <p:outputLabel for="pesoMedidoInput" value="Peso Bruto Medido en Balanza (kg) *" />
+                    <p:outputLabel for="pesoMedidoInput" value="Peso Bruto Medido en Balanza (kg)" />
                     <p:inputNumber id="pesoMedidoInput"
                                    value="#{registrarPesajeBean.pesoRegistrado}"
                                    decimalPlaces="0"
@@ -172,11 +173,7 @@
                                    suffix=" kg"
                                    required="true" />
                 </div>
-                <div style="margin-bottom: 1.25rem; padding: 0.75rem 1rem; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
-                    <p:selectBooleanCheckbox value="#{registrarPesajeBean.evaluarInmediato}"
-                                             itemLabel="Ejecutar Motor de Fiscalización inmediatamente tras el pesaje" />
-                </div>
-                <div style="display: flex; justify-content: flex-end; gap: 0.6rem;">
+                <div style="display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.25rem;">
                     <p:commandButton value="Cancelar"
                                      type="button"
                                      icon="pi pi-times"

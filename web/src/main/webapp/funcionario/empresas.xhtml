@@ -14,9 +14,6 @@
                     <i class="pi pi-building" style="color: #1d4ed8;" />
                     Padrón de Empresas Transportistas e Interoperabilidad PDI
                 </h1>
-                <p class="cuy-page-subtitle">
-                    Alta, edición, control de vigencia, vinculación de responsables/choferes y validación en línea con DNIC (PDI)
-                </p>
             </div>
             <div style="display: flex; gap: 0.6rem;">
                 <h:form id="headerEmpFuncForm" style="margin: 0; display: flex; gap: 0.6rem;">
@@ -88,7 +85,7 @@
                         <strong style="color: #0f2942;">#{emp.razonSocial()}</strong>
                     </p:column>
 
-                    <p:column headerText="Nombre Comercial" sortBy="#{emp.nombrePublico()}" filterBy="#{emp.nombrePublico()}" filterMatchMode="contains">
+                    <p:column headerText="Nombre" sortBy="#{emp.nombrePublico()}" filterBy="#{emp.nombrePublico()}" filterMatchMode="contains">
                         <h:outputText value="#{emp.nombrePublico()}" />
                     </p:column>
 
@@ -152,7 +149,7 @@
             <h:form id="dlgEmpresaForm" styleClass="ui-fluid">
                 <div class="cuy-form-grid-2" style="margin-bottom: 1rem;">
                     <div class="cuy-field">
-                        <p:outputLabel for="numEmp" value="Número de Registro / RUT *" />
+                        <p:outputLabel for="numEmp" value="Número de Registro / RUT" />
                         <p:inputNumber id="numEmp"
                                        value="#{funcionarioEmpresasBean.numeroForm}"
                                        decimalPlaces="0"
@@ -161,7 +158,7 @@
                                        required="true" />
                     </div>
                     <div class="cuy-field">
-                        <p:outputLabel for="nomPubEmp" value="Nombre Comercial / Público *" />
+                        <p:outputLabel for="nomPubEmp" value="Nombre" />
                         <p:inputText id="nomPubEmp"
                                      value="#{funcionarioEmpresasBean.nombrePublicoForm}"
                                      required="true"
@@ -169,14 +166,14 @@
                     </div>
                 </div>
                 <div class="cuy-field" style="margin-bottom: 1rem;">
-                    <p:outputLabel for="razonEmp" value="Razón Social *" />
+                    <p:outputLabel for="razonEmp" value="Razón Social" />
                     <p:inputText id="razonEmp"
                                  value="#{funcionarioEmpresasBean.razonSocialForm}"
                                  required="true"
                                  placeholder="Ej. Transportes del Sur S.A." />
                 </div>
                 <div class="cuy-field" style="margin-bottom: 1.25rem;">
-                    <p:outputLabel for="dirEmp" value="Dirección Fiscal *" />
+                    <p:outputLabel for="dirEmp" value="Dirección Fiscal" />
                     <p:inputText id="dirEmp"
                                  value="#{funcionarioEmpresasBean.direccionForm}"
                                  required="true"
@@ -201,11 +198,11 @@
         </p:dialog>
 
         <!-- Modal Vínculos de Empresa (Responsables / Choferes) -->
-        <p:dialog header="Vínculos de Usuarios con Empresa"
+        <p:dialog header="Agregar a empresa"
                   widgetVar="dlgVinculosWidget"
                   modal="true"
                   responsive="true"
-                  width="680"
+                  width="720"
                   closeOnEscape="true">
             <h:form id="dlgVinculosForm">
                 <h:panelGroup rendered="#{funcionarioEmpresasBean.empresaSeleccionada != null}">
@@ -215,25 +212,40 @@
                     </div>
 
                     <div style="background: #fff; border: 1px solid #e2e8f0; padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
-                        <div class="cuy-form-grid-2 ui-fluid" style="margin-bottom: 0.85rem;">
+                        <div class="cuy-form-grid-3 ui-fluid" style="margin-bottom: 0.85rem;">
                             <div class="cuy-field">
-                                <p:outputLabel for="usrVincId" value="ID Usuario *" />
-                                <p:inputNumber id="usrVincId" value="#{funcionarioEmpresasBean.usuarioIdVinculo}" decimalPlaces="0" thousandSeparator="" placeholder="Ej: 3" />
+                                <p:outputLabel value="Buscar usuario por" />
+                                <p:selectOneRadio id="tipoBusquedaRadio" value="#{funcionarioEmpresasBean.tipoBusquedaVinculo}" unselectable="false" style="margin-top: 0.25rem;">
+                                    <f:selectItem itemLabel="Por ID" itemValue="ID" />
+                                    <f:selectItem itemLabel="Por Cédula" itemValue="CI" />
+                                    <p:ajax update="panelInputUsuario" />
+                                </p:selectOneRadio>
                             </div>
+                            <h:panelGroup id="panelInputUsuario" layout="block" styleClass="cuy-field">
+                                <ui:fragment rendered="#{funcionarioEmpresasBean.tipoBusquedaVinculo eq 'ID'}">
+                                    <p:outputLabel for="usrVincId" value="ID Usuario" />
+                                    <p:inputNumber id="usrVincId" value="#{funcionarioEmpresasBean.usuarioIdVinculo}" decimalPlaces="0" thousandSeparator="" placeholder="Ej: 3" />
+                                </ui:fragment>
+                                <ui:fragment rendered="#{funcionarioEmpresasBean.tipoBusquedaVinculo eq 'CI'}">
+                                    <p:outputLabel for="usrVincCi" value="Cédula de Identidad" />
+                                    <p:inputNumber id="usrVincCi" value="#{funcionarioEmpresasBean.usuarioCiVinculo}" decimalPlaces="0" thousandSeparator="" placeholder="Ej: 12345678" />
+                                </ui:fragment>
+                            </h:panelGroup>
                             <div class="cuy-field">
-                                <p:outputLabel for="funcVincRadio" value="Función en la Empresa (Excluyente) *" />
-                                <p:selectOneRadio id="funcVincRadio" value="#{funcionarioEmpresasBean.funcionVinculo}" unselectable="false">
+                                <p:outputLabel for="funcVincSelect" value="Función" />
+                                <p:selectOneMenu id="funcVincSelect" value="#{funcionarioEmpresasBean.funcionVinculo}">
                                     <f:selectItem itemLabel="Responsable" itemValue="RESPONSABLE" />
                                     <f:selectItem itemLabel="Chofer" itemValue="CHOFER" />
                                     <f:selectItem itemLabel="Revocar Vínculo" itemValue="NINGUNO" />
-                                </p:selectOneRadio>
+                                </p:selectOneMenu>
                             </div>
                         </div>
-                        <div style="display: flex; justify-content: flex-end;">
-                            <p:commandButton value="Vincular Usuario"
-                                             icon="pi pi-link"
+                        <div style="display: flex; justify-content: flex-end; margin-top: 0.5rem;">
+                            <p:commandButton value="Agregar a empresa"
+                                             icon="pi pi-user-plus"
                                              actionListener="#{funcionarioEmpresasBean.guardarVinculo}"
-                                             update="tablaVinculos"
+                                             process="@form"
+                                             update="tablaVinculos panelInputUsuario :growl"
                                              styleClass="ui-button-primary" />
                         </div>
                     </div>

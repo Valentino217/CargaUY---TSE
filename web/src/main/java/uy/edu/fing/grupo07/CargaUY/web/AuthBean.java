@@ -115,6 +115,10 @@ public class AuthBean implements Serializable {
         return actor != null && actor.tiene(TipoUsuario.ADMINISTRADOR);
     }
 
+    public boolean isAdmin() {
+        return esAdministrador();
+    }
+
     public boolean esChofer() {
         Acceso actor = resolverAcceso();
         return actor != null && actor.tiene(TipoUsuario.CHOFER);
@@ -151,6 +155,16 @@ public class AuthBean implements Serializable {
         return "Usuario";
     }
 
+    public void verificarAutenticacion() throws IOException {
+        if (esAnonimo()) {
+            FacesContext faces = FacesContext.getCurrentInstance();
+            if (faces != null) {
+                ExternalContext ext = faces.getExternalContext();
+                ext.redirect(ext.getRequestContextPath() + "/login");
+            }
+        }
+    }
+
     public void cerrarSesion() throws IOException {
         FacesContext faces = FacesContext.getCurrentInstance();
         if (faces == null) {
@@ -169,6 +183,6 @@ public class AuthBean implements Serializable {
         if (session != null) {
             session.invalidate();
         }
-        ext.redirect(req.getContextPath() + "/portal/inicio.xhtml");
+        ext.redirect(req.getContextPath() + "/login");
     }
 }

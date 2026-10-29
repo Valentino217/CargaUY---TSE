@@ -320,4 +320,8 @@ public class AdminUsuariosBean implements Serializable {
     public void setRolesSeleccionados(List<String> rolesSeleccionados) {
         this.rolesSeleccionados = rolesSeleccionados;
     }
+
+    public TipoUsuario[] getTiposUsuario() {
+        return TipoUsuario.values();
+    }
 }

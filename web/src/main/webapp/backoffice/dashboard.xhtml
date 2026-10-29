@@ -14,9 +14,6 @@
                     <i class="pi pi-chart-bar" style="color: #1d4ed8;" />
                     Dashboard Ejecutivo y Analítico de Fiscalización
                 </h1>
-                <p class="cuy-page-subtitle">
-                    Métricas en tiempo real del transporte nacional de carga y exportación de reportes oficiales (CSV / PDF)
-                </p>
             </div>
             <div>
                 <h:form id="dashRefreshForm" style="margin: 0; display: flex; gap: 0.6rem;">
@@ -95,10 +92,10 @@
 
                 <div class="cuy-card" style="margin-bottom: 0;">
                     <h3 class="cuy-card-title">
-                        <i class="pi pi-exclamation-triangle" style="color: #dc2626;" /> Infracciones por Tipología
+                        <i class="pi pi-exclamation-triangle" style="color: #dc2626;" /> Infracciones por Tipo
                     </h3>
                     <p:dataTable id="dtInfTipo" var="it" value="#{dashboardBean.listaInfraccionesPorTipo}" size="small" stripedRows="true">
-                        <p:column headerText="Tipología">
+                        <p:column headerText="Tipo">
                             <h:outputText value="#{it.key}" />
                         </p:column>
                         <p:column headerText="Cantidad" style="width: 100px; text-align: right;">
@@ -113,8 +110,10 @@
         <h:form id="dashExportForm" style="margin-top: 1.25rem;">
             <div class="cuy-card">
                 <p:dataTable id="tablaConsolidadaInfracciones"
+                             widgetVar="dtConsolidada"
                              var="inf"
                              value="#{bandejaFiscalizacionBean.casos}"
+                             filteredValue="#{bandejaFiscalizacionBean.casosFiltrados}"
                              paginator="true"
                              rows="10"
                              paginatorPosition="bottom"
@@ -123,42 +122,61 @@
                              emptyMessage="No hay registros de fiscalización para exportar.">
 
                     <f:facet name="header">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
                             <span style="font-weight: 700; color: #0f2942;">
-                                <i class="pi pi-table" style="margin-right: 0.4rem;" /> Padrón Consolidado de Expedientes (Exportable CSV / PDF)
+                                <i class="pi pi-table" style="margin-right: 0.4rem;" /> Padrón de expedientes
+                            </span>
+                            <span class="ui-input-icon-left">
+                                <i class="pi pi-search" />
+                                <p:inputText id="globalFilter"
+                                             onkeyup="PF('dtConsolidada').filter()"
+                                             placeholder="Buscar en el padrón..."
+                                             style="width: 240px;" />
                             </span>
                         </div>
                     </f:facet>
 
-                    <p:column headerText="Expediente" sortBy="#{inf.idCaso()}" style="width: 100px;">
+                    <p:column headerText="Expediente" sortBy="#{inf.idCaso()}" filterBy="#{inf.idCaso()}" filterMatchMode="contains" style="width: 105px;">
                         <h:outputText value="#{inf.idCaso()}" />
                     </p:column>
 
-                    <p:column headerText="Fecha" sortBy="#{inf.fecha()}" style="width: 115px;">
+                    <p:column headerText="Fecha" sortBy="#{inf.fecha()}" filterBy="#{inf.fecha()}" filterMatchMode="contains" style="width: 125px;">
                         <h:outputText value="#{inf.fecha()}" />
                     </p:column>
 
-                    <p:column headerText="Empresa" sortBy="#{inf.nombreEmpresa()}">
+                    <p:column headerText="Empresa" sortBy="#{inf.nombreEmpresa()}" filterBy="#{inf.nombreEmpresa()}" filterMatchMode="contains">
                         <h:outputText value="#{inf.nombreEmpresa()}" />
                     </p:column>
 
-                    <p:column headerText="Matrícula" sortBy="#{inf.matricula()}" style="width: 120px;">
+                    <p:column headerText="Matrícula" sortBy="#{inf.matricula()}" filterBy="#{inf.matricula()}" filterMatchMode="contains" style="width: 120px;">
                         <h:outputText value="#{inf.matricula()}" />
                     </p:column>
 
-                    <p:column headerText="Guía #" sortBy="#{inf.guiaId()}" style="width: 90px;">
+                    <p:column headerText="Guía #" sortBy="#{inf.guiaId()}" filterBy="#{inf.guiaId()}" filterMatchMode="contains" style="width: 95px;">
                         <h:outputText value="#{inf.guiaId()}" />
                     </p:column>
 
-                    <p:column headerText="Tipología" sortBy="#{inf.tipo()}" style="width: 170px;">
+                    <p:column headerText="Tipo" sortBy="#{inf.tipo()}" filterBy="#{inf.tipo()}" filterMatchMode="exact" style="width: 175px;">
+                        <f:facet name="filter">
+                            <p:selectOneMenu onchange="PF('dtConsolidada').filter()" styleClass="ui-custom-filter" style="width: 100%;">
+                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItems value="#{bandejaFiscalizacionBean.tiposInfraccion}" />
+                            </p:selectOneMenu>
+                        </f:facet>
                         <h:outputText value="#{inf.tipo()}" />
                     </p:column>
 
-                    <p:column headerText="Estado" sortBy="#{inf.estado()}" style="width: 140px;">
+                    <p:column headerText="Estado" sortBy="#{inf.estado()}" filterBy="#{inf.estado()}" filterMatchMode="exact" style="width: 155px;">
+                        <f:facet name="filter">
+                            <p:selectOneMenu onchange="PF('dtConsolidada').filter()" styleClass="ui-custom-filter" style="width: 100%;">
+                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItems value="#{bandejaFiscalizacionBean.estadosInfraccion}" />
+                            </p:selectOneMenu>
+                        </f:facet>
                         <h:outputText value="#{inf.estado()}" />
                     </p:column>
 
-                    <p:column headerText="Evidencia">
+                    <p:column headerText="Evidencia" filterBy="#{inf.evidencia()}" filterMatchMode="contains">
                         <h:outputText value="#{inf.evidencia()}" />
                     </p:column>
                 </p:dataTable>

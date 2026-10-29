@@ -2,6 +2,7 @@ package uy.edu.fing.grupo07.CargaUY.web;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import jakarta.annotation.PostConstruct;
@@ -103,6 +104,21 @@ public class GuiaDeViajeBean implements Serializable {
         return RUBROS_CARGA;
     }
 
+    private List<Vehiculo> obtenerVehiculosHabilitados(int empId) {
+        if (empId <= 0) {
+            return Collections.emptyList();
+        }
+        try {
+            List<Vehiculo> todos = vehiculoEJB.listarVehiculosPorEmpresa(SesionActual.token(), empId);
+            if (todos == null) {
+                return Collections.emptyList();
+            }
+            return todos.stream().filter(Vehiculo::isEstadoHabilitacion).toList();
+        } catch (Exception e) {
+            return Collections.emptyList();
+        }
+    }
+
     public void nuevo() {
         guia = new GuiaDeViaje();
         guia.setFecha(java.time.LocalDate.now());
@@ -115,7 +131,7 @@ public class GuiaDeViajeBean implements Serializable {
         if (empresas != null && !empresas.isEmpty()) {
             Empresa empresaPorDefecto = empresas.get(0);
             this.empresaId = empresaPorDefecto.getNroEmpresa();
-            this.vehiculos = vehiculoEJB.listarVehiculosPorEmpresa(SesionActual.token(), empresaId);
+            this.vehiculos = obtenerVehiculosHabilitados(empresaId);
             this.choferes = GuiaDeViajeEJB.listarChoferesPorEmpresa(SesionActual.token(), empresaId);
 
             if (vehiculos != null && !vehiculos.isEmpty()) {
@@ -167,7 +183,12 @@ public class GuiaDeViajeBean implements Serializable {
             }
 
             if (vehiculoSeleccionado == null) {
-                throw new IllegalArgumentException("Debe seleccionar un vehículo válido.");
+                throw new IllegalArgumentException("Debe seleccionar un vehículo habilitado.");
+            }
+
+            if (!vehiculoSeleccionado.isEstadoHabilitacion()) {
+                throw new IllegalArgumentException("El vehículo " + vehiculoSeleccionado.getMatricula()
+                        + " se encuentra suspendido y no puede ser asignado a guías de viaje.");
             }
 
             guia.setVehiculo(vehiculoSeleccionado);
@@ -238,7 +259,7 @@ public class GuiaDeViajeBean implements Serializable {
             this.choferId = guiaSeleccionada.getChofer().getId();
         }
 
-        this.vehiculos = vehiculoEJB.listarVehiculosPorEmpresa(SesionActual.token(), empresaId);
+        this.vehiculos = obtenerVehiculosHabilitados(empresaId);
         this.choferes = GuiaDeViajeEJB.listarChoferesPorEmpresa(SesionActual.token(), empresaId);
     }
 
@@ -264,6 +285,25 @@ public class GuiaDeViajeBean implements Serializable {
         }
     }
 
+    public void avanzarEstado(GuiaDeViaje g) {
+        if (g == null) return;
+        try {
+            GuiaDeViajeEJB.avanzarEstadoAdmin(SesionActual.token(), g.getId());
+            guias = GuiaDeViajeEJB.listarParaActor(SesionActual.token());
+            mostrarMensaje(
+                    FacesMessage.SEVERITY_INFO,
+                    "Estado Actualizado",
+                    "La guía #" + g.getId() + " avanzó de estado exitosamente."
+            );
+        } catch (Exception e) {
+            mostrarMensaje(
+                    FacesMessage.SEVERITY_ERROR,
+                    "No se pudo avanzar el estado",
+                    extraerMensaje(e)
+            );
+        }
+    }
+
     public void seleccionarEmpresa() {
         this.vehiculos = new ArrayList<>();
         this.choferes = new ArrayList<>();
@@ -275,7 +315,7 @@ public class GuiaDeViajeBean implements Serializable {
         }
 
         try {
-            this.vehiculos = vehiculoEJB.listarVehiculosPorEmpresa(SesionActual.token(), empresaId);
+            this.vehiculos = obtenerVehiculosHabilitados(empresaId);
             this.choferes = GuiaDeViajeEJB.listarChoferesPorEmpresa(SesionActual.token(), empresaId);
 
             if (vehiculos != null && !vehiculos.isEmpty()) {

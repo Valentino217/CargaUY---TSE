@@ -31,19 +31,11 @@ public class BandejaFiscalizacionBean implements Serializable {
     @EJB
     private GestionInfraccionesServiceLocal infraccionesService;
 
-    @EJB
-    private MotorFiscalizacionLocal motorFiscalizacion;
-
-    @EJB
-    private FiscalizacionProducerLocal fiscalizacionProducer;
-
     private List<InfraccionDTO> casos;
     private List<InfraccionDTO> casosFiltrados;
     private InfraccionDTO casoSeleccionado;
 
     private String fundamentosResolucion;
-    private Long guiaIdFiscalizar;
-    private String modoFiscalizacion = "sync";
 
     @PostConstruct
     public void init() {
@@ -90,10 +82,13 @@ public class BandejaFiscalizacionBean implements Serializable {
             FacesContext.getCurrentInstance().validationFailed();
             return;
         }
+        if (casoSeleccionado.estado() == EstadoInfraccion.DETECTADA) {
+            mostrarMensaje(FacesMessage.SEVERITY_WARN, "Notificación Requerida",
+                    "Debe notificar formalmente a la empresa antes de poder confirmar una sanción.");
+            FacesContext.getCurrentInstance().validationFailed();
+            return;
+        }
         try {
-            if (casoSeleccionado.estado() == EstadoInfraccion.DETECTADA) {
-                infraccionesService.notificarInfraccion(casoSeleccionado.idCaso());
-            }
             int funcId = obtenerFuncionarioActivoId();
             ResolucionInfraccionDTO dto = new ResolucionInfraccionDTO(funcId, fundamentosResolucion.trim());
             casoSeleccionado = infraccionesService.confirmarInfraccion(casoSeleccionado.idCaso(), dto);
@@ -124,32 +119,6 @@ public class BandejaFiscalizacionBean implements Serializable {
         } catch (Exception e) {
             mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error al desestimar", e.getMessage());
             FacesContext.getCurrentInstance().validationFailed();
-        }
-    }
-
-    public void ejecutarFiscalizacionGuia() {
-        if (guiaIdFiscalizar == null || guiaIdFiscalizar <= 0) {
-            mostrarMensaje(FacesMessage.SEVERITY_WARN, "Validación", "Indique un ID de Guía de Viaje válido.");
-            return;
-        }
-        try {
-            if ("async".equalsIgnoreCase(modoFiscalizacion)) {
-                fiscalizacionProducer.solicitarEvaluacion(guiaIdFiscalizar);
-                mostrarMensaje(FacesMessage.SEVERITY_INFO, "Evaluación Asíncrona",
-                        "Se encoló la evaluación en FiscalizacionQueue para la guía #" + guiaIdFiscalizar);
-            } else {
-                List<TipoInfraccion> detectadas = motorFiscalizacion.evaluarGuia(guiaIdFiscalizar);
-                if (detectadas.isEmpty()) {
-                    mostrarMensaje(FacesMessage.SEVERITY_INFO, "Sin Infracciones",
-                            "La guía #" + guiaIdFiscalizar + " cumple con todos los parámetros de fiscalización.");
-                } else {
-                    mostrarMensaje(FacesMessage.SEVERITY_WARN, "Anomalías Detectadas",
-                            "Guía #" + guiaIdFiscalizar + ": " + detectadas);
-                }
-            }
-            cargarCasos();
-        } catch (Exception e) {
-            mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error en Motor de Fiscalización", e.getMessage());
         }
     }
 
@@ -219,19 +188,11 @@ public class BandejaFiscalizacionBean implements Serializable {
         this.fundamentosResolucion = fundamentosResolucion;
     }
 
-    public Long getGuiaIdFiscalizar() {
-        return guiaIdFiscalizar;
+    public EstadoInfraccion[] getEstadosInfraccion() {
+        return EstadoInfraccion.values();
     }
 
-    public void setGuiaIdFiscalizar(Long guiaIdFiscalizar) {
-        this.guiaIdFiscalizar = guiaIdFiscalizar;
-    }
-
-    public String getModoFiscalizacion() {
-        return modoFiscalizacion;
-    }
-
-    public void setModoFiscalizacion(String modoFiscalizacion) {
-        this.modoFiscalizacion = modoFiscalizacion;
+    public TipoInfraccion[] getTiposInfraccion() {
+        return TipoInfraccion.values();
     }
 }

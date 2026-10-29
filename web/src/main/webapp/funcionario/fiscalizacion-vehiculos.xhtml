@@ -14,9 +14,6 @@
                     <i class="pi pi-car" style="color: #1d4ed8;" />
                     Fiscalización Documental de Flotas (ITV y PNC)
                 </h1>
-                <p class="cuy-page-subtitle">
-                    Control de vigencia de Inspección Técnica Vehicular (ITV) y Permiso Nacional de Circulación (PNC) con alertas tempranas de vencimiento
-                </p>
             </div>
             <div>
                 <h:form id="refreshFlotaForm" style="margin: 0;">
@@ -62,7 +59,7 @@
                     <f:facet name="header">
                         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
                             <span style="font-weight: 700; color: #0f2942;">
-                                <i class="pi pi-shield" style="margin-right: 0.4rem;" /> Matriz de Vigencia Documental por Unidad
+                                <i class="pi pi-shield" style="margin-right: 0.4rem;" /> Permisos
                             </span>
                             <span class="ui-input-icon-left">
                                 <i class="pi pi-search" />
@@ -78,7 +75,7 @@
                         <span class="cuy-mono"><i class="pi pi-car" /> #{veh.matricula}</span>
                     </p:column>
 
-                    <p:column headerText="Unidad (Marca / Modelo)" sortBy="#{veh.marca}" filterBy="#{veh.marca}" filterMatchMode="contains">
+                    <p:column headerText="Unidad" sortBy="#{veh.marca}" filterBy="#{veh.marca}" filterMatchMode="contains">
                         <strong style="color: #0f2942;">#{veh.marca} #{veh.modelo}</strong>
                         <div style="font-size: 0.78rem; color: #64748b;">
                             Capacidad: #{veh.capacidadCarga} kg | Peso: #{veh.peso} kg
@@ -113,7 +110,7 @@
                         </div>
                     </p:column>
 
-                    <p:column headerText="Aptitud Operativa" style="width: 150px; text-align: center;">
+                    <p:column headerText="Aptitud" style="width: 150px; text-align: center;">
                         <p:tag value="#{fiscalizacionFlotaBean.tieneDocumentacionEnRegla(veh) ? 'APTO RUTA' : 'BLOQUEADO / ALERTA'}"
                                severity="#{fiscalizacionFlotaBean.tieneDocumentacionEnRegla(veh) ? 'success' : 'danger'}"
                                rounded="true" />

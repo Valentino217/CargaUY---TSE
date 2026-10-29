@@ -15,9 +15,6 @@
                     <i class="pi pi-car" style="color: var(--cuy-accent);" />
                     Gestión de Flota de Vehículos
                 </h1>
-                <p class="cuy-page-subtitle">
-                    Administre las unidades de transporte asociadas a sus empresas, capacidades de carga y estado de habilitación.
-                </p>
             </div>
             <h:form id="headerVehiculoActions" style="margin: 0;">
                 <p:commandButton value="Registrar Nuevo Vehículo"
@@ -83,15 +80,17 @@
 
                     <p:column headerText="Acciones" style="width: 150px; text-align: center;">
                         <p:commandButton icon="pi pi-pencil"
-                                         title="Editar unidad"
+                                         title="#{VehiculoBean.tieneGuiaEnCurso(v) ? 'Vehículo con viaje EN_CURSO (bloqueado a edición)' : 'Editar unidad'}"
+                                         disabled="#{VehiculoBean.tieneGuiaEnCurso(v)}"
                                          actionListener="#{VehiculoBean.editar(v)}"
                                          update=":dialogVehiculoForm"
-                                         oncomplete="PF('wvDialogVehiculo').show()"
+                                         oncomplete="if (!args.validationFailed) PF('wvDialogVehiculo').show()"
                                          styleClass="ui-button-outlined ui-button-info ui-button-sm"
                                          style="margin-right: 0.4rem;" />
 
                         <p:commandButton icon="pi pi-trash"
-                                         title="Dar de baja unidad"
+                                         title="#{VehiculoBean.tieneGuiaEnCurso(v) ? 'Vehículo con viaje EN_CURSO (bloqueado a baja)' : 'Dar de baja unidad'}"
+                                         disabled="#{VehiculoBean.tieneGuiaEnCurso(v)}"
                                          actionListener="#{VehiculoBean.eliminar(v)}"
                                          update="tablaVehiculos"
                                          styleClass="ui-button-outlined ui-button-danger ui-button-sm">
@@ -117,7 +116,7 @@
             <h:form id="dialogVehiculoForm" styleClass="ui-fluid">
                 <div class="cuy-form-grid-2">
                     <div class="cuy-field">
-                        <p:outputLabel for="matriculaInput" value="Matrícula *" />
+                        <p:outputLabel for="matriculaInput" value="Matrícula" />
                         <p:inputText id="matriculaInput"
                                      value="#{VehiculoBean.vehiculo.matricula}"
                                      readonly="#{VehiculoBean.editando}"
@@ -126,7 +125,7 @@
                     </div>
 
                     <div class="cuy-field">
-                        <p:outputLabel for="empresaSelect" value="Empresa *" />
+                        <p:outputLabel for="empresaSelect" value="Empresa" />
                         <p:selectOneMenu id="empresaSelect" value="#{VehiculoBean.empresaId}" required="true">
                             <f:selectItem itemLabel="Seleccione empresa..." itemValue="0" noSelectionOption="true" />
                             <f:selectItems value="#{VehiculoBean.empresas}"
@@ -137,7 +136,7 @@
                     </div>
 
                     <div class="cuy-field">
-                        <p:outputLabel for="marcaSelect" value="Marca *" />
+                        <p:outputLabel for="marcaSelect" value="Marca" />
                         <p:selectOneMenu id="marcaSelect" value="#{VehiculoBean.vehiculo.marca}" required="true">
                             <f:selectItems value="#{VehiculoBean.marcasDisponibles}" var="m" itemLabel="#{m}" itemValue="#{m}" />
                             <p:ajax listener="#{VehiculoBean.onMarcaChange}" update="modeloSelect pesoInput capInput" />
@@ -145,7 +144,7 @@
                     </div>
 
                     <div class="cuy-field">
-                        <p:outputLabel for="modeloSelect" value="Modelo *" />
+                        <p:outputLabel for="modeloSelect" value="Modelo" />
                         <p:selectOneMenu id="modeloSelect" value="#{VehiculoBean.vehiculo.modelo}" required="true">
                             <f:selectItems value="#{VehiculoBean.modelosDisponibles}" var="mdl" itemLabel="#{mdl}" itemValue="#{mdl}" />
                             <p:ajax listener="#{VehiculoBean.onModeloChange}" update="pesoInput capInput" />
@@ -153,12 +152,12 @@
                     </div>
 
                     <div class="cuy-field">
-                        <p:outputLabel for="pesoInput" value="Peso Propio / Tara (kg) *" />
+                        <p:outputLabel for="pesoInput" value="Peso Propio / Tara (kg)" />
                         <p:inputNumber id="pesoInput" value="#{VehiculoBean.vehiculo.peso}" decimalPlaces="0" required="true" />
                     </div>
 
                     <div class="cuy-field">
-                        <p:outputLabel for="capInput" value="Capacidad Máx. Carga (kg) *" />
+                        <p:outputLabel for="capInput" value="Capacidad Máx. Carga (kg)" />
                         <p:inputNumber id="capInput" value="#{VehiculoBean.vehiculo.capacidadCarga}" decimalPlaces="0" required="true" />
                     </div>
                 </div>
