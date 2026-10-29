@@ -113,7 +113,7 @@ public class GuiaDeViajeBean implements Serializable {
             if (todos == null) {
                 return Collections.emptyList();
             }
-            return todos.stream().filter(Vehiculo::isEstadoHabilitacion).toList();
+            return todos.stream().filter(v -> vehiculoEJB.estaAptoParaOperar(v.getMatricula())).toList();
         } catch (Exception e) {
             return Collections.emptyList();
         }
@@ -186,9 +186,9 @@ public class GuiaDeViajeBean implements Serializable {
                 throw new IllegalArgumentException("Debe seleccionar un vehículo habilitado.");
             }
 
-            if (!vehiculoSeleccionado.isEstadoHabilitacion()) {
+            if (!vehiculoEJB.estaAptoParaOperar(vehiculoSeleccionado.getMatricula())) {
                 throw new IllegalArgumentException("El vehículo " + vehiculoSeleccionado.getMatricula()
-                        + " se encuentra suspendido y no puede ser asignado a guías de viaje.");
+                        + " no está habilitado (requiere habilitación base, ITV y PNC vigentes).");
             }
 
             guia.setVehiculo(vehiculoSeleccionado);

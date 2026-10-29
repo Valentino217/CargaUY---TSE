@@ -169,8 +169,8 @@
                     <p:inputNumber id="pesoMedidoInput"
                                    value="#{registrarPesajeBean.pesoRegistrado}"
                                    decimalPlaces="0"
-                                   thousandSeparator="."
-                                   suffix=" kg"
+                                   thousandSeparator="." decimalSeparator=","
+                                   suffix=" kg" minValue="1" maxValue="500000"
                                    required="true" />
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.25rem;">

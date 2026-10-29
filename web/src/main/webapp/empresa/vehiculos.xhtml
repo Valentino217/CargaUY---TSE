@@ -72,9 +72,9 @@
                     </p:column>
 
                     <p:column headerText="Estado" sortBy="#{v.estadoHabilitacion}" style="width: 155px; text-align: center;">
-                        <p:tag value="#{v.estadoHabilitacion ? 'HABILITADO' : 'SUSPENDIDO'}"
-                               severity="#{v.estadoHabilitacion ? 'success' : 'danger'}"
-                               icon="#{v.estadoHabilitacion ? 'pi pi-check-circle' : 'pi pi-ban'}"
+                        <p:tag value="#{VehiculoBean.estaApto(v) ? 'HABILITADO' : (v.estadoHabilitacion ? 'NO APTO' : 'SUSPENDIDO')}"
+                               severity="#{VehiculoBean.estaApto(v) ? 'success' : (v.estadoHabilitacion ? 'warning' : 'danger')}"
+                               icon="#{VehiculoBean.estaApto(v) ? 'pi pi-check-circle' : 'pi pi-ban'}"
                                rounded="true" />
                     </p:column>
 

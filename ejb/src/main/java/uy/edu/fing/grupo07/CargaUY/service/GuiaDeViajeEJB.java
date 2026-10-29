@@ -35,6 +35,24 @@ public class GuiaDeViajeEJB implements GuiaDeViajeEJBLocal {
         if(g!=null) control.empresa(token,g.getEmpresa().getNroEmpresa(),false);
         return g;
     }
+    private void exigirHabilitacionVigente(Vehiculo v) {
+        if (v.verificarHabilitacionVigente()) {
+            return;
+        }
+        throw new IllegalArgumentException("El vehículo " + v.getMatricula()
+            + " no está habilitado para operar: " + motivoNoHabilitado(v));
+    }
+
+    public static String motivoNoHabilitado(Vehiculo v) {
+        StringBuilder sb = new StringBuilder();
+        if (!v.isEstadoHabilitacion()) sb.append("suspendido administrativamente; ");
+        boolean itv = v.getItv() != null && v.getItv().stream().anyMatch(uy.edu.fing.grupo07.CargaUY.domain.entity.ITV::isVigente);
+        boolean pnc = v.getPncs() != null && v.getPncs().stream().anyMatch(uy.edu.fing.grupo07.CargaUY.domain.entity.PNC::isVigente);
+        if (!itv) sb.append("sin ITV vigente; ");
+        if (!pnc) sb.append("sin PNC vigente; ");
+        return sb.toString().trim();
+    }
+
     private void validarAsignacion(String token,GuiaDeViaje g) {
         control.empresa(token,g.getEmpresa().getNroEmpresa(),true);
         if(g.getChofer()!=null) control.choferAsignable(token,g.getEmpresa().getNroEmpresa(),g.getChofer().getId());
@@ -45,9 +63,7 @@ public class GuiaDeViajeEJB implements GuiaDeViajeEJBLocal {
             }
             if(v.getEmpresa()!=null && g.getEmpresa()!=null && v.getEmpresa().getNroEmpresa()!=g.getEmpresa().getNroEmpresa())
                 throw new IllegalArgumentException("El vehículo no pertenece a la empresa de la guía");
-            if (!v.isEstadoHabilitacion()) {
-                throw new IllegalArgumentException("El vehículo " + v.getMatricula() + " se encuentra suspendido y no puede ser asignado a guías de viaje.");
-            }
+            exigirHabilitacionVigente(v);
         }
     }
     public void crear(String token,GuiaDeViaje g) { validarAsignacion(token,g); crear(g); }
@@ -79,9 +95,7 @@ public class GuiaDeViajeEJB implements GuiaDeViajeEJBLocal {
                 if (v == null) {
                     v = guia.getVehiculo();
                 }
-                if (!v.isEstadoHabilitacion()) {
-                    throw new IllegalStateException("No se puede iniciar el viaje: el vehículo " + v.getMatricula() + " se encuentra suspendido.");
-                }
+                exigirHabilitacionVigente(v);
             }
             guia.setEstado(TipoEstado.EN_CURSO);
             em.flush();
@@ -112,9 +126,7 @@ public class GuiaDeViajeEJB implements GuiaDeViajeEJBLocal {
             if (v == null) {
                 v = guia.getVehiculo();
             }
-            if (!v.isEstadoHabilitacion()) {
-                throw new IllegalArgumentException("El vehículo " + v.getMatricula() + " se encuentra suspendido y no puede ser asignado a guías de viaje.");
-            }
+            exigirHabilitacionVigente(v);
         }
         em.persist(guia);
     }
@@ -143,9 +155,7 @@ public class GuiaDeViajeEJB implements GuiaDeViajeEJBLocal {
             if (v == null) {
                 v = guia.getVehiculo();
             }
-            if (!v.isEstadoHabilitacion()) {
-                throw new IllegalArgumentException("El vehículo " + v.getMatricula() + " se encuentra suspendido y no puede ser asignado a guías de viaje.");
-            }
+            exigirHabilitacionVigente(v);
         }
 
     		existente.setFecha(guia.getFecha());
