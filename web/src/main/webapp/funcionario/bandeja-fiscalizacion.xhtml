@@ -226,7 +226,7 @@
                                              icon="pi pi-bell"
                                              rendered="#{bandejaFiscalizacionBean.casoSeleccionado.estado().name() eq 'DETECTADA'}"
                                              actionListener="#{bandejaFiscalizacionBean.notificarEmpresa}"
-                                             update=":dlgResolverForm :bandejaForm:tablaBandeja :kpiBandejaGroup"
+                                             update=":dlgResolverForm :bandejaForm:tablaBandeja :kpiBandejaGroup :growl"
                                              styleClass="ui-button-outlined ui-button-info" />
                         </div>
                         <div style="display: flex; gap: 0.6rem;">
@@ -240,7 +240,7 @@
                                              icon="pi pi-check-circle"
                                              rendered="#{not bandejaFiscalizacionBean.casoResuelto}"
                                              actionListener="#{bandejaFiscalizacionBean.desestimarCaso}"
-                                             update=":bandejaForm:tablaBandeja :kpiBandejaGroup"
+                                             update=":bandejaForm:tablaBandeja :kpiBandejaGroup :growl"
                                              oncomplete="if (!args.validationFailed) PF('dlgResolverWidget').hide()"
                                              styleClass="ui-button-success">
                                 <p:confirm header="Confirmar Desestimación"
@@ -252,7 +252,7 @@
                                              icon="pi pi-ban"
                                              rendered="#{not bandejaFiscalizacionBean.casoResuelto and (bandejaFiscalizacionBean.casoSeleccionado.estado().name() eq 'NOTIFICADA' or bandejaFiscalizacionBean.casoSeleccionado.estado().name() eq 'EN_DESCARGO')}"
                                              actionListener="#{bandejaFiscalizacionBean.confirmarSancion}"
-                                             update=":bandejaForm:tablaBandeja :kpiBandejaGroup"
+                                             update=":bandejaForm:tablaBandeja :kpiBandejaGroup :growl"
                                              oncomplete="if (!args.validationFailed) PF('dlgResolverWidget').hide()"
                                              styleClass="ui-button-danger">
                                 <p:confirm header="Confirmar Sanción Administrativa"

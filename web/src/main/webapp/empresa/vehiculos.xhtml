@@ -92,7 +92,7 @@
                                          title="#{VehiculoBean.tieneGuiaEnCurso(v) ? 'Vehículo con viaje EN_CURSO (bloqueado a baja)' : 'Dar de baja unidad'}"
                                          disabled="#{VehiculoBean.tieneGuiaEnCurso(v)}"
                                          actionListener="#{VehiculoBean.eliminar(v)}"
-                                         update="tablaVehiculos"
+                                         update="tablaVehiculos :growl"
                                          styleClass="ui-button-outlined ui-button-danger ui-button-sm">
                             <p:confirm header="Confirmar Baja de Vehículo"
                                        message="¿Está seguro de eliminar el vehículo con matrícula #{v.matricula}? Esta acción no se puede deshacer."
@@ -153,12 +153,14 @@
 
                     <div class="cuy-field">
                         <p:outputLabel for="pesoInput" value="Peso Propio / Tara (kg)" />
-                        <p:inputNumber id="pesoInput" value="#{VehiculoBean.vehiculo.peso}" decimalPlaces="0" required="true" />
+                        <p:inputNumber id="pesoInput" value="#{VehiculoBean.vehiculo.peso}" decimalPlaces="0"
+                                       thousandSeparator="." decimalSeparator="," suffix=" kg" minValue="1" required="true" />
                     </div>
 
                     <div class="cuy-field">
                         <p:outputLabel for="capInput" value="Capacidad Máx. Carga (kg)" />
-                        <p:inputNumber id="capInput" value="#{VehiculoBean.vehiculo.capacidadCarga}" decimalPlaces="0" required="true" />
+                        <p:inputNumber id="capInput" value="#{VehiculoBean.vehiculo.capacidadCarga}" decimalPlaces="0"
+                                       thousandSeparator="." decimalSeparator="," suffix=" kg" minValue="1" required="true" />
                     </div>
                 </div>
 
@@ -178,7 +180,7 @@
                                      icon="pi pi-check"
                                      actionListener="#{VehiculoBean.guardar}"
                                      process="@form"
-                                     update=":formTablaVehiculos:tablaVehiculos"
+                                     update=":formTablaVehiculos:tablaVehiculos :growl"
                                      oncomplete="if (!args.validationFailed) PF('wvDialogVehiculo').hide()"
                                      styleClass="ui-button-primary"
                                      style="width: auto;" />

@@ -16,11 +16,14 @@
             --cuy-primary: #0f2942;
             --cuy-secondary: #1e4976;
             --cuy-accent: #0284c7;
-            --cuy-bg: #f1f5f9;
+            --cuy-bg: #f8fafc;
             --cuy-surface: #ffffff;
-            --cuy-text: #1e293b;
+            --cuy-text: #0f172a;
             --cuy-muted: #64748b;
             --cuy-border: #e2e8f0;
+            --cuy-radius: 8px;
+            --cuy-shadow-sm: 0 1px 3px 0 rgba(15, 41, 66, 0.05);
+            --cuy-shadow-md: 0 4px 6px -1px rgba(15, 41, 66, 0.08), 0 2px 4px -2px rgba(15, 41, 66, 0.06);
         }
         * { box-sizing: border-box; }
         body {
@@ -138,11 +141,15 @@
         }
         .cuy-card {
             background: var(--cuy-surface);
-            border-radius: 10px;
+            border-radius: var(--cuy-radius);
             border: 1px solid var(--cuy-border);
             padding: 1.35rem;
-            box-shadow: 0 1px 4px rgba(15, 41, 66, 0.05);
+            box-shadow: var(--cuy-shadow-sm);
             margin-bottom: 1.25rem;
+            transition: box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+        .cuy-card:hover {
+            box-shadow: var(--cuy-shadow-md);
         }
         .cuy-card-title {
             margin: 0 0 1rem 0;
@@ -155,15 +162,20 @@
         }
         .cuy-kpi-card {
             background: var(--cuy-surface);
-            border-radius: 10px;
+            border-radius: var(--cuy-radius);
             border: 1px solid var(--cuy-border);
             border-left: 4px solid var(--cuy-accent);
             padding: 1.1rem 1.35rem;
-            box-shadow: 0 1px 4px rgba(15, 41, 66, 0.05);
+            box-shadow: var(--cuy-shadow-sm);
             display: flex;
             flex-direction: column;
             justify-content: center;
             margin-bottom: 0;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .cuy-kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--cuy-shadow-md);
         }
         .cuy-kpi-card.warning { border-left-color: #d97706; }
         .cuy-kpi-card.danger  { border-left-color: #dc2626; }
@@ -242,6 +254,79 @@
             font-size: 0.82rem;
             color: var(--cuy-muted);
         }
+        /* PrimeFaces Overrides Modernos */
+        .ui-button {
+            border-radius: 6px !important;
+            font-weight: 600 !important;
+            transition: all 0.15s ease-in-out !important;
+        }
+        .ui-button.ui-button-sm {
+            padding: 0.35rem 0.65rem !important;
+            font-size: 0.82rem !important;
+        }
+        .ui-inputfield, .ui-selectonemenu {
+            border-radius: 6px !important;
+            border-color: #cbd5e1 !important;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+        }
+        .ui-inputfield:focus, .ui-selectonemenu.ui-state-focus {
+            border-color: var(--cuy-accent) !important;
+            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+        }
+        .ui-datatable thead th {
+            background: #f8fafc !important;
+            color: #334155 !important;
+            font-weight: 600 !important;
+            font-size: 0.84rem !important;
+            border-color: #e2e8f0 !important;
+            padding: 0.75rem 0.65rem !important;
+        }
+        .ui-datatable tbody tr.ui-state-hover {
+            background: #f1f5f9 !important;
+        }
+        .ui-datatable tbody td {
+            padding: 0.65rem !important;
+            border-color: #f1f5f9 !important;
+            font-size: 0.875rem !important;
+        }
+        .ui-dialog {
+            border-radius: 10px !important;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+            border: 1px solid #cbd5e1 !important;
+            overflow: hidden;
+        }
+        .ui-dialog .ui-dialog-titlebar {
+            background: #f8fafc !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+            font-weight: 700 !important;
+            color: var(--cuy-primary) !important;
+            padding: 1rem 1.25rem !important;
+        }
+        .ui-dialog .ui-dialog-content {
+            padding: 1.25rem !important;
+        }
+        .ui-tag {
+            font-weight: 700 !important;
+            font-size: 0.75rem !important;
+            letter-spacing: 0.3px !important;
+            padding: 0.25rem 0.6rem !important;
+        }
+        /* Barra de progreso global AJAX */
+        #cuy-ajax-progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            z-index: 99999;
+            background: linear-gradient(90deg, var(--cuy-accent), #38bdf8, var(--cuy-secondary));
+            background-size: 200% 100%;
+            animation: cuy-indeterminate 1.2s infinite linear;
+        }
+        @keyframes cuy-indeterminate {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
         @media (max-width: 992px) {
             .cuy-grid-2, .cuy-grid-3, .cuy-form-grid-2, .cuy-form-grid-3 {
                 grid-template-columns: 1fr;
@@ -257,6 +342,9 @@
 </h:head>
 
 <h:body>
+    <p:ajaxStatus onstart="document.getElementById('cuy-ajax-progress-bar').style.display='block'"
+                  oncomplete="document.getElementById('cuy-ajax-progress-bar').style.display='none'" />
+    <div id="cuy-ajax-progress-bar" style="display: none;" />
 
     <!-- Componente Global de Notificaciones -->
     <p:growl id="growl" showDetail="true" skipDetailIfEqualsSummary="true" life="4500">

@@ -66,7 +66,7 @@
                                severity="#{detalleViajeBean.guiaActual.estado.name() eq 'EN_CURSO' ? 'info' : (detalleViajeBean.guiaActual.estado.name() eq 'FINALIZADO' ? 'success' : 'warning')}"
                                rounded="true" />
                         <div style="font-size: 0.9rem; color: #0f2942; font-weight: 700; margin-top: 0.4rem;">
-                            Volumen / Peso Declarado: #{detalleViajeBean.guiaActual.volumenCarga} kg
+                            Volumen / Peso Declarado: <h:outputText value="#{detalleViajeBean.guiaActual.volumenCarga}"><f:convertNumber pattern="#,##0" /></h:outputText> kg
                         </div>
                     </h:panelGroup>
                 </div>
@@ -140,7 +140,12 @@
                         </p:column>
 
                         <p:column headerText="Peso Medido" sortBy="#{pes.pesoRegistrado()}" style="text-align: right;">
-                            <strong style="color: #0f2942; font-size: 0.95rem;">#{pes.pesoRegistrado()} kg</strong>
+                            <strong style="color: #0f2942; font-size: 0.95rem;">
+                                <h:outputText value="#{pes.pesoRegistrado()}">
+                                    <f:convertNumber pattern="#,##0" />
+                                </h:outputText>
+                                <span> kg</span>
+                            </strong>
                         </p:column>
                     </p:dataTable>
                 </div>

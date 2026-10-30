@@ -78,7 +78,7 @@
                     <p:column headerText="Unidad" sortBy="#{veh.marca}" filterBy="#{veh.marca}" filterMatchMode="contains">
                         <strong style="color: #0f2942;">#{veh.marca} #{veh.modelo}</strong>
                         <div style="font-size: 0.78rem; color: #64748b;">
-                            Capacidad: #{veh.capacidadCarga} kg | Peso: #{veh.peso} kg
+                            Capacidad: <h:outputText value="#{veh.capacidadCarga}"><f:convertNumber pattern="#,##0" /></h:outputText> kg | Peso: <h:outputText value="#{veh.peso}"><f:convertNumber pattern="#,##0" /></h:outputText> kg
                         </div>
                     </p:column>
 
@@ -127,7 +127,7 @@
                             <p:commandButton icon="#{veh.estadoHabilitacion ? 'pi pi-ban' : 'pi pi-check'}"
                                              title="#{veh.estadoHabilitacion ? 'Suspender Unidad' : 'Habilitar Unidad'}"
                                              actionListener="#{fiscalizacionFlotaBean.alternarHabilitacionBase(veh)}"
-                                             update="tablaFlotaFisc :kpiFlotaFisc"
+                                             update="tablaFlotaFisc :kpiFlotaFisc :growl"
                                              styleClass="ui-button-outlined #{veh.estadoHabilitacion ? 'ui-button-danger' : 'ui-button-success'} ui-button-sm" />
                         </div>
                     </p:column>
@@ -164,7 +164,7 @@
                                 <p:commandButton value="Emitir ITV"
                                                  icon="pi pi-check"
                                                  actionListener="#{fiscalizacionFlotaBean.registrarRenovacionItv}"
-                                                 update=":flotaFiscForm:tablaFlotaFisc :kpiFlotaFisc"
+                                                 update=":flotaFiscForm:tablaFlotaFisc :kpiFlotaFisc :growl"
                                                  styleClass="ui-button-success"
                                                  style="width: auto;" />
                             </div>
@@ -181,7 +181,7 @@
                                 <p:commandButton value="Emitir PNC"
                                                  icon="pi pi-check"
                                                  actionListener="#{fiscalizacionFlotaBean.registrarRenovacionPnc}"
-                                                 update=":flotaFiscForm:tablaFlotaFisc :kpiFlotaFisc"
+                                                 update=":flotaFiscForm:tablaFlotaFisc :kpiFlotaFisc :growl"
                                                  styleClass="ui-button-primary"
                                                  style="width: auto;" />
                             </div>

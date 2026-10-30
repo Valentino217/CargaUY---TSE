@@ -18,32 +18,24 @@
         </div>
 
         <div class="cuy-kpi-grid">
-            <div class="cuy-card cuy-kpi-card" style="border-left-color: #0284c7;">
-                <div>
-                    <div class="cuy-kpi-label">Total Guías Emitidas</div>
-                    <div class="cuy-kpi-value">#{portalPublicoBean.totalViajesRegistrados}</div>
-                </div>
+            <div class="cuy-kpi-card">
+                <div class="cuy-kpi-label"><i class="pi pi-compass" /> Total Guías Emitidas</div>
+                <div class="cuy-kpi-value">#{portalPublicoBean.totalViajesRegistrados}</div>
             </div>
 
-            <div class="cuy-card cuy-kpi-card" style="border-left-color: #16a34a;">
-                <div>
-                    <div class="cuy-kpi-label">Empresas Activas</div>
-                    <div class="cuy-kpi-value">#{portalPublicoBean.totalEmpresasActivas}</div>
-                </div>
+            <div class="cuy-kpi-card success">
+                <div class="cuy-kpi-label"><i class="pi pi-building" /> Empresas Activas</div>
+                <div class="cuy-kpi-value">#{portalPublicoBean.totalEmpresasActivas}</div>
             </div>
 
-            <div class="cuy-card cuy-kpi-card" style="border-left-color: #f59e0b;">
-                <div>
-                    <div class="cuy-kpi-label">Unidades en Padrón</div>
-                    <div class="cuy-kpi-value">#{portalPublicoBean.totalVehiculosRegistrados}</div>
-                </div>
+            <div class="cuy-kpi-card warning">
+                <div class="cuy-kpi-label"><i class="pi pi-truck" /> Unidades en Padrón</div>
+                <div class="cuy-kpi-value">#{portalPublicoBean.totalVehiculosRegistrados}</div>
             </div>
 
-            <div class="cuy-card cuy-kpi-card" style="border-left-color: #7c3aed;">
-                <div>
-                    <div class="cuy-kpi-label">Controles de Balanza</div>
-                    <div class="cuy-kpi-value">#{portalPublicoBean.totalPesadas}</div>
-                </div>
+            <div class="cuy-kpi-card">
+                <div class="cuy-kpi-label"><i class="pi pi-sliders-h" /> Controles de Balanza</div>
+                <div class="cuy-kpi-value">#{portalPublicoBean.totalPesadas}</div>
             </div>
         </div>
 
@@ -110,12 +102,20 @@
                                 #{v.marca} &#8226; #{v.modelo}
                             </p:column>
 
-                            <p:column headerText="Tara (kg)" sortBy="#{v.peso}" style="width: 130px; text-align: right;">
-                                #{v.peso} kg
+                            <p:column headerText="Tara (kg)" sortBy="#{v.peso}" style="width: 140px; text-align: right;">
+                                <h:outputText value="#{v.peso}">
+                                    <f:convertNumber pattern="#,##0" />
+                                </h:outputText>
+                                <span> kg</span>
                             </p:column>
 
-                            <p:column headerText="Capacidad Máxima (kg)" sortBy="#{v.capacidadCarga}" style="width: 165px; text-align: right;">
-                                <strong>#{v.capacidadCarga} kg</strong>
+                            <p:column headerText="Capacidad Máxima (kg)" sortBy="#{v.capacidadCarga}" style="width: 175px; text-align: right;">
+                                <strong>
+                                    <h:outputText value="#{v.capacidadCarga}">
+                                        <f:convertNumber pattern="#,##0" />
+                                    </h:outputText>
+                                    <span> kg</span>
+                                </strong>
                             </p:column>
 
                             <p:column headerText="Habilitación Operativa" sortBy="#{v.estadoHabilitacion}" style="width: 170px; text-align: center;">
