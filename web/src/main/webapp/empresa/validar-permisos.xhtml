@@ -1,0 +1,48 @@
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/templates/template.xhtml">
+    <ui:define name="title">Validar permisos de empresa</ui:define>
+    <ui:define name="content">
+        <h1>Validar permisos de empresa</h1>
+        <p>Consulta de habilitación administrativa, PNC e ITV de los vehículos registrados.</p>
+
+        <h:form id="consultaPermisos">
+            <p:messages id="mensajes"/>
+            <p:outputLabel for="numero" value="Número de empresa"/>
+            <p:inputNumber id="numero" value="#{validacionPermisosBean.numeroEmpresa}"
+                           decimalPlaces="0" thousandSeparator="" minValue="1"
+                           required="true" requiredMessage="Ingresá el número de empresa"/>
+            <p:commandButton value="Consultar permisos"
+                             action="#{validacionPermisosBean.consultar}"
+                             process="@form" update="@form"/>
+
+            <p:outputPanel id="resultado">
+                <ui:fragment rendered="#{validacionPermisosBean.resultado ne null}">
+                    <h2><h:outputText value="#{validacionPermisosBean.resultado.razonSocial()}"/></h2>
+                    <p>Fecha de consulta: <h:outputText value="#{validacionPermisosBean.resultado.fechaConsulta()}"/></p>
+                    <p>Estado registral: <h:outputText value="#{validacionPermisosBean.resultado.activa() ? 'ACTIVA' : 'INACTIVA'}"/></p>
+                    <p:staticMessage severity="warn" summary="Empresa inactiva"
+                                     detail="La vigencia de documentos de vehículos no revierte la baja de la empresa."
+                                     rendered="#{not validacionPermisosBean.resultado.activa()}"/>
+                    <p>Unidades con documentación vigente y habilitación administrativa:
+                        <h:outputText value="#{validacionPermisosBean.resultado.habilitadas()}"/>
+                    </p>
+                    <p:dataTable value="#{validacionPermisosBean.resultado.unidades()}" var="u"
+                                 emptyMessage="Sin vehículos registrados: información insuficiente para evaluar la flota.">
+                        <p:column headerText="Matrícula"><h:outputText value="#{u.matricula()}"/></p:column>
+                        <p:column headerText="Habilitación administrativa"><h:outputText value="#{u.habilitacionAdministrativa() ? 'ACTIVA' : 'INHABILITADA'}"/></p:column>
+                        <p:column headerText="PNC"><h:outputText value="#{u.estadoPnc()}"/></p:column>
+                        <p:column headerText="Vencimiento PNC"><h:outputText value="#{u.vencimientoPnc()}"/></p:column>
+                        <p:column headerText="ITV"><h:outputText value="#{u.estadoItv()}"/></p:column>
+                        <p:column headerText="Vencimiento ITV"><h:outputText value="#{u.vencimientoItv()}"/></p:column>
+                        <p:column headerText="Resultado de la unidad"><h:outputText value="#{u.resultado()}"/></p:column>
+                    </p:dataTable>
+                    <p>El resultado refleja los registros de CargaUY; no constituye un certificado externo.</p>
+                </ui:fragment>
+            </p:outputPanel>
+        </h:form>
+    </ui:define>
+</ui:composition>
