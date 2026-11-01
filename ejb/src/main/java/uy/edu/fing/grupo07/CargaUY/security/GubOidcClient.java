@@ -86,11 +86,25 @@ public class GubOidcClient {
             if (!claims.getString("sub").equals(info.getString("sub")))
                 throw new ErrorAcceso(401,"Identidad inconsistente");
             if (real()) {
-                // No se trata un pasaporte extranjero como CI.
-                String pais = info.getString("pais_documento",""), tipo = info.getString("tipo_documento","");
+                String pais = info.getString("pais_documento", "").trim();
+                String tipo = info.getString("tipo_documento", "").trim();
+
+                boolean asumirDocumentoLocal =
+                        Boolean.parseBoolean(
+                                Config.valor("p1.entorno.local", "false"))
+                        && Boolean.parseBoolean(
+                                Config.valor("gub.document.asumir.local", "false"));
+
+                if (asumirDocumentoLocal && pais.isBlank() && tipo.isBlank()) {
+                    pais = "Uruguay";
+                    tipo = "DNI";
+                }
+
                 if (!pais.equalsIgnoreCase(Config.requerido("gub.document.pais"))
-                        || !tipo.equalsIgnoreCase(Config.requerido("gub.document.tipo")))
-                    throw new ErrorAcceso(409,"Se requiere documento de tipo CI uruguaya configurado");
+                        || !tipo.equalsIgnoreCase(Config.requerido("gub.document.tipo"))) {
+                    throw new ErrorAcceso(409,
+                            "Se requiere documento de tipo CI uruguaya configurado");
+                }
             }
             String documento = info.getString(real()?"numero_documento":"ci","").replaceAll("[. \\-]","");
             if (!documento.matches("[0-9]{7,8}")) throw new ErrorAcceso(409,"Documento ausente o incompatible");

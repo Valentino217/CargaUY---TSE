@@ -71,18 +71,18 @@
                         </div>
                     </f:facet>
 
-                    <p:column headerText="Matrícula" sortBy="#{veh.matricula}" filterBy="#{veh.matricula}" filterMatchMode="contains" style="width: 130px;">
+                    <p:column filterBy="#{veh.matricula}" filterMatchMode="contains" style="width: 130px;" filterPlaceholder="Matrícula">
                         <span class="cuy-mono"><i class="pi pi-car" /> #{veh.matricula}</span>
                     </p:column>
 
-                    <p:column headerText="Unidad" sortBy="#{veh.marca}" filterBy="#{veh.marca}" filterMatchMode="contains">
+                    <p:column filterBy="#{veh.marca}" filterMatchMode="contains" filterPlaceholder="Unidad (Marca / Modelo)">
                         <strong style="color: #0f2942;">#{veh.marca} #{veh.modelo}</strong>
                         <div style="font-size: 0.78rem; color: #64748b;">
                             Capacidad: #{veh.capacidadCarga} kg | Peso: #{veh.peso} kg
                         </div>
                     </p:column>
 
-                    <p:column headerText="Habilitación Base" sortBy="#{veh.estadoHabilitacion}" style="width: 140px; text-align: center;">
+                    <p:column headerText="Habilitación Base" style="width: 140px; text-align: center;">
                         <p:tag value="#{veh.estadoHabilitacion ? 'HABILITADO' : 'SUSPENDIDO'}"
                                severity="#{veh.estadoHabilitacion ? 'success' : 'danger'}"
                                rounded="true" />
@@ -160,7 +160,7 @@
                             </div>
                             <p:outputLabel for="fecItv" value="Nueva Fecha de Vencimiento ITV" />
                             <div style="display: flex; gap: 0.6rem; margin-top: 0.35rem;">
-                                <p:datePicker id="fecItv" value="#{fiscalizacionFlotaBean.nuevaFechaItv}" pattern="yyyy-MM-dd" showIcon="true" />
+                                <p:datePicker id="fecItv" value="#{fiscalizacionFlotaBean.nuevaFechaItv}" pattern="yyyy-MM-dd" showIcon="true"  panelStyleClass="cuy-calendar"  monthNavigator="true"  yearNavigator="select"  showButtonBar="true"  showOtherMonths="true"  yearRange="1900:2026"  showLongMonthNames="true" />
                                 <p:commandButton value="Emitir ITV"
                                                  icon="pi pi-check"
                                                  actionListener="#{fiscalizacionFlotaBean.registrarRenovacionItv}"
@@ -177,7 +177,7 @@
                             </div>
                             <p:outputLabel for="fecPnc" value="Nueva Fecha de Vencimiento PNC" />
                             <div style="display: flex; gap: 0.6rem; margin-top: 0.35rem;">
-                                <p:datePicker id="fecPnc" value="#{fiscalizacionFlotaBean.nuevaFechaPnc}" pattern="yyyy-MM-dd" showIcon="true" />
+                                <p:datePicker id="fecPnc" value="#{fiscalizacionFlotaBean.nuevaFechaPnc}" pattern="yyyy-MM-dd" showIcon="true"  panelStyleClass="cuy-calendar"  monthNavigator="true"  yearNavigator="select"  showButtonBar="true"  showOtherMonths="true"  yearRange="1900:2026"  showLongMonthNames="true" />
                                 <p:commandButton value="Emitir PNC"
                                                  icon="pi pi-check"
                                                  actionListener="#{fiscalizacionFlotaBean.registrarRenovacionPnc}"

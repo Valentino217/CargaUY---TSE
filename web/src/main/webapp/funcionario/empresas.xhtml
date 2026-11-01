@@ -77,23 +77,23 @@
                         </div>
                     </f:facet>
 
-                    <p:column headerText="N° Empresa" sortBy="#{emp.numero()}" filterBy="#{emp.numero()}" filterMatchMode="contains" style="width: 120px;">
+                    <p:column filterBy="#{emp.numero()}" filterMatchMode="contains" style="width: 120px;" filterPlaceholder="N° Empresa">
                         <span class="cuy-mono">#<h:outputText value="#{emp.numero()}" /></span>
                     </p:column>
 
-                    <p:column headerText="Razón Social" sortBy="#{emp.razonSocial()}" filterBy="#{emp.razonSocial()}" filterMatchMode="contains">
+                    <p:column filterBy="#{emp.razonSocial()}" filterMatchMode="contains" filterPlaceholder="Razón Social">
                         <strong style="color: #0f2942;">#{emp.razonSocial()}</strong>
                     </p:column>
 
-                    <p:column headerText="Nombre" sortBy="#{emp.nombrePublico()}" filterBy="#{emp.nombrePublico()}" filterMatchMode="contains">
+                    <p:column filterBy="#{emp.nombrePublico()}" filterMatchMode="contains" filterPlaceholder="Nombre Comercial">
                         <h:outputText value="#{emp.nombrePublico()}" />
                     </p:column>
 
-                    <p:column headerText="Dirección Fiscal" sortBy="#{emp.direccion()}">
+                    <p:column headerText="Dirección Fiscal">
                         <h:outputText value="#{emp.direccion()}" />
                     </p:column>
 
-                    <p:column headerText="Estado" sortBy="#{emp.activa()}" style="width: 135px; text-align: center;">
+                    <p:column headerText="Estado" style="width: 135px; text-align: center;">
                         <p:tag value="#{emp.activa() ? 'HABILITADA' : 'INACTIVA'}"
                                severity="#{emp.activa() ? 'success' : 'danger'}"
                                icon="#{emp.activa() ? 'pi pi-check' : 'pi pi-ban'}"

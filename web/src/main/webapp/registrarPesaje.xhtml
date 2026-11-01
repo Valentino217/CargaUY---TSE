@@ -49,6 +49,8 @@
             margin-bottom: 20px;
         }
     </style>
+    <link rel="stylesheet" href="#{request.contextPath}/css/ajustes-ui.css"/>
+    <link rel="stylesheet" href="#{request.contextPath}/css/calendarios.css"/>
 </h:head>
 
 <h:body>
@@ -94,7 +96,7 @@
                     <h:outputLabel for="fecha" value="Fecha:" style="font-weight: bold;"/>
                     <p:datePicker id="fecha"
                                   value="#{registrarPesajeBean.fecha}"
-                                  pattern="dd/MM/yyyy"/>
+                                  pattern="dd/MM/yyyy" panelStyleClass="cuy-calendar"  monthNavigator="true"  yearNavigator="select"  showButtonBar="true"  showOtherMonths="true"  showIcon="true"  yearRange="1900:2026"  showLongMonthNames="true" />
 
                     <h:outputLabel for="hora" value="Hora:" style="font-weight: bold;"/>
                     <p:datePicker id="hora"

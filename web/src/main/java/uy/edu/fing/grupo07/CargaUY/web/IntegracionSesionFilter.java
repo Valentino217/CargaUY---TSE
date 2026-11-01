@@ -66,6 +66,7 @@ public class IntegracionSesionFilter implements Filter {
     }
 
     private boolean evaluarPermisoRuta(String p, String metodo, Acceso actor) {
+        if ("/completar-perfil.xhtml".equals(p)) return true;
         if (actor.tiene(TipoUsuario.ADMINISTRADOR)) {
             return true;
         }

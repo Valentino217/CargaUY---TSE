@@ -42,34 +42,34 @@
                              size="small"
                              reflow="true">
 
-                    <p:column headerText="Guía #" sortBy="#{g.id}" filterBy="#{g.id}" filterMatchMode="exact" style="width: 90px; text-align: center;">
+                    <p:column filterBy="#{g.id}" filterMatchMode="exact" style="width: 90px; text-align: center;" filterPlaceholder="Guía #">
                         <span class="cuy-mono">##{g.id}</span>
                     </p:column>
 
-                    <p:column headerText="Fecha" sortBy="#{g.fecha}" style="width: 120px;">
+                    <p:column headerText="Fecha" style="width: 120px;">
                         <h:outputText value="#{g.fecha}" />
                     </p:column>
 
-                    <p:column headerText="Origen Destino" sortBy="#{g.origen}" filterBy="#{g.origen}" filterMatchMode="contains">
+                    <p:column filterBy="#{g.origen}" filterMatchMode="contains" filterPlaceholder="Corredor (Origen &#8594; Destino)">
                         <strong>#{g.origen}</strong> &#8594; <strong>#{g.destino}</strong>
                         <small style="display: block; color: var(--cuy-muted);">Rubro: #{g.rubroCliente} &#8226; Carga: #{g.volumenCarga} kg/m&#179;</small>
                     </p:column>
 
-                    <p:column headerText="Vehículo Asignado" sortBy="#{g.vehiculo.matricula}" filterBy="#{g.vehiculo.matricula}" filterMatchMode="contains" style="width: 165px;">
+                    <p:column filterBy="#{g.vehiculo.matricula}" filterMatchMode="contains" style="width: 165px;" filterPlaceholder="Vehículo Asignado">
                         <ui:fragment rendered="#{not empty g.vehiculo}">
                             <span class="cuy-mono"><i class="pi pi-car" /> #{g.vehiculo.matricula}</span>
                             <small style="display: block; color: var(--cuy-muted); margin-top: 2px;">#{g.vehiculo.marca} #{g.vehiculo.modelo}</small>
                         </ui:fragment>
                     </p:column>
 
-                    <p:column headerText="Chofer Asignado" sortBy="#{g.chofer.nombre}" filterBy="#{g.chofer.nombre}" filterMatchMode="contains">
+                    <p:column filterBy="#{g.chofer.nombre}" filterMatchMode="contains" filterPlaceholder="Chofer Asignado">
                         <ui:fragment rendered="#{not empty g.chofer}">
                             <strong>#{g.chofer.nombre}</strong>
                             <small style="display: block; color: var(--cuy-muted);">CI: #{g.chofer.ci}</small>
                         </ui:fragment>
                     </p:column>
 
-                    <p:column headerText="Estado" sortBy="#{g.estado}" filterBy="#{g.estado}" filterMatchMode="exact" style="width: 150px; text-align: center;">
+                    <p:column filterBy="#{g.estado}" filterMatchMode="exact" style="width: 150px; text-align: center;" filterPlaceholder="Estado">
                         <p:tag value="#{g.estado}"
                                severity="#{g.estado eq 'FINALIZADO' ? 'success' : (g.estado eq 'EN_CURSO' ? 'info' : 'warning')}"
                                rounded="true" />
@@ -212,8 +212,8 @@
                         </div>
 
                         <div class="cuy-field">
-                            <p:outputLabel for="fechaInput" value="Fecha Programada" />
-                            <p:datePicker id="fechaInput" value="#{GuiaDeViajeBean.guia.fecha}" pattern="yyyy-MM-dd" showIcon="true" required="true" />
+                            <p:outputLabel for="fechaInput" value="Fecha Programada *" />
+                            <p:datePicker id="fechaInput" value="#{GuiaDeViajeBean.guia.fecha}" pattern="yyyy-MM-dd" showIcon="true" required="true"  panelStyleClass="cuy-calendar"  monthNavigator="true"  yearNavigator="select"  showButtonBar="true"  showOtherMonths="true"  yearRange="1900:2026"  showLongMonthNames="true" />
                         </div>
                     </div>
                 </p:fieldset>

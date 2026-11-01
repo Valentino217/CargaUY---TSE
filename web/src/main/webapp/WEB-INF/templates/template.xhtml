@@ -254,6 +254,8 @@
         }
     </style>
     <ui:insert name="head" />
+    <link rel="stylesheet" href="#{request.contextPath}/css/ajustes-ui.css"/>
+    <link rel="stylesheet" href="#{request.contextPath}/css/calendarios.css"/>
 </h:head>
 
 <h:body>
@@ -310,6 +312,7 @@
                 <!-- 1. PORTAL PÚBLICO -->
                 <p:menuitem value="Validar Empresa" icon="pi pi-verified" outcome="/portal/validar-empresa.xhtml" />
                 <p:menuitem value="Información Pública" icon="pi pi-chart-bar" outcome="/portal/info-publica.xhtml" />
+                <p:menuitem value="Validar permisos" url="#{request.contextPath}/empresa/validar-permisos.xhtml" rendered="#{authBean.esCiudadanoEmpresa()}"/>
 
                 <!-- 2. CIUDADANO EMPRESA -->
                 <p:submenu label="Mi Empresa" icon="pi pi-building" rendered="#{authBean.esCiudadanoEmpresa()}">
@@ -318,6 +321,7 @@
                     <p:menuitem value="Guías de Viaje" icon="pi pi-map" outcome="/empresa/viajes.xhtml" />
                     <p:separator />
                     <p:menuitem value="Infracciones y Descargos" icon="pi pi-exclamation-circle" outcome="/empresa/infracciones.xhtml" />
+                    <p:menuitem value="Validar permisos" url="#{request.contextPath}/empresa/validar-permisos.xhtml" rendered="#{authBean.esCiudadanoEmpresa()}"/>
                 </p:submenu>
 
                 <!-- 3. FUNCIONARIO -->
@@ -340,6 +344,7 @@
                     <p:menuitem value="Usuarios y Roles" icon="pi pi-users" outcome="/admin/usuarios.xhtml" />
                     <p:menuitem value="Nodos Periféricos y Catálogos" icon="pi pi-server" outcome="/admin/nodos.xhtml" />
                     <p:menuitem value="Parámetros de Fiscalización" icon="pi pi-sliders-h" outcome="/admin/reglas-fiscalizacion.xhtml" />
+                    <p:menuitem value="Validar permisos" url="#{request.contextPath}/empresa/validar-permisos.xhtml" rendered="#{authBean.esCiudadanoEmpresa()}"/>
                 </p:submenu>
 
             </p:menubar>

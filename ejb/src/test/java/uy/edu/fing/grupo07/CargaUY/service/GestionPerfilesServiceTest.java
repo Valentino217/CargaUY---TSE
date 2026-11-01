@@ -10,6 +10,39 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class GestionPerfilesServiceTest {
+    @Test void perfilFederadoPendientePermiteEditarNombreSinInventarNacimiento() throws Exception {
+        EntityManager em=mock(EntityManager.class);
+        var u=new Ciudadano("Ana","ana@example.com",null,12345678,"{GUB}");
+        u.setId(7);u.setOrigenIdentidad("GUB");
+        when(em.find(Usuario.class,7)).thenReturn(u);
+        servicio(em).modificarUsuario("token",7,0,new DatosUsuario(TipoUsuario.CIUDADANO,
+                "Ana Actualizada","ana@example.com",null,12345678,null,null,null,null));
+        assertEquals("Ana Actualizada",u.getNombre());assertNull(u.getFechaNac());
+    }
+
+    @Test void perfilFederadoPermiteCompletarNacimientoPeroNoBorrarloDespues() throws Exception {
+        EntityManager em=mock(EntityManager.class);
+        var u=new Ciudadano("Ana","ana@example.com",null,12345678,"{GUB}");
+        u.setId(7);u.setOrigenIdentidad("GUB");
+        when(em.find(Usuario.class,7)).thenReturn(u);
+        var s=servicio(em);
+        var fecha=LocalDate.of(1990,1,1);
+        s.modificarUsuario("token",7,0,new DatosUsuario(TipoUsuario.CIUDADANO,
+                "Ana","ana@example.com",fecha,12345678,null,null,null,null));
+        assertEquals(fecha,u.getFechaNac());
+        assertThrows(ErrorNegocio.class,()->s.modificarUsuario("token",7,0,
+                new DatosUsuario(TipoUsuario.CIUDADANO,"Ana","ana@example.com",null,
+                        12345678,null,null,null,null)));
+    }
+
+    @Test void perfilLocalSigueExigiendoNacimiento() throws Exception {
+        EntityManager em=mock(EntityManager.class);
+        var u=new Ciudadano("Ana","ana@example.com",null,12345678,"local");u.setId(7);
+        when(em.find(Usuario.class,7)).thenReturn(u);
+        assertThrows(ErrorNegocio.class,()->servicio(em).modificarUsuario("token",7,0,
+                new DatosUsuario(TipoUsuario.CIUDADANO,"Ana","ana@example.com",null,
+                        12345678,null,null,null,null)));
+    }
     private DatosUsuario datosRoles(){return new DatosUsuario(TipoUsuario.ADMINISTRADOR,"Ana","ana@example.com",LocalDate.of(1990,1,1),12345678,null,50,"Montevideo","Dirección");}
     @Test void altaConVariosRolesNoAgregaElTipoRecibidoEnDatos()throws Exception{
         EntityManager em=mock(EntityManager.class);
@@ -68,6 +101,8 @@ class GestionPerfilesServiceTest {
         Field seguridad=GestionPerfilesService.class.getDeclaredField("control");
         seguridad.setAccessible(true);
         var control=mock(uy.edu.fing.grupo07.CargaUY.security.ControlAcceso.class);
+          when(control.exigir("token")).thenReturn(new uy.edu.fing.grupo07.CargaUY.security.Acceso(
+              99,90000001,"Admin",java.util.Set.of(TipoUsuario.ADMINISTRADOR)));
         when(control.admin("token")).thenReturn(new uy.edu.fing.grupo07.CargaUY.security.Acceso(
             99,90000001,"Admin",java.util.Set.of(TipoUsuario.ADMINISTRADOR)));
         when(control.exigir("token",TipoUsuario.ADMINISTRADOR,TipoUsuario.FUNCIONARIO)).thenReturn(new uy.edu.fing.grupo07.CargaUY.security.Acceso(99,90000001,"Admin",java.util.Set.of(TipoUsuario.ADMINISTRADOR)));
