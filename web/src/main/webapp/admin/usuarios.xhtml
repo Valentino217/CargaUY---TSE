@@ -53,6 +53,7 @@
                              value="#{adminUsuariosBean.usuarios}"
                              filteredValue="#{adminUsuariosBean.usuariosFiltrados}"
                              widgetVar="dtUsuarios"
+                             styleClass="cuy-tabla-usuarios"
                              paginator="true"
                              rows="10"
                              paginatorPosition="bottom"
@@ -75,20 +76,32 @@
                         </div>
                     </f:facet>
 
-                    <p:column headerText="ID" sortBy="#{u.id()}" style="width: 70px; text-align: center;">
+                    <p:column headerText="ID" style="width: 70px; text-align: center;">
                         <span class="cuy-mono">##{u.id()}</span>
                     </p:column>
 
-                    <p:column headerText="Nombre Completo" sortBy="#{u.nombre()}" filterBy="#{u.nombre()}" filterMatchMode="contains">
+                    <p:column filterBy="#{u.nombre()}" filterMatchMode="contains" style="width: 240px;">
+                        <f:facet name="filter">
+                            <p:inputText id="nombreFiltro" placeholder="Nombre completo" title="Filtrar por nombre completo"
+                                         onkeyup="PF('dtUsuarios').filter()" styleClass="cuy-filtro-usuarios" />
+                        </f:facet>
                         <strong style="color: #0f2942;">#{u.nombre()}</strong>
                         <div style="font-size: 0.78rem; color: #64748b;">#{u.mail()}</div>
                     </p:column>
 
-                    <p:column headerText="Cédula (CI)" sortBy="#{u.ci()}" filterBy="#{u.ci()}" filterMatchMode="contains" style="width: 120px;">
+                    <p:column filterBy="#{u.ci()}" filterMatchMode="contains" style="width: 140px;">
+                        <f:facet name="filter">
+                            <p:inputText id="ciFiltro" placeholder="Cédula (CI)" title="Filtrar por cédula (ci)"
+                                         onkeyup="PF('dtUsuarios').filter()" styleClass="cuy-filtro-usuarios" />
+                        </f:facet>
                         <span class="cuy-mono">#{u.ci()}</span>
                     </p:column>
 
-                    <p:column headerText="Rol Principal" sortBy="#{u.tipo()}" filterBy="#{u.tipo()}" filterMatchMode="contains" style="width: 150px;">
+                    <p:column filterBy="#{u.tipo()}" filterMatchMode="contains" style="width: 160px;">
+                        <f:facet name="filter">
+                            <p:inputText id="rolFiltro" placeholder="Rol principal" title="Filtrar por rol principal"
+                                         onkeyup="PF('dtUsuarios').filter()" styleClass="cuy-filtro-usuarios" />
+                        </f:facet>
                         <p:tag value="#{u.tipo()}"
                                severity="#{u.tipo() eq 'ADMINISTRADOR' ? 'danger' : (u.tipo() eq 'AUTORIDAD' ? 'warning' : (u.tipo() eq 'FUNCIONARIO' ? 'info' : 'success'))}"
                                rounded="true" />
@@ -100,7 +113,7 @@
                         </div>
                     </p:column>
 
-                    <p:column headerText="Estado" sortBy="#{u.activo()}" style="width: 115px; text-align: center;">
+                    <p:column headerText="Estado" style="width: 115px; text-align: center;">
                         <p:tag value="#{u.activo() ? 'ACTIVO' : 'INACTIVO'}"
                                severity="#{u.activo() ? 'success' : 'danger'}"
                                rounded="true" />
@@ -178,7 +191,7 @@
                     </div>
                     <div class="cuy-field">
                         <p:outputLabel for="fnacUsr" value="Fecha de Nacimiento *" />
-                        <p:datePicker id="fnacUsr" value="#{adminUsuariosBean.fechaNacForm}" pattern="yyyy-MM-dd" showIcon="true" required="true" />
+                        <p:datePicker id="fnacUsr" value="#{adminUsuariosBean.fechaNacForm}" pattern="yyyy-MM-dd" showIcon="true" required="true"  panelStyleClass="cuy-calendar"  monthNavigator="true"  yearNavigator="select"  showButtonBar="true"  showOtherMonths="true"  yearRange="1900:2026"  showLongMonthNames="true" />
                     </div>
                     <ui:fragment rendered="#{not adminUsuariosBean.modoEdicion}">
                         <div class="cuy-field">

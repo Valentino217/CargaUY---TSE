@@ -74,35 +74,35 @@
                         </div>
                     </f:facet>
 
-                    <p:column headerText="Caso #" sortBy="#{inf.idCaso()}" style="width: 85px; text-align: center;">
+                    <p:column headerText="Caso #" style="width: 85px; text-align: center;">
                         <span class="cuy-mono">#<h:outputText value="#{inf.idCaso()}" /></span>
                     </p:column>
 
-                    <p:column headerText="Fecha" sortBy="#{inf.fecha()}" style="width: 115px;">
+                    <p:column headerText="Fecha" style="width: 115px;">
                         <h:outputText value="#{inf.fecha()}" />
                     </p:column>
 
-                    <p:column headerText="Tipo de Infracción" sortBy="#{inf.tipo()}" filterBy="#{inf.tipo()}" filterMatchMode="contains" style="width: 190px;">
+                    <p:column filterBy="#{inf.tipo()}" filterMatchMode="contains" style="width: 190px;" filterPlaceholder="Tipo de Infracción">
                         <p:tag value="#{inf.tipo()}"
                                severity="#{inf.tipo().name() eq 'EXCESO_PESO' ? 'danger' : (inf.tipo().name() eq 'DESVIO_RUTA' ? 'warning' : 'info')}"
                                icon="pi pi-exclamation-circle"
                                rounded="true" />
                     </p:column>
 
-                    <p:column headerText="Guía / Matrícula" sortBy="#{inf.matricula()}" filterBy="#{inf.matricula()}" filterMatchMode="contains" style="width: 155px;">
+                    <p:column filterBy="#{inf.matricula()}" filterMatchMode="contains" style="width: 155px;" filterPlaceholder="Guía / Matrícula">
                         <span class="cuy-mono"><i class="pi pi-car" /> #{inf.matricula() != null ? inf.matricula() : 'S/D'}</span>
                         <div style="font-size: 0.78rem; color: #64748b;">
                             Guía ##{inf.guiaId() != null ? inf.guiaId() : '-'}
                         </div>
                     </p:column>
 
-                    <p:column headerText="Evidencia Técnica Resumida" filterBy="#{inf.evidencia()}" filterMatchMode="contains">
+                    <p:column filterBy="#{inf.evidencia()}" filterMatchMode="contains" filterPlaceholder="Evidencia Técnica Resumida">
                         <div style="font-size: 0.86rem; color: #334155;">
                             #{inf.evidencia()}
                         </div>
                     </p:column>
 
-                    <p:column headerText="Estado" sortBy="#{inf.estado()}" filterBy="#{inf.estado()}" filterMatchMode="exact" style="width: 150px; text-align: center;">
+                    <p:column filterBy="#{inf.estado()}" filterMatchMode="exact" style="width: 150px; text-align: center;" filterPlaceholder="Estado">
                         <p:tag value="#{inf.estado()}"
                                severity="#{inf.estado().name() eq 'CONFIRMADA' ? 'danger' : (inf.estado().name() eq 'DESESTIMADA' ? 'success' : (inf.estado().name() eq 'EN_DESCARGO' ? 'warning' : 'info'))}"
                                rounded="true" />

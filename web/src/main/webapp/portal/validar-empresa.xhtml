@@ -59,19 +59,19 @@
                              size="small"
                              reflow="true">
 
-                    <p:column headerText="Nro. Registro" sortBy="#{emp.nroEmpresa}" style="width: 130px; text-align: center;">
+                    <p:column headerText="Nro. Registro" style="width: 130px; text-align: center;">
                         <span class="cuy-mono">##{emp.nroEmpresa}</span>
                     </p:column>
 
-                    <p:column headerText="Razón Social" sortBy="#{emp.razonSocial}" filterBy="#{emp.razonSocial}" filterMatchMode="contains">
+                    <p:column filterBy="#{emp.razonSocial}" filterMatchMode="contains" filterPlaceholder="Razón Social">
                         <strong>#{emp.razonSocial}</strong>
                     </p:column>
 
-                    <p:column headerText="Nombre Comercial" sortBy="#{emp.nombrePublico}" filterBy="#{emp.nombrePublico}" filterMatchMode="contains">
+                    <p:column filterBy="#{emp.nombrePublico}" filterMatchMode="contains" filterPlaceholder="Nombre Comercial">
                         <h:outputText value="#{emp.nombrePublico}" />
                     </p:column>
 
-                    <p:column headerText="Domicilio Fiscal" sortBy="#{emp.direccion}">
+                    <p:column headerText="Domicilio Fiscal">
                         <h:outputText value="#{emp.direccion}" />
                     </p:column>
 
@@ -82,7 +82,7 @@
                                rounded="true" />
                     </p:column>
 
-                    <p:column headerText="Estado Registral" sortBy="#{emp.activa}" style="width: 150px; text-align: center;">
+                    <p:column headerText="Estado Registral" style="width: 150px; text-align: center;">
                         <p:tag value="#{emp.activa ? 'HABILITADA' : 'INACTIVA / BAJA'}"
                                severity="#{emp.activa ? 'success' : 'danger'}"
                                icon="#{emp.activa ? 'pi pi-check-circle' : 'pi pi-times-circle'}"

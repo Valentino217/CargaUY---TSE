@@ -1,0 +1,182 @@
+/* Capa visual compartida por el portal, PrimeFaces y las vistas independientes. */
+:root {
+    --cuy-control-radius: 8px;
+    --cuy-focus: #0284c7;
+    --cuy-shadow-soft: 0 4px 20px rgb(15 41 66 / 5%);
+}
+
+body {
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* La especificidad de body permite superar el tema de PrimeFaces. */
+body .ui-button,
+body button,
+body input[type="submit"],
+body input[type="button"],
+body .button,
+body .card-btn {
+    border-radius: var(--cuy-control-radius) !important;
+    font-weight: 600;
+    transition: background-color 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+body .ui-button:not(.ui-state-disabled):hover,
+body .button:hover,
+body .card-btn:hover {
+    box-shadow: 0 3px 9px rgb(15 41 66 / 12%);
+}
+
+body :is(button, a, input, select, textarea):focus-visible {
+    outline: 3px solid #38bdf8;
+    outline-offset: 3px;
+}
+
+body .ui-button.ui-state-disabled,
+body button:disabled {
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+body .ui-inputfield:not(.ui-chkbox-box):not(.ui-radiobutton-box),
+body .ui-selectonemenu,
+body select,
+body textarea,
+body input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]) {
+    border-radius: var(--cuy-control-radius);
+}
+
+body .ui-inputfield:not(.ui-state-error):focus,
+body .ui-selectonemenu.ui-state-focus {
+    border-color: var(--cuy-focus);
+    box-shadow: 0 0 0 3px rgb(2 132 199 / 12%);
+}
+
+/* No alterar los radios de casillas, indicadores de estado ni controles internos. */
+body .ui-datepicker-trigger {
+    border-radius: 0 8px 8px 0 !important;
+}
+
+.cuy-header { gap: 24px; padding-block: 16px; }
+.cuy-brand-subtitle { margin-top: 3px; }
+.cuy-user-box { flex-wrap: wrap; justify-content: flex-end; }
+.cuy-page-header { margin-bottom: 28px; }
+.cuy-page-title { line-height: 1.25; letter-spacing: -0.025em; }
+.cuy-page-subtitle { line-height: 1.6; max-width: 76ch; }
+.cuy-field { min-width: 0; }
+.cuy-field label { margin-bottom: 2px; }
+.cuy-field .ui-inputnumber,
+.cuy-field .ui-calendar { width: 100%; }
+.cuy-field .ui-inputfield { max-width: 100%; }
+
+body .cuy-card,
+body .cuy-kpi-card,
+body .module-card,
+body .card {
+    border-radius: 12px;
+    box-shadow: var(--cuy-shadow-soft);
+}
+
+.cuy-card-title { line-height: 1.4; }
+.cuy-kpi-value { letter-spacing: -0.035em; }
+body .cuy-footer { padding-block: 20px; }
+
+body .ui-datatable .ui-datatable-tablewrapper {
+    border-radius: 8px;
+    overflow-x: auto;
+}
+body .ui-datatable thead th {
+    background: #f3f6fa;
+    color: #334155;
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 14px 16px;
+    border-color: #e2e8f0;
+}
+body .ui-datatable tbody td {
+    padding: 13px 16px;
+    border-color: #e8edf3;
+    vertical-align: middle;
+}
+body .ui-datatable tbody tr:not(.ui-state-highlight):hover {
+    background: #f0f7fc;
+}
+body .ui-paginator {
+    border-color: #e2e8f0;
+    padding: 10px;
+}
+body .ui-paginator .ui-paginator-page { border-radius: 8px; }
+body .ui-datatable .ui-button + .ui-button { margin-left: 6px; }
+
+body .ui-dialog {
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgb(15 41 66 / 20%);
+    max-width: calc(100vw - 24px);
+}
+body .ui-dialog .ui-dialog-titlebar { border-radius: 12px 12px 0 0; }
+body .ui-dialog .ui-dialog-content { border-radius: 0 0 12px 12px; }
+body .ui-messages > div,
+body .ui-message { border-radius: 8px; }
+
+body .cuy-nav-wrapper .ui-menuitem-link { border-radius: 8px; }
+body .cuy-nav-wrapper .ui-menuitem-link:hover { background: #eef6fc; }
+body .cuy-nav-wrapper .ui-menuitem-link .ui-menuitem-text { font-weight: 500; }
+body .cuy-nav-wrapper .ui-menu-child {
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgb(15 41 66 / 12%);
+}
+
+.operation-tabs { gap: 8px; }
+.operation-tabs a { border-radius: 8px; }
+body .alert { border-radius: 8px; }
+body .login-container { padding-block: 12px; }
+body .login-form { gap: 20px; }
+body .login-form label { line-height: 1.5; }
+
+@media (max-width: 768px) {
+    .cuy-header { flex-wrap: wrap; gap: 16px; }
+    .cuy-user-box { gap: 10px; }
+    .cuy-page-title { font-size: 1.3rem; }
+    .cuy-grid-cards { grid-template-columns: minmax(0, 1fr); }
+    body .ui-datatable thead th,
+    body .ui-datatable tbody td { padding: 10px 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body .ui-button, body button, body .button, body .card-btn {
+        transition: none;
+    }
+}
+
+/* Filtros compactos del padrón de usuarios. */
+body .cuy-tabla-usuarios .cuy-filtro-usuarios {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    margin: 0;
+    font-weight: 400;
+}
+body .cuy-tabla-usuarios .cuy-filtro-usuarios::placeholder {
+    color: #64748b;
+    opacity: 1;
+}
+body .cuy-tabla-usuarios tbody td {
+    overflow-wrap: anywhere;
+}
+
+/* Iconos de indicadores siempre en la esquina superior derecha. */
+body .cuy-kpi-card {
+    position: relative;
+    padding-right: 4.25rem;
+}
+body .cuy-kpi-card > .pi,
+body .cuy-kpi-card .cuy-kpi-label > .pi {
+    position: absolute;
+    top: 1.1rem;
+    right: 1.15rem;
+    margin: 0;
+    line-height: 1;
+    font-size: 1.75rem;
+}

@@ -83,22 +83,22 @@
                         </div>
                     </f:facet>
 
-                    <p:column headerText="Caso #" sortBy="#{caso.idCaso()}" style="width: 85px; text-align: center;">
+                    <p:column headerText="Caso #" style="width: 85px; text-align: center;">
                         <span class="cuy-mono">#<h:outputText value="#{caso.idCaso()}" /></span>
                     </p:column>
 
-                    <p:column headerText="Fecha" sortBy="#{caso.fecha()}" style="width: 110px;">
+                    <p:column headerText="Fecha" style="width: 110px;">
                         <h:outputText value="#{caso.fecha()}" />
                     </p:column>
 
-                    <p:column headerText="Empresa / Unidad" sortBy="#{caso.nombreEmpresa()}" filterBy="#{caso.nombreEmpresa()}" filterMatchMode="contains">
+                    <p:column filterBy="#{caso.nombreEmpresa()}" filterMatchMode="contains" filterPlaceholder="Empresa / Unidad">
                         <strong style="color: #0f2942;">#{caso.nombreEmpresa() != null ? caso.nombreEmpresa() : 'Empresa N/D'}</strong>
                         <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.15rem;">
                             Matrícula: <span class="cuy-mono">#{caso.matricula() != null ? caso.matricula() : 'S/D'}</span> | Guía ##{caso.guiaId()}
                         </div>
                     </p:column>
 
-                    <p:column headerText="Tipo Infracción" sortBy="#{caso.tipo()}" filterBy="#{caso.tipo()}" filterMatchMode="contains" style="width: 185px;">
+                    <p:column filterBy="#{caso.tipo()}" filterMatchMode="contains" style="width: 185px;" filterPlaceholder="Tipo Infracción">
                         <p:tag value="#{caso.tipo()}"
                                severity="#{caso.tipo().name() eq 'EXCESO_PESO' ? 'danger' : (caso.tipo().name() eq 'DESVIO_RUTA' ? 'warning' : 'info')}"
                                icon="pi pi-exclamation-triangle"
@@ -112,7 +112,7 @@
                                rounded="true" />
                     </p:column>
 
-                    <p:column headerText="Estado" sortBy="#{caso.estado()}" filterBy="#{caso.estado()}" filterMatchMode="contains" style="width: 150px; text-align: center;">
+                    <p:column filterBy="#{caso.estado()}" filterMatchMode="contains" style="width: 150px; text-align: center;" filterPlaceholder="Estado">
                         <p:tag value="#{caso.estado()}"
                                severity="#{caso.estado().name() eq 'CONFIRMADA' ? 'danger' : (caso.estado().name() eq 'DESESTIMADA' ? 'success' : (caso.estado().name() eq 'EN_DESCARGO' ? 'warning' : 'info'))}"
                                rounded="true" />

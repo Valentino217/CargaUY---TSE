@@ -49,7 +49,7 @@
 
                         <div class="cuy-field">
                             <p:outputLabel for="fechaNac" value="Fecha de Nacimiento" />
-                            <p:datePicker id="fechaNac" value="#{empresaPerfilBean.fechaNacEdit}" pattern="yyyy-MM-dd" showIcon="true" />
+                            <p:datePicker id="fechaNac" value="#{empresaPerfilBean.fechaNacEdit}" pattern="yyyy-MM-dd" showIcon="true"  panelStyleClass="cuy-calendar"  monthNavigator="true"  yearNavigator="select"  showButtonBar="true"  showOtherMonths="true"  yearRange="1900:2026"  showLongMonthNames="true" />
                         </div>
                     </div>
 
@@ -77,19 +77,19 @@
                                  stripedRows="true"
                                  size="small">
 
-                        <p:column headerText="Nro. Empresa" sortBy="#{emp.numero()}" style="width: 130px; text-align: center;">
+                        <p:column headerText="Nro. Empresa" style="width: 130px; text-align: center;">
                             <span class="cuy-mono">##{emp.numero()}</span>
                         </p:column>
 
-                        <p:column headerText="Razón Social" sortBy="#{emp.razonSocial()}" filterBy="#{emp.razonSocial()}" filterMatchMode="contains">
+                        <p:column filterBy="#{emp.razonSocial()}" filterMatchMode="contains" filterPlaceholder="Razón Social">
                             <strong>#{emp.razonSocial()}</strong>
                         </p:column>
 
-                        <p:column headerText="Nombre Público" sortBy="#{emp.nombrePublico()}">
+                        <p:column headerText="Nombre Público">
                             #{emp.nombrePublico()}
                         </p:column>
 
-                        <p:column headerText="Dirección Fiscal" sortBy="#{emp.direccion()}">
+                        <p:column headerText="Dirección Fiscal">
                             #{emp.direccion()}
                         </p:column>
 
