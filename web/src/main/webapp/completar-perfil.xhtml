@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:h="jakarta.faces.html"
+      xmlns:p="http://primefaces.org/ui" lang="es">
+<h:head>
+    <title>Completá tu perfil - CargaUY</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <link rel="stylesheet" href="#{request.contextPath}/css/plataforma.css"/>
+    <link rel="stylesheet" href="#{request.contextPath}/css/ajustes-ui.css"/>
+    <link rel="stylesheet" href="#{request.contextPath}/css/calendarios.css"/>
+</h:head>
+<h:body>
+    <p:dialog header="Completá tu perfil" visible="true" modal="true"
+              closable="false" closeOnEscape="false" draggable="false"
+              resizable="false" responsive="true" width="420">
+        <p>Para continuar a CargaUY, ingresá tu fecha de nacimiento.</p>
+        <h:form id="nacimiento">
+            <p:messages id="mensajes"/>
+            <div class="form-grid">
+                <div>
+                    <p:outputLabel for="fecha" value="Fecha de nacimiento"/>
+                    <p:datePicker id="fecha" value="#{completarPerfilBean.fechaNacimiento}"
+                                  pattern="dd/MM/yyyy" showIcon="true" monthNavigator="true"
+                                  yearNavigator="select" yearRange="1900:2026"
+                                  maxdate="#{completarPerfilBean.hoy}" required="true"
+                                  requiredMessage="Ingresá tu fecha de nacimiento"
+                                  converterMessage="Ingresá una fecha válida con formato día/mes/año" panelStyleClass="cuy-calendar"  showButtonBar="true"  showOtherMonths="true"  showLongMonthNames="true" />
+                </div>
+            </div>
+            <p:commandButton value="Guardar y continuar" action="#{completarPerfilBean.guardar}"
+                             ajax="false" style="margin-top:16px"/>
+        </h:form>
+        <h:form id="salir">
+            <p:commandButton value="Cerrar sesión" action="#{authBean.cerrarSesion}"
+                             ajax="false" styleClass="ui-button-secondary" style="margin-top:12px"/>
+        </h:form>
+    </p:dialog>
+</h:body>
+</html>

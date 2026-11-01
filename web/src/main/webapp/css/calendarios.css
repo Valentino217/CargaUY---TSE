@@ -1,0 +1,218 @@
+/* Diseño inspirado en la referencia; PrimeFaces conserva conversión y validación. */
+:root {
+    --calendar-accent: #ff374b;
+    --calendar-soft: #ffeaec;
+    --calendar-blue: #1752ff;
+}
+
+body .ui-datepicker.cuy-calendar,
+body .cuy-native-calendar {
+    width: 360px;
+    max-width: calc(100vw - 24px);
+    padding: 16px;
+    border: 1px solid #edf0f5;
+    border-radius: 24px;
+    background: linear-gradient(180deg, #fff 0%, #f6f7f9 42%, #fff 100%);
+    color: #17212f;
+    box-shadow: 0 18px 50px rgb(15 41 66 / 15%);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body .cuy-calendar .ui-datepicker-header {
+    padding: 4px 0 14px;
+    background: transparent;
+    border: 0;
+}
+body .cuy-calendar .ui-datepicker-title {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    margin: 0 26px;
+    line-height: 1.5;
+}
+body .cuy-calendar .ui-datepicker-title select,
+body .cuy-native-calendar select {
+    background: #f0f2f5;
+    border: 1px solid transparent;
+    border-radius: 16px;
+    padding: 10px 8px;
+    color: #17212f;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    min-height: 42px;
+    width: 50%;
+}
+body .cuy-calendar .ui-datepicker-prev,
+body .cuy-calendar .ui-datepicker-next {
+    top: 10px;
+    width: 26px;
+    height: 32px;
+    border-radius: 8px;
+    color: #64748b;
+}
+body .cuy-calendar .ui-datepicker-prev:hover,
+body .cuy-calendar .ui-datepicker-next:hover { background: #e9edf3; }
+
+body .cuy-calendar table { margin: 0; border-collapse: separate; border-spacing: 0 4px; }
+body .cuy-calendar table th {
+    padding: 10px 0;
+    color: #8490a0;
+    font-size: 12px;
+    font-weight: 700;
+    background: transparent;
+    border: 0;
+}
+body .cuy-calendar table td { padding: 0; border: 0; text-align: center; }
+body .cuy-calendar table td > a,
+body .cuy-calendar table td > span {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    color: #17212f;
+    font-weight: 600;
+    text-decoration: none;
+}
+body .cuy-calendar table td > a:hover { background: var(--calendar-soft); color: #dc2337; }
+body .cuy-calendar table td > a.ui-state-highlight { background: #edf2ff; color: #1752ff; }
+body .cuy-calendar table td > a.ui-state-active,
+body .cuy-calendar table td > span.ui-state-active {
+    background: var(--calendar-accent);
+    color: #fff;
+    box-shadow: 0 6px 14px rgb(255 55 75 / 24%);
+}
+body .cuy-calendar .ui-datepicker-other-month > a,
+body .cuy-calendar .ui-datepicker-other-month > span { color: #aeb7c4; }
+body .cuy-calendar td.ui-state-disabled { opacity: .4; }
+body .cuy-calendar .ui-datepicker-buttonbar {
+    display: flex;
+    gap: 10px;
+    padding: 14px 0 0;
+    margin-top: 8px;
+    border-top: 1px solid #edf0f5;
+}
+body .cuy-calendar .ui-datepicker-buttonbar .ui-button { flex: 1; margin: 0; font-size: 14px; }
+
+/* Los formularios heredados conservan input[type=date], su nombre e ISO yyyy-MM-dd. */
+.cuy-native-date { display: flex; align-items: stretch; gap: 6px; min-width: 0; }
+.cuy-native-date input { min-width: 0; }
+.cuy-native-date input::-webkit-calendar-picker-indicator { display: none; }
+body .cuy-calendar-trigger {
+    flex: 0 0 42px;
+    min-width: 42px;
+    padding: 0;
+    background: #eff4ff;
+    color: #1752ff;
+    border: 1px solid #dce5fa;
+}
+body .cuy-calendar-trigger:hover { background: #e2eaff; color: #123dc4; }
+body .cuy-native-calendar { position: fixed; z-index: 10050; }
+.cuy-native-calendar[hidden] { display: none; }
+.cuy-calendar-options { display: flex; gap: 10px; margin-bottom: 12px; }
+.cuy-calendar-options label { flex: 1; }
+body .cuy-calendar-options select { width: 100%; }
+.cuy-calendar-week,
+.cuy-calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.cuy-calendar-week span { text-align: center; color: #8490a0; font-size: 12px; font-weight: 700; padding: 8px 0; }
+.cuy-calendar-grid { gap: 4px 0; }
+body .cuy-calendar-day {
+    padding: 0;
+    min-height: 38px;
+    height: 38px;
+    border: 0;
+    border-radius: 12px !important;
+    background: transparent;
+    color: #17212f;
+    font-size: 14px;
+    box-shadow: none;
+}
+body .cuy-calendar-day:hover { background: var(--calendar-soft); color: #dc2337; }
+body .cuy-calendar-day[aria-pressed="true"] { background: var(--calendar-accent); color: white; }
+body .cuy-calendar-day:disabled { color: #aeb7c4; background: transparent; opacity: .5; }
+.cuy-calendar-caption { margin: 0 0 8px; font-size: 13px; color: #64748b; }
+.cuy-calendar-actions { display: flex; gap: 12px; margin-top: 16px; }
+body .cuy-calendar-actions button { flex: 1; padding: 10px 8px; font-size: 14px; }
+body .cuy-calendar-cancel { background: #f0f2f5; border-color: #f0f2f5; color: #17212f; }
+body .cuy-calendar-apply { background: var(--calendar-blue); border-color: var(--calendar-blue); color: white; }
+body .cuy-calendar-apply:disabled { opacity: .5; }
+
+@media (max-width: 400px) {
+    body .ui-datepicker.cuy-calendar,
+    body .cuy-native-calendar { padding: 12px; }
+    body .cuy-calendar table td > a,
+    body .cuy-calendar table td > span { width: 34px; height: 36px; }
+}
+
+/* Calendario compacto: navegación mediante mes y año desplegables. */
+body .ui-datepicker.cuy-calendar,
+body .cuy-native-calendar {
+    width: 290px;
+    padding: 12px;
+    box-sizing: border-box;
+    border-radius: 18px;
+}
+body .cuy-calendar .ui-datepicker-prev,
+body .cuy-calendar .ui-datepicker-next {
+    display: none;
+}
+body .cuy-calendar .ui-datepicker-title { margin: 0; }
+body .cuy-calendar .ui-datepicker-title select,
+body .cuy-native-calendar select {
+    min-height: 36px;
+    padding: 7px 8px;
+    font-size: 13px;
+}
+body .cuy-calendar td > a,
+body .cuy-calendar td > span,
+body .cuy-native-calendar .cuy-calendar-day {
+    width: 31px;
+    height: 31px;
+    font-size: 13px;
+}
+body .cuy-calendar table { border-spacing: 0 2px; }
+body .cuy-calendar .ui-datepicker-buttonbar { padding-top: 8px; }
+
+/* El tema de PrimeFaces define anchos mínimos en la tabla interna. */
+body .ui-datepicker.cuy-calendar .ui-datepicker-group,
+body .ui-datepicker.cuy-calendar .ui-datepicker-calendar-container {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+body .ui-datepicker.cuy-calendar table.ui-datepicker-calendar {
+    width: 100% !important;
+    min-width: 0 !important;
+    table-layout: fixed;
+    margin: 0;
+}
+body .ui-datepicker.cuy-calendar table.ui-datepicker-calendar th,
+body .ui-datepicker.cuy-calendar table.ui-datepicker-calendar td {
+    width: 14.2857%;
+    min-width: 0;
+    padding: 2px 0 !important;
+    box-sizing: border-box;
+}
+body .ui-datepicker.cuy-calendar table.ui-datepicker-calendar td > a,
+body .ui-datepicker.cuy-calendar table.ui-datepicker-calendar td > span {
+    width: 30px;
+    height: 30px;
+    min-width: 0;
+    min-height: 0;
+    line-height: 30px;
+    font-size: 13px;
+}
+body .ui-datepicker.cuy-calendar .ui-datepicker-title select {
+    width: calc(50% - 4px) !important;
+    min-width: 0;
+    box-sizing: border-box;
+    color: #17212f;
+}

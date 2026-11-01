@@ -62,7 +62,8 @@ public abstract class Usuario implements Serializable {
     @Column(nullable = false, length = 150)
     private String mail;
 
-    @Column(name = "fecha_nac", nullable = false)
+    // Un ciudadano federado puede ingresar antes de completar su nacimiento.
+    @Column(name = "fecha_nac")
     private LocalDate fechaNac;
 
     @Column(nullable = false, unique = true)

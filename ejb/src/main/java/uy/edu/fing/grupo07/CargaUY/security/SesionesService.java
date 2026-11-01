@@ -34,8 +34,8 @@ public class SesionesService {
                 .setParameter("ci", i.ci()).getSingleResult();
             if (existe > 0) throw new ErrorAcceso(409,
                 "La CI existe: un administrador debe vincular la identidad verificada. Referencia: "+i.subject());
-            if (i.nacimiento()==null) throw new ErrorAcceso(409,
-                "Un administrador debe crear el perfil completo y vincular la identidad verificada. Referencia: "+i.subject());
+            // El proveedor real no entrega nacimiento: se completa luego en Mi perfil.
+            // La identidad se vincula automáticamente solo al crear una cuenta nueva.
             Ciudadano c = new Ciudadano(i.nombre(), i.mail(), i.nacimiento(), i.ci(), "{GUB}");
             c.getRoles().add(TipoUsuario.CIUDADANO);
             c.setOrigenIdentidad("GUB"); c.setUidExterno(i.subject());
@@ -81,6 +81,23 @@ public class SesionesService {
         if (token == null || !token.matches("[A-Za-z0-9_-]{43}")) return;
         SesionAcceso s = em.find(SesionAcceso.class, Cripto.hash(token));
         if (s != null) em.remove(s);
+    }
+
+    public boolean nacimientoPendiente(String token) {
+        Acceso actor = validarToken(token);
+        return em.find(Usuario.class, actor.id()).getFechaNac() == null;
+    }
+
+    /** Solo completa el dato de la persona autenticada; no recibe IDs del navegador. */
+    public void completarNacimiento(String token, LocalDate fecha) {
+        Acceso actor = validarToken(token);
+        if (fecha == null || fecha.isAfter(LocalDate.now()))
+            throw new ErrorAcceso(400, "Ingresá una fecha de nacimiento válida, no futura");
+        Usuario usuario = em.find(Usuario.class, actor.id(), LockModeType.PESSIMISTIC_WRITE);
+        if (usuario.getFechaNac() != null)
+            throw new ErrorAcceso(409, "La fecha ya fue registrada. Continuá a Inicio");
+        usuario.setFechaNac(fecha);
+        em.flush();
     }
     public void revocarUsuario(int id) {
         em.createQuery("delete from SesionAcceso s where s.usuario.id=:id")

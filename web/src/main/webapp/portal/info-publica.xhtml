@@ -53,30 +53,30 @@
                                      stripedRows="true"
                                      size="small">
 
-                            <p:column headerText="Guía #" sortBy="#{g.id}" style="width: 95px; text-align: center;">
+                            <p:column headerText="Guía #" style="width: 95px; text-align: center;">
                                 <strong>##{g.id}</strong>
                             </p:column>
 
-                            <p:column headerText="Fecha" sortBy="#{g.fecha}" style="width: 140px;">
+                            <p:column headerText="Fecha Operativa" style="width: 140px;">
                                 <h:outputText value="#{g.fecha}" />
                             </p:column>
 
-                            <p:column headerText="Origen Destino" sortBy="#{g.origen}" filterBy="#{g.origen}" filterMatchMode="contains">
+                            <p:column filterBy="#{g.origen}" filterMatchMode="contains" filterPlaceholder="Corredor (Origen &#8594; Destino)">
                                 <strong>#{g.origen}</strong> &#8594; <strong>#{g.destino}</strong>
                             </p:column>
 
-                            <p:column headerText="Rubro" sortBy="#{g.rubroCliente}" filterBy="#{g.rubroCliente}" filterMatchMode="contains">
+                            <p:column filterBy="#{g.rubroCliente}" filterMatchMode="contains" filterPlaceholder="Rubro Declarado">
                                 <h:outputText value="#{g.rubroCliente}" />
                             </p:column>
 
-                            <p:column headerText="Volumen de Carga" sortBy="#{g.volumenCarga}" style="width: 150px; text-align: right;">
+                            <p:column headerText="Volumen de Carga" style="width: 150px; text-align: right;">
                                 <h:outputText value="#{g.volumenCarga}">
                                     <f:convertNumber pattern="#,##0.0" />
                                 </h:outputText>
                                 <span> t/m&#179;</span>
                             </p:column>
 
-                            <p:column headerText="Estado" sortBy="#{g.estado}" style="width: 150px; text-align: center;">
+                            <p:column headerText="Estado" style="width: 150px; text-align: center;">
                                 <p:tag value="#{g.estado}"
                                        severity="#{g.estado eq 'FINALIZADO' ? 'success' : (g.estado eq 'EN_CURSO' ? 'info' : 'warning')}" />
                             </p:column>
@@ -94,31 +94,23 @@
                                      stripedRows="true"
                                      size="small">
 
-                            <p:column headerText="Matrícula" sortBy="#{v.matricula}" filterBy="#{v.matricula}" filterMatchMode="contains" style="width: 140px;">
+                            <p:column filterBy="#{v.matricula}" filterMatchMode="contains" style="width: 140px;" filterPlaceholder="Matrícula">
                                 <strong>#{v.matricula}</strong>
                             </p:column>
 
-                            <p:column headerText="Marca / Modelo" sortBy="#{v.marca}" filterBy="#{v.marca}" filterMatchMode="contains">
+                            <p:column filterBy="#{v.marca}" filterMatchMode="contains" filterPlaceholder="Marca / Modelo">
                                 #{v.marca} &#8226; #{v.modelo}
                             </p:column>
 
-                            <p:column headerText="Tara (kg)" sortBy="#{v.peso}" style="width: 140px; text-align: right;">
-                                <h:outputText value="#{v.peso}">
-                                    <f:convertNumber pattern="#,##0" />
-                                </h:outputText>
-                                <span> kg</span>
+                            <p:column headerText="Tara (kg)" style="width: 130px; text-align: right;">
+                                #{v.peso} kg
                             </p:column>
 
-                            <p:column headerText="Capacidad Máxima (kg)" sortBy="#{v.capacidadCarga}" style="width: 175px; text-align: right;">
-                                <strong>
-                                    <h:outputText value="#{v.capacidadCarga}">
-                                        <f:convertNumber pattern="#,##0" />
-                                    </h:outputText>
-                                    <span> kg</span>
-                                </strong>
+                            <p:column headerText="Capacidad Máxima (kg)" style="width: 165px; text-align: right;">
+                                <strong>#{v.capacidadCarga} kg</strong>
                             </p:column>
 
-                            <p:column headerText="Habilitación Operativa" sortBy="#{v.estadoHabilitacion}" style="width: 170px; text-align: center;">
+                            <p:column headerText="Habilitación Operativa" style="width: 170px; text-align: center;">
                                 <p:tag value="#{v.estadoHabilitacion ? 'HABILITADO' : 'NO HABILITADO'}"
                                        severity="#{v.estadoHabilitacion ? 'success' : 'danger'}" />
                             </p:column>
