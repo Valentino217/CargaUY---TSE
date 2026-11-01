@@ -17,6 +17,13 @@
             </div>
             <div style="display: flex; gap: 0.6rem;">
                 <h:form id="monitoreoTopForm" style="margin: 0; display: flex; gap: 0.6rem;">
+                    <p:commandButton value="Simular Telemetría FaaS"
+                                     icon="pi pi-cloud"
+                                     type="button"
+                                     onclick="PF('dlgFaasWidget').show()"
+                                     disabled="#{detalleViajeBean.guiaActual == null}"
+                                     title="Procesar coordenadas GPS mediante Function as a Service (Cloud FaaS) y evaluar desvío de ruta"
+                                     styleClass="ui-button-outlined ui-button-help" />
                     <p:commandButton value="Sincronizar Mock Balanza"
                                      icon="pi pi-cloud-download"
                                      actionListener="#{detalleViajeBean.sincronizarMockBalanza}"
@@ -102,6 +109,14 @@
 
                         <p:column headerText="Coordenadas / Detalle">
                             <span class="cuy-mono" style="font-size: 0.78rem;">#{ev.latitud()}, #{ev.longitud()}</span>
+                            <h:panelGroup rendered="#{ev.distanciaDesvioKm() != null}">
+                                <div style="margin-top: 0.2rem;">
+                                    <p:tag value="Desvío FaaS: #{ev.distanciaDesvioKm()} km"
+                                           severity="#{ev.distanciaDesvioKm() > 5.0 ? 'danger' : 'success'}"
+                                           icon="#{ev.distanciaDesvioKm() > 5.0 ? 'pi pi-exclamation-triangle' : 'pi pi-check-circle'}"
+                                           rounded="true" />
+                                </div>
+                            </h:panelGroup>
                             <h:panelGroup rendered="#{ev.incidente() != null}">
                                 <div style="font-size: 0.8rem; color: #dc2626; font-weight: 600; margin-top: 0.2rem;">
                                     <i class="pi pi-exclamation-circle" /> #{ev.incidente().descripcion()}
@@ -191,6 +206,96 @@
                                      action="#{detalleViajeBean.consultarViaje}"
                                      update=":monitoreoForm"
                                      oncomplete="if (!args.validationFailed) PF('dlgPesajeWidget').hide()"
+                                     styleClass="ui-button-primary"
+                                     style="width: auto;" />
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <!-- Modal Simulador de Telemetría GPS vía FaaS (Cloud) y Fiscalización de Desvío -->
+        <p:dialog header="Simulador de Telemetría GPS vía FaaS (Cloud) y Fiscalización de Desvío"
+                  widgetVar="dlgFaasWidget"
+                  modal="true"
+                  responsive="true"
+                  width="640"
+                  closeOnEscape="true">
+            <h:form id="dlgFaasForm" styleClass="ui-fluid">
+                <div style="font-size: 0.84rem; color: #475569; margin-bottom: 0.9rem; background: #f8fafc; padding: 0.75rem; border-radius: 6px; border: 1px solid #e2e8f0;">
+                    Envía un evento de tracking al endpoint HTTPS de la función Cloud (AWS Lambda / Google Cloud Functions) para calcular la distancia perpendicular en kilómetros al corredor asignado y evaluar automáticamente <strong>DESVIO_DE_RUTA</strong> (1 infracción máxima por viaje).
+                </div>
+
+                <div class="cuy-field" style="margin-bottom: 0.85rem;">
+                    <p:outputLabel for="inputFaasUrl" value="Endpoint Cloud FaaS (HTTPS Function URL - vacío usa cálculo local de respaldo)" />
+                    <p:inputText id="inputFaasUrl"
+                                 value="#{detalleViajeBean.faasEndpointUrl}"
+                                 placeholder="Ej: https://xxxx.lambda-url.us-east-1.on.aws/" />
+                </div>
+
+                <div style="display: flex; gap: 0.6rem; margin-bottom: 0.85rem;">
+                    <p:commandButton value="Precargar Punto en Ruta (Sin Desvío)"
+                                     icon="pi pi-check-circle"
+                                     actionListener="#{detalleViajeBean.cargarCoordenadasEnRuta}"
+                                     process="@this"
+                                     update="inputFaasLat inputFaasLon inputFaasDesc"
+                                     styleClass="ui-button-outlined ui-button-success" />
+                    <p:commandButton value="Precargar Punto con Desvío (&gt; Umbral)"
+                                     icon="pi pi-exclamation-triangle"
+                                     actionListener="#{detalleViajeBean.cargarCoordenadasDesviadas}"
+                                     process="@this"
+                                     update="inputFaasLat inputFaasLon inputFaasDesc"
+                                     styleClass="ui-button-outlined ui-button-danger" />
+                </div>
+
+                <div class="cuy-grid-2" style="margin-bottom: 0.85rem;">
+                    <div class="cuy-field">
+                        <p:outputLabel for="inputFaasLat" value="Latitud GPS" />
+                        <p:inputNumber id="inputFaasLat"
+                                       value="#{detalleViajeBean.telemetriaLatitud}"
+                                       decimalPlaces="4"
+                                       decimalSeparator="."
+                                       thousandSeparator="" />
+                    </div>
+                    <div class="cuy-field">
+                        <p:outputLabel for="inputFaasLon" value="Longitud GPS" />
+                        <p:inputNumber id="inputFaasLon"
+                                       value="#{detalleViajeBean.telemetriaLongitud}"
+                                       decimalPlaces="4"
+                                       decimalSeparator="."
+                                       thousandSeparator="" />
+                    </div>
+                </div>
+
+                <div class="cuy-field" style="margin-bottom: 0.85rem;">
+                    <p:outputLabel for="inputFaasDesc" value="Descripción de Telemetría" />
+                    <p:inputText id="inputFaasDesc"
+                                 value="#{detalleViajeBean.telemetriaDescripcion}"
+                                 placeholder="Reporte automático de posición GPS..." />
+                </div>
+
+                <div class="cuy-field" style="margin-bottom: 0.85rem;">
+                    <p:selectBooleanCheckbox id="chkEvalDesvio"
+                                             value="#{detalleViajeBean.evaluarDesvioInmediato}"
+                                             itemLabel="Evaluar Motor de Fiscalización inmediatamente (DESVIO_DE_RUTA)" />
+                </div>
+
+                <h:panelGroup rendered="#{not empty detalleViajeBean.ultimoResultadoFaas}">
+                    <div style="margin-bottom: 0.85rem; padding: 0.65rem 0.9rem; background: #eff6ff; border-left: 4px solid #2563eb; border-radius: 6px; font-size: 0.84rem; color: #1e3a8a; font-weight: 600;">
+                        <i class="pi pi-info-circle" style="margin-right: 0.35rem;" />
+                        <h:outputText value="#{detalleViajeBean.ultimoResultadoFaas}" />
+                    </div>
+                </h:panelGroup>
+
+                <div style="display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1rem;">
+                    <p:commandButton value="Cerrar"
+                                     type="button"
+                                     icon="pi pi-times"
+                                     onclick="PF('dlgFaasWidget').hide()"
+                                     styleClass="ui-button-outlined ui-button-secondary"
+                                     style="width: auto;" />
+                    <p:commandButton value="Procesar en FaaS y Evaluar Desvío"
+                                     icon="pi pi-bolt"
+                                     actionListener="#{detalleViajeBean.enviarTelemetriaFaas}"
+                                     update=":dlgFaasForm :monitoreoForm :growl"
                                      styleClass="ui-button-primary"
                                      style="width: auto;" />
                 </div>

@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import uy.edu.fing.grupo07.CargaUY.domain.entity.EventoViaje;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.GuiaDeViaje;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.ITV;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.Infraccion;
@@ -15,11 +16,12 @@ import uy.edu.fing.grupo07.CargaUY.domain.entity.PNC;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.PesadaBalanza;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.ReglaFiscalizacion;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.Vehiculo;
-import uy.edu.fing.grupo07.CargaUY.domain.enums.EstadoInfraccion;
+import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEvento;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoInfraccion;
 import uy.edu.fing.grupo07.CargaUY.exception.BusinessException;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Collections;
 import java.util.List;
@@ -44,6 +46,9 @@ class MotorFiscalizacionTest {
 
     @Mock
     private TypedQuery<PesadaBalanza> queryPesada;
+
+    @Mock
+    private TypedQuery<EventoViaje> queryEventoDesvio;
 
     @Mock
     private TypedQuery<Long> queryInfraccionesExistentes;
@@ -260,5 +265,82 @@ class MotorFiscalizacionTest {
 
         assertNotNull(infracciones);
         assertTrue(infracciones.isEmpty());
+    }
+
+    @Test
+    @DisplayName("Debe detectar DESVIO_DE_RUTA cuando el desvío calculado por FaaS supera el umbral de tracking")
+    void testDesvioDeRutaSuperaToleranciaGeneraInfraccion() {
+        Long guiaId = 7L;
+        GuiaDeViaje guia = new GuiaDeViaje();
+        guia.setId(guiaId);
+        guia.setOrigen("Montevideo");
+        guia.setDestino("Rivera");
+
+        EventoViaje eventoDesviado = new EventoViaje(
+                "uuid-desvio-1",
+                LocalDateTime.now(),
+                TipoEvento.INCIDENTE,
+                -33.2333,
+                -54.3833,
+                guia
+        );
+        eventoDesviado.setDistanciaDesvioKm(85.4);
+
+        ReglaFiscalizacion regla = new ReglaFiscalizacion(500, 5.0);
+
+        when(em.find(GuiaDeViaje.class, guiaId)).thenReturn(guia);
+        when(em.find(ReglaFiscalizacion.class, 1)).thenReturn(regla);
+
+        when(em.createQuery(anyString(), eq(EventoViaje.class))).thenReturn(queryEventoDesvio);
+        when(queryEventoDesvio.setParameter("guiaId", guiaId)).thenReturn(queryEventoDesvio);
+        when(queryEventoDesvio.setMaxResults(1)).thenReturn(queryEventoDesvio);
+        when(queryEventoDesvio.getResultList()).thenReturn(List.of(eventoDesviado));
+
+        when(em.createQuery(anyString(), eq(Long.class))).thenReturn(queryInfraccionesExistentes);
+        when(queryInfraccionesExistentes.setParameter("guiaId", guiaId)).thenReturn(queryInfraccionesExistentes);
+        when(queryInfraccionesExistentes.setParameter("tipo", TipoInfraccion.DESVIO_DE_RUTA))
+                .thenReturn(queryInfraccionesExistentes);
+        when(queryInfraccionesExistentes.getSingleResult()).thenReturn(0L);
+
+        List<TipoInfraccion> infracciones = motor.evaluarGuia(guiaId);
+
+        assertEquals(1, infracciones.size());
+        assertEquals(TipoInfraccion.DESVIO_DE_RUTA, infracciones.get(0));
+        verify(em).persist(any(Infraccion.class));
+    }
+
+    @Test
+    @DisplayName("No debe generar DESVIO_DE_RUTA cuando la distancia de desvío está dentro de la tolerancia")
+    void testDesvioDeRutaDentroDeToleranciaNoGeneraInfraccion() {
+        Long guiaId = 8L;
+        GuiaDeViaje guia = new GuiaDeViaje();
+        guia.setId(guiaId);
+        guia.setOrigen("Montevideo");
+        guia.setDestino("Rivera");
+
+        EventoViaje eventoEnRuta = new EventoViaje(
+                "uuid-enruta-1",
+                LocalDateTime.now(),
+                TipoEvento.INCIDENTE,
+                -32.9032,
+                -55.8576,
+                guia
+        );
+        eventoEnRuta.setDistanciaDesvioKm(1.2);
+
+        ReglaFiscalizacion regla = new ReglaFiscalizacion(500, 5.0);
+
+        when(em.find(GuiaDeViaje.class, guiaId)).thenReturn(guia);
+        when(em.find(ReglaFiscalizacion.class, 1)).thenReturn(regla);
+
+        when(em.createQuery(anyString(), eq(EventoViaje.class))).thenReturn(queryEventoDesvio);
+        when(queryEventoDesvio.setParameter("guiaId", guiaId)).thenReturn(queryEventoDesvio);
+        when(queryEventoDesvio.setMaxResults(1)).thenReturn(queryEventoDesvio);
+        when(queryEventoDesvio.getResultList()).thenReturn(List.of(eventoEnRuta));
+
+        List<TipoInfraccion> infracciones = motor.evaluarGuia(guiaId);
+
+        assertTrue(infracciones.isEmpty());
+        verify(em, never()).persist(any(Infraccion.class));
     }
 }

@@ -41,6 +41,9 @@ public class EventoViaje implements Serializable {
     @Column(nullable = false)
     private double longitud;
 
+    @Column(name = "distancia_desvio_km")
+    private Double distanciaDesvioKm;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "guia_id", nullable = false)
     private GuiaDeViaje guia;
@@ -53,7 +56,11 @@ public class EventoViaje implements Serializable {
     }
 
     public EventoViaje(String uuid, LocalDateTime tiempo, TipoEvento tipo, double latitud, double longitud, GuiaDeViaje guia) {
-        this.uuid = (uuid != null && !uuid.isBlank()) ? uuid : UUID.randomUUID().toString();
+        if (uuid != null && !uuid.isBlank()) {
+            this.uuid = uuid;
+        } else {
+            this.uuid = UUID.randomUUID().toString();
+        }
         this.tiempo = tiempo;
         this.tipo = tipo;
         this.latitud = latitud;
@@ -109,6 +116,14 @@ public class EventoViaje implements Serializable {
         this.longitud = longitud;
     }
 
+    public Double getDistanciaDesvioKm() {
+        return distanciaDesvioKm;
+    }
+
+    public void setDistanciaDesvioKm(Double distanciaDesvioKm) {
+        this.distanciaDesvioKm = distanciaDesvioKm;
+    }
+
     public GuiaDeViaje getGuia() {
         return guia;
     }
@@ -130,8 +145,12 @@ public class EventoViaje implements Serializable {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         EventoViaje that = (EventoViaje) o;
         return Objects.equals(uuid, that.uuid);
     }

@@ -93,7 +93,7 @@
 
                     <p:column filterBy="#{inf.tipo()}" filterMatchMode="contains" style="width: 190px;" filterPlaceholder="Tipo de Infracción">
                         <p:tag value="#{inf.tipo()}"
-                               severity="#{inf.tipo().name() eq 'EXCESO_PESO' ? 'danger' : (inf.tipo().name() eq 'DESVIO_RUTA' ? 'warning' : 'info')}"
+                               severity="#{(inf.tipo().name() eq 'EXCESO_DE_CARGA' or inf.tipo().name() eq 'EXCESO_PESO') ? 'danger' : ((inf.tipo().name() eq 'DESVIO_DE_RUTA' or inf.tipo().name() eq 'DESVIO_RUTA') ? 'warning' : 'info')}"
                                icon="pi pi-exclamation-circle"
                                rounded="true" />
                     </p:column>

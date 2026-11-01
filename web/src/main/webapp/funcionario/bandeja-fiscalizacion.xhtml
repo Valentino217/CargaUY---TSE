@@ -95,7 +95,7 @@
 
                     <p:column filterBy="#{caso.tipo()}" filterMatchMode="contains" style="width: 185px;" filterPlaceholder="Tipo Infracción">
                         <p:tag value="#{caso.tipo()}"
-                               severity="#{caso.tipo().name() eq 'EXCESO_PESO' ? 'danger' : (caso.tipo().name() eq 'DESVIO_RUTA' ? 'warning' : 'info')}"
+                               severity="#{(caso.tipo().name() eq 'EXCESO_DE_CARGA' or caso.tipo().name() eq 'EXCESO_PESO') ? 'danger' : ((caso.tipo().name() eq 'DESVIO_DE_RUTA' or caso.tipo().name() eq 'DESVIO_RUTA') ? 'warning' : 'info')}"
                                icon="pi pi-exclamation-triangle"
                                rounded="true" />
                     </p:column>

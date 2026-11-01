@@ -6,7 +6,8 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 
 /**
- * Entidad PuntoTracking que almacena coordenadas GPS y marcas de tiempo del trayecto.
+ * Entidad PuntoTracking que almacena coordenadas GPS, marcas de tiempo del trayecto
+ * y la distancia de desvío en kilómetros calculada por el servicio FaaS.
  */
 @Entity
 @Table(name = "puntos_tracking", indexes = {
@@ -29,6 +30,9 @@ public class PuntoTracking implements Serializable {
     @Column(nullable = false)
     private LocalDateTime tiempo;
 
+    @Column(name = "distancia_desvio_km")
+    private Double distanciaDesvioKm;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "guia_id", nullable = false)
     private GuiaDeViaje guia;
@@ -40,6 +44,14 @@ public class PuntoTracking implements Serializable {
         this.latitud = latitud;
         this.longitud = longitud;
         this.tiempo = tiempo;
+        this.guia = guia;
+    }
+
+    public PuntoTracking(double latitud, double longitud, LocalDateTime tiempo, Double distanciaDesvioKm, GuiaDeViaje guia) {
+        this.latitud = latitud;
+        this.longitud = longitud;
+        this.tiempo = tiempo;
+        this.distanciaDesvioKm = distanciaDesvioKm;
         this.guia = guia;
     }
 
@@ -75,6 +87,14 @@ public class PuntoTracking implements Serializable {
         this.tiempo = tiempo;
     }
 
+    public Double getDistanciaDesvioKm() {
+        return distanciaDesvioKm;
+    }
+
+    public void setDistanciaDesvioKm(Double distanciaDesvioKm) {
+        this.distanciaDesvioKm = distanciaDesvioKm;
+    }
+
     public GuiaDeViaje getGuia() {
         return guia;
     }
@@ -85,8 +105,12 @@ public class PuntoTracking implements Serializable {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         PuntoTracking that = (PuntoTracking) o;
         return Objects.equals(id, that.id);
     }
