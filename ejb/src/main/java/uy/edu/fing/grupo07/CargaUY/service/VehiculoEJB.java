@@ -40,11 +40,22 @@ public class VehiculoEJB implements VehiculoEJBLocal {
         return v;
     }
     public void crear(String token,Vehiculo v) {
-        control.empresa(token,v.getEmpresa().getNroEmpresa(),true); crear(v);
+        if (v == null || v.getMatricula() == null || v.getMatricula().isBlank()) {
+            throw new IllegalArgumentException("La matrícula del vehículo es obligatoria.");
+        }
+        v.setMatricula(v.getMatricula().trim().toUpperCase());
+        control.empresa(token,v.getEmpresa().getNroEmpresa(),true);
+        if (buscar(v.getMatricula()) != null) {
+            throw new IllegalArgumentException("Ya existe un vehículo registrado con la matrícula " + v.getMatricula() + ".");
+        }
+        crear(v);
     }
     public void modificar(String token,Vehiculo v) {
         Vehiculo anterior=buscar(token,v.getMatricula());
         if(anterior==null) throw new IllegalArgumentException("Vehículo inexistente");
+        if(tieneGuiaEnCurso(v.getMatricula())) {
+            throw new IllegalStateException("No se puede editar el vehículo " + v.getMatricula() + " porque tiene una guía de viaje EN_CURSO.");
+        }
         control.empresa(token,anterior.getEmpresa().getNroEmpresa(),true);
         control.empresa(token,v.getEmpresa().getNroEmpresa(),true); modificar(v);
     }
@@ -54,13 +65,10 @@ public class VehiculoEJB implements VehiculoEJBLocal {
         control.empresa(token,actual.getEmpresa().getNroEmpresa(),true); eliminar(actual);
     }
 
-	@PersistenceContext(unitName = "CargaUYPersistenceUnit")
+    @PersistenceContext(unitName = "CargaUYPersistenceUnit")
     private EntityManager em;
-    /**
-     * Default constructor. 
-     */
+
     public VehiculoEJB() {
-        // TODO Auto-generated constructor stub
     }
     
     @Override
@@ -80,20 +88,45 @@ public class VehiculoEJB implements VehiculoEJBLocal {
         ).getResultList();
     }
     
-
-    
     @Override
     public void crear(Vehiculo vehiculo) {
         em.persist(vehiculo);
     }
 
     @Override
+    public boolean tieneGuiaEnCurso(String matricula) {
+        if (matricula == null || matricula.isBlank()) return false;
+        Long count = em.createQuery(
+                "SELECT COUNT(g) FROM GuiaDeViaje g WHERE UPPER(TRIM(g.vehiculo.matricula)) = UPPER(TRIM(:mat)) AND g.estado = :enCurso",
+                Long.class
+        )
+        .setParameter("mat", matricula)
+        .setParameter("enCurso", uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado.EN_CURSO)
+        .getSingleResult();
+        return count != null && count > 0L;
+    }
+
+    @Override
     public void modificar(Vehiculo vehiculo) {
+        if (tieneGuiaEnCurso(vehiculo.getMatricula())) {
+            throw new IllegalStateException("No se puede editar el vehículo " + vehiculo.getMatricula() + " porque tiene una guía de viaje EN_CURSO.");
+        }
         em.merge(vehiculo);
     }
 
     @Override
     public void eliminar(Vehiculo vehiculo) {
+        Long cantGuias = em.createQuery(
+                "SELECT COUNT(g) FROM GuiaDeViaje g WHERE g.vehiculo.matricula = :mat",
+                Long.class
+        ).setParameter("mat", vehiculo.getMatricula()).getSingleResult();
+
+        if (cantGuias != null && cantGuias > 0) {
+            throw new IllegalStateException(
+                "No se puede eliminar el vehículo " + vehiculo.getMatricula() +
+                " porque tiene " + cantGuias + " guía(s) de viaje asociada(s). Puede suspender su habilitación en su lugar."
+            );
+        }
         em.remove(em.merge(vehiculo));
     }
 
@@ -101,7 +134,7 @@ public class VehiculoEJB implements VehiculoEJBLocal {
     public Vehiculo buscar(String matricula) {
         return em.find(Vehiculo.class, matricula);
     }
-     //permite encontrar los vehiculos dada una empresa
+
     @Override
     public List<Vehiculo> listarVehiculosPorCiudadano(int ciudadanoId) {
         return em.createQuery(
@@ -140,5 +173,11 @@ public class VehiculoEJB implements VehiculoEJBLocal {
         )
         .setParameter("nroEmpresa", nroEmpresa)
         .getResultList();
+    }
+
+    /** Vehículo apto = habilitación base + ITV vigente + PNC vigente. */
+    public boolean estaAptoParaOperar(String matricula) {
+        Vehiculo v = em.find(Vehiculo.class, matricula);
+        return v != null && v.verificarHabilitacionVigente();
     }
 }

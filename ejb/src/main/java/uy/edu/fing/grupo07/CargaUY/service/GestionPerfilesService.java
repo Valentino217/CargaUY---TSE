@@ -111,7 +111,8 @@ public class GestionPerfilesService {
         Acceso actor=control.exigir(token); if(actor.id()!=id && !actor.tiene(ADMINISTRADOR)) throw new ErrorAcceso(403,"Perfil ajeno");
         Usuario u = usuario(id);
         if(u.getVersion()!=versionEsperada) throw new ErrorAcceso(409,"Perfil modificado; recargá");
-        validarUsuario(d);
+        validarUsuario(d, u instanceof Ciudadano && "GUB".equals(u.getOrigenIdentidad())
+                && u.getFechaNac() == null);
         if (!clase(d.tipo()).isInstance(u) || u.getCi() != d.ci())
             throw new ErrorNegocio("Esta operación no cambia tipo ni CI");
         // La edición de perfil no cambia credenciales.
@@ -207,13 +208,17 @@ public class GestionPerfilesService {
         return e;
     }
     private void validarUsuario(DatosUsuario d) {
+        validarUsuario(d, false);
+    }
+    private void validarUsuario(DatosUsuario d, boolean nacimientoPendiente) {
         if (d == null || d.tipo() == null) throw new ErrorNegocio("Tipo obligatorio");
         Validaciones.texto(d.nombre(), "Nombre", 100);
         String mail = Validaciones.texto(d.mail(), "Correo", 150);
         if (!mail.matches("[^\\s@]+@[^\\s@]+\\.[^\\s@]+"))
             throw new ErrorNegocio("Correo inválido");
         Validaciones.positivo(d.ci(), "CI");
-        if (d.fechaNac() == null || d.fechaNac().isAfter(LocalDate.now()))
+        if (d.fechaNac() == null && !nacimientoPendiente
+                || d.fechaNac() != null && d.fechaNac().isAfter(LocalDate.now()))
             throw new ErrorNegocio("Fecha de nacimiento inválida");
         if (d.tipo() == TipoUsuario.FUNCIONARIO) {
             if (d.nroFuncionario() == null) throw new ErrorNegocio("Número obligatorio");

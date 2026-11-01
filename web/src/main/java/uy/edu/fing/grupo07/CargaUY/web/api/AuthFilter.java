@@ -16,8 +16,9 @@ public class AuthFilter implements ContainerRequestFilter {
     @Context private jakarta.servlet.http.HttpServletRequest http;
     @Override public void filter(ContainerRequestContext r) throws IOException {
         if(!uy.edu.fing.grupo07.CargaUY.web.WebSeguridad.transporte(http)) { r.abortWith(Response.status(403).build()); return; }
+        if("OPTIONS".equalsIgnoreCase(r.getMethod())) return;
         String p=r.getUriInfo().getPath().replaceFirst("^/","");
-        if((p.equals("auth/login")||p.equals("auth/gub/iniciar")||p.equals("auth/gub/terminar"))&&r.getMethod().equals("POST")
+        if((p.equals("auth/login")||p.equals("auth/gub/iniciar")||p.equals("auth/gub/terminar")||p.equals("auth/dev-chofer"))&&r.getMethod().equals("POST")
                 ||(p.equals("public/health")||p.equals("public/ready"))&&r.getMethod().equals("GET")) return;
         String h=r.getHeaderString("Authorization");
         String token=h!=null&&h.startsWith("Bearer ")?h.substring(7):null;

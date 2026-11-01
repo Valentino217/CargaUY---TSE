@@ -29,6 +29,10 @@ public class AutenticacionService {
         return sesiones.emitirGub(gub.validar(code,verifier,nonce,true));
     }
     
+    public SesionesService.Login loginDevChofer(int ci) {
+        return sesiones.emitirDevChofer(ci);
+    }
+    
     public Acceso validarToken(String token) { 
     	return sesiones.validarToken(token); 
     }

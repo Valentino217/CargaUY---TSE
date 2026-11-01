@@ -18,6 +18,7 @@ import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado;
 @LocalBean
 public class GuiaDeViajeEJB implements GuiaDeViajeEJBLocal {
     @jakarta.ejb.EJB private uy.edu.fing.grupo07.CargaUY.security.ControlAcceso control;
+    @jakarta.ejb.EJB private uy.edu.fing.grupo07.CargaUY.jms.FiscalizacionProducerLocal fiscalizacionProducer;
     public List<GuiaDeViaje> listarParaActor(String token) {
         var actor=control.exigir(token);
         if(actor.tiene(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.ADMINISTRADOR)) return listarGuias();
@@ -34,11 +35,36 @@ public class GuiaDeViajeEJB implements GuiaDeViajeEJBLocal {
         if(g!=null) control.empresa(token,g.getEmpresa().getNroEmpresa(),false);
         return g;
     }
+    private void exigirHabilitacionVigente(Vehiculo v) {
+        if (v.verificarHabilitacionVigente()) {
+            return;
+        }
+        throw new IllegalArgumentException("El vehículo " + v.getMatricula()
+            + " no está habilitado para operar: " + motivoNoHabilitado(v));
+    }
+
+    public static String motivoNoHabilitado(Vehiculo v) {
+        StringBuilder sb = new StringBuilder();
+        if (!v.isEstadoHabilitacion()) sb.append("suspendido administrativamente; ");
+        boolean itv = v.getItv() != null && v.getItv().stream().anyMatch(uy.edu.fing.grupo07.CargaUY.domain.entity.ITV::isVigente);
+        boolean pnc = v.getPncs() != null && v.getPncs().stream().anyMatch(uy.edu.fing.grupo07.CargaUY.domain.entity.PNC::isVigente);
+        if (!itv) sb.append("sin ITV vigente; ");
+        if (!pnc) sb.append("sin PNC vigente; ");
+        return sb.toString().trim();
+    }
+
     private void validarAsignacion(String token,GuiaDeViaje g) {
         control.empresa(token,g.getEmpresa().getNroEmpresa(),true);
         if(g.getChofer()!=null) control.choferAsignable(token,g.getEmpresa().getNroEmpresa(),g.getChofer().getId());
-        if(g.getVehiculo()!=null && g.getVehiculo().getEmpresa().getNroEmpresa()!=g.getEmpresa().getNroEmpresa())
-            throw new IllegalArgumentException("El vehículo no pertenece a la empresa de la guía");
+        if(g.getVehiculo()!=null) {
+            Vehiculo v = em.find(Vehiculo.class, g.getVehiculo().getMatricula());
+            if (v == null) {
+                v = g.getVehiculo();
+            }
+            if(v.getEmpresa()!=null && g.getEmpresa()!=null && v.getEmpresa().getNroEmpresa()!=g.getEmpresa().getNroEmpresa())
+                throw new IllegalArgumentException("El vehículo no pertenece a la empresa de la guía");
+            exigirHabilitacionVigente(v);
+        }
     }
     public void crear(String token,GuiaDeViaje g) { validarAsignacion(token,g); crear(g); }
     public void modificar(String token,GuiaDeViaje g) {
@@ -53,6 +79,37 @@ public class GuiaDeViajeEJB implements GuiaDeViajeEJBLocal {
         control.empresa(token,actual.getEmpresa().getNroEmpresa(),true); eliminar(actual);
     }
 
+    @Override
+    public void avanzarEstadoAdmin(String token, Long guiaId) {
+        control.admin(token);
+        if (guiaId == null) {
+            throw new IllegalArgumentException("El ID de guía es obligatorio.");
+        }
+        GuiaDeViaje guia = em.find(GuiaDeViaje.class, guiaId);
+        if (guia == null) {
+            throw new IllegalArgumentException("Guía de viaje inexistente: #" + guiaId);
+        }
+        if (guia.getEstado() == TipoEstado.SIN_INICIAR) {
+            if (guia.getVehiculo() != null) {
+                Vehiculo v = em.find(Vehiculo.class, guia.getVehiculo().getMatricula());
+                if (v == null) {
+                    v = guia.getVehiculo();
+                }
+                exigirHabilitacionVigente(v);
+            }
+            guia.setEstado(TipoEstado.EN_CURSO);
+            em.flush();
+            if (fiscalizacionProducer != null) {
+                fiscalizacionProducer.solicitarEvaluacion(guia.getId());
+            }
+        } else if (guia.getEstado() == TipoEstado.EN_CURSO) {
+            guia.setEstado(TipoEstado.FINALIZADO);
+            em.flush();
+        } else if (guia.getEstado() == TipoEstado.FINALIZADO) {
+            throw new IllegalStateException("La guía de viaje #" + guiaId + " ya se encuentra FINALIZADA.");
+        }
+    }
+
 	@PersistenceContext(unitName = "CargaUYPersistenceUnit")
     private EntityManager em;
 	/**
@@ -64,6 +121,13 @@ public class GuiaDeViajeEJB implements GuiaDeViajeEJBLocal {
     
     @Override
     public void crear(GuiaDeViaje guia) {
+        if (guia.getVehiculo() != null) {
+            Vehiculo v = em.find(Vehiculo.class, guia.getVehiculo().getMatricula());
+            if (v == null) {
+                v = guia.getVehiculo();
+            }
+            exigirHabilitacionVigente(v);
+        }
         em.persist(guia);
     }
 
@@ -85,6 +149,14 @@ public class GuiaDeViajeEJB implements GuiaDeViajeEJBLocal {
     		            "Solo se pueden modificar guías en estado SIN_INICIAR."
     		        );
     		}
+
+        if (guia.getVehiculo() != null) {
+            Vehiculo v = em.find(Vehiculo.class, guia.getVehiculo().getMatricula());
+            if (v == null) {
+                v = guia.getVehiculo();
+            }
+            exigirHabilitacionVigente(v);
+        }
 
     		existente.setFecha(guia.getFecha());
     		existente.setOrigen(guia.getOrigen());

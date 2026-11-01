@@ -124,8 +124,9 @@ class DetalleViajeBeanTest {
     @Test
     @DisplayName("sincronizarMockBalanza exitoso consulta mock y refresca datos de la guía impactada")
     void testSincronizarMockBalanzaExitoso() {
+        bean.setGuiaIdSeleccionada(7L);
         PesadaBalanzaDTO nueva = new PesadaBalanzaDTO(99, LocalDate.now(), LocalTime.now(), 44000, "STP 9999", 7L);
-        when(balanzaService.registrarPesadaDesdeMock()).thenReturn(nueva);
+        when(balanzaService.registrarPesadaDesdeMock(7L)).thenReturn(nueva);
 
         GuiaDeViaje guia7 = new GuiaDeViaje();
         guia7.setId(7L);
@@ -135,7 +136,8 @@ class DetalleViajeBeanTest {
 
         bean.sincronizarMockBalanza();
 
-        verify(balanzaService, times(1)).registrarPesadaDesdeMock();
+        verify(balanzaService, times(1)).registrarPesadaDesdeMock(7L);
+        verify(balanzaService, never()).registrarPesadaDesdeMock();
         assertEquals(7L, bean.getGuiaIdSeleccionada());
         assertNotNull(bean.getGuiaActual());
         assertEquals(1, bean.getTotalPesadas());

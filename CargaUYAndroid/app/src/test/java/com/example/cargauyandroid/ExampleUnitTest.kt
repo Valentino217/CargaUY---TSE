@@ -36,7 +36,7 @@ class ExampleUnitTest {
             empresa = "Transportes del Plata S.A."
         )
         assertEquals(
-            "Carga parcial: 4500 Kg | Mercadería: Madera | Empresa: Transportes del Plata S.A.",
+            "Carga parcial: 4500 Kg | Mercaderia: Madera | Empresa: Transportes del Plata S.A.",
             detalle
         )
 
@@ -66,14 +66,14 @@ class ExampleUnitTest {
             tiempo = "2026-10-19T15:00:00",
             latitud = -33.25,
             longitud = -56.02,
-            descripcion = "Pinchadura de neumático",
+            descripcion = "Pinchadura de neumatico",
             foto = "pinchadura.jpg"
         )
 
         val dto = local.toDto()
         assertEquals("INCIDENTE", dto.tipo)
         assertNotNull(dto.incidente)
-        assertEquals("Pinchadura de neumático", dto.incidente?.descripcion)
+        assertEquals("Pinchadura de neumatico", dto.incidente?.descripcion)
         assertEquals("pinchadura.jpg", dto.incidente?.foto)
     }
 }

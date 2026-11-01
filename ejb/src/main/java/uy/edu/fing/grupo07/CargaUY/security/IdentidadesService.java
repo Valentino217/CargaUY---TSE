@@ -74,6 +74,14 @@ public class IdentidadesService {
     
     public record VinculoVista(int usuario,String nombre,boolean responsable,boolean chofer){
     }
+
+    public Integer buscarIdPorCi(int ci) {
+        java.util.List<Integer> ids = em.createQuery("select u.id from Usuario u where u.ci = :ci", Integer.class)
+            .setParameter("ci", ci)
+            .setMaxResults(1)
+            .getResultList();
+        return ids.isEmpty() ? null : ids.get(0);
+    }
     
     public java.util.List<VinculoVista> listar(String token,int empresa){
         control.empresa(token,empresa,false);

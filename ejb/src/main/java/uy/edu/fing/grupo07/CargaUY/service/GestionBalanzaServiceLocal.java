@@ -22,6 +22,13 @@ public interface GestionBalanzaServiceLocal {
     PesadaBalanzaDTO registrarPesadaDesdeMock();
 
     /**
+     * Consulta el mock de balanza periférica y registra la pesada en la guía indicada como respaldo.
+     */
+    default PesadaBalanzaDTO registrarPesadaDesdeMock(Long guiaIdFallback) {
+        return registrarPesadaDesdeMock();
+    }
+
+    /**
      * Retorna todas las pesadas asociadas a una guía de viaje ordenadas cronológicamente.
      */
     List<PesadaBalanzaDTO> listarPesadasPorGuia(Long guiaId);

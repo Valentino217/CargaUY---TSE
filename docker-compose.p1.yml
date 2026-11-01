@@ -23,6 +23,9 @@ services:
       PDI_PUBLIC_ENDPOINT: http://localhost:8081/pdi/ws
       PDI_DELAY_SECONDS: "0"
     ports: ["127.0.0.1:8081:8080"]
+  mock-balanza:
+    build: ./docker/mock-balanza
+    ports: ["127.0.0.1:8082:8080"]
 volumes:
   ldap_p1:
   keycloak_p1:

@@ -29,6 +29,47 @@ class SyncRepository(context: Context) {
     private val appContext = context.applicationContext
     val dbHelper = OfflineDatabaseHelper(appContext)
 
+    var baseDatosReiniciadaPorNuevaCompilacion: Boolean = false
+        private set
+
+    init {
+        verificarYLimpiarSiNuevaInstalacion()
+    }
+
+    fun verificarYLimpiarSiNuevaInstalacion(): Boolean {
+        return try {
+            val pInfo = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                appContext.packageManager.getPackageInfo(
+                    appContext.packageName,
+                    android.content.pm.PackageManager.PackageInfoFlags.of(0)
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                appContext.packageManager.getPackageInfo(appContext.packageName, 0)
+            }
+            val lastUpdate = pInfo.lastUpdateTime
+            val prefs = appContext.getSharedPreferences("cargauy_prefs", Context.MODE_PRIVATE)
+            val guardado = prefs.getLong("last_installed_time", -1L)
+            if (guardado != lastUpdate) {
+                dbHelper.limpiarBaseDeDatosCompleta()
+                prefs.edit().putLong("last_installed_time", lastUpdate).apply()
+                baseDatosReiniciadaPorNuevaCompilacion = true
+                Log.d("CARGAUY", "Nueva compilacion/instalacion detectada (time=$lastUpdate). Base de datos local reiniciada.")
+                true
+            } else {
+                false
+            }
+        } catch (e: Exception) {
+            Log.w("CARGAUY", "No se pudo verificar actualizacion de app: ${e.message}")
+            false
+        }
+    }
+
+    fun limpiarBaseDeDatosManual() {
+        dbHelper.limpiarBaseDeDatosCompleta()
+        Log.d("CARGAUY", "Base de datos local limpiada manualmente.")
+    }
+
     @Volatile
     var servidorAlcanzable: Boolean = true
         private set
@@ -41,12 +82,19 @@ class SyncRepository(context: Context) {
         return capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 
-    fun registrarCallbackConectividad(onNetworkAvailable: () -> Unit): ConnectivityManager.NetworkCallback? {
+    fun registrarCallbackConectividad(
+        onNetworkAvailable: () -> Unit,
+        onNetworkLost: (() -> Unit)? = null
+    ): ConnectivityManager.NetworkCallback? {
         val cm = appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
             ?: return null
         val callback = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
                 onNetworkAvailable()
+            }
+
+            override fun onLost(network: Network) {
+                onNetworkLost?.invoke()
             }
         }
         return try {
@@ -105,12 +153,50 @@ class SyncRepository(context: Context) {
         return sdf.format(Date())
     }
 
-    suspend fun consultarGuiasChofer(cedula: Int): ConsultaGuiasResult = withContext(Dispatchers.IO) {
+    private suspend fun asegurarTokenLocal(cedula: Int, forzarRenovacion: Boolean = false) {
+        if (!forzarRenovacion && SesionMovil.token.isNotBlank() && (SesionMovil.cedulaAsociada == null || SesionMovil.cedulaAsociada == cedula)) {
+            return
+        }
         try {
-            Log.d("CARGAUY", "Consultando guías para CI=$cedula")
-            val remotas = RetrofitClient.executeWithFallback { api -> api.obtenerViajes(cedula) }
+            val resp = RetrofitClient.executeWithFallback { api ->
+                api.obtenerDevToken(mapOf("ci" to cedula))
+            }
+            val tk = resp["token"] as? String
+            if (!tk.isNullOrBlank()) {
+                SesionMovil.token = tk
+                SesionMovil.cedulaAsociada = cedula
+                Log.d("CARGAUY", "Token dev obtenido automaticamente para CI=$cedula")
+            }
+        } catch (e: Exception) {
+            Log.w("CARGAUY", "No se pudo obtener token dev automatico para CI=$cedula: ${e.message}")
+        }
+    }
+
+    suspend fun consultarGuiasChofer(cedula: Int): ConsultaGuiasResult = withContext(Dispatchers.IO) {
+        if (!hayConexionInternet()) {
+            servidorAlcanzable = false
+            Log.d("CARGAUY", "Sin conexion a internet detectada. Mostrando cache offline.")
+            val cache = dbHelper.obtenerGuiasCache(cedula)
+            return@withContext ConsultaGuiasResult(
+                guias = cache,
+                desdeCacheOffline = true,
+                mensajeAviso = "Modo sin conexion: mostrando guias guardadas en el telefono."
+            )
+        }
+
+        try {
+            Log.d("CARGAUY", "Consultando guias para CI=$cedula")
+            asegurarTokenLocal(cedula)
+            val remotas = try {
+                RetrofitClient.executeWithFallback { api -> api.obtenerViajes(cedula) }
+            } catch (e: retrofit2.HttpException) {
+                if (e.code() == 401 || e.code() == 403) {
+                    asegurarTokenLocal(cedula, forzarRenovacion = true)
+                    RetrofitClient.executeWithFallback { api -> api.obtenerViajes(cedula) }
+                } else throw e
+            }
             servidorAlcanzable = true
-            Log.d("CARGAUY", "Guías recibidas de ${RetrofitClient.activeBaseUrl}: ${remotas.size}")
+            Log.d("CARGAUY", "Guias recibidas de ${RetrofitClient.activeBaseUrl}: ${remotas.size}")
             dbHelper.guardarGuiasCache(cedula, remotas)
             return@withContext ConsultaGuiasResult(
                 guias = remotas,
@@ -118,12 +204,12 @@ class SyncRepository(context: Context) {
             )
         } catch (e: Exception) {
             servidorAlcanzable = false
-            Log.e("CARGAUY", "Fallo al consultar guías: ${e.message}", e)
+            Log.e("CARGAUY", "Fallo al consultar guias: ${e.message}", e)
             val cache = dbHelper.obtenerGuiasCache(cedula)
             return@withContext ConsultaGuiasResult(
                 guias = cache,
                 desdeCacheOffline = true,
-                mensajeAviso = "Modo sin conexión: mostrando guías guardadas en el teléfono. Detalle: ${e.javaClass.simpleName}: ${e.message}"
+                mensajeAviso = "Modo sin conexion: mostrando guias guardadas en el telefono. Detalle: ${e.javaClass.simpleName}: ${e.message}"
             )
         }
     }
@@ -164,7 +250,7 @@ class SyncRepository(context: Context) {
                 evento = eventoLocal.copy(estadoSync = EstadoSyncLocal.DUPLICADO.name),
                 guardadoOffline = false,
                 duplicadoDetectado = true,
-                mensajeUsuario = "Ya existe un evento con el mismo identificador ($uuid) y no se volverá a registrar (Flujo 3.B)."
+                mensajeUsuario = "Ya existe un evento con el mismo identificador ($uuid) y no se volvera a registrar."
             )
         }
 
@@ -175,9 +261,21 @@ class SyncRepository(context: Context) {
             dbHelper.actualizarEstadoGuiaLocal(guiaId, "FINALIZADO")
         }
 
+        // Si no hay conexión (Flujo 3.A): guardar solo localmente y no enviar al servidor
+        if (!hayConexionInternet()) {
+            servidorAlcanzable = false
+            Log.d("CARGAUY", "Sin conexion a internet detectada por el sistema. Guardado offline (Flujo 3.A).")
+            return@withContext ResultadoOperacionEvento(
+                evento = eventoLocal,
+                guardadoOffline = true,
+                mensajeUsuario = "Modo sin conexion: Evento '${tipo.etiqueta}' guardado en el telefono (UUID: ${uuid.take(8)}...) para sincronizar al recuperar conexion."
+            )
+        }
+
         // Intentar sincronizar directamente con el backend; si no hay red, cae en el catch (Flujo 3.A)
         return@withContext try {
             Log.d("CARGAUY", "Enviando evento $uuid (${tipo.codigo}) al servidor...")
+            asegurarTokenLocal(cedulaChofer)
             val resultados = RetrofitClient.executeWithFallback { api ->
                 api.sincronizarEventos(listOf(eventoLocal.toDto()))
             }
@@ -211,7 +309,7 @@ class SyncRepository(context: Context) {
                         evento = eventoLocal.copy(estadoSync = EstadoSyncLocal.DUPLICADO.name),
                         guardadoOffline = false,
                         duplicadoDetectado = true,
-                        mensajeUsuario = "El sistema indica que ya existe el evento con UUID ${uuid.take(8)}... Se descartó el duplicado (Flujo 3.B)."
+                        mensajeUsuario = "El sistema indica que ya existe el evento con UUID ${uuid.take(8)}... Se descarto el duplicado."
                     )
                 }
 
@@ -220,17 +318,17 @@ class SyncRepository(context: Context) {
                     ResultadoOperacionEvento(
                         evento = eventoLocal,
                         guardadoOffline = true,
-                        mensajeUsuario = "El servidor devolvió un aviso ($msgError). El evento quedó guardado localmente para reintentar."
+                        mensajeUsuario = "El servidor devolvio un aviso ($msgError). El evento quedo guardado localmente para reintentar."
                     )
                 }
             }
         } catch (e: Exception) {
             servidorAlcanzable = false
-            Log.w("CARGAUY", "Guardado offline (3.A) por falta de conexión: ${e.message}")
+            Log.w("CARGAUY", "Guardado offline por falta de conexion: ${e.message}")
             ResultadoOperacionEvento(
                 evento = eventoLocal,
                 guardadoOffline = true,
-                mensajeUsuario = "Sin conexión al servidor (3.A): Evento '${tipo.etiqueta}' guardado en el teléfono (UUID: ${uuid.take(8)}...) para sincronizar al recuperar conexión."
+                mensajeUsuario = "Sin conexion al servidor: Evento '${tipo.etiqueta}' guardado en el telefono (UUID: ${uuid.take(8)}...) para sincronizar al recuperar conexion."
             )
         }
     }
@@ -244,8 +342,22 @@ class SyncRepository(context: Context) {
             return@withContext null
         }
 
+        if (!hayConexionInternet()) {
+            servidorAlcanzable = false
+            Log.d("CARGAUY", "Intento de sincronizar sin conexion a internet activa. Cancelado.")
+            return@withContext ResumenSincronizacion(
+                totalEnviados = pendientes.size,
+                aceptados = 0,
+                duplicados = 0,
+                errores = pendientes.size,
+                rutaActualizada = false,
+                mensaje = "Sin conexion (${pendientes.size} eventos siguen guardados en el telefono esperando red)."
+            )
+        }
+
         return@withContext try {
-            Log.d("CARGAUY", "Sincronizando lote de ${pendientes.size} evento(s) pendiente(s)...")
+            Log.d("CARGAUY", "Sincronizando lote de ${pendientes.size} eventos pendientes...")
+            asegurarTokenLocal(cedulaChofer)
             val dtos = pendientes.map { it.toDto() }
             val respuestas = RetrofitClient.executeWithFallback { api ->
                 api.sincronizarEventos(dtos)
@@ -304,16 +416,16 @@ class SyncRepository(context: Context) {
 
             val partesMensaje = mutableListOf<String>()
             if (aceptados > 0) {
-                partesMensaje.add("$aceptados evento(s) sincronizado(s) con el sistema")
+                partesMensaje.add("$aceptados eventos sincronizados con el sistema")
             }
             if (duplicados > 0) {
-                partesMensaje.add("$duplicados evento(s) duplicado(s) omitido(s) (4.A)")
+                partesMensaje.add("$duplicados eventos duplicados omitidos ")
             }
             if (rutaActualizada) {
-                partesMensaje.add("Ruta/guía actualizada desde el servidor (4.B)")
+                partesMensaje.add("Ruta/guia actualizada desde el servidor ")
             }
             if (errores > 0) {
-                partesMensaje.add("$errores evento(s) quedaron pendientes")
+                partesMensaje.add("$errores eventos quedaron pendientes")
             }
 
             ResumenSincronizacion(
@@ -322,7 +434,7 @@ class SyncRepository(context: Context) {
                 duplicados = duplicados,
                 errores = errores,
                 rutaActualizada = rutaActualizada,
-                mensaje = partesMensaje.joinToString(" • ").ifBlank { "Sincronización completada." }
+                mensaje = partesMensaje.joinToString(" • ").ifBlank { "Sincronizacion completada." }
             )
         } catch (e: Exception) {
             servidorAlcanzable = false
@@ -333,7 +445,7 @@ class SyncRepository(context: Context) {
                 duplicados = 0,
                 errores = pendientes.size,
                 rutaActualizada = false,
-                mensaje = "Sin conexión con el servidor (${pendientes.size} evento(s) siguen guardados en el teléfono esperando red)."
+                mensaje = "Offline (${pendientes.size} eventos siguen guardados en el telefono esperando red)."
             )
         }
     }
@@ -341,6 +453,11 @@ class SyncRepository(context: Context) {
     suspend fun listarEventosCombinadosGuia(guiaId: Long): List<EventoLocal> = withContext(Dispatchers.IO) {
         val locales = dbHelper.listarEventosPorGuiaLocal(guiaId)
         val mapaPorUuid = LinkedHashMap<String, EventoLocal>()
+
+        if (!hayConexionInternet()) {
+            servidorAlcanzable = false
+            return@withContext locales.sortedBy { it.tiempo }
+        }
 
         try {
             val remotos = RetrofitClient.executeWithFallback { api ->

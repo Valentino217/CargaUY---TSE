@@ -131,6 +131,8 @@
             font-style: italic;
         }
     </style>
+    <link rel="stylesheet" href="#{request.contextPath}/css/ajustes-ui.css"/>
+    <link rel="stylesheet" href="#{request.contextPath}/css/calendarios.css"/>
 </h:head>
 
 <h:body>
@@ -173,15 +175,14 @@
                     <p:commandButton value="Consultar"
                                      action="#{detalleViajeBean.consultarViaje}"
                                      update=":formTracking"
-                                     icon="pi pi-search"/>
-
+                                     icon="pi pi-search"/>  
                     <p:commandButton value="Sincronizar Mock Balanza"
                                      action="#{detalleViajeBean.sincronizarMockBalanza}"
                                      update=":formTracking"
                                      icon="pi pi-sync"
+                                     rendered="false"
                                      styleClass="ui-button-success"
                                      title="Consulta el mock periférico de balanza y registra pesada automática"/>
-
                     <p:commandButton value="Reportar Incidente"
                                      type="button"
                                      onclick="PF('dlgIncidente').show();"
@@ -235,7 +236,7 @@
                 </div>
 
                 <!-- Sección 1: Línea cronológica de eventos (AC013) -->
-                <p:panel header="Línea Cronológica de Eventos de Ruta (Orden Ascendente)" styleClass="mb-4">
+                <p:panel header="Línea Cronológica de Eventos de Ruta " styleClass="mb-4">
                     <p:dataTable id="tablaEventos"
                                  value="#{detalleViajeBean.eventos}"
                                  var="ev"

@@ -191,7 +191,7 @@ public class DetalleViajeBean implements Serializable {
      */
     public void sincronizarMockBalanza() {
         try {
-            PesadaBalanzaDTO nuevaPesada = balanzaService.registrarPesadaDesdeMock();
+            PesadaBalanzaDTO nuevaPesada = balanzaService.registrarPesadaDesdeMock(guiaIdSeleccionada);
             if (nuevaPesada != null) {
                 mostrarMensaje(
                         FacesMessage.SEVERITY_INFO,

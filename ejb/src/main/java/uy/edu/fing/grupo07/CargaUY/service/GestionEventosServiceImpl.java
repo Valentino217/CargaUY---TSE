@@ -77,6 +77,10 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
 
         // Transición de estado de la guía de viaje según los hitos de inicio y fin
         if (dto.tipo() == TipoEvento.INICIO) {
+            if (guia.getVehiculo() != null && !guia.getVehiculo().verificarHabilitacionVigente()) {
+                throw new BusinessException("No se puede iniciar el viaje: el vehículo " + guia.getVehiculo().getMatricula()
+                        + " no está habilitado para operar: " + GuiaDeViajeEJB.motivoNoHabilitado(guia.getVehiculo()));
+            }
             guia.setEstado(TipoEstado.EN_CURSO);
         } else if (dto.tipo() == TipoEvento.FIN) {
             guia.setEstado(TipoEstado.FINALIZADO);

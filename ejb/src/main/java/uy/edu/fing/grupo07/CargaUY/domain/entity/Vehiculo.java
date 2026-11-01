@@ -33,7 +33,7 @@ public class Vehiculo implements Serializable {
     private int capacidadCarga;
 
     @Column(name = "estado_habilitacion", nullable = false)
-    private boolean estadoHabilitacion;
+    private boolean estadoHabilitacion = true;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "nro_empresa", nullable = false)
