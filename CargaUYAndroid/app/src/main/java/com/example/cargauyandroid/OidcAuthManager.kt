@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import android.util.Base64
 import android.util.Log
+import androidx.browser.customtabs.CustomTabsIntent
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.security.SecureRandom
@@ -54,8 +55,8 @@ object OidcAuthManager {
      * Inicia el flujo OIDC PKCE:
      * 1. Genera code_verifier y code_challenge.
      * 2. Llama a POST /api/auth/gub/iniciar.
-     * 3. Resuelve el host si Keycloak se ejecuta en localhost.
-     * 4. Abre la pantalla de login del proveedor en el navegador del dispositivo.
+     * 3. Resuelve el host si Keycloak se ejecuta en localhost o en emulador (10.0.2.2).
+     * 4. Abre la pantalla de login del proveedor usando Chrome Custom Tabs (o navegador estándar de fallback).
      */
     suspend fun iniciarFlujoLogin(context: Context): Result<String> {
         return try {
@@ -71,12 +72,23 @@ object OidcAuthManager {
 
             pendingState = response.state
             val urlFinal = RetrofitClient.resolverUrlProveedor(response.url)
-            Log.d(TAG, "Abriendo navegador en: $urlFinal (state=${response.state})")
+            Log.d(TAG, "Abriendo CustomTab/Navegador en: $urlFinal (state=${response.state})")
 
-            val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(urlFinal)).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            val uriFinal = Uri.parse(urlFinal)
+            try {
+                // Preferir Chrome Custom Tabs para evitar desvíos a búsquedas de Google y cerrar la pestaña automáticamente
+                val customTabsIntent = CustomTabsIntent.Builder()
+                    .setShowTitle(true)
+                    .build()
+                customTabsIntent.intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                customTabsIntent.launchUrl(context, uriFinal)
+            } catch (eTab: Exception) {
+                Log.w(TAG, "Fallo CustomTabs, usando navegador estándar: ${eTab.message}")
+                val browserIntent = Intent(Intent.ACTION_VIEW, uriFinal).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(browserIntent)
             }
-            context.startActivity(browserIntent)
 
             Result.success(urlFinal)
         } catch (e: Exception) {
@@ -119,7 +131,7 @@ object OidcAuthManager {
                 api.terminarGub(TerminarGubRequest(code = code, state = state, verifier = verifier))
             }
 
-            // Guardar sesión
+            // Guardar sesión en SesionMovil reactiva
             SesionMovil.token = respuesta.token
             SesionMovil.cedulaAsociada = respuesta.ci
             SesionMovil.nombreChofer = respuesta.nombre

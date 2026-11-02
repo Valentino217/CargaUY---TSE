@@ -1,6 +1,10 @@
 package com.example.cargauyandroid
 
+import android.os.Build
 import android.util.Log
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
@@ -24,8 +28,12 @@ object RetrofitClient {
             .build()
     }
 
-    private val clientsByUrl: Map<String, ViajesApi> = Constants.CANDIDATE_URLS.associateWith { url ->
-        Retrofit.Builder()
+    private val clientsByUrl: MutableMap<String, ViajesApi> = Constants.CANDIDATE_URLS.associateWith { url ->
+        crearApiParaUrl(url)
+    }.toMutableMap()
+
+    private fun crearApiParaUrl(url: String): ViajesApi {
+        return Retrofit.Builder()
             .baseUrl(url)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
@@ -33,22 +41,52 @@ object RetrofitClient {
             .create(ViajesApi::class.java)
     }
 
-    @Volatile
-    var activeBaseUrl: String = Constants.BASE_URL
+    /**
+     * Detecta si la app se ejecuta dentro del emulador oficial de Android (AVD/QEMU)
+     */
+    fun esEmulador(): Boolean {
+        return (Build.FINGERPRINT.startsWith("generic")
+                || Build.FINGERPRINT.startsWith("unknown")
+                || Build.MODEL.contains("google_sdk")
+                || Build.MODEL.contains("Emulator")
+                || Build.MODEL.contains("Android SDK built for x86")
+                || Build.MANUFACTURER.contains("Genymotion")
+                || (Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic"))
+                || "google_sdk" == Build.PRODUCT)
+    }
 
-    val retrofit: Retrofit by lazy {
-        Retrofit.Builder()
-            .baseUrl(Constants.BASE_URL)
+    // Inicializar URL base según si corre en emulador o dispositivo real
+    var activeBaseUrl: String by mutableStateOf(
+        if (esEmulador()) "http://10.0.2.2:8080/" else Constants.BASE_URL
+    )
+
+    fun actualizarBaseUrl(nuevaUrl: String) {
+        val urlNormalizada = if (nuevaUrl.endsWith("/")) nuevaUrl else "$nuevaUrl/"
+        if (!clientsByUrl.containsKey(urlNormalizada)) {
+            clientsByUrl[urlNormalizada] = crearApiParaUrl(urlNormalizada)
+        }
+        activeBaseUrl = urlNormalizada
+        Log.d("CARGAUY", "URL base activa cambiada a: $activeBaseUrl")
+    }
+
+    val retrofit: Retrofit
+        get() = Retrofit.Builder()
+            .baseUrl(activeBaseUrl)
             .client(okHttpClient)
             .addConverterFactory(GsonConverterFactory.create())
             .build()
-    }
 
     suspend fun <T> executeWithFallback(block: suspend (ViajesApi) -> T): T {
-        val orderedUrls = (listOf(activeBaseUrl) + Constants.CANDIDATE_URLS).distinct()
+        // En emulador, priorizar 10.0.2.2; en físico, priorizar la IP activa y candidatos
+        val urlsOrdenadas = if (esEmulador()) {
+            (listOf(activeBaseUrl, "http://10.0.2.2:8080/") + Constants.CANDIDATE_URLS).distinct()
+        } else {
+            (listOf(activeBaseUrl) + Constants.CANDIDATE_URLS).distinct()
+        }
+
         var lastException: Exception? = null
-        for (url in orderedUrls) {
-            val api = clientsByUrl[url] ?: continue
+        for (url in urlsOrdenadas) {
+            val api = clientsByUrl.getOrPut(url) { crearApiParaUrl(url) }
             try {
                 Log.d("CARGAUY", "Intentando llamada en $url ...")
                 val result = block(api)
@@ -66,24 +104,33 @@ object RetrofitClient {
 
     /**
      * Ajusta la URL de autorización de Keycloak/gub.uy si el backend devolvió "localhost" o "127.0.0.1",
-     * reemplazándola por el host activo alcanzable por el emulador o dispositivo móvil.
+     * reemplazándola por el host alcanzable por el emulador (10.0.2.2) o la IP del servidor en LAN.
      */
     fun resolverUrlProveedor(urlOriginal: String): String {
         return try {
             val uri = URI(urlOriginal)
-            val host = uri.host ?: return urlOriginal
-            if (host.equals("localhost", ignoreCase = true) || host == "127.0.0.1") {
-                val baseUri = URI(activeBaseUrl)
-                val hostObjetivo = baseUri.host ?: "10.0.2.2"
-                val puerto = if (uri.port != -1) ":${uri.port}" else ""
-                val scheme = uri.scheme ?: "http"
-                val path = uri.rawPath ?: ""
-                val query = if (uri.rawQuery != null) "?${uri.rawQuery}" else ""
-                val fragment = if (uri.rawFragment != null) "#${uri.rawFragment}" else ""
-                "$scheme://$hostObjetivo$puerto$path$query$fragment"
-            } else {
-                urlOriginal
+            val hostOriginal = uri.host ?: return urlOriginal
+            val puertoOriginal = if (uri.port != -1) ":${uri.port}" else ""
+
+            val hostActivo = try { URI(activeBaseUrl).host } catch (_: Exception) { null }
+
+            val hostDestino = when {
+                // Si estamos en emulador y la conexión activa es local o 10.0.2.2, Keycloak está en 10.0.2.2:8083
+                esEmulador() && (hostActivo == null || hostActivo == "10.0.2.2" || hostActivo == "localhost" || hostActivo == "127.0.0.1") -> "10.0.2.2"
+                // Si la conexión activa es una IP LAN específica (ej. 10.0.0.16), Keycloak está en esa misma IP LAN
+                hostActivo != null && hostActivo != "localhost" && hostActivo != "127.0.0.1" -> hostActivo
+                // Fallback para emulador si la URL venía con localhost
+                esEmulador() -> "10.0.2.2"
+                else -> hostActivo ?: hostOriginal
             }
+
+            val scheme = uri.scheme ?: "http"
+            val path = uri.rawPath ?: ""
+            val query = if (uri.rawQuery != null) "?${uri.rawQuery}" else ""
+            val fragment = if (uri.rawFragment != null) "#${uri.rawFragment}" else ""
+            val urlFinal = "$scheme://$hostDestino$puertoOriginal$path$query$fragment"
+            Log.d("CARGAUY", "URL Proveedor resuelta: $urlFinal (desde original: $urlOriginal)")
+            urlFinal
         } catch (e: Exception) {
             Log.w("CARGAUY", "No se pudo ajustar URL de proveedor: ${e.message}")
             urlOriginal
@@ -91,11 +138,14 @@ object RetrofitClient {
     }
 }
 
-/** Estado de sesión autenticada en memoria y utilidades para el chofer */
+/**
+ * Estado de sesión autenticada reactivo con Compose:
+ * Al modificar cualquiera de sus campos, la UI se recompone de inmediato.
+ */
 object SesionMovil {
-    @Volatile var token: String = ""
-    @Volatile var cedulaAsociada: Int? = null
-    @Volatile var nombreChofer: String? = null
+    var token: String by mutableStateOf("")
+    var cedulaAsociada: Int? by mutableStateOf(null)
+    var nombreChofer: String? by mutableStateOf(null)
 
     val estaAutenticado: Boolean
         get() = token.isNotBlank()

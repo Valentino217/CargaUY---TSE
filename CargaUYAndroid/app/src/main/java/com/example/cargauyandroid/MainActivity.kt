@@ -120,8 +120,10 @@ fun NavegationComponent(
     val navController = rememberNavController()
     val scope = rememberCoroutineScope()
 
-    var cedulaTexto by rememberSaveable { mutableStateOf(Constants.DEFAULT_CEDULA.toString()) }
-    val cedulaActual = cedulaTexto.toIntOrNull() ?: Constants.DEFAULT_CEDULA
+    var cedulaTexto by rememberSaveable {
+        mutableStateOf(SesionMovil.cedulaAsociada?.toString() ?: "")
+    }
+    val cedulaActual = cedulaTexto.toIntOrNull() ?: SesionMovil.cedulaAsociada ?: Constants.DEFAULT_CEDULA
 
     var enLinea by remember { mutableStateOf(syncRepository.servidorAlcanzable) }
     var pendientesCount by remember { mutableIntStateOf(syncRepository.dbHelper.contarEventosPendientes()) }
@@ -478,7 +480,8 @@ fun MainScreen(
                         OutlinedButton(
                             onClick = {
                                 SesionMovil.limpiar()
-                                onMensajeGlobal("Sesión cerrada.")
+                                onCedulaChange("")
+                                onMensajeGlobal("Sesión cerrada correctamente.")
                             },
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFB91C1C))
                         ) {
@@ -568,6 +571,43 @@ fun MainScreen(
                 shape = RoundedCornerShape(8.dp)
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        text = "Conexión con el Servidor:",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF475569)
+                    )
+                    Text(
+                        text = "Activo: ${RetrofitClient.activeBaseUrl}",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF0284C7)
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                RetrofitClient.actualizarBaseUrl("http://10.0.2.2:8080/")
+                                onMensajeGlobal("Cambiado a host de emulador 10.0.2.2:8080")
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("10.0.2.2 (Emulador)", fontSize = 10.sp)
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                RetrofitClient.actualizarBaseUrl("http://10.0.0.16:8080/")
+                                onMensajeGlobal("Cambiado a host LAN 10.0.0.16:8080")
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text("10.0.0.16 (LAN)", fontSize = 10.sp)
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
                     Text(
                         text = "Configuración manual de chofer (sin OIDC)",
                         fontSize = 12.sp,
@@ -774,6 +814,28 @@ fun PantallaViajes(
             }
             OutlinedButton(onClick = { cargarGuias() }) {
                 Text("Actualizar")
+            }
+        }
+
+        if (!SesionMovil.estaAutenticado) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF3C7)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(10.dp)) {
+                    Text(
+                        text = "⚠️ Modo no autenticado",
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF92400E),
+                        fontSize = 12.sp
+                    )
+                    Text(
+                        text = "Mostrando guías de prueba asignadas a la CI $cedulaChofer. Para viajar oficialmente, inicie sesión con Usuario gub.uy.",
+                        color = Color(0xFF92400E),
+                        fontSize = 11.sp
+                    )
+                }
             }
         }
 

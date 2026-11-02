@@ -59,4 +59,6 @@ dependencies {
     implementation("com.squareup.retrofit2:retrofit:2.11.0")
     implementation("com.squareup.retrofit2:converter-gson:2.11.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.9.4")
+    // Chrome Custom Tabs para autenticación OIDC integrada
+    implementation("androidx.browser:browser:1.8.0")
 }
