@@ -48,7 +48,7 @@ $realm = @{
         clientId='cargauy'; enabled=$true; protocol='openid-connect'
         publicClient=$false; secret=$clientSecret; standardFlowEnabled=$true
         directAccessGrantsEnabled=$false; implicitFlowEnabled=$false
-        redirectUris=@('http://localhost:8080/CargaUY-web/gub/callback','uy.cargauy:/oauth/callback')
+        redirectUris=@('http://localhost:8080/CargaUY-web/gub/callback','uy.cargauy://oauth/callback','uy.cargauy:/oauth/callback')
         webOrigins=@('http://localhost:8080')
         defaultClientScopes=@('profile','email')
         attributes=@{'pkce.code.challenge.method'='S256'; 'id.token.signed.response.alg'='RS256'}
@@ -84,7 +84,7 @@ gub.issuer=http://localhost:8083/realms/cargauy-test
 gub.client.id=cargauy
 gub.client.secret=$clientSecret
 gub.redirect=http://localhost:8080/CargaUY-web/gub/callback
-gub.mobile.redirect=uy.cargauy:/oauth/callback
+gub.mobile.redirect=uy.cargauy://oauth/callback
 pdi.endpoint=http://localhost:8081/pdi/ws
 p1.pruebas=false
 "@

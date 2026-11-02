@@ -81,8 +81,7 @@ public class GubOidcClient {
                 .POST(HttpRequest.BodyPublishers.ofString(datos)));
             JsonObject claims = validarIdToken(token.getString("id_token"), nonce);
             String acceso = token.getString("access_token");
-            JsonObject info = pedir(HttpRequest.newBuilder(endpoint("userinfo"))
-                .header("Authorization","Bearer " + acceso).GET());
+            JsonObject info = obtenerUserInfo(acceso, claims);
             if (!claims.getString("sub").equals(info.getString("sub")))
                 throw new ErrorAcceso(401,"Identidad inconsistente");
             if (real()) {
@@ -151,7 +150,7 @@ public class GubOidcClient {
 	            : aud instanceof JsonArray a && a.stream().anyMatch(v -> v instanceof JsonString s
 	                && clientId().equals(s.getString()));
 	        long ahora = Instant.now().getEpochSecond();
-	        if (!issuer().equals(c.getString("iss")) || !audiencia
+	        if (!issuerValido(c.getString("iss", "")) || !audiencia
 	                || !Cripto.igual(nonce,c.getString("nonce",""))
 	                || c.getJsonNumber("exp").longValue() <= ahora
 	                || c.getJsonNumber("iat").longValue() > ahora+30
@@ -161,6 +160,47 @@ public class GubOidcClient {
 	            throw new ErrorAcceso(401,"Claims de identidad inválidos");
 	        return c;
 	    }
+
+    private boolean issuerValido(String issClaim) {
+        if (issuer().equals(issClaim)) return true;
+        if (!Boolean.parseBoolean(Config.valor("p1.entorno.local", "false")) || issClaim == null) return false;
+        try {
+            URI esperado = URI.create(issuer());
+            URI recibido = URI.create(issClaim);
+            return Objects.equals(esperado.getScheme(), recibido.getScheme())
+                && esperado.getPort() == recibido.getPort()
+                && Objects.equals(esperado.getPath(), recibido.getPath());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private JsonObject obtenerUserInfo(String acceso, JsonObject claims) throws Exception {
+        boolean local = Boolean.parseBoolean(Config.valor("p1.entorno.local", "false"));
+        String issToken = claims.getString("iss", issuer());
+        if (local && !issuer().equals(issToken) && !real()) {
+            try {
+                URI u = URI.create(issToken + "/protocol/openid-connect/userinfo");
+                if (!"10.0.2.2".equals(u.getHost())) {
+                    return pedir(HttpRequest.newBuilder(u)
+                        .header("Authorization", "Bearer " + acceso).GET());
+                }
+            } catch (Exception ignored) {
+            }
+            if (claims.containsKey("sub") && claims.containsKey("ci") && claims.containsKey("email")) {
+                return claims;
+            }
+        }
+        try {
+            return pedir(HttpRequest.newBuilder(endpoint("userinfo"))
+                .header("Authorization", "Bearer " + acceso).GET());
+        } catch (ErrorAcceso e) {
+            if (local && !real() && claims.containsKey("sub") && claims.containsKey("ci") && claims.containsKey("email")) {
+                return claims;
+            }
+            throw e;
+        }
+    }
     
     private JsonObject pedir(HttpRequest.Builder b) 
 		throws Exception {

@@ -46,7 +46,7 @@ public class FlujosService {
 	 }
 	 
 	 public static String redirect(){
-		 return Config.valor("gub.mobile.redirect","uy.cargauy:/oauth/callback");
+		 return Config.valor("gub.mobile.redirect","uy.cargauy://oauth/callback");
 	 }
 	 
 	 @Schedule(hour="*",minute="*/15",persistent=false)
