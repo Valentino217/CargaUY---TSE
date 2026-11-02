@@ -21,6 +21,13 @@ public interface GestionEventosServiceLocal {
     EventoViaje guardarEvento(EventoViajeDTO dto);
 
     /**
+     * Valida las precondiciones de negocio y estado de guía antes de encolar asíncronamente en TrackingQueue,
+     * derivando a fiscalización VIAJE_SIN_GUIA si corresponde y lanzando BusinessException ante rechazos.
+     */
+    default void validarEventoPreEncolado(EventoViajeDTO dto) {
+    }
+
+    /**
      * Procesa un lote de eventos en sincronización offline.
      * Si un evento ya existe por UUID, devuelve estado DUPLICATE sin fallar el resto del lote.
      */

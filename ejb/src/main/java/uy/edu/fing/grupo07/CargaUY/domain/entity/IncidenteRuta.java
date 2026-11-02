@@ -17,7 +17,7 @@ public class IncidenteRuta implements Serializable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(length = 500)
+    @Column(columnDefinition = "TEXT")
     private String foto;
 
     @Column(nullable = false, length = 1000)

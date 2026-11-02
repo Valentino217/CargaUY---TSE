@@ -20,10 +20,10 @@ public class RegistroAuditoria implements Serializable {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 100)
+    @Column(nullable = false, length = 100, updatable = false)
     private String resolucion;
 
-    @Column(nullable = false)
+    @Column(nullable = false, updatable = false)
     private LocalDate fecha;
 
     @Column(name = "timestamp_creacion", nullable = false, updatable = false)
@@ -38,6 +38,10 @@ public class RegistroAuditoria implements Serializable {
     @Column(nullable = false, length = 2000, updatable = false)
     private String fundamento;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "infraccion_id", updatable = false)
+    private Infraccion infraccion;
+
     /**
      * Constructor protegido requerido por la especificación JPA.
      */
@@ -45,15 +49,36 @@ public class RegistroAuditoria implements Serializable {
     }
 
     /**
-     * Constructor público único para instanciación. No se permiten modificaciones posteriores.
+     * Constructor público sin asociación inicial (compatibilidad retroactiva).
      */
     public RegistroAuditoria(String resolucion, LocalDate fecha, String usuario, String accion, String fundamento) {
+        this(null, resolucion, fecha, usuario, accion, fundamento);
+    }
+
+    /**
+     * Constructor público inmutable asociado directamente al caso de infracción auditado.
+     */
+    public RegistroAuditoria(
+            Infraccion infraccion,
+            String resolucion,
+            LocalDate fecha,
+            String usuario,
+            String accion,
+            String fundamento
+    ) {
+        this.infraccion = infraccion;
         this.resolucion = resolucion;
         this.fecha = fecha != null ? fecha : LocalDate.now();
         this.timestampCreacion = LocalDateTime.now();
         this.usuario = usuario;
         this.accion = accion;
         this.fundamento = fundamento;
+    }
+
+    void asociarInfraccion(Infraccion nuevaInfraccion) {
+        if (this.infraccion == null) {
+            this.infraccion = nuevaInfraccion;
+        }
     }
 
     public Long getId() {
@@ -84,16 +109,20 @@ public class RegistroAuditoria implements Serializable {
         return fundamento;
     }
 
+    public Infraccion getInfraccion() {
+        return infraccion;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         RegistroAuditoria that = (RegistroAuditoria) o;
-        return Objects.equals(id, that.id);
+        return id != null && Objects.equals(id, that.id);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id);
+        return getClass().hashCode();
     }
 }

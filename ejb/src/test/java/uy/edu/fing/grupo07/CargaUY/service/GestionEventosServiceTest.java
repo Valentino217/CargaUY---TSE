@@ -348,4 +348,260 @@ class GestionEventosServiceTest {
         assertEquals(1, list.size());
         assertEquals(1L, list.get(0).id());
     }
+
+    @Test
+    @DisplayName("Punto C.3 / E.8 - Rechaza eventos distintos de INICIO en guía SIN_INICIAR y deriva vehículo a fiscalización SIN_GUIA")
+    void testRechazaEventoNoInicioEnGuiaSinIniciarYDerivaFiscalizacion() {
+        uy.edu.fing.grupo07.CargaUY.jms.FiscalizacionProducerLocal producerMock =
+                mock(uy.edu.fing.grupo07.CargaUY.jms.FiscalizacionProducerLocal.class);
+        GestionEventosServiceImpl svcConFiscalizacion = new GestionEventosServiceImpl(em, null, producerMock);
+
+        Vehiculo vehiculo = new Vehiculo("888999", "Volvo", "FH", 8000, 30000, true, null);
+        guiaPrueba.setVehiculo(vehiculo);
+        guiaPrueba.setEstado(TipoEstado.SIN_INICIAR);
+
+        when(em.createQuery(anyString(), eq(Long.class))).thenReturn(queryCount);
+        when(queryCount.setParameter(eq("uuid"), anyString())).thenReturn(queryCount);
+        when(queryCount.getSingleResult()).thenReturn(0L);
+        when(em.find(GuiaDeViaje.class, 1L)).thenReturn(guiaPrueba);
+
+        EventoViajeDTO dtoCarga = new EventoViajeDTO(
+                "uuid-invalido-sin-iniciar",
+                LocalDateTime.now(),
+                TipoEvento.CARGA_PARCIAL,
+                -34.9,
+                -56.1,
+                1L,
+                null,
+                null,
+                5000.0,
+                "Soja",
+                "AgroSur",
+                null
+        );
+
+        assertThrows(BusinessException.class, () -> svcConFiscalizacion.guardarEvento(dtoCarga));
+        assertEquals(TipoEstado.SIN_INICIAR, guiaPrueba.getEstado());
+        verify(em, never()).persist(any(EventoViaje.class));
+        verify(producerMock).solicitarEvaluacionSinGuia(eq("888999"), contains("SIN_INICIAR"));
+    }
+
+    @Test
+    @DisplayName("Punto C.3 - Rechaza segundo evento INICIO cuando la guía ya está EN_CURSO")
+    void testRechazaSegundoInicioEnGuiaEnCurso() {
+        guiaPrueba.setEstado(TipoEstado.EN_CURSO);
+        when(em.createQuery(anyString(), eq(Long.class))).thenReturn(queryCount);
+        when(queryCount.setParameter(eq("uuid"), anyString())).thenReturn(queryCount);
+        when(queryCount.getSingleResult()).thenReturn(0L);
+        when(em.find(GuiaDeViaje.class, 1L)).thenReturn(guiaPrueba);
+
+        EventoViajeDTO dtoInicioDuplicado = new EventoViajeDTO(
+                "uuid-segundo-inicio",
+                LocalDateTime.now(),
+                TipoEvento.INICIO,
+                -34.9,
+                -56.1,
+                1L,
+                null
+        );
+
+        assertThrows(BusinessException.class, () -> service.guardarEvento(dtoInicioDuplicado));
+        verify(em, never()).persist(any(EventoViaje.class));
+    }
+
+    @Test
+    @DisplayName("Punto C.3 / E.8 - Rechaza cualquier evento sobre guía FINALIZADO y deriva vehículo a fiscalización SIN_GUIA")
+    void testRechazaEventosEnGuiaFinalizadaYDerivaFiscalizacion() {
+        uy.edu.fing.grupo07.CargaUY.jms.FiscalizacionProducerLocal producerMock =
+                mock(uy.edu.fing.grupo07.CargaUY.jms.FiscalizacionProducerLocal.class);
+        GestionEventosServiceImpl svcConFiscalizacion = new GestionEventosServiceImpl(em, null, producerMock);
+
+        Vehiculo vehiculo = new Vehiculo("777666", "Scania", "G410", 8500, 29000, true, null);
+        guiaPrueba.setVehiculo(vehiculo);
+        guiaPrueba.setEstado(TipoEstado.FINALIZADO);
+
+        when(em.createQuery(anyString(), eq(Long.class))).thenReturn(queryCount);
+        when(queryCount.setParameter(eq("uuid"), anyString())).thenReturn(queryCount);
+        when(queryCount.getSingleResult()).thenReturn(0L);
+        when(em.find(GuiaDeViaje.class, 1L)).thenReturn(guiaPrueba);
+
+        EventoViajeDTO dtoPostFin = new EventoViajeDTO(
+                "uuid-post-fin",
+                LocalDateTime.now(),
+                TipoEvento.DESCARGA_PARCIAL,
+                -31.3,
+                -55.5,
+                1L,
+                null,
+                null,
+                1200.0,
+                "Madera",
+                "Forestal Norte",
+                null
+        );
+
+        assertThrows(BusinessException.class, () -> svcConFiscalizacion.guardarEvento(dtoPostFin));
+        assertEquals(TipoEstado.FINALIZADO, guiaPrueba.getEstado());
+        verify(em, never()).persist(any(EventoViaje.class));
+        verify(producerMock).solicitarEvaluacionSinGuia(eq("777666"), contains("FINALIZADA"));
+    }
+
+    @Test
+    @DisplayName("Punto C.3 - Persiste y mapea campos estructurados de carga parcial (cantidadKg, mercaderia, empresaCarga) y rechaza kg negativos")
+    void testPersistenciaCamposCargaParcialYValidacionNegativos() {
+        guiaPrueba.setEstado(TipoEstado.EN_CURSO);
+        Vehiculo vehiculo = new Vehiculo("555444", "Mercedes", "Actros", 9000, 31000, true, null);
+        guiaPrueba.setVehiculo(vehiculo);
+
+        when(em.createQuery(anyString(), eq(Long.class))).thenReturn(queryCount);
+        when(queryCount.setParameter(eq("uuid"), anyString())).thenReturn(queryCount);
+        when(queryCount.getSingleResult()).thenReturn(0L);
+        when(em.find(GuiaDeViaje.class, 1L)).thenReturn(guiaPrueba);
+
+        EventoViajeDTO dtoNegativo = new EventoViajeDTO(
+                "uuid-kg-neg",
+                LocalDateTime.now(),
+                TipoEvento.CARGA_PARCIAL,
+                -34.9,
+                -56.1,
+                1L,
+                null,
+                null,
+                -50.0,
+                "Trigo",
+                "Molino Sur",
+                null
+        );
+        assertThrows(BusinessException.class, () -> service.guardarEvento(dtoNegativo));
+
+        EventoViajeDTO dtoCargaParcial = new EventoViajeDTO(
+                "uuid-carga-parcial-ok",
+                LocalDateTime.now(),
+                TipoEvento.CARGA_PARCIAL,
+                -33.5,
+                -56.2,
+                1L,
+                null,
+                null,
+                12500.5,
+                "  Celulosa  ",
+                "  UPM Paso de los Toros  ",
+                null
+        );
+
+        EventoViaje guardado = service.guardarEvento(dtoCargaParcial);
+        assertEquals(12500.5, guardado.getCantidadKg());
+        assertEquals("Celulosa", guardado.getMercaderia());
+        assertEquals("UPM Paso de los Toros", guardado.getEmpresaCarga());
+
+        when(em.createQuery(anyString(), eq(EventoViaje.class))).thenReturn(queryEventos);
+        when(queryEventos.setParameter(eq("guiaId"), eq(1L))).thenReturn(queryEventos);
+        when(queryEventos.getResultList()).thenReturn(List.of(guardado));
+
+        List<EventoViajeDTO> listados = service.listarEventosPorGuia(1L);
+        assertEquals(1, listados.size());
+        assertEquals(12500.5, listados.get(0).cantidadKg());
+        assertEquals("Celulosa", listados.get(0).mercaderia());
+        assertEquals("UPM Paso de los Toros", listados.get(0).empresaCarga());
+        assertEquals("555444", listados.get(0).matricula());
+    }
+
+    @Test
+    @DisplayName("Punto C.3 - Persiste incidente en ruta con fotografía codificada en data URI Base64")
+    void testGuardarIncidenteConFotoBase64() {
+        guiaPrueba.setEstado(TipoEstado.EN_CURSO);
+        when(em.createQuery(anyString(), eq(Long.class))).thenReturn(queryCount);
+        when(queryCount.setParameter(eq("uuid"), anyString())).thenReturn(queryCount);
+        when(queryCount.getSingleResult()).thenReturn(0L);
+        when(em.find(GuiaDeViaje.class, 1L)).thenReturn(guiaPrueba);
+
+        String dataUri = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/";
+        EventoViajeDTO dto = new EventoViajeDTO(
+                "uuid-inc-b64",
+                LocalDateTime.now(),
+                TipoEvento.INCIDENTE,
+                -32.8,
+                -56.4,
+                1L,
+                new IncidenteDTO(dataUri, "Desperfecto hidráulico con evidencia fotográfica")
+        );
+
+        EventoViaje guardado = service.guardarEvento(dto);
+        assertNotNull(guardado.getIncidente());
+        assertEquals(dataUri, guardado.getIncidente().getFoto());
+        assertEquals("Desperfecto hidráulico con evidencia fotográfica", guardado.getIncidente().getDescripcion());
+    }
+
+    @Test
+    @DisplayName("Punto E.7 - Permite iniciar viaje con vehículo sin ITV/PNC vigente y encola evaluación automática en FiscalizacionQueue")
+    void testIniciarViajeVehiculoSinHabilitacionDisparaFiscalizacion() {
+        uy.edu.fing.grupo07.CargaUY.jms.FiscalizacionProducerLocal producerMock =
+                mock(uy.edu.fing.grupo07.CargaUY.jms.FiscalizacionProducerLocal.class);
+        GestionEventosServiceImpl svcConFiscalizacion = new GestionEventosServiceImpl(em, null, producerMock);
+
+        Vehiculo vehiculoSinItv = new Vehiculo("333222", "Scania", "P310", 8000, 22000, false, null);
+        guiaPrueba.setVehiculo(vehiculoSinItv);
+        guiaPrueba.setEstado(TipoEstado.SIN_INICIAR);
+
+        when(em.createQuery(anyString(), eq(Long.class))).thenReturn(queryCount);
+        when(queryCount.setParameter(eq("uuid"), anyString())).thenReturn(queryCount);
+        when(queryCount.getSingleResult()).thenReturn(0L);
+        when(em.find(GuiaDeViaje.class, 1L)).thenReturn(guiaPrueba);
+
+        EventoViajeDTO dtoInicio = new EventoViajeDTO(
+                "uuid-ini-sin-hab",
+                LocalDateTime.now(),
+                TipoEvento.INICIO,
+                -34.9,
+                -56.1,
+                1L,
+                null
+        );
+
+        EventoViaje ev = svcConFiscalizacion.guardarEvento(dtoInicio);
+        assertNotNull(ev);
+        assertEquals(TipoEstado.EN_CURSO, guiaPrueba.getEstado());
+        verify(producerMock).solicitarEvaluacion(1L);
+    }
+
+    @Test
+    @DisplayName("Punto E.8 - Evento recibido por matrícula para camión registrado sin guía EN_CURSO dispara fiscalización VIAJE_SIN_GUIA")
+    void testEventoPorMatriculaSinGuiaActivaDisparaFiscalizacionSinGuia() {
+        uy.edu.fing.grupo07.CargaUY.jms.FiscalizacionProducerLocal producerMock =
+                mock(uy.edu.fing.grupo07.CargaUY.jms.FiscalizacionProducerLocal.class);
+        GestionEventosServiceImpl svcConFiscalizacion = new GestionEventosServiceImpl(em, null, producerMock);
+
+        Vehiculo camionPadron = new Vehiculo("444555", "Volvo", "FMX", 9000, 30000, true, null);
+
+        when(em.createQuery(anyString(), eq(Long.class))).thenReturn(queryCount);
+        when(queryCount.setParameter(eq("uuid"), anyString())).thenReturn(queryCount);
+        when(queryCount.getSingleResult()).thenReturn(0L);
+
+        when(em.createQuery(anyString(), eq(GuiaDeViaje.class))).thenReturn(queryGuia);
+        when(queryGuia.setParameter(eq("matricula"), eq("444555"))).thenReturn(queryGuia);
+        when(queryGuia.setParameter(eq("enCurso"), eq(TipoEstado.EN_CURSO))).thenReturn(queryGuia);
+        when(queryGuia.setMaxResults(1)).thenReturn(queryGuia);
+        when(queryGuia.getResultList()).thenReturn(Collections.emptyList());
+
+        when(em.find(Vehiculo.class, "444555")).thenReturn(camionPadron);
+
+        EventoViajeDTO dtoSinGuia = new EventoViajeDTO(
+                "uuid-track-sin-guia",
+                LocalDateTime.now(),
+                TipoEvento.CARGA_PARCIAL,
+                -34.5,
+                -56.2,
+                null,
+                null,
+                2.0,
+                8000.0,
+                "Arroz",
+                "Saman",
+                "444555"
+        );
+
+        assertThrows(BusinessException.class, () -> svcConFiscalizacion.guardarEvento(dtoSinGuia));
+        verify(producerMock).solicitarEvaluacionSinGuia(eq("444555"), contains("uuid-track-sin-guia"));
+        verify(em, never()).persist(any(EventoViaje.class));
+    }
 }

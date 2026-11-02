@@ -89,7 +89,7 @@
                     <p:column filterBy="#{caso.nombreEmpresa()}" filterMatchMode="contains" filterPlaceholder="Empresa / Unidad">
                         <strong style="color: #0f2942;">#{caso.nombreEmpresa() != null ? caso.nombreEmpresa() : 'Empresa N/D'}</strong>
                         <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.15rem;">
-                            Matrícula: <span class="cuy-mono">#{caso.matricula() != null ? caso.matricula() : 'S/D'}</span> | Guía ##{caso.guiaId()}
+                            Matrícula: <span class="cuy-mono">#{caso.matricula() != null ? caso.matricula() : 'S/D'}</span> | #{caso.guiaId() != null ? 'Guía #'.concat(caso.guiaId().toString()) : 'Sin guía activa'}
                         </div>
                     </p:column>
 
@@ -140,10 +140,10 @@
                         <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 1rem;">
                             <div>
                                 <div style="font-size: 0.78rem; color: #64748b; text-transform: uppercase; font-weight: 700;">
-                                    Expediente ##{bandejaFiscalizacionBean.casoSeleccionado.idCaso()} &#8226; Guía ##{bandejaFiscalizacionBean.casoSeleccionado.guiaId()}
+                                    Expediente ##{bandejaFiscalizacionBean.casoSeleccionado.idCaso()} &#8226; #{bandejaFiscalizacionBean.casoSeleccionado.guiaId() != null ? 'Guía #'.concat(bandejaFiscalizacionBean.casoSeleccionado.guiaId().toString()) : 'Sin guía activa'}
                                 </div>
                                 <div style="font-size: 1.05rem; font-weight: 800; color: #0f2942;">
-                                    #{bandejaFiscalizacionBean.casoSeleccionado.nombreEmpresa()} &#8226; Matrícula <span class="cuy-mono">#{bandejaFiscalizacionBean.casoSeleccionado.matricula()}</span>
+                                    #{bandejaFiscalizacionBean.casoSeleccionado.nombreEmpresa() != null ? bandejaFiscalizacionBean.casoSeleccionado.nombreEmpresa() : 'Empresa N/D'} &#8226; Matrícula <span class="cuy-mono">#{bandejaFiscalizacionBean.casoSeleccionado.matricula() != null ? bandejaFiscalizacionBean.casoSeleccionado.matricula() : 'S/D'}</span>
                                 </div>
                             </div>
                             <div style="display: flex; gap: 0.5rem; align-items: center;">
@@ -180,17 +180,32 @@
                             </h:panelGroup>
                         </div>
 
-                        <!-- Pista de Auditoría Inmutable si ya fue resuelto -->
-                        <h:panelGroup rendered="#{bandejaFiscalizacionBean.casoSeleccionado.auditoria() != null}">
+                        <!-- Pista de Auditoría Inmutable (Append-Only) -->
+                        <h:panelGroup rendered="#{not empty bandejaFiscalizacionBean.casoSeleccionado.historialAuditoria()}">
                             <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-left: 4px solid #059669; border-radius: 8px; padding: 0.9rem 1rem; margin-bottom: 1rem;">
-                                <div style="font-weight: 700; color: #065f46; font-size: 0.85rem; margin-bottom: 0.3rem;">
-                                    <i class="pi pi-lock" /> Registro de Auditoría Inmutable Sellado
+                                <div style="font-weight: 700; color: #065f46; font-size: 0.85rem; margin-bottom: 0.5rem;">
+                                    <i class="pi pi-lock" /> Historial de Auditoría Inmutable (Append-Only)
                                 </div>
-                                <div style="font-size: 0.84rem; color: #047857;">
-                                    <strong>Acción:</strong> #{bandejaFiscalizacionBean.casoSeleccionado.auditoria().accion()} |
-                                    <strong>Autor:</strong> #{bandejaFiscalizacionBean.casoSeleccionado.auditoria().usuario()} |
-                                    <strong>Timestamp:</strong> #{bandejaFiscalizacionBean.casoSeleccionado.auditoria().timestampCreacion()}
-                                </div>
+                                <p:dataTable var="aud"
+                                             value="#{bandejaFiscalizacionBean.casoSeleccionado.historialAuditoria()}"
+                                             size="small"
+                                             stripedRows="true">
+                                    <p:column headerText="Acción" style="width: 165px;">
+                                        <span class="cuy-mono" style="font-size: 0.76rem; font-weight: 700;">#{aud.accion()}</span>
+                                    </p:column>
+                                    <p:column headerText="Estado" style="width: 110px;">
+                                        <h:outputText value="#{aud.resolucion()}" style="font-size: 0.78rem;" />
+                                    </p:column>
+                                    <p:column headerText="Autor" style="width: 160px;">
+                                        <h:outputText value="#{aud.usuario()}" style="font-size: 0.78rem;" />
+                                    </p:column>
+                                    <p:column headerText="Timestamp" style="width: 150px;">
+                                        <span class="cuy-mono" style="font-size: 0.74rem;">#{aud.timestampCreacion()}</span>
+                                    </p:column>
+                                    <p:column headerText="Fundamento / Detalle">
+                                        <h:outputText value="#{aud.fundamento()}" style="font-size: 0.78rem;" />
+                                    </p:column>
+                                </p:dataTable>
                             </div>
                         </h:panelGroup>
 

@@ -44,6 +44,7 @@ public class RegistrarPesajeBean implements Serializable {
 
     private List<GuiaDeViaje> guiasDisponibles;
     private Long guiaIdSeleccionada;
+    private String matriculaManual;
     private Integer pesoRegistrado;
     private LocalDate fecha;
     private LocalTime hora;
@@ -130,6 +131,7 @@ public class RegistrarPesajeBean implements Serializable {
      * Evento al cambiar la guía seleccionada en el combo box.
      */
     public void onGuiaChange() {
+        this.matriculaManual = null;
         cargarPesadasDeGuia();
     }
 
@@ -155,11 +157,12 @@ public class RegistrarPesajeBean implements Serializable {
      * Da de alta una nueva pesada en balanza y ejecuta la fiscalización.
      */
     public void registrarPesaje() {
-        if (guiaIdSeleccionada == null) {
+        boolean tieneMatriculaManual = matriculaManual != null && !matriculaManual.isBlank();
+        if (guiaIdSeleccionada == null && !tieneMatriculaManual) {
             mostrarMensaje(
                     FacesMessage.SEVERITY_WARN,
                     "Validación",
-                    "Debe seleccionar una guía de viaje."
+                    "Debe seleccionar una guía de viaje o ingresar la matrícula del vehículo."
             );
             return;
         }
@@ -183,24 +186,46 @@ public class RegistrarPesajeBean implements Serializable {
             horaEfectiva = LocalTime.now();
         }
 
+        String matriculaDto = tieneMatriculaManual ? matriculaManual.trim() : null;
+        Long guiaIdDto = tieneMatriculaManual ? null : guiaIdSeleccionada;
+
         PesadaBalanzaDTO pesadaDTO = new PesadaBalanzaDTO(
                 null,
                 fechaEfectiva,
                 horaEfectiva,
                 pesoRegistrado,
-                null,
-                guiaIdSeleccionada
+                matriculaDto,
+                guiaIdDto
         );
 
         try {
             PesadaBalanzaDTO pesadaGuardada = balanzaService.registrarPesada(pesadaDTO);
-            mostrarMensaje(
-                    FacesMessage.SEVERITY_INFO,
-                    "Pesaje Registrado",
-                    "Se registró la pesada #" + pesadaGuardada.idPesada()
-                            + " de " + pesoRegistrado + " kg. Evaluación encolada en FiscalizacionQueue (JMS)."
-            );
-            cargarPesadasDeGuia();
+            this.matriculaManual = null;
+            if (pesadaGuardada.guiaId() != null) {
+                this.guiaIdSeleccionada = pesadaGuardada.guiaId();
+                mostrarMensaje(
+                        FacesMessage.SEVERITY_INFO,
+                        "Pesaje Registrado",
+                        "Se registró la pesada #" + pesadaGuardada.idPesada()
+                                + " de " + pesoRegistrado + " kg. Evaluación encolada en FiscalizacionQueue (JMS)."
+                );
+                cargarPesadasDeGuia();
+            } else {
+                String mat = pesadaGuardada.matricula() != null ? pesadaGuardada.matricula() : matriculaDto;
+                if (evaluarInmediato && motorFiscalizacion != null && mat != null && !mat.isBlank()) {
+                    motorFiscalizacion.evaluarVehiculoSinGuia(
+                            mat,
+                            "Pesaje manual en balanza #" + pesadaGuardada.idPesada() + " (" + pesoRegistrado + " kg)"
+                    );
+                }
+                mostrarMensaje(
+                        FacesMessage.SEVERITY_WARN,
+                        "Pesaje sin Guía Activa (VIAJE_SIN_GUIA)",
+                        "Se registró la pesada #" + pesadaGuardada.idPesada()
+                                + " de " + pesoRegistrado + " kg para el vehículo " + mat
+                                + " sin viaje EN_CURSO. Derivado a fiscalización automática VIAJE_SIN_GUIA."
+                );
+            }
 
         } catch (Exception excepcion) {
             LOGGER.log(Level.SEVERE, "Error al registrar pesada", excepcion);
@@ -255,6 +280,14 @@ public class RegistrarPesajeBean implements Serializable {
 
     public void setGuiaIdSeleccionada(Long guiaIdSeleccionada) {
         this.guiaIdSeleccionada = guiaIdSeleccionada;
+    }
+
+    public String getMatriculaManual() {
+        return matriculaManual;
+    }
+
+    public void setMatriculaManual(String matriculaManual) {
+        this.matriculaManual = matriculaManual;
     }
 
     public Integer getPesoRegistrado() {

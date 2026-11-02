@@ -35,21 +35,18 @@ public class GuiaDeViajeEJB implements GuiaDeViajeEJBLocal {
         if(g!=null) control.empresa(token,g.getEmpresa().getNroEmpresa(),false);
         return g;
     }
-    private void exigirHabilitacionVigente(Vehiculo v) {
-        if (v.verificarHabilitacionVigente()) {
-            return;
-        }
-        throw new IllegalArgumentException("El vehículo " + v.getMatricula()
-            + " no está habilitado para operar: " + motivoNoHabilitado(v));
+    public static String motivoNoHabilitado(Vehiculo v) {
+        return motivoNoHabilitado(v, java.time.LocalDate.now());
     }
 
-    public static String motivoNoHabilitado(Vehiculo v) {
+    public static String motivoNoHabilitado(Vehiculo v, java.time.LocalDate fechaReferencia) {
+        java.time.LocalDate ref = fechaReferencia != null ? fechaReferencia : java.time.LocalDate.now();
         StringBuilder sb = new StringBuilder();
         if (!v.isEstadoHabilitacion()) sb.append("suspendido administrativamente; ");
-        boolean itv = v.getItv() != null && v.getItv().stream().anyMatch(uy.edu.fing.grupo07.CargaUY.domain.entity.ITV::isVigente);
-        boolean pnc = v.getPncs() != null && v.getPncs().stream().anyMatch(uy.edu.fing.grupo07.CargaUY.domain.entity.PNC::isVigente);
-        if (!itv) sb.append("sin ITV vigente; ");
-        if (!pnc) sb.append("sin PNC vigente; ");
+        boolean itv = v.getItv() != null && v.getItv().stream().anyMatch(i -> i.isVigenteEn(ref));
+        boolean pnc = v.getPncs() != null && v.getPncs().stream().anyMatch(p -> p.isVigenteEn(ref));
+        if (!itv) sb.append("sin ITV vigente al ").append(ref).append("; ");
+        if (!pnc) sb.append("sin PNC vigente al ").append(ref).append("; ");
         return sb.toString().trim();
     }
 
@@ -63,7 +60,6 @@ public class GuiaDeViajeEJB implements GuiaDeViajeEJBLocal {
             }
             if(v.getEmpresa()!=null && g.getEmpresa()!=null && v.getEmpresa().getNroEmpresa()!=g.getEmpresa().getNroEmpresa())
                 throw new IllegalArgumentException("El vehículo no pertenece a la empresa de la guía");
-            exigirHabilitacionVigente(v);
         }
     }
     public void crear(String token,GuiaDeViaje g) { validarAsignacion(token,g); crear(g); }
@@ -90,13 +86,6 @@ public class GuiaDeViajeEJB implements GuiaDeViajeEJBLocal {
             throw new IllegalArgumentException("Guía de viaje inexistente: #" + guiaId);
         }
         if (guia.getEstado() == TipoEstado.SIN_INICIAR) {
-            if (guia.getVehiculo() != null) {
-                Vehiculo v = em.find(Vehiculo.class, guia.getVehiculo().getMatricula());
-                if (v == null) {
-                    v = guia.getVehiculo();
-                }
-                exigirHabilitacionVigente(v);
-            }
             guia.setEstado(TipoEstado.EN_CURSO);
             em.flush();
             if (fiscalizacionProducer != null) {
@@ -116,18 +105,10 @@ public class GuiaDeViajeEJB implements GuiaDeViajeEJBLocal {
      * Default constructor. 
      */
     public GuiaDeViajeEJB() {
-        // TODO Auto-generated constructor stub
     }
     
     @Override
     public void crear(GuiaDeViaje guia) {
-        if (guia.getVehiculo() != null) {
-            Vehiculo v = em.find(Vehiculo.class, guia.getVehiculo().getMatricula());
-            if (v == null) {
-                v = guia.getVehiculo();
-            }
-            exigirHabilitacionVigente(v);
-        }
         em.persist(guia);
     }
 
@@ -149,14 +130,6 @@ public class GuiaDeViajeEJB implements GuiaDeViajeEJBLocal {
     		            "Solo se pueden modificar guías en estado SIN_INICIAR."
     		        );
     		}
-
-        if (guia.getVehiculo() != null) {
-            Vehiculo v = em.find(Vehiculo.class, guia.getVehiculo().getMatricula());
-            if (v == null) {
-                v = guia.getVehiculo();
-            }
-            exigirHabilitacionVigente(v);
-        }
 
     		existente.setFecha(guia.getFecha());
     		existente.setOrigen(guia.getOrigen());

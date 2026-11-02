@@ -58,33 +58,64 @@ public class AuthFilter implements ContainerRequestFilter {
                 throw new ErrorAcceso(403,"Se requiere un operador de fiscalización");
         }
         if(!p.startsWith("chofer/")) return;
-        if(p.equals("chofer/eventos/faas")&&(actor.tiene(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.ADMINISTRADOR)||actor.tiene(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.FUNCIONARIO))) return;
+        boolean esOperadorFiscalizacion = actor.tiene(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.ADMINISTRADOR)
+                || actor.tiene(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.FUNCIONARIO);
+        if(p.equals("chofer/eventos/faas") && esOperadorFiscalizacion) return;
         var parametros=r.getUriInfo().getQueryParameters();
         try {
-            control.consultarChofer(token,parametros.getFirst("choferId")==null?null:Integer.valueOf(parametros.getFirst("choferId")),
-                parametros.getFirst("ci")==null?null:Integer.valueOf(parametros.getFirst("ci")));
-            if(p.startsWith("chofer/eventos/")&&!p.equals("chofer/eventos/sync")&&!p.equals("chofer/eventos/faas"))
-                control.guiaChofer(token,Long.valueOf(p.substring("chofer/eventos/".length())));
+            if (!(esOperadorFiscalizacion && p.startsWith("chofer/eventos/"))) {
+                control.consultarChofer(token,parametros.getFirst("choferId")==null?null:Integer.valueOf(parametros.getFirst("choferId")),
+                    parametros.getFirst("ci")==null?null:Integer.valueOf(parametros.getFirst("ci")));
+            }
+            if(p.startsWith("chofer/eventos/")&&!p.equals("chofer/eventos/sync")&&!p.equals("chofer/eventos/faas")) {
+                if (!esOperadorFiscalizacion) {
+                    control.guiaChofer(token,Long.valueOf(p.substring("chofer/eventos/".length())));
+                } else {
+                    Long.valueOf(p.substring("chofer/eventos/".length()));
+                }
+            }
             if(r.getMethod().equals("POST")&&(p.equals("chofer/eventos/sync")||p.equals("chofer/eventos/faas")||p.equals("chofer/incidente"))) {
                 byte[] body=r.getEntityStream().readNBytes(1_048_577);
                 if(body.length>1_048_576) throw new ErrorAcceso(413,"Lote demasiado grande");
                 r.setEntityStream(new java.io.ByteArrayInputStream(body));
+                boolean admiteSinGuiaPorMatricula = p.equals("chofer/eventos/sync") || p.equals("chofer/eventos/faas");
                 try(var reader=jakarta.json.Json.createReader(new java.io.ByteArrayInputStream(body))) {
                     var json=reader.readValue();
                     if(json instanceof jakarta.json.JsonArray lote) {
                         for(var elemento:lote) {
                             if(!(elemento instanceof jakarta.json.JsonObject evento)) throw new ErrorAcceso(400,"Evento inválido");
-                            var id=evento.getJsonNumber("guiaId");
-                            control.guiaChofer(token,id==null?null:id.longValueExact());
+                            validarEventoJson(token, actor, evento, admiteSinGuiaPorMatricula);
                         }
                     } else if(json instanceof jakarta.json.JsonObject evento) {
-                        var id=evento.getJsonNumber("guiaId");
-                        control.guiaChofer(token,id==null?null:id.longValueExact());
+                        validarEventoJson(token, actor, evento, admiteSinGuiaPorMatricula);
                     } else throw new ErrorAcceso(400,"Solicitud inválida");
                 }
             }
         } catch(NumberFormatException|jakarta.json.JsonException|ClassCastException|ArithmeticException e) {
             throw new ErrorAcceso(400,"Identificador o JSON inválido");
+        }
+    }
+    private void validarEventoJson(String token, Acceso actor, jakarta.json.JsonObject evento, boolean admiteSinGuiaPorMatricula) {
+        var id = (evento.containsKey("guiaId") && !evento.isNull("guiaId")) ? evento.getJsonNumber("guiaId") : null;
+        boolean tieneMatricula = evento.containsKey("matricula") && !evento.isNull("matricula")
+                && !evento.getString("matricula").isBlank();
+        boolean esOperadorFiscalizacion = actor.tiene(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.ADMINISTRADOR)
+                || actor.tiene(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.FUNCIONARIO);
+        if (admiteSinGuiaPorMatricula && id == null && tieneMatricula
+                && (esOperadorFiscalizacion || actor.tiene(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.CHOFER))) {
+            return;
+        }
+        if (esOperadorFiscalizacion && id != null) {
+            id.longValueExact();
+            return;
+        }
+        try {
+            control.guiaChofer(token, id == null ? null : id.longValueExact());
+        } catch (ErrorAcceso e) {
+            if (e.getEstado() == 404 && admiteSinGuiaPorMatricula && tieneMatricula) {
+                return;
+            }
+            throw e;
         }
     }
 }

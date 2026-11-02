@@ -243,4 +243,112 @@ class DetalleViajeBeanTest {
         assertEquals("STP 1234", bean.getVehiculoMatricula());
         assertEquals("TransLog S.A.", bean.getEmpresaRazonSocial());
     }
+
+    @Test
+    @DisplayName("enviarTelemetriaFaas con matrícula manual sin guía EN_CURSO dispara fiscalización VIAJE_SIN_GUIA")
+    void testEnviarTelemetriaFaasPorMatriculaSinGuiaActiva() {
+        uy.edu.fing.grupo07.CargaUY.fiscalizacion.MotorFiscalizacionLocal motorMock =
+                mock(uy.edu.fing.grupo07.CargaUY.fiscalizacion.MotorFiscalizacionLocal.class);
+        bean.setMotorFiscalizacion(motorMock);
+        bean.setGuiaIdSeleccionada(null);
+        bean.setTelemetriaMatricula("  STP 4321  ");
+        assertEquals("  STP 4321  ", bean.getTelemetriaMatricula());
+        bean.setTelemetriaLatitud(-33.5200);
+        bean.setTelemetriaLongitud(-55.8100);
+        bean.setEvaluarDesvioInmediato(true);
+
+        when(eventosService.guardarEvento(any(EventoViajeDTO.class))).thenThrow(
+                new uy.edu.fing.grupo07.CargaUY.exception.BusinessException(
+                        "El vehículo STP 4321 no tiene ninguna guía de viaje EN_CURSO; se derivó a fiscalización automática por VIAJE_SIN_GUIA."
+                )
+        );
+        when(motorMock.evaluarVehiculoSinGuia(eq("STP 4321"), anyString())).thenReturn(true);
+
+        bean.enviarTelemetriaFaas();
+
+        verify(motorMock, times(1)).evaluarVehiculoSinGuia(eq("STP 4321"), contains("sin viaje EN_CURSO"));
+        assertNotNull(bean.getUltimoResultadoFaas());
+        assertTrue(bean.getUltimoResultadoFaas().contains("VIAJE_SIN_GUIA"));
+    }
+
+    @Test
+    @DisplayName("enviarTelemetriaFaas con matrícula inexistente no reporta falso VIAJE_SIN_GUIA")
+    void testEnviarTelemetriaFaasPorMatriculaInexistente() {
+        uy.edu.fing.grupo07.CargaUY.fiscalizacion.MotorFiscalizacionLocal motorMock =
+                mock(uy.edu.fing.grupo07.CargaUY.fiscalizacion.MotorFiscalizacionLocal.class);
+        bean.setMotorFiscalizacion(motorMock);
+        bean.setGuiaIdSeleccionada(null);
+        bean.setTelemetriaMatricula("ZZZ 9999");
+        bean.setTelemetriaLatitud(-33.5200);
+        bean.setTelemetriaLongitud(-55.8100);
+        bean.setEvaluarDesvioInmediato(true);
+
+        when(eventosService.guardarEvento(any(EventoViajeDTO.class))).thenThrow(
+                new uy.edu.fing.grupo07.CargaUY.exception.BusinessException(
+                        "No existe vehículo registrado ni guía de viaje EN_CURSO para la matrícula ZZZ 9999"
+                )
+        );
+
+        bean.enviarTelemetriaFaas();
+
+        verifyNoInteractions(motorMock);
+        assertNull(bean.getUltimoResultadoFaas());
+    }
+
+    @Test
+    @DisplayName("enviarTelemetriaFaas con matrícula manual que sí tiene guía EN_CURSO usa su corredor y evalúa esa guía")
+    void testEnviarTelemetriaFaasConMatriculaManualDeCamionConGuiaEnCursoEvaluaGuiaCorrecta() {
+        uy.edu.fing.grupo07.CargaUY.fiscalizacion.MotorFiscalizacionLocal motorMock =
+                mock(uy.edu.fing.grupo07.CargaUY.fiscalizacion.MotorFiscalizacionLocal.class);
+        bean.setMotorFiscalizacion(motorMock);
+
+        Vehiculo v1 = new Vehiculo();
+        v1.setMatricula("AA 1111");
+        GuiaDeViaje g1 = new GuiaDeViaje();
+        g1.setId(1L);
+        g1.setOrigen("Montevideo");
+        g1.setDestino("Colonia");
+        g1.setEstado(TipoEstado.EN_CURSO);
+        g1.setVehiculo(v1);
+
+        Vehiculo v2 = new Vehiculo();
+        v2.setMatricula("BB 2222");
+        GuiaDeViaje g2 = new GuiaDeViaje();
+        g2.setId(2L);
+        g2.setOrigen("Salto");
+        g2.setDestino("Artigas");
+        g2.setEstado(TipoEstado.EN_CURSO);
+        g2.setVehiculo(v2);
+
+        when(guiaDeViajeEJB.listarGuias()).thenReturn(List.of(g1, g2));
+        when(guiaDeViajeEJB.buscarGuias(1L)).thenReturn(g1);
+        when(guiaDeViajeEJB.buscarGuias(2L)).thenReturn(g2);
+        when(eventosService.listarEventosPorGuia(anyLong())).thenReturn(Collections.emptyList());
+        when(balanzaService.listarPesadasPorGuia(anyLong())).thenReturn(Collections.emptyList());
+
+        bean.setGuiaIdSeleccionada(1L);
+        bean.consultarViaje();
+
+        bean.setTelemetriaMatricula("  bb 2222  ");
+        bean.cargarCoordenadasEnRuta();
+        assertTrue(bean.getTelemetriaDescripcion().contains("Salto -> Artigas"));
+
+        uy.edu.fing.grupo07.CargaUY.domain.entity.EventoViaje persistidoG2 =
+                new uy.edu.fing.grupo07.CargaUY.domain.entity.EventoViaje();
+        persistidoG2.setGuia(g2);
+        when(eventosService.guardarEvento(any(EventoViajeDTO.class))).thenReturn(persistidoG2);
+        when(motorMock.evaluarGuia(2L)).thenReturn(Collections.emptyList());
+
+        bean.setEvaluarDesvioInmediato(true);
+        bean.enviarTelemetriaFaas();
+
+        verify(eventosService).guardarEvento(argThat(dto ->
+                "bb 2222".equals(dto.matricula())
+                        && dto.distanciaDesvioKm() != null
+                        && dto.distanciaDesvioKm() < 1.0
+        ));
+        verify(motorMock, times(1)).evaluarGuia(2L);
+        verify(motorMock, never()).evaluarGuia(1L);
+        assertEquals(2L, bean.getGuiaIdSeleccionada());
+    }
 }

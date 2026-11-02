@@ -48,6 +48,15 @@ enum class TipoEventoOption(
                 else -> codigo
             }
         }
+
+        fun opcionesPermitidasParaEstado(estadoGuia: String?): List<TipoEventoOption> {
+            return when (estadoGuia?.trim()?.uppercase()) {
+                "SIN_INICIAR" -> listOf(INICIO)
+                "EN_CURSO" -> listOf(CARGA_PARCIAL, DESCARGA_PARCIAL, INCIDENTE, FIN)
+                "FINALIZADO" -> emptyList()
+                else -> entries.toList()
+            }
+        }
     }
 }
 
@@ -63,7 +72,11 @@ data class EventoViajeDto(
     val latitud: Double,
     val longitud: Double,
     val guiaId: Long,
-    val incidente: IncidenteDto? = null
+    val incidente: IncidenteDto? = null,
+    val cantidadKg: Double? = null,
+    val mercaderia: String? = null,
+    val empresaCarga: String? = null,
+    val matricula: String? = null
 )
 
 data class SyncResultDto(
@@ -76,7 +89,18 @@ enum class EstadoSyncLocal {
     PENDIENTE,
     SINCRONIZADO,
     DUPLICADO,
-    ERROR
+    ERROR;
+
+    companion object {
+        fun desdeRespuestaServidor(estadoServidor: String?): EstadoSyncLocal {
+            return when (estadoServidor?.trim()?.uppercase()) {
+                "ACCEPTED" -> SINCRONIZADO
+                "DUPLICATE" -> DUPLICADO
+                "REJECTED", "ERROR" -> ERROR
+                else -> PENDIENTE
+            }
+        }
+    }
 }
 
 data class EventoLocal(
@@ -88,10 +112,13 @@ data class EventoLocal(
     val longitud: Double,
     val descripcion: String? = null,
     val foto: String? = null,
+    val cantidadKg: Double? = null,
+    val mercaderia: String? = null,
+    val empresaCarga: String? = null,
     val estadoSync: String = EstadoSyncLocal.PENDIENTE.name,
     val mensajeSync: String? = null
 ) {
-    fun toDto(): EventoViajeDto {
+    fun toDto(matricula: String? = null): EventoViajeDto {
         val inc = if (!descripcion.isNullOrBlank() || !foto.isNullOrBlank()) {
             IncidenteDto(
                 foto = foto?.takeIf { it.isNotBlank() },
@@ -107,7 +134,11 @@ data class EventoLocal(
             latitud = latitud,
             longitud = longitud,
             guiaId = guiaId,
-            incidente = inc
+            incidente = inc,
+            cantidadKg = cantidadKg,
+            mercaderia = mercaderia?.takeIf { it.isNotBlank() },
+            empresaCarga = empresaCarga?.takeIf { it.isNotBlank() },
+            matricula = matricula?.takeIf { it.isNotBlank() }
         )
     }
 }
@@ -116,6 +147,7 @@ data class ResultadoOperacionEvento(
     val evento: EventoLocal,
     val guardadoOffline: Boolean,
     val duplicadoDetectado: Boolean = false,
+    val rechazadoPorServidor: Boolean = false,
     val mensajeUsuario: String
 )
 
@@ -136,6 +168,56 @@ object EventoFormatter {
         empresa: String
     ): String {
         val accion = if (esDescarga) "Descarga parcial" else "Carga parcial"
-        return "$accion: ${cantidadKg.trim()} Kg | Mercaderia: ${mercaderia.trim()}"
+        return "$accion: ${cantidadKg.trim()} Kg | Mercaderia: ${mercaderia.trim()} | Empresa: ${empresa.trim()}"
     }
 }
+
+object SyncBatchChunker {
+    const val MAX_EVENTOS_POR_LOTE = 10
+    const val MAX_BYTES_ESTIMADOS_POR_LOTE = 450_000
+
+    fun estimarBytesJson(dto: EventoViajeDto): Int {
+        var total = 256 +
+            dto.uuid.length +
+            dto.tiempo.length +
+            dto.tipo.length +
+            (dto.mercaderia?.length ?: 0) +
+            (dto.empresaCarga?.length ?: 0) +
+            (dto.matricula?.length ?: 0)
+        if (dto.incidente != null) {
+            total += 64 + dto.incidente.descripcion.length + (dto.incidente.foto?.length ?: 0)
+        }
+        return total
+    }
+
+    fun particionarLotes(
+        eventos: List<EventoViajeDto>,
+        maxEventosPorLote: Int = MAX_EVENTOS_POR_LOTE,
+        maxBytesPorLote: Int = MAX_BYTES_ESTIMADOS_POR_LOTE
+    ): List<List<EventoViajeDto>> {
+        if (eventos.isEmpty()) return emptyList()
+        val limiteCantidad = maxEventosPorLote.coerceAtLeast(1)
+        val limiteBytes = maxBytesPorLote.coerceAtLeast(1024)
+        val lotes = mutableListOf<List<EventoViajeDto>>()
+        var loteActual = mutableListOf<EventoViajeDto>()
+        var bytesActuales = 2 // "[]"
+
+        for (dto in eventos) {
+            val bytesEvento = estimarBytesJson(dto)
+            val excedeCantidad = loteActual.size >= limiteCantidad
+            val excedeTamano = loteActual.isNotEmpty() && (bytesActuales + bytesEvento > limiteBytes)
+            if (excedeCantidad || excedeTamano) {
+                lotes.add(loteActual)
+                loteActual = mutableListOf()
+                bytesActuales = 2
+            }
+            loteActual.add(dto)
+            bytesActuales += bytesEvento
+        }
+        if (loteActual.isNotEmpty()) {
+            lotes.add(loteActual)
+        }
+        return lotes
+    }
+}
+

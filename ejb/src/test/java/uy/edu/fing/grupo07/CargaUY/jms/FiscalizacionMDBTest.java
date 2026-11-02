@@ -100,4 +100,26 @@ class FiscalizacionMDBTest {
         assertThrows(RuntimeException.class, () -> mdb.onMessage(textMessage));
         verifyNoInteractions(motorFiscalizacion);
     }
+
+    @Test
+    @DisplayName("Punto E.8 - Debe invocar evaluarVehiculoSinGuia al recibir mensaje con prefijo SIN_GUIA|matricula|detalle")
+    void testOnMessageSinGuiaInvocaMotorVehiculoSinGuia() throws JMSException {
+        when(textMessage.getText()).thenReturn("SIN_GUIA|123456|Pesaje balanza #99 (34000 kg)");
+        when(motorFiscalizacion.evaluarVehiculoSinGuia("123456", "Pesaje balanza #99 (34000 kg)")).thenReturn(true);
+
+        mdb.onMessage(textMessage);
+
+        verify(motorFiscalizacion).evaluarVehiculoSinGuia("123456", "Pesaje balanza #99 (34000 kg)");
+        verify(motorFiscalizacion, never()).evaluarGuia(org.mockito.ArgumentMatchers.anyLong());
+    }
+
+    @Test
+    @DisplayName("Punto E.8 - Debe ignorar mensaje SIN_GUIA| malformado con matrícula vacía")
+    void testOnMessageSinGuiaMatriculaVaciaEsIgnorado() throws JMSException {
+        when(textMessage.getText()).thenReturn("SIN_GUIA|   |Detalle");
+
+        mdb.onMessage(textMessage);
+
+        verifyNoInteractions(motorFiscalizacion);
+    }
 }

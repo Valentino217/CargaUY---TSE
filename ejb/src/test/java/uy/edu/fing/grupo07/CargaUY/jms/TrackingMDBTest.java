@@ -150,4 +150,27 @@ class TrackingMDBTest {
 
         assertThrows(RuntimeException.class, () -> mdb.onMessage(textMessage));
     }
+
+    @Test
+    @DisplayName("No debe duplicar mensaje en FiscalizacionQueue cuando guardarEvento retorna la entidad persistida")
+    void testOnMessageNoDuplicaFiscalizacionCuandoServicioYaEncolo() throws JMSException {
+        EventoViajeDTO dto = new EventoViajeDTO(
+                "uuid-async-nodup",
+                LocalDateTime.now(),
+                TipoEvento.CARGA,
+                -34.9,
+                -56.1,
+                1L,
+                null
+        );
+        when(textMessage.getText()).thenReturn(jsonb.toJson(dto));
+        when(eventosService.existeEvento("uuid-async-nodup")).thenReturn(false);
+        when(eventosService.guardarEvento(any(EventoViajeDTO.class)))
+                .thenReturn(new uy.edu.fing.grupo07.CargaUY.domain.entity.EventoViaje());
+
+        mdb.onMessage(textMessage);
+
+        verify(eventosService).guardarEvento(any(EventoViajeDTO.class));
+        verify(fiscalizacionProducer, never()).solicitarEvaluacion(anyLong());
+    }
 }

@@ -76,6 +76,7 @@ public class DetalleViajeBean implements Serializable {
 
     // Campos para el simulador de telemetría GPS vía FaaS (Cloud)
     private String faasEndpointUrl;
+    private String telemetriaMatricula;
     private Double telemetriaLatitud;
     private Double telemetriaLongitud;
     private String telemetriaDescripcion;
@@ -224,19 +225,53 @@ public class DetalleViajeBean implements Serializable {
         }
     }
 
+    private GuiaDeViaje buscarGuiaActivaPorMatricula(String matricula) {
+        if (matricula == null || matricula.isBlank()) {
+            return null;
+        }
+        String buscada = matricula.trim();
+        List<GuiaDeViaje> candidatas = this.guiasDisponibles;
+        if (guiaDeViajeEJB != null) {
+            try {
+                List<GuiaDeViaje> frescas = guiaDeViajeEJB.listarGuias();
+                if (frescas != null && !frescas.isEmpty()) {
+                    this.guiasDisponibles = frescas;
+                    candidatas = frescas;
+                }
+            } catch (Exception e) {
+                LOGGER.log(Level.FINE, "No se pudo refrescar guías al resolver matrícula {0}: {1}",
+                        new Object[]{buscada, e.getMessage()});
+            }
+        }
+        if (candidatas != null) {
+            for (GuiaDeViaje g : candidatas) {
+                if (g != null
+                        && g.getEstado() == TipoEstado.EN_CURSO
+                        && g.getVehiculo() != null
+                        && g.getVehiculo().getMatricula() != null
+                        && g.getVehiculo().getMatricula().trim().equalsIgnoreCase(buscada)) {
+                    return g;
+                }
+            }
+        }
+        return null;
+    }
+
     /**
      * Precarga en el simulador FaaS unas coordenadas sobre el corredor Origen -> Destino (sin desvío).
      */
     public void cargarCoordenadasEnRuta() {
         FaasTrackingClient cliente = obtenerClienteFaas();
+        boolean tieneMatriculaManual = telemetriaMatricula != null && !telemetriaMatricula.isBlank();
+        GuiaDeViaje guiaRef = tieneMatriculaManual ? buscarGuiaActivaPorMatricula(telemetriaMatricula) : guiaActual;
         String origen = "Montevideo";
         String destino = "Rivera";
-        if (guiaActual != null) {
-            if (guiaActual.getOrigen() != null) {
-                origen = guiaActual.getOrigen();
+        if (guiaRef != null) {
+            if (guiaRef.getOrigen() != null && !guiaRef.getOrigen().isBlank()) {
+                origen = guiaRef.getOrigen();
             }
-            if (guiaActual.getDestino() != null) {
-                destino = guiaActual.getDestino();
+            if (guiaRef.getDestino() != null && !guiaRef.getDestino().isBlank()) {
+                destino = guiaRef.getDestino();
             }
         }
         double[] coords = cliente.obtenerPuntoMedioEnRuta(origen, destino);
@@ -250,14 +285,16 @@ public class DetalleViajeBean implements Serializable {
      */
     public void cargarCoordenadasDesviadas() {
         FaasTrackingClient cliente = obtenerClienteFaas();
+        boolean tieneMatriculaManual = telemetriaMatricula != null && !telemetriaMatricula.isBlank();
+        GuiaDeViaje guiaRef = tieneMatriculaManual ? buscarGuiaActivaPorMatricula(telemetriaMatricula) : guiaActual;
         String origen = "Montevideo";
         String destino = "Rivera";
-        if (guiaActual != null) {
-            if (guiaActual.getOrigen() != null) {
-                origen = guiaActual.getOrigen();
+        if (guiaRef != null) {
+            if (guiaRef.getOrigen() != null && !guiaRef.getOrigen().isBlank()) {
+                origen = guiaRef.getOrigen();
             }
-            if (guiaActual.getDestino() != null) {
-                destino = guiaActual.getDestino();
+            if (guiaRef.getDestino() != null && !guiaRef.getDestino().isBlank()) {
+                destino = guiaRef.getDestino();
             }
         }
         double[] coords = cliente.obtenerPuntoDesviadoDeRuta(origen, destino);
@@ -271,14 +308,23 @@ public class DetalleViajeBean implements Serializable {
      * de desvío en kilómetros y enviarlo al flujo de TrackingQueue y MotorFiscalizacion.
      */
     public void enviarTelemetriaFaas() {
-        if (guiaIdSeleccionada == null) {
-            mostrarMensaje(FacesMessage.SEVERITY_WARN, "Validación", "Debe seleccionar una guía de viaje.");
+        boolean tieneMatriculaManual = telemetriaMatricula != null && !telemetriaMatricula.isBlank();
+        if (guiaIdSeleccionada == null && !tieneMatriculaManual) {
+            mostrarMensaje(FacesMessage.SEVERITY_WARN, "Validación", "Debe seleccionar una guía de viaje o ingresar la matrícula del vehículo.");
             return;
         }
         if (telemetriaLatitud == null || telemetriaLongitud == null) {
             mostrarMensaje(FacesMessage.SEVERITY_WARN, "Validación", "Debe indicar latitud y longitud (o usar los botones de simulación).");
             return;
         }
+
+        String matriculaEfectiva = tieneMatriculaManual
+                ? telemetriaMatricula.trim()
+                : (guiaActual != null && guiaActual.getVehiculo() != null ? guiaActual.getVehiculo().getMatricula() : null);
+        GuiaDeViaje guiaReferencia = tieneMatriculaManual
+                ? buscarGuiaActivaPorMatricula(matriculaEfectiva)
+                : guiaActual;
+        Long guiaIdDto = tieneMatriculaManual ? null : guiaIdSeleccionada;
 
         try {
             FaasTrackingClient cliente = obtenerClienteFaas();
@@ -297,30 +343,83 @@ public class DetalleViajeBean implements Serializable {
                     TipoEvento.INCIDENTE,
                     telemetriaLatitud,
                     telemetriaLongitud,
-                    guiaIdSeleccionada,
+                    guiaIdDto,
                     new IncidenteDTO(null, desc),
-                    null
+                    null,
+                    null,
+                    null,
+                    null,
+                    matriculaEfectiva
             );
 
             String origen = "Montevideo";
             String destino = "Rivera";
-            if (guiaActual != null) {
-                if (guiaActual.getOrigen() != null) {
-                    origen = guiaActual.getOrigen();
+            if (guiaReferencia != null) {
+                if (guiaReferencia.getOrigen() != null && !guiaReferencia.getOrigen().isBlank()) {
+                    origen = guiaReferencia.getOrigen();
                 }
-                if (guiaActual.getDestino() != null) {
-                    destino = guiaActual.getDestino();
+                if (guiaReferencia.getDestino() != null && !guiaReferencia.getDestino().isBlank()) {
+                    destino = guiaReferencia.getDestino();
                 }
             }
 
             FaasTrackingClient.ResultadoFaas resultadoFaas = cliente.procesarEvento(eventoBase, origen, destino);
-            EventoViajeDTO eventoEnriquecido = resultadoFaas.eventoEnriquecido();
+            EventoViajeDTO eFaas = resultadoFaas.eventoEnriquecido();
+            EventoViajeDTO eventoEnriquecido = new EventoViajeDTO(
+                    eFaas.uuid(),
+                    eFaas.tiempo(),
+                    eFaas.tipo(),
+                    eFaas.latitud(),
+                    eFaas.longitud(),
+                    eFaas.guiaId(),
+                    eFaas.incidente(),
+                    eFaas.distanciaDesvioKm(),
+                    eFaas.cantidadKg(),
+                    eFaas.mercaderia(),
+                    eFaas.empresaCarga(),
+                    eFaas.matricula() != null ? eFaas.matricula() : matriculaEfectiva
+            );
 
             if (evaluarDesvioInmediato) {
-                eventosService.guardarEvento(eventoEnriquecido);
+                uy.edu.fing.grupo07.CargaUY.domain.entity.EventoViaje eventoPersistido;
+                try {
+                    eventoPersistido = eventosService.guardarEvento(eventoEnriquecido);
+                } catch (uy.edu.fing.grupo07.CargaUY.exception.BusinessException be) {
+                    boolean vehiculoInexistente = be.getMessage() != null
+                            && be.getMessage().contains("No existe vehículo registrado");
+                    if (!vehiculoInexistente
+                            && matriculaEfectiva != null && !matriculaEfectiva.isBlank()
+                            && (guiaIdDto == null || guiaActual == null || guiaActual.getEstado() != TipoEstado.EN_CURSO)) {
+                        if (motorFiscalizacion != null) {
+                            motorFiscalizacion.evaluarVehiculoSinGuia(
+                                    matriculaEfectiva,
+                                    "Telemetría GPS FaaS (" + telemetriaLatitud + ", " + telemetriaLongitud + ") sin viaje EN_CURSO"
+                            );
+                        }
+                        this.ultimoResultadoFaas = "Actividad GPS detectada para matrícula " + matriculaEfectiva
+                                + " sin viaje EN_CURSO. Derivado a fiscalización automática VIAJE_SIN_GUIA.";
+                        mostrarMensaje(
+                                FacesMessage.SEVERITY_WARN,
+                                "Fiscalización VIAJE_SIN_GUIA",
+                                this.ultimoResultadoFaas
+                        );
+                        return;
+                    }
+                    throw be;
+                }
+
+                Long guiaEvaluar = (eventoPersistido != null && eventoPersistido.getGuia() != null)
+                        ? eventoPersistido.getGuia().getId()
+                        : (eventoEnriquecido.guiaId() != null
+                                ? eventoEnriquecido.guiaId()
+                                : (guiaReferencia != null ? guiaReferencia.getId() : (!tieneMatriculaManual ? guiaIdSeleccionada : null)));
+                if (guiaEvaluar != null) {
+                    this.guiaIdSeleccionada = guiaEvaluar;
+                }
+
                 List<TipoInfraccion> nuevasInfracciones = new ArrayList<>();
-                if (motorFiscalizacion != null) {
-                    nuevasInfracciones = motorFiscalizacion.evaluarGuia(guiaIdSeleccionada);
+                if (motorFiscalizacion != null && guiaEvaluar != null) {
+                    nuevasInfracciones = motorFiscalizacion.evaluarGuia(guiaEvaluar);
                 }
 
                 this.ultimoResultadoFaas = "Desvío calculado por FaaS: " + resultadoFaas.distanciaDesvioKm()
@@ -345,7 +444,13 @@ public class DetalleViajeBean implements Serializable {
                 if (trackingProducer != null) {
                     trackingProducer.enviarEvento(eventoEnriquecido);
                 } else {
-                    eventosService.guardarEvento(eventoEnriquecido);
+                    uy.edu.fing.grupo07.CargaUY.domain.entity.EventoViaje persistido = eventosService.guardarEvento(eventoEnriquecido);
+                    if (persistido != null && persistido.getGuia() != null) {
+                        this.guiaIdSeleccionada = persistido.getGuia().getId();
+                    }
+                }
+                if (guiaReferencia != null && guiaReferencia.getId() != null) {
+                    this.guiaIdSeleccionada = guiaReferencia.getId();
                 }
                 this.ultimoResultadoFaas = "Desvío calculado por FaaS: " + resultadoFaas.distanciaDesvioKm()
                         + " km. Evento encolado asíncronamente en TrackingQueue.";
@@ -382,17 +487,24 @@ public class DetalleViajeBean implements Serializable {
                 if (nuevaPesada.matricula() != null) {
                     matricula = nuevaPesada.matricula();
                 }
-                mostrarMensaje(
-                        FacesMessage.SEVERITY_INFO,
-                        "Pesaje Sincronizado",
-                        String.format("Se registró pesada para la guía #%s con %,d kg (Vehículo: %s).",
-                                nuevaPesada.guiaId(),
-                                nuevaPesada.pesoRegistrado(),
-                                matricula)
-                );
-
                 if (nuevaPesada.guiaId() != null) {
+                    mostrarMensaje(
+                            FacesMessage.SEVERITY_INFO,
+                            "Pesaje Sincronizado",
+                            String.format("Se registró pesada para la guía #%d con %,d kg (Vehículo: %s).",
+                                    nuevaPesada.guiaId(),
+                                    nuevaPesada.pesoRegistrado(),
+                                    matricula)
+                    );
                     this.guiaIdSeleccionada = nuevaPesada.guiaId();
+                } else {
+                    mostrarMensaje(
+                            FacesMessage.SEVERITY_WARN,
+                            "Pesaje sin Guía Activa",
+                            String.format("Se registró pesada de %,d kg para el vehículo %s sin guía EN_CURSO. Se encoló fiscalización VIAJE_SIN_GUIA.",
+                                    nuevaPesada.pesoRegistrado(),
+                                    matricula)
+                    );
                 }
                 consultarViaje();
             } else {
@@ -667,6 +779,18 @@ public class DetalleViajeBean implements Serializable {
 
     public void setFaasEndpointUrl(String faasEndpointUrl) {
         this.faasEndpointUrl = faasEndpointUrl;
+    }
+
+    public String getTelemetriaMatricula() {
+        return telemetriaMatricula;
+    }
+
+    public void setTelemetriaMatricula(String telemetriaMatricula) {
+        this.telemetriaMatricula = telemetriaMatricula;
+    }
+
+    void setMotorFiscalizacion(MotorFiscalizacionLocal motorFiscalizacion) {
+        this.motorFiscalizacion = motorFiscalizacion;
     }
 
     public Double getTelemetriaLatitud() {

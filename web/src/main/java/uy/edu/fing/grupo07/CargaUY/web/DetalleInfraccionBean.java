@@ -53,13 +53,35 @@ public class DetalleInfraccionBean implements Serializable {
         cargarInfraccion();
     }
 
+    private boolean tieneContextoWeb() {
+        if (request != null) {
+            return true;
+        }
+        try {
+            return FacesContext.getCurrentInstance() != null;
+        } catch (Throwable errorEntorno) {
+            return false;
+        }
+    }
+
+    private String obtenerTokenWeb() {
+        if (request != null) {
+            return WebSeguridad.token(request);
+        }
+        return SesionActual.token();
+    }
+
     public void cargarInfraccion() {
         if (idCaso == null) {
             return;
         }
 
         try {
-            this.infraccion = infraccionesService.obtenerInfraccion(idCaso);
+            if (tieneContextoWeb()) {
+                this.infraccion = infraccionesService.obtenerInfraccion(obtenerTokenWeb(), idCaso);
+            } else {
+                this.infraccion = infraccionesService.obtenerInfraccion(idCaso);
+            }
         } catch (BusinessException excepcionNegocio) {
             LOGGER.log(Level.WARNING, "Infracción no encontrada: {0}", excepcionNegocio.getMessage());
             mostrarMensaje(
@@ -83,7 +105,11 @@ public class DetalleInfraccionBean implements Serializable {
         }
 
         try {
-            this.infraccion = infraccionesService.notificarInfraccion(idCaso);
+            if (tieneContextoWeb()) {
+                this.infraccion = infraccionesService.notificarInfraccion(obtenerTokenWeb(), idCaso);
+            } else {
+                this.infraccion = infraccionesService.notificarInfraccion(idCaso);
+            }
             mostrarMensaje(
                     FacesMessage.SEVERITY_INFO,
                     "Notificación Exitosa",
@@ -120,7 +146,11 @@ public class DetalleInfraccionBean implements Serializable {
 
         try {
             DescargoRequestDTO peticion = new DescargoRequestDTO(textoDescargo);
-            this.infraccion = infraccionesService.presentarDescargo(idCaso, peticion);
+            if (tieneContextoWeb()) {
+                this.infraccion = infraccionesService.presentarDescargo(obtenerTokenWeb(), idCaso, peticion);
+            } else {
+                this.infraccion = infraccionesService.presentarDescargo(idCaso, peticion);
+            }
             this.textoDescargo = "";
             mostrarMensaje(
                     FacesMessage.SEVERITY_INFO,
@@ -157,8 +187,12 @@ public class DetalleInfraccionBean implements Serializable {
         }
 
         try {
-            ResolucionInfraccionDTO resolucion = new ResolucionInfraccionDTO(getFuncionarioId(), fundamento);
-            this.infraccion = infraccionesService.confirmarInfraccion(idCaso, resolucion);
+            if (tieneContextoWeb()) {
+                this.infraccion = infraccionesService.confirmarInfraccion(obtenerTokenWeb(), idCaso, fundamento);
+            } else {
+                ResolucionInfraccionDTO resolucion = new ResolucionInfraccionDTO(getFuncionarioId(), fundamento);
+                this.infraccion = infraccionesService.confirmarInfraccion(idCaso, resolucion);
+            }
             this.fundamento = "";
             mostrarMensaje(
                     FacesMessage.SEVERITY_INFO,
@@ -195,8 +229,12 @@ public class DetalleInfraccionBean implements Serializable {
         }
 
         try {
-            ResolucionInfraccionDTO resolucion = new ResolucionInfraccionDTO(getFuncionarioId(), fundamento);
-            this.infraccion = infraccionesService.desestimarInfraccion(idCaso, resolucion);
+            if (tieneContextoWeb()) {
+                this.infraccion = infraccionesService.desestimarInfraccion(obtenerTokenWeb(), idCaso, fundamento);
+            } else {
+                ResolucionInfraccionDTO resolucion = new ResolucionInfraccionDTO(getFuncionarioId(), fundamento);
+                this.infraccion = infraccionesService.desestimarInfraccion(idCaso, resolucion);
+            }
             this.fundamento = "";
             mostrarMensaje(
                     FacesMessage.SEVERITY_INFO,

@@ -143,11 +143,19 @@ public class Vehiculo implements Serializable {
     }
 
     /**
-     * Verifica si el vehículo cuenta con habilitación vigente (PNC e ITV al día).
+     * Verifica si el vehículo cuenta con habilitación vigente (PNC e ITV al día) en la fecha actual.
      */
     public boolean verificarHabilitacionVigente() {
-        boolean itvValido = itvs != null && itvs.stream().anyMatch(ITV::isVigente);
-        boolean pncValido = pncs != null && pncs.stream().anyMatch(PNC::isVigente);
+        return verificarHabilitacionVigenteEn(LocalDate.now());
+    }
+
+    /**
+     * Verifica si el vehículo cuenta con habilitación administrativa, PNC e ITV vigentes a una fecha dada.
+     */
+    public boolean verificarHabilitacionVigenteEn(LocalDate fechaReferencia) {
+        LocalDate ref = fechaReferencia != null ? fechaReferencia : LocalDate.now();
+        boolean itvValido = itvs != null && itvs.stream().anyMatch(i -> i.isVigenteEn(ref));
+        boolean pncValido = pncs != null && pncs.stream().anyMatch(p -> p.isVigenteEn(ref));
         return estadoHabilitacion && itvValido && pncValido;
     }
 

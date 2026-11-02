@@ -303,4 +303,196 @@ class GestionInfraccionesServiceTest {
         assertEquals("DESESTIMAR_INFRACCION", dto.auditoria().accion());
         verify(em).persist(any(RegistroAuditoria.class));
     }
+
+    @Test
+    @DisplayName("Punto D.5 - ControlAcceso bloquea acceso sin privilegios a listarInfracciones, obtenerInfraccion y presentarDescargo")
+    void testControlAccesoRbacYAislamientoPorEmpresa() {
+        uy.edu.fing.grupo07.CargaUY.security.ControlAcceso controlMock =
+                org.mockito.Mockito.mock(uy.edu.fing.grupo07.CargaUY.security.ControlAcceso.class);
+        GestionInfraccionesServiceImpl svcSeguro = new GestionInfraccionesServiceImpl(em, controlMock);
+
+        when(controlMock.exigir(
+                eq("tok-chofer"),
+                eq(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.FUNCIONARIO),
+                eq(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.ADMINISTRADOR),
+                eq(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.AUTORIDAD)
+        )).thenThrow(new uy.edu.fing.grupo07.CargaUY.security.ErrorAcceso(403, "Rol no autorizado"));
+
+        assertThrows(
+                uy.edu.fing.grupo07.CargaUY.security.ErrorAcceso.class,
+                () -> svcSeguro.listarInfracciones("tok-chofer", null, null)
+        );
+
+        // Ciudadano no puede consultar una infracción aún en estado DETECTADA
+        uy.edu.fing.grupo07.CargaUY.security.Acceso actorCiudadano =
+                new uy.edu.fing.grupo07.CargaUY.security.Acceso(
+                        80, 41234567, "Ana Representante",
+                        java.util.Set.of(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.CIUDADANO)
+                );
+        when(controlMock.exigir(
+                eq("tok-ciudadano"),
+                eq(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.FUNCIONARIO),
+                eq(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.ADMINISTRADOR),
+                eq(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.AUTORIDAD),
+                eq(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.CIUDADANO)
+        )).thenReturn(actorCiudadano);
+
+        infraccionPrueba.setEstado(EstadoInfraccion.DETECTADA);
+        when(em.find(Infraccion.class, 1)).thenReturn(infraccionPrueba);
+
+        assertThrows(
+                uy.edu.fing.grupo07.CargaUY.security.ErrorAcceso.class,
+                () -> svcSeguro.obtenerInfraccion("tok-ciudadano", 1)
+        );
+
+        // Ciudadano de otra empresa no puede presentar descargo sobre empresa #50
+        infraccionPrueba.setEstado(EstadoInfraccion.NOTIFICADA);
+        when(controlMock.empresa("tok-otra-empresa", 50, true))
+                .thenThrow(new uy.edu.fing.grupo07.CargaUY.security.ErrorAcceso(403, "No pertenece a la empresa"));
+
+        assertThrows(
+                uy.edu.fing.grupo07.CargaUY.security.ErrorAcceso.class,
+                () -> svcSeguro.presentarDescargo("tok-otra-empresa", 1, new DescargoRequestDTO("Intento cruzado"))
+        );
+    }
+
+    @Test
+    @DisplayName("Punto D.5 / E.8 - listarInfraccionesParaEmpresa aísla estrictamente por empresa vinculada (sin fuga multi-empresa) e incluye VIAJE_SIN_GUIA")
+    void testListarInfraccionesParaEmpresaSinFugaEIncluyeViajeSinGuia() {
+        uy.edu.fing.grupo07.CargaUY.security.ControlAcceso controlMock =
+                org.mockito.Mockito.mock(uy.edu.fing.grupo07.CargaUY.security.ControlAcceso.class);
+        GestionInfraccionesServiceImpl svcSeguro = new GestionInfraccionesServiceImpl(em, controlMock);
+
+        uy.edu.fing.grupo07.CargaUY.security.Acceso actorCiudadano =
+                new uy.edu.fing.grupo07.CargaUY.security.Acceso(
+                        81, 45556667, "Representante LogiSur",
+                        java.util.Set.of(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.CIUDADANO)
+                );
+        when(controlMock.exigir(
+                anyString(),
+                eq(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.CIUDADANO),
+                eq(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.FUNCIONARIO),
+                eq(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.ADMINISTRADOR),
+                eq(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.AUTORIDAD)
+        )).thenReturn(actorCiudadano);
+
+        @SuppressWarnings("unchecked")
+        TypedQuery<Integer> qEmpresas = org.mockito.Mockito.mock(TypedQuery.class);
+        when(em.createQuery(anyString(), eq(Integer.class))).thenReturn(qEmpresas);
+        when(qEmpresas.setParameter("usuarioId", 81)).thenReturn(qEmpresas);
+
+        // Caso 1: usuario sin empresas vinculadas -> retorna lista vacía (jamás todas las notificadas)
+        when(qEmpresas.getResultList()).thenReturn(List.of());
+        List<InfraccionDTO> vacio = svcSeguro.listarInfraccionesParaEmpresa("tok-sin-empresa");
+        assertTrue(vacio.isEmpty());
+        verify(em, never()).createQuery(anyString(), eq(Infraccion.class));
+
+        // Caso 2: usuario responsable de empresa 50 -> retorna caso VIAJE_SIN_GUIA (guia == null)
+        when(qEmpresas.getResultList()).thenReturn(List.of(50));
+
+        Empresa emp50 = guiaPrueba.getEmpresa();
+        Vehiculo camionEmp50 = new Vehiculo("987654", "Scania", "R450", 9000, 31000, true, emp50);
+        Infraccion infSinGuia = new Infraccion(
+                LocalDate.now(),
+                TipoInfraccion.VIAJE_SIN_GUIA,
+                EstadoInfraccion.NOTIFICADA,
+                camionEmp50,
+                "Pesada en balanza sin guía activa."
+        );
+        infSinGuia.setIdCaso(77);
+
+        when(em.createQuery(anyString(), eq(Infraccion.class))).thenReturn(queryInfracciones);
+        when(queryInfracciones.setParameter("detectada", EstadoInfraccion.DETECTADA)).thenReturn(queryInfracciones);
+        when(queryInfracciones.setParameter("empresas", List.of(50))).thenReturn(queryInfracciones);
+        when(queryInfracciones.getResultList()).thenReturn(List.of(infSinGuia));
+
+        List<InfraccionDTO> propios = svcSeguro.listarInfraccionesParaEmpresa("tok-emp-50");
+        assertEquals(1, propios.size());
+        assertEquals(77, propios.get(0).idCaso());
+        assertNull(propios.get(0).guiaId());
+        assertEquals("987654", propios.get(0).matricula());
+        assertEquals("LogiSur", propios.get(0).nombreEmpresa());
+        assertEquals(TipoInfraccion.VIAJE_SIN_GUIA, propios.get(0).tipo());
+    }
+
+    @Test
+    @DisplayName("Punto D.5 - confirmarInfraccion(token, ...) toma funcionarioId del token autenticado sin IDs hardcodeados")
+    void testConfirmarInfraccionConTokenAutenticado() {
+        uy.edu.fing.grupo07.CargaUY.security.ControlAcceso controlMock =
+                org.mockito.Mockito.mock(uy.edu.fing.grupo07.CargaUY.security.ControlAcceso.class);
+        GestionInfraccionesServiceImpl svcSeguro = new GestionInfraccionesServiceImpl(em, controlMock);
+
+        uy.edu.fing.grupo07.CargaUY.security.Acceso actorFunc =
+                new uy.edu.fing.grupo07.CargaUY.security.Acceso(
+                        501, 23456789, "Inspector Juan",
+                        java.util.Set.of(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.FUNCIONARIO)
+                );
+        when(controlMock.exigir(
+                eq("tok-func-501"),
+                eq(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.FUNCIONARIO),
+                eq(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.ADMINISTRADOR)
+        )).thenReturn(actorFunc);
+
+        infraccionPrueba.setEstado(EstadoInfraccion.NOTIFICADA);
+        funcionarioPrueba.setId(501);
+        funcionarioPrueba.getRoles().add(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.FUNCIONARIO);
+        when(em.find(Infraccion.class, 1)).thenReturn(infraccionPrueba);
+        when(em.find(uy.edu.fing.grupo07.CargaUY.domain.entity.Usuario.class, 501)).thenReturn(funcionarioPrueba);
+
+        InfraccionDTO dto = svcSeguro.confirmarInfraccion("tok-func-501", 1, "Sanción firme verificada.");
+
+        assertEquals(EstadoInfraccion.CONFIRMADA, dto.estado());
+        assertTrue(dto.auditoria().usuario().contains("Inspector Juan"));
+    }
+
+    @Test
+    @DisplayName("Punto E.c / E.d - procesarNotificacionAutomatica es idempotente y el ciclo completo acumula los 4 hitos en historialAuditoria append-only")
+    void testCicloCompletoHistorialAuditoriaAppendOnlyYNotificacionAutomatica() {
+        // Caso inexistente -> retorna null sin lanzar excepción
+        when(em.find(Infraccion.class, 404)).thenReturn(null);
+        assertNull(service.procesarNotificacionAutomatica(404));
+
+        // 1. Creación inicial (MotorFiscalizacion adjunta CREAR_INFRACCION)
+        infraccionPrueba.agregarRegistroAuditoria(new RegistroAuditoria(
+                infraccionPrueba,
+                EstadoInfraccion.DETECTADA.name(),
+                LocalDate.now(),
+                "SISTEMA (Motor de Fiscalización)",
+                "CREAR_INFRACCION",
+                "Exceso de 1500 kg constatado en balanza."
+        ));
+        when(em.find(Infraccion.class, 1)).thenReturn(infraccionPrueba);
+
+        // 2. Notificación automática (E.c)
+        InfraccionDTO trasNotificar = service.procesarNotificacionAutomatica(1);
+        assertNotNull(trasNotificar);
+        assertEquals(EstadoInfraccion.NOTIFICADA, trasNotificar.estado());
+        assertEquals(2, trasNotificar.historialAuditoria().size());
+
+        // Reintento idempotente de notificación automática: no agrega un tercer registro
+        InfraccionDTO trasReintento = service.procesarNotificacionAutomatica(1);
+        assertEquals(2, trasReintento.historialAuditoria().size());
+
+        // 3. Presentación de descargo por la empresa
+        InfraccionDTO trasDescargo = service.presentarDescargo(1, new DescargoRequestDTO("Certificado de tara actualizado."));
+        assertEquals(EstadoInfraccion.EN_DESCARGO, trasDescargo.estado());
+        assertEquals(3, trasDescargo.historialAuditoria().size());
+
+        // 4. Resolución final por funcionario
+        funcionarioPrueba.getRoles().add(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.FUNCIONARIO);
+        when(em.find(uy.edu.fing.grupo07.CargaUY.domain.entity.Usuario.class, 501)).thenReturn(funcionarioPrueba);
+
+        InfraccionDTO trasConfirmar = service.confirmarInfraccion(
+                1,
+                new ResolucionInfraccionDTO(501, "El certificado adjunto corresponde a otro remolque; se confirma sanción.")
+        );
+
+        assertEquals(EstadoInfraccion.CONFIRMADA, trasConfirmar.estado());
+        assertEquals(4, trasConfirmar.historialAuditoria().size());
+        assertEquals("CREAR_INFRACCION", trasConfirmar.historialAuditoria().get(0).accion());
+        assertEquals("NOTIFICAR_INFRACCION", trasConfirmar.historialAuditoria().get(1).accion());
+        assertEquals("PRESENTAR_DESCARGO", trasConfirmar.historialAuditoria().get(2).accion());
+        assertEquals("CONFIRMAR_INFRACCION", trasConfirmar.historialAuditoria().get(3).accion());
+        assertEquals("CONFIRMAR_INFRACCION", trasConfirmar.auditoria().accion());
+    }
 }

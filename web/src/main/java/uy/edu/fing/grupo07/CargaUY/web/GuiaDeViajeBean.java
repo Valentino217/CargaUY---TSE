@@ -110,10 +110,7 @@ public class GuiaDeViajeBean implements Serializable {
         }
         try {
             List<Vehiculo> todos = vehiculoEJB.listarVehiculosPorEmpresa(SesionActual.token(), empId);
-            if (todos == null) {
-                return Collections.emptyList();
-            }
-            return todos.stream().filter(v -> vehiculoEJB.estaAptoParaOperar(v.getMatricula())).toList();
+            return todos != null ? todos : Collections.emptyList();
         } catch (Exception e) {
             return Collections.emptyList();
         }
@@ -183,13 +180,10 @@ public class GuiaDeViajeBean implements Serializable {
             }
 
             if (vehiculoSeleccionado == null) {
-                throw new IllegalArgumentException("Debe seleccionar un vehículo habilitado.");
+                throw new IllegalArgumentException("Debe seleccionar un vehículo válido.");
             }
 
-            if (!vehiculoEJB.estaAptoParaOperar(vehiculoSeleccionado.getMatricula())) {
-                throw new IllegalArgumentException("El vehículo " + vehiculoSeleccionado.getMatricula()
-                        + " no está habilitado (requiere habilitación base, ITV y PNC vigentes).");
-            }
+            boolean apto = vehiculoEJB.estaAptoParaOperar(vehiculoSeleccionado.getMatricula(), guia.getFecha());
 
             guia.setVehiculo(vehiculoSeleccionado);
 
@@ -213,6 +207,15 @@ public class GuiaDeViajeBean implements Serializable {
             } else {
                 GuiaDeViajeEJB.crear(SesionActual.token(), guia);
                 mostrarMensaje(FacesMessage.SEVERITY_INFO, "Éxito", "Guía de viaje registrada correctamente.");
+            }
+
+            if (!apto) {
+                mostrarMensaje(
+                        FacesMessage.SEVERITY_WARN,
+                        "Advertencia de Habilitación",
+                        "El vehículo " + vehiculoSeleccionado.getMatricula()
+                                + " presenta permisos vencidos o inhabilitación. Si inicia el viaje sin regularizar, el motor de fiscalización generará un caso SIN_HABILITACION."
+                );
             }
 
             guias = GuiaDeViajeEJB.listarParaActor(SesionActual.token());

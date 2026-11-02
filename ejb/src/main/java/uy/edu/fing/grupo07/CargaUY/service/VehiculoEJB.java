@@ -90,6 +90,9 @@ public class VehiculoEJB implements VehiculoEJBLocal {
     
     @Override
     public void crear(Vehiculo vehiculo) {
+        if (vehiculo != null && vehiculo.getMatricula() != null && !vehiculo.getMatricula().isBlank()) {
+            vehiculo.setMatricula(vehiculo.getMatricula().trim().toUpperCase(java.util.Locale.ROOT));
+        }
         em.persist(vehiculo);
     }
 
@@ -127,12 +130,45 @@ public class VehiculoEJB implements VehiculoEJBLocal {
                 " porque tiene " + cantGuias + " guía(s) de viaje asociada(s). Puede suspender su habilitación en su lugar."
             );
         }
+
+        Long cantInfracciones = em.createQuery(
+                "SELECT COUNT(i) FROM Infraccion i WHERE i.vehiculo.matricula = :mat",
+                Long.class
+        ).setParameter("mat", vehiculo.getMatricula()).getSingleResult();
+
+        if (cantInfracciones != null && cantInfracciones > 0) {
+            throw new IllegalStateException(
+                "No se puede eliminar el vehículo " + vehiculo.getMatricula() +
+                " porque tiene " + cantInfracciones + " expediente(s) de infracción asociado(s). Puede suspender su habilitación en su lugar."
+            );
+        }
+
+        Long cantPesadas = em.createQuery(
+                "SELECT COUNT(p) FROM PesadaBalanza p WHERE p.vehiculo.matricula = :mat",
+                Long.class
+        ).setParameter("mat", vehiculo.getMatricula()).getSingleResult();
+
+        if (cantPesadas != null && cantPesadas > 0) {
+            throw new IllegalStateException(
+                "No se puede eliminar el vehículo " + vehiculo.getMatricula() +
+                " porque tiene " + cantPesadas + " registro(s) de pesaje en balanza asociado(s). Puede suspender su habilitación en su lugar."
+            );
+        }
+
         em.remove(em.merge(vehiculo));
     }
 
     @Override
     public Vehiculo buscar(String matricula) {
-        return em.find(Vehiculo.class, matricula);
+        if (matricula == null) {
+            return null;
+        }
+        Vehiculo v = em.find(Vehiculo.class, matricula);
+        String upper = matricula.trim().toUpperCase(java.util.Locale.ROOT);
+        if (v == null && !matricula.equals(upper)) {
+            v = em.find(Vehiculo.class, upper);
+        }
+        return v;
     }
 
     @Override
@@ -175,9 +211,23 @@ public class VehiculoEJB implements VehiculoEJBLocal {
         .getResultList();
     }
 
-    /** Vehículo apto = habilitación base + ITV vigente + PNC vigente. */
+    /** Vehículo apto hoy = habilitación base + ITV vigente + PNC vigente. */
+    @Override
     public boolean estaAptoParaOperar(String matricula) {
+        return estaAptoParaOperar(matricula, java.time.LocalDate.now());
+    }
+
+    /** Vehículo apto en la fecha de referencia indicada (E.7: fecha de la guía de viaje). */
+    @Override
+    public boolean estaAptoParaOperar(String matricula, java.time.LocalDate fechaReferencia) {
+        if (matricula == null || matricula.isBlank()) {
+            return false;
+        }
         Vehiculo v = em.find(Vehiculo.class, matricula);
-        return v != null && v.verificarHabilitacionVigente();
+        return v != null && v.verificarHabilitacionVigenteEn(fechaReferencia);
+    }
+
+    VehiculoEJB(EntityManager em) {
+        this.em = em;
     }
 }

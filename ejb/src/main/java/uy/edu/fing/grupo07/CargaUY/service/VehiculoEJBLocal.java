@@ -17,5 +17,7 @@ public interface VehiculoEJBLocal {
 	void modificar(Vehiculo vehiculo);
 	void eliminar(Vehiculo vehiculo);
 	Vehiculo buscar(String matricula);
-	boolean tieneGuiaEnCurso(String matricula);
+	boolean tieneGuiaEnCurso(String matricula);
+	boolean estaAptoParaOperar(String matricula);
+	boolean estaAptoParaOperar(String matricula, java.time.LocalDate fechaReferencia);
 }

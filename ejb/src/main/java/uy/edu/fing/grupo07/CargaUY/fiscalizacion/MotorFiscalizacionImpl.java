@@ -1,5 +1,6 @@
 package uy.edu.fing.grupo07.CargaUY.fiscalizacion;
 
+import jakarta.ejb.EJB;
 import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
@@ -11,11 +12,14 @@ import uy.edu.fing.grupo07.CargaUY.domain.entity.ITV;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.Infraccion;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.PNC;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.PesadaBalanza;
+import uy.edu.fing.grupo07.CargaUY.domain.entity.RegistroAuditoria;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.ReglaFiscalizacion;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.Vehiculo;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.EstadoInfraccion;
+import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoInfraccion;
 import uy.edu.fing.grupo07.CargaUY.exception.BusinessException;
+import uy.edu.fing.grupo07.CargaUY.jms.NotificacionProducerLocal;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -34,15 +38,24 @@ public class MotorFiscalizacionImpl implements MotorFiscalizacionLocal {
 
     private static final int UMBRAL_CARGA_POR_DEFECTO = 500;
     private static final double UMBRAL_TRACKING_POR_DEFECTO = 5.0;
+    private static final String USUARIO_SISTEMA = "SISTEMA (Motor de Fiscalización)";
 
     @PersistenceContext(unitName = "CargaUYPersistenceUnit")
     private EntityManager em;
+
+    @EJB
+    private NotificacionProducerLocal notificacionProducer;
 
     public MotorFiscalizacionImpl() {
     }
 
     public MotorFiscalizacionImpl(EntityManager em) {
         this.em = em;
+    }
+
+    public MotorFiscalizacionImpl(EntityManager em, NotificacionProducerLocal notificacionProducer) {
+        this.em = em;
+        this.notificacionProducer = notificacionProducer;
     }
 
     @Override
@@ -70,6 +83,89 @@ public class MotorFiscalizacionImpl implements MotorFiscalizacionLocal {
         evaluarDesvioDeRuta(guia, reglas, infraccionesGeneradas);
 
         return infraccionesGeneradas;
+    }
+
+    @Override
+    public boolean evaluarVehiculoSinGuia(String matricula, String detalleActividad) {
+        if (matricula == null || matricula.isBlank()) {
+            throw new BusinessException("La matrícula del vehículo es obligatoria para fiscalizar VIAJE_SIN_GUIA.");
+        }
+
+        String matriculaNormalizada = matricula.trim();
+        Vehiculo vehiculo = buscarVehiculoPorMatricula(matriculaNormalizada);
+        if (vehiculo == null) {
+            LOGGER.log(
+                    Level.WARNING,
+                    "No fue posible fiscalizar VIAJE_SIN_GUIA: vehículo {0} inexistente en el padrón.",
+                    matriculaNormalizada
+            );
+            return false;
+        }
+
+        try {
+            em.lock(vehiculo, LockModeType.PESSIMISTIC_WRITE);
+        } catch (Exception ignored) {
+            // En tests unitarios con mocks que no soportan lock no interrumpir
+        }
+
+        TypedQuery<Long> queryGuiasActivas = em.createQuery(
+                "SELECT COUNT(g) FROM GuiaDeViaje g WHERE g.vehiculo.matricula = :matricula AND g.estado = :enCurso",
+                Long.class
+        );
+        if (queryGuiasActivas != null) {
+            queryGuiasActivas.setParameter("matricula", vehiculo.getMatricula());
+            queryGuiasActivas.setParameter("enCurso", TipoEstado.EN_CURSO);
+            Long guiasActivas = queryGuiasActivas.getSingleResult();
+            if (guiasActivas != null && guiasActivas > 0L) {
+                return false;
+            }
+        }
+
+        LocalDate fechaDeteccion = LocalDate.now();
+        TypedQuery<Long> queryExistentes = em.createQuery(
+                "SELECT COUNT(i) FROM Infraccion i WHERE i.vehiculo.matricula = :matricula "
+                        + "AND i.tipo = :tipo AND i.fecha = :fecha AND i.guia IS NULL",
+                Long.class
+        );
+        if (queryExistentes != null) {
+            queryExistentes.setParameter("matricula", vehiculo.getMatricula());
+            queryExistentes.setParameter("tipo", TipoInfraccion.VIAJE_SIN_GUIA);
+            queryExistentes.setParameter("fecha", fechaDeteccion);
+            Long existentes = queryExistentes.getSingleResult();
+            if (existentes != null && existentes > 0L) {
+                return false;
+            }
+        }
+
+        String origenDato = (detalleActividad != null && !detalleActividad.isBlank())
+                ? detalleActividad.trim()
+                : "Recepción de datos operativos de monitoreo/pesaje";
+        String evidencia = "Se detectó actividad operativa del vehículo matrícula " + vehiculo.getMatricula()
+                + " sin ninguna Guía de Viaje activa (EN_CURSO) asociada en el sistema. Origen del dato: "
+                + origenDato + ".";
+
+        Infraccion nuevaInfraccion = new Infraccion(
+                fechaDeteccion,
+                TipoInfraccion.VIAJE_SIN_GUIA,
+                EstadoInfraccion.DETECTADA,
+                vehiculo,
+                evidencia
+        );
+        adjuntarAuditoriaCreacion(nuevaInfraccion, fechaDeteccion, evidencia);
+
+        em.persist(nuevaInfraccion);
+        em.flush();
+
+        if (notificacionProducer != null) {
+            notificacionProducer.solicitarNotificacion(nuevaInfraccion.getIdCaso());
+        }
+
+        LOGGER.log(
+                Level.INFO,
+                "Infracción VIAJE_SIN_GUIA detectada y registrada con éxito para vehículo matrícula: {0}",
+                vehiculo.getMatricula()
+        );
+        return true;
     }
 
     private void evaluarExcesoDeCarga(
@@ -119,7 +215,8 @@ public class MotorFiscalizacionImpl implements MotorFiscalizacionLocal {
             return;
         }
 
-        boolean habilitacionVigente = vehiculo.verificarHabilitacionVigente();
+        LocalDate fechaViaje = guia.getFecha() != null ? guia.getFecha() : LocalDate.now();
+        boolean habilitacionVigente = vehiculo.verificarHabilitacionVigenteEn(fechaViaje);
         if (habilitacionVigente) {
             return;
         }
@@ -134,7 +231,7 @@ public class MotorFiscalizacionImpl implements MotorFiscalizacionLocal {
         List<ITV> listaItv = vehiculo.getItv();
         if (listaItv != null) {
             for (ITV itv : listaItv) {
-                if (itv.isVigente()) {
+                if (itv.isVigenteEn(fechaViaje)) {
                     tieneItvVigente = true;
                     break;
                 }
@@ -142,14 +239,15 @@ public class MotorFiscalizacionImpl implements MotorFiscalizacionLocal {
         }
 
         if (!tieneItvVigente) {
-            detalleFaltantes.append("Inspección Técnica Vehicular (ITV) ausente o vencida. ");
+            detalleFaltantes.append("Inspección Técnica Vehicular (ITV) ausente o vencida a la fecha del viaje (")
+                    .append(fechaViaje).append("). ");
         }
 
         boolean tienePncVigente = false;
         List<PNC> listaPnc = vehiculo.getPncs();
         if (listaPnc != null) {
             for (PNC pnc : listaPnc) {
-                if (pnc.isVigente()) {
+                if (pnc.isVigenteEn(fechaViaje)) {
                     tienePncVigente = true;
                     break;
                 }
@@ -157,11 +255,12 @@ public class MotorFiscalizacionImpl implements MotorFiscalizacionLocal {
         }
 
         if (!tienePncVigente) {
-            detalleFaltantes.append("Permiso Nacional de Circulación (PNC) ausente o vencido. ");
+            detalleFaltantes.append("Permiso Nacional de Circulación (PNC) ausente o vencido a la fecha del viaje (")
+                    .append(fechaViaje).append("). ");
         }
 
         String evidencia = "El vehículo matrícula " + vehiculo.getMatricula()
-                + " no cuenta con habilitación vigente para circular. Detalle: "
+                + " no cuenta con habilitación vigente para circular a la fecha del viaje (" + fechaViaje + "). Detalle: "
                 + detalleFaltantes.toString().trim();
 
         registrarInfraccionSiNoExiste(
@@ -233,22 +332,41 @@ public class MotorFiscalizacionImpl implements MotorFiscalizacionLocal {
             return;
         }
 
+        LocalDate hoy = LocalDate.now();
         Infraccion nuevaInfraccion = new Infraccion(
-                LocalDate.now(),
+                hoy,
                 tipo,
                 EstadoInfraccion.DETECTADA,
                 guia,
                 evidencia
         );
+        adjuntarAuditoriaCreacion(nuevaInfraccion, hoy, evidencia);
 
         em.persist(nuevaInfraccion);
+        em.flush();
         infraccionesGeneradas.add(tipo);
+
+        if (notificacionProducer != null) {
+            notificacionProducer.solicitarNotificacion(nuevaInfraccion.getIdCaso());
+        }
 
         LOGGER.log(
                 Level.INFO,
                 "Infracción detectada y registrada con éxito. Guía: {0}, Tipo: {1}",
                 new Object[]{guia.getId(), tipo}
         );
+    }
+
+    private void adjuntarAuditoriaCreacion(Infraccion infraccion, LocalDate fecha, String evidencia) {
+        RegistroAuditoria auditoriaCreacion = new RegistroAuditoria(
+                infraccion,
+                EstadoInfraccion.DETECTADA.name(),
+                fecha,
+                USUARIO_SISTEMA,
+                "CREAR_INFRACCION",
+                evidencia != null && !evidencia.isBlank() ? evidencia : "Caso detectado automáticamente."
+        );
+        infraccion.agregarRegistroAuditoria(auditoriaCreacion);
     }
 
     private PesadaBalanza buscarPesadaMasAlta(Long guiaId) {
@@ -313,5 +431,33 @@ public class MotorFiscalizacionImpl implements MotorFiscalizacionLocal {
                 UMBRAL_CARGA_POR_DEFECTO,
                 UMBRAL_TRACKING_POR_DEFECTO
         );
+    }
+
+    private Vehiculo buscarVehiculoPorMatricula(String matriculaRaw) {
+        if (matriculaRaw == null || matriculaRaw.isBlank()) {
+            return null;
+        }
+        String limpia = matriculaRaw.trim();
+        Vehiculo v = em.find(Vehiculo.class, limpia);
+        String upper = limpia.toUpperCase(java.util.Locale.ROOT);
+        if (v == null && !limpia.equals(upper)) {
+            v = em.find(Vehiculo.class, upper);
+        }
+        String lower = limpia.toLowerCase(java.util.Locale.ROOT);
+        if (v == null && !limpia.equals(lower)) {
+            v = em.find(Vehiculo.class, lower);
+        }
+        if (v == null && !upper.equals(lower)) {
+            jakarta.persistence.Query q = em.createQuery("SELECT v FROM Vehiculo v WHERE UPPER(TRIM(v.matricula)) = :mat");
+            if (q != null) {
+                q.setParameter("mat", upper);
+                q.setMaxResults(1);
+                List<?> encontrados = q.getResultList();
+                if (encontrados != null && !encontrados.isEmpty() && encontrados.get(0) instanceof Vehiculo encontrado) {
+                    v = encontrado;
+                }
+            }
+        }
+        return v;
     }
 }

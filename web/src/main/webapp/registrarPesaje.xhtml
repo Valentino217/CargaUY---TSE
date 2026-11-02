@@ -73,18 +73,21 @@
 
             <p:panel header="Datos del Pesaje">
                 <h:panelGrid columns="2" cellpadding="6">
-                    <h:outputLabel for="guia" value="Guía de Viaje: *" style="font-weight: bold;"/>
+                    <h:outputLabel for="guia" value="Guía de Viaje:" style="font-weight: bold;"/>
                     <h:selectOneMenu id="guia"
-                                     value="#{registrarPesajeBean.guiaIdSeleccionada}"
-                                     required="true"
-                                     requiredMessage="Debe seleccionar una guía de viaje.">
-                        <f:selectItem itemLabel="-- Seleccione una guía --" itemValue="#{null}" noSelectionOption="true"/>
+                                     value="#{registrarPesajeBean.guiaIdSeleccionada}">
+                        <f:selectItem itemLabel="-- Sin guía activa (usar matrícula) --" itemValue="#{null}" noSelectionOption="true"/>
                         <f:selectItems value="#{registrarPesajeBean.guiasDisponibles}"
                                        var="g"
                                        itemValue="#{g.id}"
                                        itemLabel="#{registrarPesajeBean.obtenerEtiquetaGuia(g)}"/>
                         <f:ajax listener="#{registrarPesajeBean.onGuiaChange}" render=":formPesaje:tablaPesadas"/>
                     </h:selectOneMenu>
+
+                    <h:outputLabel for="matricula" value="Matrícula (sin guía):" style="font-weight: bold;"/>
+                    <p:inputText id="matricula"
+                                 value="#{registrarPesajeBean.matriculaManual}"
+                                 placeholder="Ej: STP 1234"/>
 
                     <h:outputLabel for="peso" value="Peso Registrado (kg): *" style="font-weight: bold;"/>
                     <p:inputNumber id="peso"

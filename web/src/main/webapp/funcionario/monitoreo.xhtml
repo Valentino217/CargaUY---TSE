@@ -21,22 +21,19 @@
                                      icon="pi pi-cloud"
                                      type="button"
                                      onclick="PF('dlgFaasWidget').show()"
-                                     disabled="#{detalleViajeBean.guiaActual == null}"
-                                     title="Procesar coordenadas GPS mediante Function as a Service (Cloud FaaS) y evaluar desvío de ruta"
+                                     title="Procesar coordenadas GPS mediante Function as a Service (Cloud FaaS) y evaluar desvío de ruta o VIAJE_SIN_GUIA"
                                      styleClass="ui-button-outlined ui-button-help" />
                     <p:commandButton value="Sincronizar Mock Balanza"
                                      icon="pi pi-cloud-download"
                                      actionListener="#{detalleViajeBean.sincronizarMockBalanza}"
                                      update=":monitoreoForm :growl"
-                                     disabled="#{detalleViajeBean.guiaActual == null or detalleViajeBean.guiaActual.estado.name() ne 'EN_CURSO'}"
-                                     title="#{detalleViajeBean.guiaActual == null or detalleViajeBean.guiaActual.estado.name() ne 'EN_CURSO' ? 'Solo habilitado para viajes EN_CURSO' : 'Sincronizar pesada del mock periférico'}"
+                                     title="Sincronizar pesada del mock periférico (si el camión no tiene guía EN_CURSO, dispara fiscalización VIAJE_SIN_GUIA)"
                                      styleClass="ui-button-outlined ui-button-info" />
                     <p:commandButton value="Registrar Pesaje Manual"
                                      icon="pi pi-sliders-h"
                                      type="button"
                                      onclick="PF('dlgPesajeWidget').show()"
-                                     disabled="#{empty registrarPesajeBean.guiasDisponibles}"
-                                     title="#{empty registrarPesajeBean.guiasDisponibles ? 'No hay guías EN_CURSO para pesar' : 'Registrar pesaje manual'}"
+                                     title="Registrar pesaje manual por guía EN_CURSO o por matrícula sin guía activa"
                                      styleClass="ui-button-primary" />
                 </h:form>
             </div>
@@ -103,7 +100,7 @@
 
                         <p:column headerText="Tipo" sortBy="#{ev.tipo()}" style="width: 135px;">
                             <p:tag value="#{ev.tipo()}"
-                                   severity="#{ev.tipo().name() eq 'INCIDENTE' ? 'danger' : (ev.tipo().name() eq 'INICIO_VIAJE' ? 'success' : (ev.tipo().name() eq 'FIN_VIAJE' ? 'info' : 'secondary'))}"
+                                   severity="#{ev.tipo().name() eq 'INCIDENTE' ? 'danger' : (ev.tipo().name() eq 'INICIO' ? 'success' : (ev.tipo().name() eq 'FIN' ? 'info' : 'secondary'))}"
                                    rounded="true" />
                         </p:column>
 
@@ -117,10 +114,30 @@
                                            rounded="true" />
                                 </div>
                             </h:panelGroup>
+                            <h:panelGroup rendered="#{ev.cantidadKg() != null or not empty ev.mercaderia() or not empty ev.empresaCarga()}">
+                                <div style="font-size: 0.8rem; color: #334155; margin-top: 0.25rem;">
+                                    <i class="pi pi-box" style="color: #4f46e5;" />
+                                    <h:outputText value=" #{ev.cantidadKg()} kg" rendered="#{ev.cantidadKg() != null}" />
+                                    <h:outputText value=" &#8226; #{ev.mercaderia()}" rendered="#{not empty ev.mercaderia()}" />
+                                    <h:outputText value=" &#8226; #{ev.empresaCarga()}" rendered="#{not empty ev.empresaCarga()}" />
+                                </div>
+                            </h:panelGroup>
                             <h:panelGroup rendered="#{ev.incidente() != null}">
                                 <div style="font-size: 0.8rem; color: #dc2626; font-weight: 600; margin-top: 0.2rem;">
                                     <i class="pi pi-exclamation-circle" /> #{ev.incidente().descripcion()}
                                 </div>
+                                <h:panelGroup rendered="#{not empty ev.incidente().foto() and ev.incidente().foto().startsWith('data:image/')}">
+                                    <div style="margin-top: 0.35rem;">
+                                        <img src="#{ev.incidente().foto()}"
+                                             alt="Foto del incidente"
+                                             style="max-width: 150px; max-height: 110px; border-radius: 6px; border: 1px solid #cbd5e1; object-fit: cover;" />
+                                    </div>
+                                </h:panelGroup>
+                                <h:panelGroup rendered="#{not empty ev.incidente().foto() and not ev.incidente().foto().startsWith('data:image/')}">
+                                    <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.15rem;">
+                                        <i class="pi pi-image" /> Foto: #{ev.incidente().foto()}
+                                    </div>
+                                </h:panelGroup>
                             </h:panelGroup>
                         </p:column>
                     </p:dataTable>
@@ -176,13 +193,20 @@
                   closeOnEscape="true">
             <h:form id="dlgPesajeForm" styleClass="ui-fluid">
                 <div class="cuy-field" style="margin-bottom: 1rem;">
-                    <p:outputLabel for="guiaPesajeSel" value="Guía de Viaje" />
-                    <p:selectOneMenu id="guiaPesajeSel" value="#{registrarPesajeBean.guiaIdSeleccionada}" required="true">
+                    <p:outputLabel for="guiaPesajeSel" value="Guía de Viaje (EN_CURSO)" />
+                    <p:selectOneMenu id="guiaPesajeSel" value="#{registrarPesajeBean.guiaIdSeleccionada}">
+                        <f:selectItem itemLabel="-- Sin guía activa (ingresar matrícula debajo) --" itemValue="#{null}" noSelectionOption="true" />
                         <f:selectItems value="#{registrarPesajeBean.guiasDisponibles}"
                                        var="gp"
                                        itemLabel="#{registrarPesajeBean.obtenerEtiquetaGuia(gp)}"
                                        itemValue="#{gp.id}" />
                     </p:selectOneMenu>
+                </div>
+                <div class="cuy-field" style="margin-bottom: 1rem;">
+                    <p:outputLabel for="matPesajeInput" value="Matrícula del Vehículo (para pesaje sin guía activa - VIAJE_SIN_GUIA)" />
+                    <p:inputText id="matPesajeInput"
+                                 value="#{registrarPesajeBean.matriculaManual}"
+                                 placeholder="Ej: STP 1234" />
                 </div>
                 <div class="cuy-field" style="margin-bottom: 1rem;">
                     <p:outputLabel for="pesoMedidoInput" value="Peso Bruto Medido en Balanza (kg)" />
@@ -204,7 +228,7 @@
                                      icon="pi pi-check"
                                      actionListener="#{registrarPesajeBean.registrarPesaje}"
                                      action="#{detalleViajeBean.consultarViaje}"
-                                     update=":monitoreoForm"
+                                     update=":monitoreoForm :growl"
                                      oncomplete="if (!args.validationFailed) PF('dlgPesajeWidget').hide()"
                                      styleClass="ui-button-primary"
                                      style="width: auto;" />
@@ -221,7 +245,7 @@
                   closeOnEscape="true">
             <h:form id="dlgFaasForm" styleClass="ui-fluid">
                 <div style="font-size: 0.84rem; color: #475569; margin-bottom: 0.9rem; background: #f8fafc; padding: 0.75rem; border-radius: 6px; border: 1px solid #e2e8f0;">
-                    Envía un evento de tracking al endpoint HTTPS de la función Cloud (AWS Lambda / Google Cloud Functions) para calcular la distancia perpendicular en kilómetros al corredor asignado y evaluar automáticamente <strong>DESVIO_DE_RUTA</strong> (1 infracción máxima por viaje).
+                    Envía un evento de tracking al endpoint HTTPS de la función Cloud (AWS Lambda / Google Cloud Functions) para calcular la distancia perpendicular en kilómetros al corredor asignado y evaluar automáticamente <strong>DESVIO_DE_RUTA</strong> (o <strong>VIAJE_SIN_GUIA</strong> si se informa matrícula sin viaje activo).
                 </div>
 
                 <div class="cuy-field" style="margin-bottom: 0.85rem;">
@@ -231,17 +255,24 @@
                                  placeholder="Ej: https://xxxx.lambda-url.us-east-1.on.aws/" />
                 </div>
 
+                <div class="cuy-field" style="margin-bottom: 0.85rem;">
+                    <p:outputLabel for="inputFaasMatricula" value="Matrícula del Vehículo (opcional para simular tracking sin guía activa)" />
+                    <p:inputText id="inputFaasMatricula"
+                                 value="#{detalleViajeBean.telemetriaMatricula}"
+                                 placeholder="Vacío usa la guía seleccionada; ej: STP 1234 para simular camión sin guía" />
+                </div>
+
                 <div style="display: flex; gap: 0.6rem; margin-bottom: 0.85rem;">
                     <p:commandButton value="Precargar Punto en Ruta (Sin Desvío)"
                                      icon="pi pi-check-circle"
                                      actionListener="#{detalleViajeBean.cargarCoordenadasEnRuta}"
-                                     process="@this"
+                                     process="@this inputFaasMatricula"
                                      update="inputFaasLat inputFaasLon inputFaasDesc"
                                      styleClass="ui-button-outlined ui-button-success" />
                     <p:commandButton value="Precargar Punto con Desvío (&gt; Umbral)"
                                      icon="pi pi-exclamation-triangle"
                                      actionListener="#{detalleViajeBean.cargarCoordenadasDesviadas}"
-                                     process="@this"
+                                     process="@this inputFaasMatricula"
                                      update="inputFaasLat inputFaasLon inputFaasDesc"
                                      styleClass="ui-button-outlined ui-button-danger" />
                 </div>

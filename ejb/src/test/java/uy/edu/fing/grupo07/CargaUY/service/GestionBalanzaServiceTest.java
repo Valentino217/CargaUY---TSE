@@ -170,4 +170,46 @@ class GestionBalanzaServiceTest {
         assertEquals(30000, lista.get(0).pesoRegistrado());
         assertEquals(29500, lista.get(1).pesoRegistrado());
     }
+
+    @Test
+    @DisplayName("Punto E.8 - Si un camión registrado en padrón pasa por balanza sin guía EN_CURSO, persiste pesada sin guía y dispara fiscalización VIAJE_SIN_GUIA")
+    void testRegistrarPesadaCamionRegistradoSinGuiaActivaDisparaFiscalizacion() {
+        when(em.createQuery(anyString(), eq(GuiaDeViaje.class))).thenReturn(queryGuia);
+        when(queryGuia.setParameter(eq("matricula"), eq(123456))).thenReturn(queryGuia);
+        when(queryGuia.setParameter(eq("enCurso"), eq(TipoEstado.EN_CURSO))).thenReturn(queryGuia);
+        when(queryGuia.setMaxResults(1)).thenReturn(queryGuia);
+        when(queryGuia.getResultList()).thenReturn(Collections.emptyList());
+
+        when(em.find(Vehiculo.class, "123456")).thenReturn(vehiculoPrueba);
+
+        PesadaBalanzaDTO dto = new PesadaBalanzaDTO(
+                null, LocalDate.now(), LocalTime.of(14, 30), 33800, "123456", null
+        );
+
+        PesadaBalanzaDTO resultado = service.registrarPesada(dto);
+
+        assertNotNull(resultado);
+        assertNull(resultado.guiaId());
+        assertEquals("123456", resultado.matricula());
+        assertEquals(33800, resultado.pesoRegistrado());
+        verify(em).persist(argThat((PesadaBalanza p) ->
+                p.getGuia() == null && p.getVehiculo() == vehiculoPrueba && p.getPesoRegistrado() == 33800
+        ));
+        verify(fiscalizacionProducer).solicitarEvaluacionSinGuia(eq("123456"), contains("33800 kg"));
+    }
+
+    @Test
+    @DisplayName("Punto E.8 - Rechaza pesaje con guiaId en estado SIN_INICIAR o FINALIZADO y deriva el camión a fiscalización VIAJE_SIN_GUIA")
+    void testRegistrarPesadaConGuiaNoEnCursoDisparaFiscalizacionSinGuia() {
+        guiaPrueba.setEstado(TipoEstado.FINALIZADO);
+        when(em.find(GuiaDeViaje.class, 10L)).thenReturn(guiaPrueba);
+
+        PesadaBalanzaDTO dto = new PesadaBalanzaDTO(
+                null, LocalDate.now(), LocalTime.now(), 28000, null, 10L
+        );
+
+        assertThrows(BusinessException.class, () -> service.registrarPesada(dto));
+        verify(fiscalizacionProducer).solicitarEvaluacionSinGuia(eq("123456"), contains("FINALIZADO"));
+        verify(em, never()).persist(any(PesadaBalanza.class));
+    }
 }

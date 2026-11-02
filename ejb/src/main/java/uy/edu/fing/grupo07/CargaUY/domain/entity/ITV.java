@@ -60,7 +60,12 @@ public class ITV implements Serializable {
     }
 
     public boolean isVigente() {
-        return fechaVencimiento != null && !fechaVencimiento.isBefore(LocalDate.now());
+        return isVigenteEn(LocalDate.now());
+    }
+
+    public boolean isVigenteEn(LocalDate fechaReferencia) {
+        LocalDate ref = fechaReferencia != null ? fechaReferencia : LocalDate.now();
+        return fechaVencimiento != null && !fechaVencimiento.isBefore(ref);
     }
 
     @Override

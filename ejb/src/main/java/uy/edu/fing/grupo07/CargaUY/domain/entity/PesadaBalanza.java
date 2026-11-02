@@ -30,17 +30,26 @@ public class PesadaBalanza implements Serializable {
     private int pesoRegistrado;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "guia_id", nullable = false)
+    @JoinColumn(name = "guia_id", nullable = true)
     private GuiaDeViaje guia;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "vehiculo_matricula", nullable = true)
+    private Vehiculo vehiculo;
 
     public PesadaBalanza() {
     }
 
     public PesadaBalanza(LocalDate fecha, LocalTime hora, int pesoRegistrado, GuiaDeViaje guia) {
+        this(fecha, hora, pesoRegistrado, guia, guia != null ? guia.getVehiculo() : null);
+    }
+
+    public PesadaBalanza(LocalDate fecha, LocalTime hora, int pesoRegistrado, GuiaDeViaje guia, Vehiculo vehiculo) {
         this.fecha = fecha;
         this.hora = hora;
         this.pesoRegistrado = pesoRegistrado;
         this.guia = guia;
+        this.vehiculo = vehiculo;
     }
 
     public int getIdPesada() {
@@ -81,6 +90,14 @@ public class PesadaBalanza implements Serializable {
 
     public void setGuia(GuiaDeViaje guia) {
         this.guia = guia;
+    }
+
+    public Vehiculo getVehiculo() {
+        return vehiculo;
+    }
+
+    public void setVehiculo(Vehiculo vehiculo) {
+        this.vehiculo = vehiculo;
     }
 
     @Override
