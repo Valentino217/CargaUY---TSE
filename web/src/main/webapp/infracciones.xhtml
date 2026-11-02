@@ -86,7 +86,7 @@
                 <div style="display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap;">
                     <div>
                         <p:outputLabel for="filtroEstado" value="Estado de Infracción: " style="display: block; font-weight: bold; margin-bottom: 6px;"/>
-                        <p:selectOneMenu id="filtroEstado" value="#{bandejaInfraccionesBean.filtroEstado}" style="min-width: 200px;">
+                        <p:selectOneMenu id="filtroEstado" label="Estado de Infracción" value="#{bandejaInfraccionesBean.filtroEstado}" style="min-width: 200px;">
                             <f:selectItem itemLabel="-- Todos los estados --" itemValue="#{null}"/>
                             <f:selectItems value="#{bandejaInfraccionesBean.estadosDisponibles}" var="est" itemLabel="#{est.name()}" itemValue="#{est}"/>
                         </p:selectOneMenu>
@@ -94,7 +94,7 @@
 
                     <div>
                         <p:outputLabel for="filtroTipo" value="Tipo de Infracción: " style="display: block; font-weight: bold; margin-bottom: 6px;"/>
-                        <p:selectOneMenu id="filtroTipo" value="#{bandejaInfraccionesBean.filtroTipo}" style="min-width: 220px;">
+                        <p:selectOneMenu id="filtroTipo" label="Tipo de Infracción" value="#{bandejaInfraccionesBean.filtroTipo}" style="min-width: 220px;">
                             <f:selectItem itemLabel="-- Todos los tipos --" itemValue="#{null}"/>
                             <f:selectItems value="#{bandejaInfraccionesBean.tiposDisponibles}" var="tip" itemLabel="#{tip.name()}" itemValue="#{tip}"/>
                         </p:selectOneMenu>
@@ -112,12 +112,12 @@
                 <div style="display: flex; gap: 20px; align-items: flex-end; flex-wrap: wrap;">
                     <div>
                         <p:outputLabel for="guiaId" value="ID Guía de Viaje: " style="display: block; font-weight: bold; margin-bottom: 6px;"/>
-                        <p:inputNumber id="guiaId" value="#{bandejaInfraccionesBean.guiaIdFiscalizar}" decimalPlaces="0" placeholder="Ej: 10" style="width: 150px;"/>
+                        <p:inputNumber id="guiaId" label="ID Guía de Viaje" value="#{bandejaInfraccionesBean.guiaIdFiscalizar}" decimalPlaces="0" placeholder="Ej: 10" style="width: 150px;"/>
                     </div>
 
                     <div>
                         <p:outputLabel for="modoFisc" value="Modo de Ejecución: " style="display: block; font-weight: bold; margin-bottom: 6px;"/>
-                        <p:selectOneMenu id="modoFisc" value="#{bandejaInfraccionesBean.modoFiscalizacion}" style="min-width: 220px;">
+                        <p:selectOneMenu id="modoFisc" label="Modo de Ejecución" value="#{bandejaInfraccionesBean.modoFiscalizacion}" style="min-width: 220px;">
                             <f:selectItem itemLabel="Síncrono (Inmediato)" itemValue="sync"/>
                             <f:selectItem itemLabel="Asíncrono (JMS FiscalizacionQueue)" itemValue="async"/>
                         </p:selectOneMenu>

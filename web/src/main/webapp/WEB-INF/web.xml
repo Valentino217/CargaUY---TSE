@@ -33,11 +33,30 @@
 
     <context-param>
         <param-name>jakarta.faces.PROJECT_STAGE</param-name>
-        <param-value>Development</param-value>
+        <!-- Production: no muestra trazas de Java al usuario ante un error inesperado. -->
+        <param-value>Production</param-value>
     </context-param>
 
     <welcome-file-list>
         <welcome-file>index.xhtml</welcome-file>
     </welcome-file-list>
+
+    <!-- Carteles de error en español (en vez de las páginas técnicas del servidor) -->
+    <error-page>
+        <error-code>403</error-code>
+        <location>/error.xhtml</location>
+    </error-page>
+    <error-page>
+        <error-code>404</error-code>
+        <location>/error.xhtml</location>
+    </error-page>
+    <error-page>
+        <error-code>500</error-code>
+        <location>/error.xhtml</location>
+    </error-page>
+    <error-page>
+        <exception-type>jakarta.faces.application.ViewExpiredException</exception-type>
+        <location>/error.xhtml</location>
+    </error-page>
 
 </web-app>

@@ -4,6 +4,7 @@ import android.util.Log
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.net.URI
 import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
@@ -62,12 +63,48 @@ object RetrofitClient {
         }
         throw lastException ?: IllegalStateException("No se pudo conectar a ninguna URL candidata")
     }
+
+    /**
+     * Ajusta la URL de autorización de Keycloak/gub.uy si el backend devolvió "localhost" o "127.0.0.1",
+     * reemplazándola por el host activo alcanzable por el emulador o dispositivo móvil.
+     */
+    fun resolverUrlProveedor(urlOriginal: String): String {
+        return try {
+            val uri = URI(urlOriginal)
+            val host = uri.host ?: return urlOriginal
+            if (host.equals("localhost", ignoreCase = true) || host == "127.0.0.1") {
+                val baseUri = URI(activeBaseUrl)
+                val hostObjetivo = baseUri.host ?: "10.0.2.2"
+                val puerto = if (uri.port != -1) ":${uri.port}" else ""
+                val scheme = uri.scheme ?: "http"
+                val path = uri.rawPath ?: ""
+                val query = if (uri.rawQuery != null) "?${uri.rawQuery}" else ""
+                val fragment = if (uri.rawFragment != null) "#${uri.rawFragment}" else ""
+                "$scheme://$hostObjetivo$puerto$path$query$fragment"
+            } else {
+                urlOriginal
+            }
+        } catch (e: Exception) {
+            Log.w("CARGAUY", "No se pudo ajustar URL de proveedor: ${e.message}")
+            urlOriginal
+        }
+    }
 }
 
-/** Token temporal en memoria para pruebas de integración. El login OIDC móvil sigue pendiente. */
+/** Estado de sesión autenticada en memoria y utilidades para el chofer */
 object SesionMovil {
     @Volatile var token: String = ""
     @Volatile var cedulaAsociada: Int? = null
+    @Volatile var nombreChofer: String? = null
+
+    val estaAutenticado: Boolean
+        get() = token.isNotBlank()
+
+    fun limpiar() {
+        token = ""
+        cedulaAsociada = null
+        nombreChofer = null
+    }
 }
 
 object ApiClient {

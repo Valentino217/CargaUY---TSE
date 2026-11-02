@@ -48,7 +48,7 @@
                 <div class="cuy-grid-3" style="align-items: center;">
                     <div class="cuy-field ui-fluid">
                         <p:outputLabel for="selGuiaMon" value="Seleccionar Guía de Viaje a Monitorear" />
-                        <p:selectOneMenu id="selGuiaMon" value="#{detalleViajeBean.guiaIdSeleccionada}">
+                        <p:selectOneMenu id="selGuiaMon" label="Seleccionar Guía de Viaje a Monitorear" value="#{detalleViajeBean.guiaIdSeleccionada}">
                             <f:selectItem itemLabel="-- Seleccione una Guía --" itemValue="#{null}" noSelectionOption="true" />
                             <f:selectItems value="#{detalleViajeBean.guiasDisponibles}"
                                            var="g"
@@ -177,7 +177,7 @@
             <h:form id="dlgPesajeForm" styleClass="ui-fluid">
                 <div class="cuy-field" style="margin-bottom: 1rem;">
                     <p:outputLabel for="guiaPesajeSel" value="Guía de Viaje" />
-                    <p:selectOneMenu id="guiaPesajeSel" value="#{registrarPesajeBean.guiaIdSeleccionada}" required="true">
+                    <p:selectOneMenu id="guiaPesajeSel" label="Guía de Viaje" value="#{registrarPesajeBean.guiaIdSeleccionada}" required="true">
                         <f:selectItems value="#{registrarPesajeBean.guiasDisponibles}"
                                        var="gp"
                                        itemLabel="#{registrarPesajeBean.obtenerEtiquetaGuia(gp)}"
@@ -186,7 +186,7 @@
                 </div>
                 <div class="cuy-field" style="margin-bottom: 1rem;">
                     <p:outputLabel for="pesoMedidoInput" value="Peso Bruto Medido en Balanza (kg)" />
-                    <p:inputNumber id="pesoMedidoInput"
+                    <p:inputNumber id="pesoMedidoInput" label="Peso Bruto Medido en Balanza (kg)"
                                    value="#{registrarPesajeBean.pesoRegistrado}"
                                    decimalPlaces="0"
                                    thousandSeparator="." decimalSeparator=","
@@ -226,7 +226,7 @@
 
                 <div class="cuy-field" style="margin-bottom: 0.85rem;">
                     <p:outputLabel for="inputFaasUrl" value="Endpoint Cloud FaaS (HTTPS Function URL - vacío usa cálculo local de respaldo)" />
-                    <p:inputText id="inputFaasUrl"
+                    <p:inputText id="inputFaasUrl" label="Endpoint Cloud FaaS (HTTPS Function URL - vacío usa cálculo local de respaldo)"
                                  value="#{detalleViajeBean.faasEndpointUrl}"
                                  placeholder="Ej: https://xxxx.lambda-url.us-east-1.on.aws/" />
                 </div>
@@ -249,7 +249,7 @@
                 <div class="cuy-grid-2" style="margin-bottom: 0.85rem;">
                     <div class="cuy-field">
                         <p:outputLabel for="inputFaasLat" value="Latitud GPS" />
-                        <p:inputNumber id="inputFaasLat"
+                        <p:inputNumber id="inputFaasLat" label="Latitud GPS"
                                        value="#{detalleViajeBean.telemetriaLatitud}"
                                        decimalPlaces="4"
                                        decimalSeparator="."
@@ -257,7 +257,7 @@
                     </div>
                     <div class="cuy-field">
                         <p:outputLabel for="inputFaasLon" value="Longitud GPS" />
-                        <p:inputNumber id="inputFaasLon"
+                        <p:inputNumber id="inputFaasLon" label="Longitud GPS"
                                        value="#{detalleViajeBean.telemetriaLongitud}"
                                        decimalPlaces="4"
                                        decimalSeparator="."
@@ -267,7 +267,7 @@
 
                 <div class="cuy-field" style="margin-bottom: 0.85rem;">
                     <p:outputLabel for="inputFaasDesc" value="Descripción de Telemetría" />
-                    <p:inputText id="inputFaasDesc"
+                    <p:inputText id="inputFaasDesc" label="Descripción de Telemetría"
                                  value="#{detalleViajeBean.telemetriaDescripcion}"
                                  placeholder="Reporte automático de posición GPS..." />
                 </div>

@@ -149,7 +149,7 @@
                     <div class="cuy-form-grid-3">
                         <div class="cuy-field">
                             <p:outputLabel for="empSelect" value="Empresa" />
-                            <p:selectOneMenu id="empSelect" value="#{GuiaDeViajeBean.empresaId}" required="true">
+                            <p:selectOneMenu id="empSelect" label="Empresa" value="#{GuiaDeViajeBean.empresaId}" required="true">
                                 <f:selectItems value="#{GuiaDeViajeBean.empresas}"
                                                var="e"
                                                itemLabel="#{e.razonSocial}"
@@ -160,7 +160,7 @@
 
                         <div class="cuy-field">
                             <p:outputLabel for="vehSelect" value="Vehículo Habilitado" />
-                            <p:selectOneMenu id="vehSelect" value="#{GuiaDeViajeBean.matriculaVehiculo}" required="true"
+                            <p:selectOneMenu id="vehSelect" label="Vehículo Habilitado" value="#{GuiaDeViajeBean.matriculaVehiculo}" required="true"
                                              requiredMessage="Debe seleccionar un vehículo habilitado.">
                                 <f:selectItem itemLabel="#{empty GuiaDeViajeBean.vehiculos ? 'Sin vehículos habilitados' : '-- Seleccionar Vehículo --'}"
                                               itemValue="" noSelectionOption="true" />
@@ -173,7 +173,7 @@
 
                         <div class="cuy-field">
                             <p:outputLabel for="chofSelect" value="Chofer Asignado" />
-                            <p:selectOneMenu id="chofSelect" value="#{GuiaDeViajeBean.choferId}" required="true">
+                            <p:selectOneMenu id="chofSelect" label="Chofer Asignado" value="#{GuiaDeViajeBean.choferId}" required="true">
                                 <f:selectItems value="#{GuiaDeViajeBean.choferes}"
                                                var="c"
                                                itemLabel="#{c.nombre} (CI #{c.ci})"
@@ -187,34 +187,34 @@
                     <div class="cuy-form-grid-2">
                         <div class="cuy-field">
                             <p:outputLabel for="origenSelect" value="Localidad de Origen" />
-                            <p:selectOneMenu id="origenSelect" value="#{GuiaDeViajeBean.guia.origen}" filter="true" filterMatchMode="contains" required="true">
+                            <p:selectOneMenu id="origenSelect" label="Localidad de Origen" value="#{GuiaDeViajeBean.guia.origen}" filter="true" filterMatchMode="contains" required="true">
                                 <f:selectItems value="#{GuiaDeViajeBean.localidadesUruguay}" var="locO" itemLabel="#{locO}" itemValue="#{locO}" />
                             </p:selectOneMenu>
                         </div>
 
                         <div class="cuy-field">
                             <p:outputLabel for="destinoSelect" value="Localidad de Destino" />
-                            <p:selectOneMenu id="destinoSelect" value="#{GuiaDeViajeBean.guia.destino}" filter="true" filterMatchMode="contains" required="true">
+                            <p:selectOneMenu id="destinoSelect" label="Localidad de Destino" value="#{GuiaDeViajeBean.guia.destino}" filter="true" filterMatchMode="contains" required="true">
                                 <f:selectItems value="#{GuiaDeViajeBean.localidadesUruguay}" var="locD" itemLabel="#{locD}" itemValue="#{locD}" />
                             </p:selectOneMenu>
                         </div>
 
                         <div class="cuy-field">
                             <p:outputLabel for="rubroSelect" value="Rubro del Cliente" />
-                            <p:selectOneMenu id="rubroSelect" value="#{GuiaDeViajeBean.guia.rubroCliente}" editable="true" required="true">
+                            <p:selectOneMenu id="rubroSelect" label="Rubro del Cliente" value="#{GuiaDeViajeBean.guia.rubroCliente}" editable="true" required="true">
                                 <f:selectItems value="#{GuiaDeViajeBean.rubrosDisponibles}" var="rub" itemLabel="#{rub}" itemValue="#{rub}" />
                             </p:selectOneMenu>
                         </div>
 
                         <div class="cuy-field">
                             <p:outputLabel for="volInput" value="Volumen / Peso Declarado (kg)" />
-                            <p:inputNumber id="volInput" value="#{GuiaDeViajeBean.guia.volumenCarga}" decimalPlaces="0"
+                            <p:inputNumber id="volInput" label="Volumen / Peso Declarado (kg)" value="#{GuiaDeViajeBean.guia.volumenCarga}" decimalPlaces="0"
                                            thousandSeparator="." decimalSeparator="," suffix=" kg" minValue="1" required="true" />
                         </div>
 
                         <div class="cuy-field">
                             <p:outputLabel for="fechaInput" value="Fecha Programada *" />
-                            <p:datePicker id="fechaInput" value="#{GuiaDeViajeBean.guia.fecha}" pattern="yyyy-MM-dd" showIcon="true" required="true"  panelStyleClass="cuy-calendar"  monthNavigator="true"  yearNavigator="select"  showButtonBar="true"  showOtherMonths="true"  yearRange="1900:2026"  showLongMonthNames="true" />
+                            <p:datePicker id="fechaInput" label="Fecha Programada" value="#{GuiaDeViajeBean.guia.fecha}" pattern="yyyy-MM-dd" showIcon="true" required="true"  panelStyleClass="cuy-calendar"  monthNavigator="true"  yearNavigator="select"  showButtonBar="true"  showOtherMonths="true"  yearRange="1900:2026"  showLongMonthNames="true" />
                         </div>
                     </div>
                 </p:fieldset>

@@ -10,6 +10,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -72,10 +74,15 @@ import com.example.cargauyandroid.ui.theme.CargaUYAndroidTheme
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    private var callbackOidcUri = mutableStateOf<Uri?>(null)
+
     @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        if (intent?.data?.scheme == "uy.cargauy") {
+            callbackOidcUri.value = intent?.data
+        }
         setContent {
             CargaUYAndroidTheme {
                 Scaffold(
@@ -84,16 +91,30 @@ class MainActivity : ComponentActivity() {
                         .statusBarsPadding()
                 ) { innerPadding ->
                     Box(modifier = Modifier.padding(innerPadding)) {
-                        NavegationComponent()
+                        NavegationComponent(
+                            deepLinkUri = callbackOidcUri.value,
+                            onDeepLinkConsumido = { callbackOidcUri.value = null }
+                        )
                     }
                 }
             }
         }
     }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent.data?.scheme == "uy.cargauy") {
+            callbackOidcUri.value = intent.data
+        }
+    }
 }
 
 @Composable
-fun NavegationComponent() {
+fun NavegationComponent(
+    deepLinkUri: Uri? = null,
+    onDeepLinkConsumido: () -> Unit = {}
+) {
     val context = LocalContext.current
     val syncRepository = remember { SyncRepository(context) }
     val navController = rememberNavController()
@@ -107,6 +128,27 @@ fun NavegationComponent() {
     var sincronizando by remember { mutableStateOf(false) }
     var mensajeGlobalSync by remember { mutableStateOf<String?>(null) }
     var syncTick by remember { mutableIntStateOf(0) }
+    var sesionTick by remember { mutableIntStateOf(0) }
+    var autenticandoOidc by remember { mutableStateOf(false) }
+
+    // Procesar retorno del login OIDC PKCE desde Keycloak / gub.uy
+    LaunchedEffect(deepLinkUri) {
+        val uri = deepLinkUri ?: return@LaunchedEffect
+        onDeepLinkConsumido()
+        autenticandoOidc = true
+        mensajeGlobalSync = "Verificando identidad con gub.uy..."
+        val resultado = OidcAuthManager.procesarCallback(uri)
+        autenticandoOidc = false
+        resultado.onSuccess { res ->
+            mensajeGlobalSync = "¡Bienvenido, ${res.nombre ?: "Chofer"}! Sesión iniciada vía gub.uy."
+            res.ci?.let { ci ->
+                cedulaTexto = ci.toString()
+            }
+            sesionTick++
+        }.onFailure { err ->
+            mensajeGlobalSync = "Error al completar autenticación: ${err.message}"
+        }
+    }
 
     fun refrescarEstadoLocal() {
         enLinea = syncRepository.servidorAlcanzable
@@ -207,6 +249,9 @@ fun NavegationComponent() {
                     onCedulaChange = { cedulaTexto = it },
                     syncRepository = syncRepository,
                     pendientesCount = pendientesCount,
+                    autenticandoOidc = autenticandoOidc,
+                    sesionTick = sesionTick,
+                    onMensajeGlobal = { mensajeGlobalSync = it },
                     onEventoChange = {
                         refrescarEstadoLocal()
                         ejecutarSincronizacion(mostrarSiVacio = true)
@@ -353,12 +398,19 @@ fun MainScreen(
     onCedulaChange: (String) -> Unit,
     syncRepository: SyncRepository,
     pendientesCount: Int,
+    autenticandoOidc: Boolean = false,
+    sesionTick: Int = 0,
+    onMensajeGlobal: (String) -> Unit = {},
     onEventoChange: () -> Unit,
     onLimpiarBd: () -> Unit
 ) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var mensajeError by remember { mutableStateOf<String?>(null) }
     var buscandoViajeActivo by remember { mutableStateOf(false) }
+    var cargandoLoginGub by remember { mutableStateOf(false) }
+    var cargandoDevToken by remember { mutableStateOf(false) }
+    var mostrarAvanzadoDev by rememberSaveable { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -378,42 +430,205 @@ fun MainScreen(
             color = Color(0xFF475569)
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
+        // Tarjeta de Identificación y Autenticación OIDC con gub.uy / Keycloak
         Card(
             modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
+            colors = CardDefaults.cardColors(
+                containerColor = if (SesionMovil.estaAutenticado) Color(0xFFF0FDF4) else Color(0xFFF8FAFC)
+            ),
+            border = BorderStroke(
+                width = 1.dp,
+                color = if (SesionMovil.estaAutenticado) Color(0xFF86EFAC) else Color(0xFFCBD5E1)
+            ),
+            shape = RoundedCornerShape(12.dp),
             elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "Identificacion del Chofer",
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 16.sp
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = cedulaTexto,
-                    onValueChange = { nuevo ->
-                        onCedulaChange(nuevo.filter { it.isDigit() })
-                    },
-                    label = { Text("Cedula de Identidad (CI)") },
-                    placeholder = { Text("Ej: 11223344") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                var tokenTexto by remember { mutableStateOf(SesionMovil.token) }
-                OutlinedTextField(
-                    value = tokenTexto,
-                    onValueChange = { tokenTexto = it.trim(); SesionMovil.token = tokenTexto },
-                    label = { Text("Token de integracion") },
-                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Text("Token temporal para pruebas")
-                Spacer(modifier = Modifier.height(4.dp))
+                if (SesionMovil.estaAutenticado) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("● ", color = Color(0xFF16A34A), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                                Text(
+                                    text = "Sesión iniciada vía gub.uy",
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF15803D),
+                                    fontSize = 14.sp
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = SesionMovil.nombreChofer ?: "Chofer Autenticado",
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF1E293B),
+                                fontSize = 15.sp
+                            )
+                            Text(
+                                text = "CI: ${SesionMovil.cedulaAsociada ?: cedulaTexto}",
+                                color = Color(0xFF64748B),
+                                fontSize = 13.sp
+                            )
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                SesionMovil.limpiar()
+                                onMensajeGlobal("Sesión cerrada.")
+                            },
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFB91C1C))
+                        ) {
+                            Text("Salir", fontSize = 12.sp)
+                        }
+                    }
+                } else {
+                    Text(
+                        text = "Identificación de Chofer",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 16.sp,
+                        color = Color(0xFF0F172A)
+                    )
+                    Text(
+                        text = "Para consultar y certificar eventos en ruta, inicie sesión con su Usuario gub.uy.",
+                        fontSize = 13.sp,
+                        color = Color(0xFF64748B)
+                    )
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Button(
+                        onClick = {
+                            cargandoLoginGub = true
+                            mensajeError = null
+                            scope.launch {
+                                val resultado = OidcAuthManager.iniciarFlujoLogin(context)
+                                cargandoLoginGub = false
+                                resultado.onFailure { err ->
+                                    mensajeError = "No se pudo iniciar el login con gub.uy: ${err.message}"
+                                }
+                            }
+                        },
+                        enabled = !cargandoLoginGub && !autenticandoOidc,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0F4C81)),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                    ) {
+                        if (cargandoLoginGub || autenticandoOidc) {
+                            CircularProgressIndicator(
+                                modifier = Modifier
+                                    .height(20.dp)
+                                    .width(20.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Abriendo gub.uy...")
+                        } else {
+                            Text(
+                                "Ingresar con Usuario gub.uy",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Opciones de pruebas de desarrollo
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { mostrarAvanzadoDev = !mostrarAvanzadoDev }
+                .padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = if (mostrarAvanzadoDev) "▲ Ocultar opciones de pruebas (Dev)" else "▼ Opciones de pruebas y manual (Dev)",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color(0xFF64748B)
+            )
+        }
+
+        if (mostrarAvanzadoDev) {
+            Spacer(modifier = Modifier.height(6.dp))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F5F9)),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        text = "Configuración manual de chofer (sin OIDC)",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF475569)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = cedulaTexto,
+                        onValueChange = { nuevo ->
+                            onCedulaChange(nuevo.filter { it.isDigit() })
+                        },
+                        label = { Text("Cédula de Identidad manual (CI)") },
+                        placeholder = { Text("Ej: 11223344") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    var tokenTexto by remember(SesionMovil.token) { mutableStateOf(SesionMovil.token) }
+                    OutlinedTextField(
+                        value = tokenTexto,
+                        onValueChange = {
+                            tokenTexto = it.trim()
+                            SesionMovil.token = tokenTexto
+                        },
+                        label = { Text("Token Bearer manual") },
+                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(
+                        onClick = {
+                            val ci = cedulaTexto.toIntOrNull() ?: Constants.DEFAULT_CEDULA
+                            cargandoDevToken = true
+                            scope.launch {
+                                try {
+                                    val res = RetrofitClient.executeWithFallback { api ->
+                                        api.obtenerDevToken(mapOf("ci" to ci))
+                                    }
+                                    val tok = (res["token"] as? String) ?: ""
+                                    SesionMovil.token = tok
+                                    SesionMovil.cedulaAsociada = ci
+                                    SesionMovil.nombreChofer = (res["nombre"] as? String) ?: "Chofer Dev #$ci"
+                                    tokenTexto = tok
+                                    cargandoDevToken = false
+                                    onMensajeGlobal("Token Dev obtenido para CI $ci")
+                                } catch (e: Exception) {
+                                    cargandoDevToken = false
+                                    onMensajeGlobal("Fallo al obtener token Dev: ${e.message}")
+                                }
+                            }
+                        },
+                        enabled = !cargandoDevToken,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF475569)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(if (cargandoDevToken) "Obteniendo token..." else "Obtener Token de Prueba Dev")
+                    }
+                }
             }
         }
 

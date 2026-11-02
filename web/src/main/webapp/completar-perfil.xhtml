@@ -18,7 +18,7 @@
             <div class="form-grid">
                 <div>
                     <p:outputLabel for="fecha" value="Fecha de nacimiento"/>
-                    <p:datePicker id="fecha" value="#{completarPerfilBean.fechaNacimiento}"
+                    <p:datePicker id="fecha" label="Fecha de nacimiento" value="#{completarPerfilBean.fechaNacimiento}"
                                   pattern="dd/MM/yyyy" showIcon="true" monthNavigator="true"
                                   yearNavigator="select" yearRange="1900:2026"
                                   maxdate="#{completarPerfilBean.hoy}" required="true"

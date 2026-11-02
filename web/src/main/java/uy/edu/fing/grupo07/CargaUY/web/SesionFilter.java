@@ -26,7 +26,7 @@ public class SesionFilter implements Filter {
         } catch(ErrorAcceso e) {
             if(e.getEstado()==401) {
                 r.getSession().invalidate(); s.sendRedirect(r.getContextPath()+"/login");
-            } else WebSeguridad.error(s,e.getEstado(),e.getMessage());
+            } else WebSeguridad.error(r,s,e.getEstado(),e.getMessage());
         }
     }
 }

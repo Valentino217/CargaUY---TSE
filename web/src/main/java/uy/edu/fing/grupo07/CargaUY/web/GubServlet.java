@@ -33,14 +33,14 @@ public class GubServlet extends HttpServlet {
         ses.removeAttribute("oidcVerifier"); ses.removeAttribute("oidcInicio");
         if(!Cripto.igual(state,r.getParameter("state"))||inicio==null
                 ||inicio.plusSeconds(180).isBefore(Instant.now())) {
-            WebSeguridad.error(s,401,"Inicio de sesión vencido o inválido"); return;
+            WebSeguridad.error(r,s,401,"Inicio de sesión vencido o inválido"); return;
         }
         if(r.getParameter("error")!=null) {
-            WebSeguridad.error(s,401,"El proveedor no autorizó el ingreso"); return;
+            WebSeguridad.error(r,s,401,"El proveedor no autorizó el ingreso"); return;
         }
         try {
             WebSeguridad.iniciar(r,auth.loginGub(r.getParameter("code"),verifier,nonce));
             s.sendRedirect(r.getContextPath()+"/index.xhtml");
-        } catch(ErrorAcceso e) { WebSeguridad.error(s,e.getEstado(),e.getMessage()); }
+        } catch(ErrorAcceso e) { WebSeguridad.error(r,s,e.getEstado(),e.getMessage()); }
     }
 }

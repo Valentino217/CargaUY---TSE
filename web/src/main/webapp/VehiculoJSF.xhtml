@@ -118,32 +118,32 @@
                 <div class="form-grid">
                     <div class="form-field">
                         <h:outputLabel for="matricula" value="Matrícula: *"/>
-                        <h:inputText id="matricula" value="#{VehiculoBean.vehiculo.matricula}"/>
+                        <h:inputText id="matricula" label="Matrícula" value="#{VehiculoBean.vehiculo.matricula}"/>
                     </div>
 
                     <div class="form-field">
                         <h:outputLabel for="marca" value="Marca: *"/>
-                        <h:inputText id="marca" value="#{VehiculoBean.vehiculo.marca}"/>
+                        <h:inputText id="marca" label="Marca" value="#{VehiculoBean.vehiculo.marca}"/>
                     </div>
 
                     <div class="form-field">
                         <h:outputLabel for="modelo" value="Modelo: *"/>
-                        <h:inputText id="modelo" value="#{VehiculoBean.vehiculo.modelo}"/>
+                        <h:inputText id="modelo" label="Modelo" value="#{VehiculoBean.vehiculo.modelo}"/>
                     </div>
 
                     <div class="form-field">
                         <h:outputLabel for="peso" value="Peso propio (Tara en kg): *"/>
-                        <h:inputText id="peso" value="#{VehiculoBean.vehiculo.peso}"/>
+                        <h:inputText id="peso" label="Peso propio (Tara en kg)" value="#{VehiculoBean.vehiculo.peso}"/>
                     </div>
 
                     <div class="form-field">
                         <h:outputLabel for="capacidadCarga" value="Capacidad de Carga (kg): *"/>
-                        <h:inputText id="capacidadCarga" value="#{VehiculoBean.vehiculo.capacidadCarga}"/>
+                        <h:inputText id="capacidadCarga" label="Capacidad de Carga (kg)" value="#{VehiculoBean.vehiculo.capacidadCarga}"/>
                     </div>
 
                     <div class="form-field">
                         <h:outputLabel for="empresa" value="Empresa Titular: *"/>
-                        <h:selectOneMenu id="empresa"
+                        <h:selectOneMenu id="empresa" label="Empresa Titular"
                                          value="#{VehiculoBean.empresaId}"
                                          required="true"
                                          requiredMessage="Debe seleccionar una empresa.">
@@ -158,7 +158,7 @@
                     <div class="form-field" style="justify-content: center;">
                         <h:outputLabel for="estadoHabilitacion" value="Habilitación Administrativa:"/>
                         <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
-                            <h:selectBooleanCheckbox id="estadoHabilitacion" value="#{VehiculoBean.vehiculo.estadoHabilitacion}"/>
+                            <h:selectBooleanCheckbox id="estadoHabilitacion" label="Habilitación Administrativa" value="#{VehiculoBean.vehiculo.estadoHabilitacion}"/>
                             <label for="form:estadoHabilitacion" style="font-weight: normal; cursor: pointer;">Vehículo habilitado para circular</label>
                         </div>
                     </div>

@@ -150,7 +150,7 @@
                 <div class="cuy-form-grid-2" style="margin-bottom: 1rem;">
                     <div class="cuy-field">
                         <p:outputLabel for="numEmp" value="Número de Registro / RUT" />
-                        <p:inputNumber id="numEmp"
+                        <p:inputNumber id="numEmp" label="Número de Registro / RUT"
                                        value="#{funcionarioEmpresasBean.numeroForm}"
                                        decimalPlaces="0"
                                        thousandSeparator=""
@@ -159,7 +159,7 @@
                     </div>
                     <div class="cuy-field">
                         <p:outputLabel for="nomPubEmp" value="Nombre" />
-                        <p:inputText id="nomPubEmp"
+                        <p:inputText id="nomPubEmp" label="Nombre"
                                      value="#{funcionarioEmpresasBean.nombrePublicoForm}"
                                      required="true"
                                      placeholder="Ej. TransSur Logística" />
@@ -167,14 +167,14 @@
                 </div>
                 <div class="cuy-field" style="margin-bottom: 1rem;">
                     <p:outputLabel for="razonEmp" value="Razón Social" />
-                    <p:inputText id="razonEmp"
+                    <p:inputText id="razonEmp" label="Razón Social"
                                  value="#{funcionarioEmpresasBean.razonSocialForm}"
                                  required="true"
                                  placeholder="Ej. Transportes del Sur S.A." />
                 </div>
                 <div class="cuy-field" style="margin-bottom: 1.25rem;">
                     <p:outputLabel for="dirEmp" value="Dirección Fiscal" />
-                    <p:inputText id="dirEmp"
+                    <p:inputText id="dirEmp" label="Dirección Fiscal"
                                  value="#{funcionarioEmpresasBean.direccionForm}"
                                  required="true"
                                  placeholder="Ej. Ruta 5 Km 24, Canelones" />
@@ -224,16 +224,16 @@
                             <h:panelGroup id="panelInputUsuario" layout="block" styleClass="cuy-field">
                                 <ui:fragment rendered="#{funcionarioEmpresasBean.tipoBusquedaVinculo eq 'ID'}">
                                     <p:outputLabel for="usrVincId" value="ID Usuario" />
-                                    <p:inputNumber id="usrVincId" value="#{funcionarioEmpresasBean.usuarioIdVinculo}" decimalPlaces="0" thousandSeparator="" placeholder="Ej: 3" />
+                                    <p:inputNumber id="usrVincId" label="ID Usuario" value="#{funcionarioEmpresasBean.usuarioIdVinculo}" decimalPlaces="0" thousandSeparator="" placeholder="Ej: 3" />
                                 </ui:fragment>
                                 <ui:fragment rendered="#{funcionarioEmpresasBean.tipoBusquedaVinculo eq 'CI'}">
                                     <p:outputLabel for="usrVincCi" value="Cédula de Identidad" />
-                                    <p:inputNumber id="usrVincCi" value="#{funcionarioEmpresasBean.usuarioCiVinculo}" decimalPlaces="0" thousandSeparator="" placeholder="Ej: 12345678" />
+                                    <p:inputNumber id="usrVincCi" label="Cédula de Identidad" value="#{funcionarioEmpresasBean.usuarioCiVinculo}" decimalPlaces="0" thousandSeparator="" placeholder="Ej: 12345678" />
                                 </ui:fragment>
                             </h:panelGroup>
                             <div class="cuy-field">
                                 <p:outputLabel for="funcVincSelect" value="Función" />
-                                <p:selectOneMenu id="funcVincSelect" value="#{funcionarioEmpresasBean.funcionVinculo}">
+                                <p:selectOneMenu id="funcVincSelect" label="Función" value="#{funcionarioEmpresasBean.funcionVinculo}">
                                     <f:selectItem itemLabel="Responsable" itemValue="RESPONSABLE" />
                                     <f:selectItem itemLabel="Chofer" itemValue="CHOFER" />
                                     <f:selectItem itemLabel="Revocar Vínculo" itemValue="NINGUNO" />
@@ -288,7 +288,7 @@
                     <div style="display: flex; gap: 0.75rem; align-items: flex-end; margin-bottom: 1rem;">
                         <div class="cuy-field" style="flex: 1;">
                             <p:outputLabel for="ciPdiInput" value="Cédula de Identidad (sin puntos ni guión)" />
-                            <p:inputNumber id="ciPdiInput" value="#{funcionarioEmpresasBean.ciConsultaPdi}" decimalPlaces="0" thousandSeparator="" placeholder="Ej. 41234567" />
+                            <p:inputNumber id="ciPdiInput" label="Cédula de Identidad (sin puntos ni guión)" value="#{funcionarioEmpresasBean.ciConsultaPdi}" decimalPlaces="0" thousandSeparator="" placeholder="Ej. 41234567" />
                         </div>
                         <p:commandButton value="Consultar PDI"
                                          icon="pi pi-search"

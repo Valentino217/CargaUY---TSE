@@ -4,4 +4,16 @@
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/web-facesconfig_4_0.xsd"
     version="4.0">
+
+    <application>
+        <!-- Toda la interfaz (mensajes de JSF, calendarios, paginadores, etc.) en español,
+             sin depender del idioma del navegador. -->
+        <locale-config>
+            <default-locale>es</default-locale>
+            <supported-locale>es</supported-locale>
+        </locale-config>
+        <!-- Reemplaza los mensajes técnicos por defecto ("Validation Error: Value is required")
+             por textos que explican qué falta o qué hay que corregir. -->
+        <message-bundle>mensajes_jsf</message-bundle>
+    </application>
 </faces-config>

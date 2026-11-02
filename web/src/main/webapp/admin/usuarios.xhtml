@@ -166,7 +166,7 @@
                 <div class="cuy-form-grid-2">
                     <div class="cuy-field">
                         <p:outputLabel for="tipoUsr" value="Tipo / Rol Base" />
-                        <p:selectOneMenu id="tipoUsr" value="#{adminUsuariosBean.tipoForm}" disabled="#{adminUsuariosBean.modoEdicion}">
+                        <p:selectOneMenu id="tipoUsr" label="Tipo / Rol Base" value="#{adminUsuariosBean.tipoForm}" disabled="#{adminUsuariosBean.modoEdicion}">
                             <f:selectItem itemLabel="CIUDADANO (Empresa)" itemValue="CIUDADANO" />
                             <f:selectItem itemLabel="CHOFER" itemValue="CHOFER" />
                             <f:selectItem itemLabel="FUNCIONARIO" itemValue="FUNCIONARIO" />
@@ -176,33 +176,33 @@
                     </div>
                     <div class="cuy-field">
                         <p:outputLabel for="ciUsr" value="Cédula de Identidad" />
-                        <p:inputNumber id="ciUsr" value="#{adminUsuariosBean.ciForm}" decimalPlaces="0" thousandSeparator="" required="true" disabled="#{adminUsuariosBean.modoEdicion}" />
+                        <p:inputNumber id="ciUsr" label="Cédula de Identidad" value="#{adminUsuariosBean.ciForm}" decimalPlaces="0" thousandSeparator="" required="true" disabled="#{adminUsuariosBean.modoEdicion}" />
                     </div>
                     <div class="cuy-field">
                         <p:outputLabel for="nomUsr" value="Nombre Completo" />
-                        <p:inputText id="nomUsr" value="#{adminUsuariosBean.nombreForm}" required="true" />
+                        <p:inputText id="nomUsr" label="Nombre Completo" value="#{adminUsuariosBean.nombreForm}" required="true" />
                     </div>
                     <div class="cuy-field">
                         <p:outputLabel for="mailUsr" value="Correo Electrónico" />
-                        <p:inputText id="mailUsr" value="#{adminUsuariosBean.mailForm}" required="true" />
+                        <p:inputText id="mailUsr" label="Correo Electrónico" value="#{adminUsuariosBean.mailForm}" required="true" />
                     </div>
                     <div class="cuy-field">
                         <p:outputLabel for="fnacUsr" value="Fecha de Nacimiento *" />
-                        <p:datePicker id="fnacUsr" value="#{adminUsuariosBean.fechaNacForm}" pattern="yyyy-MM-dd" showIcon="true" required="true"  panelStyleClass="cuy-calendar"  monthNavigator="true"  yearNavigator="select"  showButtonBar="true"  showOtherMonths="true"  yearRange="1900:2026"  showLongMonthNames="true" />
+                        <p:datePicker id="fnacUsr" label="Fecha de Nacimiento" value="#{adminUsuariosBean.fechaNacForm}" pattern="yyyy-MM-dd" showIcon="true" required="true"  panelStyleClass="cuy-calendar"  monthNavigator="true"  yearNavigator="select"  showButtonBar="true"  showOtherMonths="true"  yearRange="1900:2026"  showLongMonthNames="true" />
                     </div>
                     <ui:fragment rendered="#{not adminUsuariosBean.modoEdicion}">
                         <div class="cuy-field">
                             <p:outputLabel for="pwdUsr" value="Contraseña Inicial" />
-                            <p:password id="pwdUsr" value="#{adminUsuariosBean.passwordForm}" redisplay="true" />
+                            <p:password id="pwdUsr" label="Contraseña Inicial" value="#{adminUsuariosBean.passwordForm}" redisplay="true" />
                         </div>
                     </ui:fragment>
                     <div class="cuy-field">
                         <p:outputLabel for="nroFuncUsr" value="N° Funcionario (Si aplica)" />
-                        <p:inputNumber id="nroFuncUsr" value="#{adminUsuariosBean.nroFuncionarioForm}" decimalPlaces="0" thousandSeparator="" />
+                        <p:inputNumber id="nroFuncUsr" label="N° Funcionario (Si aplica)" value="#{adminUsuariosBean.nroFuncionarioForm}" decimalPlaces="0" thousandSeparator="" />
                     </div>
                     <div class="cuy-field">
                         <p:outputLabel for="depUsr" value="Departamento / Cargo (Si aplica)" />
-                        <p:inputText id="depUsr" value="#{adminUsuariosBean.departamentoForm}" placeholder="Ej. Fiscalización Vial" />
+                        <p:inputText id="depUsr" label="Departamento / Cargo (Si aplica)" value="#{adminUsuariosBean.departamentoForm}" placeholder="Ej. Fiscalización Vial" />
                     </div>
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.25rem;">
@@ -261,14 +261,14 @@
                         <div class="cuy-form-grid-2">
                             <div class="cuy-field">
                                 <p:outputLabel for="origIdSel" value="Proveedor" />
-                                <p:selectOneMenu id="origIdSel" value="#{adminUsuariosBean.origenIdentidadForm}">
+                                <p:selectOneMenu id="origIdSel" label="Proveedor" value="#{adminUsuariosBean.origenIdentidadForm}">
                                     <f:selectItem itemLabel="OpenLDAP (Staff)" itemValue="LDAP" />
                                     <f:selectItem itemLabel="Usuario gub.uy (OIDC)" itemValue="GUB" />
                                 </p:selectOneMenu>
                             </div>
                             <div class="cuy-field">
                                 <p:outputLabel for="uidExtInput" value="UID / Subject Externo" />
-                                <p:inputText id="uidExtInput" value="#{adminUsuariosBean.uidExternoForm}" placeholder="Ej. martin.admin" />
+                                <p:inputText id="uidExtInput" label="UID / Subject Externo" value="#{adminUsuariosBean.uidExternoForm}" placeholder="Ej. martin.admin" />
                             </div>
                         </div>
                         <div style="margin-top: 0.85rem; text-align: right;">

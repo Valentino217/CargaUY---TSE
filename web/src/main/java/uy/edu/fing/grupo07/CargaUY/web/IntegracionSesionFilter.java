@@ -60,7 +60,7 @@ public class IntegracionSesionFilter implements Filter {
             if (e.getEstado() == 401) {
                 s.sendRedirect(r.getContextPath() + "/login");
             } else {
-                WebSeguridad.error(s, e.getEstado(), e.getMessage());
+                WebSeguridad.error(r, s, e.getEstado(), e.getMessage());
             }
         }
     }

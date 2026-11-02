@@ -168,7 +168,7 @@
                         <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;"/>
                         <h3 style="font-size: 1rem; margin-bottom: 12px; color: #1e3a8a;">Registrar</h3>
                         <p:outputLabel for="descargoInput" value="Argumentos o comprobantes:" style="display: block; font-weight: bold; margin-bottom: 6px;"/>
-                        <p:inputTextarea id="descargoInput" value="#{detalleInfraccionBean.textoDescargo}" rows="3" style="width: 100%; margin-bottom: 12px;" placeholder="Ingrese el descargo de la empresa transportista..."/>
+                        <p:inputTextarea id="descargoInput" label="Argumentos o comprobantes" value="#{detalleInfraccionBean.textoDescargo}" rows="3" style="width: 100%; margin-bottom: 12px;" placeholder="Ingrese el descargo de la empresa transportista..."/>
                         <p:commandButton value="Registrar Descargo" action="#{detalleInfraccionBean.presentarDescargo}" update="formDetalle growl" icon="pi pi-send"/>
                     </h:panelGroup>
                 </p:panel>
@@ -193,11 +193,11 @@
                                 <div style="display: flex; flex-direction: column; gap: 12px; max-width: 600px;">
                                     <div>
                                         <p:outputLabel for="funcIdConf" value="ID Funcionario: " style="font-weight: bold;"/>
-                                        <p:inputNumber id="funcIdConf" value="#{detalleInfraccionBean.funcionarioId}" decimalPlaces="0" style="width: 120px; margin-left: 8px;"/>
+                                        <p:inputNumber id="funcIdConf" label="ID Funcionario" value="#{detalleInfraccionBean.funcionarioId}" decimalPlaces="0" style="width: 120px; margin-left: 8px;"/>
                                     </div>
                                     <div>
                                         <p:outputLabel for="fundamentoConf" value="Fundamento de la Sanción: " style="font-weight: bold; display: block; margin-bottom: 6px;"/>
-                                        <p:inputTextarea id="fundamentoConf" value="#{detalleInfraccionBean.fundamento}" rows="3" style="width: 100%;" placeholder="Motivación..."/>
+                                        <p:inputTextarea id="fundamentoConf" label="Fundamento de la Sanción" value="#{detalleInfraccionBean.fundamento}" rows="3" style="width: 100%;" placeholder="Motivación..."/>
                                     </div>
 
                                 </div>
@@ -211,11 +211,11 @@
                             <div style="display: flex; flex-direction: column; gap: 12px; max-width: 600px;">
                                 <div>
                                     <p:outputLabel for="funcIdDes" value="ID Funcionario: " style="font-weight: bold;"/>
-                                    <p:inputNumber id="funcIdDes" value="#{detalleInfraccionBean.funcionarioId}" decimalPlaces="0" style="width: 120px; margin-left: 8px;"/>
+                                    <p:inputNumber id="funcIdDes" label="ID Funcionario" value="#{detalleInfraccionBean.funcionarioId}" decimalPlaces="0" style="width: 120px; margin-left: 8px;"/>
                                 </div>
                                 <div>
                                     <p:outputLabel for="fundamentoDes" value="Motivo de la Desestimación: " style="font-weight: bold; display: block; margin-bottom: 6px;"/>
-                                    <p:inputTextarea id="fundamentoDes" value="#{detalleInfraccionBean.fundamento}" rows="3" style="width: 100%;" placeholder="Motivo de archivo..."/>
+                                    <p:inputTextarea id="fundamentoDes" label="Motivo de la Desestimación" value="#{detalleInfraccionBean.fundamento}" rows="3" style="width: 100%;" placeholder="Motivo de archivo..."/>
                                 </div>
                                 <div>
                                 

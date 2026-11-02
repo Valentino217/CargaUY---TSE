@@ -117,7 +117,7 @@
                 <div class="cuy-form-grid-2">
                     <div class="cuy-field">
                         <p:outputLabel for="matriculaInput" value="Matrícula" />
-                        <p:inputText id="matriculaInput"
+                        <p:inputText id="matriculaInput" label="Matrícula"
                                      value="#{VehiculoBean.vehiculo.matricula}"
                                      readonly="#{VehiculoBean.editando}"
                                      required="true"
@@ -126,7 +126,7 @@
 
                     <div class="cuy-field">
                         <p:outputLabel for="empresaSelect" value="Empresa" />
-                        <p:selectOneMenu id="empresaSelect" value="#{VehiculoBean.empresaId}" required="true">
+                        <p:selectOneMenu id="empresaSelect" label="Empresa" value="#{VehiculoBean.empresaId}" required="true">
                             <f:selectItem itemLabel="Seleccione empresa..." itemValue="0" noSelectionOption="true" />
                             <f:selectItems value="#{VehiculoBean.empresas}"
                                            var="emp"
@@ -137,7 +137,7 @@
 
                     <div class="cuy-field">
                         <p:outputLabel for="marcaSelect" value="Marca" />
-                        <p:selectOneMenu id="marcaSelect" value="#{VehiculoBean.vehiculo.marca}" required="true">
+                        <p:selectOneMenu id="marcaSelect" label="Marca" value="#{VehiculoBean.vehiculo.marca}" required="true">
                             <f:selectItems value="#{VehiculoBean.marcasDisponibles}" var="m" itemLabel="#{m}" itemValue="#{m}" />
                             <p:ajax listener="#{VehiculoBean.onMarcaChange}" update="modeloSelect pesoInput capInput" />
                         </p:selectOneMenu>
@@ -145,7 +145,7 @@
 
                     <div class="cuy-field">
                         <p:outputLabel for="modeloSelect" value="Modelo" />
-                        <p:selectOneMenu id="modeloSelect" value="#{VehiculoBean.vehiculo.modelo}" required="true">
+                        <p:selectOneMenu id="modeloSelect" label="Modelo" value="#{VehiculoBean.vehiculo.modelo}" required="true">
                             <f:selectItems value="#{VehiculoBean.modelosDisponibles}" var="mdl" itemLabel="#{mdl}" itemValue="#{mdl}" />
                             <p:ajax listener="#{VehiculoBean.onModeloChange}" update="pesoInput capInput" />
                         </p:selectOneMenu>
@@ -153,19 +153,19 @@
 
                     <div class="cuy-field">
                         <p:outputLabel for="pesoInput" value="Peso Propio / Tara (kg)" />
-                        <p:inputNumber id="pesoInput" value="#{VehiculoBean.vehiculo.peso}" decimalPlaces="0"
+                        <p:inputNumber id="pesoInput" label="Peso Propio / Tara (kg)" value="#{VehiculoBean.vehiculo.peso}" decimalPlaces="0"
                                        thousandSeparator="." decimalSeparator="," suffix=" kg" minValue="1" required="true" />
                     </div>
 
                     <div class="cuy-field">
                         <p:outputLabel for="capInput" value="Capacidad Máx. Carga (kg)" />
-                        <p:inputNumber id="capInput" value="#{VehiculoBean.vehiculo.capacidadCarga}" decimalPlaces="0"
+                        <p:inputNumber id="capInput" label="Capacidad Máx. Carga (kg)" value="#{VehiculoBean.vehiculo.capacidadCarga}" decimalPlaces="0"
                                        thousandSeparator="." decimalSeparator="," suffix=" kg" minValue="1" required="true" />
                     </div>
                 </div>
 
                 <div style="margin: 1.15rem 0 1.35rem 0; padding: 0.75rem 1rem; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 0.6rem;">
-                    <p:selectBooleanCheckbox id="habCheck" value="#{VehiculoBean.vehiculo.estadoHabilitacion}" />
+                    <p:selectBooleanCheckbox id="habCheck" label="Unidad habilitada operativamente para asignación de viajes" value="#{VehiculoBean.vehiculo.estadoHabilitacion}" />
                     <p:outputLabel for="habCheck" value="Unidad habilitada operativamente para asignación de viajes" style="font-weight: 600; color: #0f2942; margin: 0;" />
                 </div>
 

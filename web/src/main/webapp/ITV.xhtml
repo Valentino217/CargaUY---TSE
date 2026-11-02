@@ -116,7 +116,7 @@
                 <div class="form-grid">
                     <div class="form-field">
                         <h:outputLabel for="vehiculo" value="Vehículo (Matrícula): *"/>
-                        <h:selectOneMenu id="vehiculo"
+                        <h:selectOneMenu id="vehiculo" label="Vehículo (Matrícula)"
                                          value="#{ITVBean.matricula}"
                                          required="true"
                                          requiredMessage="Debe seleccionar un vehículo obligatorio.">
@@ -130,7 +130,7 @@
 
                     <div class="form-field">
                         <h:outputLabel for="fechaVencimiento" value="Fecha de Vencimiento: *"/>
-                        <p:datePicker id="fechaVencimiento" 
+                        <p:datePicker id="fechaVencimiento" label="Fecha de Vencimiento" 
                                       value="#{ITVBean.itv.fechaVencimiento}"
                                       pattern="dd/MM/yyyy"
                                       required="true"

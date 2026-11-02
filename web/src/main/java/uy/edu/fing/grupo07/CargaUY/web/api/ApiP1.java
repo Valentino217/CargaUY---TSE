@@ -31,7 +31,10 @@ public class ApiP1 {
     @POST @Path("auth/gub/terminar") @Consumes(MediaType.APPLICATION_JSON)
     public Response terminarMovil(JsonObject entrada){
         var l=auth.loginMovil(entrada.getString("code",""),entrada.getString("state",""),entrada.getString("verifier",""));
-        return Response.ok(Json.createObjectBuilder().add("token",l.token()).add("vence",l.vence().toString()).build())
+        // La app movil necesita la CI y el nombre para consultar las guias del chofer logueado.
+        return Response.ok(Json.createObjectBuilder().add("token",l.token())
+                .add("ci",l.usuario().ci()).add("nombre",l.usuario().nombre())
+                .add("vence",l.vence().toString()).build())
             .header("Cache-Control","no-store").build();
     }
     @POST @Path("auth/dev-chofer") @Consumes(MediaType.APPLICATION_JSON)
@@ -54,7 +57,7 @@ public class ApiP1 {
     public JsonObject me(){
         Acceso a=auth.validarToken(token()); JsonArrayBuilder roles=Json.createArrayBuilder();
         a.roles().forEach(r->roles.add(r.name()));
-        return Json.createObjectBuilder().add("id",a.id()).add("nombre",a.nombre())
+        return Json.createObjectBuilder().add("id",a.id()).add("ci",a.ci()).add("nombre",a.nombre())
             .add("roles",roles).build();
     }
     @POST @Path("auth/logout")

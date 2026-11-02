@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:c="jakarta.tags.core"
+      lang="es">
+<h:head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>CargaUY - Ocurri&#243; un problema</title>
+    <link rel="stylesheet" href="#{request.contextPath}/css/plataforma.css"/>
+</h:head>
+<h:body>
+    <!-- Pagina de error unica: depende solo del codigo/excepcion que informa el contenedor. -->
+    <c:set var="codigo" value="#{requestScope['jakarta.servlet.error.status_code']}"/>
+    <c:set var="tipoExcepcion" value="#{requestScope['jakarta.servlet.error.exception_type'].simpleName}"/>
+    <main class="login-container">
+        <section class="card" role="alert">
+            <c:choose>
+                <c:when test="#{tipoExcepcion eq 'ViewExpiredException'}">
+                    <h1>Tu sesi&#243;n venci&#243; por inactividad</h1>
+                    <p>Pasaron varios minutos sin actividad y la pantalla dej&#243; de ser v&#225;lida. Los datos que no guardaste no se conservaron.</p>
+                    <p>Volv&#233; a ingresar para continuar trabajando.</p>
+                </c:when>
+                <c:when test="#{codigo eq 403}">
+                    <h1>No ten&#233;s permiso para acceder</h1>
+                    <p>Tu usuario no tiene habilitada esta pantalla. Si cre&#233;s que deber&#237;as tener acceso, consult&#225; con un administrador de CargaUY.</p>
+                </c:when>
+                <c:when test="#{codigo eq 404}">
+                    <h1>No encontramos esa p&#225;gina</h1>
+                    <p>La direcci&#243;n que abriste no existe o fue movida. Revis&#225; que est&#233; bien escrita o volv&#233; al inicio.</p>
+                </c:when>
+                <c:otherwise>
+                    <h1>Ocurri&#243; un problema inesperado</h1>
+                    <p>No pudimos completar la operaci&#243;n. No es un error tuyo: intent&#225; nuevamente en unos minutos. Si el problema persiste, avis&#225; a un administrador de CargaUY.</p>
+                </c:otherwise>
+            </c:choose>
+            <p><a class="button button-full" href="#{request.contextPath}/login">Volver a ingresar</a></p>
+            <p><a href="#{request.contextPath}/index.xhtml">Ir al inicio</a></p>
+        </section>
+    </main>
+</h:body>
+</html>

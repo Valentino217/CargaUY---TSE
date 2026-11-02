@@ -118,7 +118,7 @@
                 <div class="form-grid">
                     <div class="form-field">
                         <h:outputLabel for="fecha" value="Fecha: *"/>
-                        <p:datePicker id="fecha" 
+                        <p:datePicker id="fecha" label="Fecha" 
                                       value="#{GuiaDeViajeBean.guia.fecha}"
                                       pattern="dd/MM/yyyy"
                                       required="true"
@@ -127,27 +127,27 @@
 
                     <div class="form-field">
                         <h:outputLabel for="origen" value="Origen:"/>
-                        <h:inputText id="origen" value="#{GuiaDeViajeBean.guia.origen}"/>
+                        <h:inputText id="origen" label="Origen" value="#{GuiaDeViajeBean.guia.origen}"/>
                     </div>
 
                     <div class="form-field">
                         <h:outputLabel for="destino" value="Destino:"/>
-                        <h:inputText id="destino" value="#{GuiaDeViajeBean.guia.destino}"/>
+                        <h:inputText id="destino" label="Destino" value="#{GuiaDeViajeBean.guia.destino}"/>
                     </div>
 
                     <div class="form-field">
                         <h:outputLabel for="rubroCliente" value="Rubro Cliente:"/>
-                        <h:inputText id="rubroCliente" value="#{GuiaDeViajeBean.guia.rubroCliente}"/>
+                        <h:inputText id="rubroCliente" label="Rubro Cliente" value="#{GuiaDeViajeBean.guia.rubroCliente}"/>
                     </div>
 
                     <div class="form-field">
                         <h:outputLabel for="volumenCarga" value="Volumen de Carga (m³):"/>
-                        <h:inputText id="volumenCarga" value="#{GuiaDeViajeBean.guia.volumenCarga}"/>
+                        <h:inputText id="volumenCarga" label="Volumen de Carga (m³)" value="#{GuiaDeViajeBean.guia.volumenCarga}"/>
                     </div>
 
                     <div class="form-field">
                         <h:outputLabel for="empresa" value="Empresa: *"/>
-                        <h:selectOneMenu id="empresa"
+                        <h:selectOneMenu id="empresa" label="Empresa"
                                          value="#{GuiaDeViajeBean.empresaId}"
                                          required="true"
                                          requiredMessage="Debe seleccionar una empresa.">
@@ -162,7 +162,7 @@
 
                     <div class="form-field">
                         <h:outputLabel for="vehiculo" value="Vehículo: *"/>
-                        <h:selectOneMenu id="vehiculo"
+                        <h:selectOneMenu id="vehiculo" label="Vehículo"
                                          value="#{GuiaDeViajeBean.matriculaVehiculo}"
                                          required="true"
                                          requiredMessage="Debe seleccionar un vehículo.">
@@ -176,7 +176,7 @@
 
                     <div class="form-field">
                         <h:outputLabel for="chofer" value="Chofer: *"/>
-                        <h:selectOneMenu id="chofer"
+                        <h:selectOneMenu id="chofer" label="Chofer"
                                          value="#{GuiaDeViajeBean.choferId}"
                                          required="true"
                                          requiredMessage="Debe seleccionar un chofer.">

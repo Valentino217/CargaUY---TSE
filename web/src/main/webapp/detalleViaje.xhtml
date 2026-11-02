@@ -167,7 +167,7 @@
             <p:panel header="Selección y Control de Viaje" styleClass="mb-4">
                 <div class="select-bar">
                     <h:outputLabel for="selectGuia" value="Guía de Viaje:" style="font-weight: 600;"/>
-                    <h:selectOneMenu id="selectGuia"
+                    <h:selectOneMenu id="selectGuia" label="Guía de Viaje"
                                      value="#{detalleViajeBean.guiaIdSeleccionada}"
                                      style="min-width: 380px; padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1;">
                         <f:selectItem itemLabel="-- Seleccione una guía --" itemValue="#{null}" noSelectionOption="true"/>
@@ -248,7 +248,7 @@
                     <div style="margin-bottom: 12px;">
                         <h:outputLabel for="faasUrl" value="Endpoint HTTPS de la Función FaaS (AWS Lambda / Google Cloud Function):"
                                        style="font-weight: 600; display: block; margin-bottom: 4px;"/>
-                        <p:inputText id="faasUrl"
+                        <p:inputText id="faasUrl" label="Endpoint HTTPS de la Función FaaS (AWS Lambda / Google Cloud Function)"
                                      value="#{detalleViajeBean.faasEndpointUrl}"
                                      placeholder="https://xxxxxxxx.lambda-url.us-east-1.on.aws/"
                                      style="width: 100%; font-family: monospace;"/>
@@ -257,7 +257,7 @@
                     <div class="faas-grid">
                         <div>
                             <h:outputLabel for="telLat" value="Latitud GPS:" style="font-weight: 600; display: block; margin-bottom: 4px;"/>
-                            <p:inputNumber id="telLat"
+                            <p:inputNumber id="telLat" label="Latitud GPS"
                                            value="#{detalleViajeBean.telemetriaLatitud}"
                                            decimalPlaces="4"
                                            placeholder="-32.9000"
@@ -265,7 +265,7 @@
                         </div>
                         <div>
                             <h:outputLabel for="telLon" value="Longitud GPS:" style="font-weight: 600; display: block; margin-bottom: 4px;"/>
-                            <p:inputNumber id="telLon"
+                            <p:inputNumber id="telLon" label="Longitud GPS"
                                            value="#{detalleViajeBean.telemetriaLongitud}"
                                            decimalPlaces="4"
                                            placeholder="-55.8500"
@@ -273,7 +273,7 @@
                         </div>
                         <div>
                             <h:outputLabel for="telDesc" value="Detalle de Telemetría:" style="font-weight: 600; display: block; margin-bottom: 4px;"/>
-                            <p:inputText id="telDesc"
+                            <p:inputText id="telDesc" label="Detalle de Telemetría"
                                          value="#{detalleViajeBean.telemetriaDescripcion}"
                                          placeholder="Reporte de posición GPS en ruta"
                                          style="width: 100%;"/>
@@ -412,7 +412,7 @@
                 <div style="display: flex; flex-direction: column; gap: 14px; padding-top: 10px;">
                     <div>
                         <h:outputLabel for="incDesc" value="Descripción del Incidente: *" style="font-weight: 600; display: block; margin-bottom: 4px;"/>
-                        <p:inputTextarea id="incDesc"
+                        <p:inputTextarea id="incDesc" label="Descripción del Incidente"
                                          value="#{detalleViajeBean.nuevoIncidenteDescripcion}"
                                          rows="3"
                                          style="width: 100%;"
@@ -422,7 +422,7 @@
 
                     <div>
                         <h:outputLabel for="incFoto" value="Referencia / Foto (URL o Archivo):" style="font-weight: 600; display: block; margin-bottom: 4px;"/>
-                        <p:inputText id="incFoto"
+                        <p:inputText id="incFoto" label="Referencia / Foto (URL o Archivo)"
                                      value="#{detalleViajeBean.nuevoIncidenteFoto}"
                                      placeholder="ej. rotura_cubierta.jpg"
                                      style="width: 100%;"/>
@@ -431,7 +431,7 @@
                     <div style="display: flex; gap: 12px;">
                         <div style="flex: 1;">
                             <h:outputLabel for="incLat" value="Latitud:" style="font-weight: 600; display: block; margin-bottom: 4px;"/>
-                            <p:inputNumber id="incLat"
+                            <p:inputNumber id="incLat" label="Latitud"
                                            value="#{detalleViajeBean.nuevoIncidenteLatitud}"
                                            decimalPlaces="4"
                                            placeholder="-34.9011"
@@ -439,7 +439,7 @@
                         </div>
                         <div style="flex: 1;">
                             <h:outputLabel for="incLon" value="Longitud:" style="font-weight: 600; display: block; margin-bottom: 4px;"/>
-                            <p:inputNumber id="incLon"
+                            <p:inputNumber id="incLon" label="Longitud"
                                            value="#{detalleViajeBean.nuevoIncidenteLongitud}"
                                            decimalPlaces="4"
                                            placeholder="-56.1645"

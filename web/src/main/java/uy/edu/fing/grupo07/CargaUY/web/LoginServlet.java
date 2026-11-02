@@ -19,7 +19,7 @@ public class LoginServlet extends HttpServlet {
             throws IOException,ServletException {
         r.setCharacterEncoding("UTF-8");
         if(!WebSeguridad.transporte(r)||!WebSeguridad.csrf(r)) {
-            WebSeguridad.error(s,403,"Recargá el formulario antes de ingresar"); return;
+            WebSeguridad.error(r,s,403,"Recargá el formulario antes de ingresar"); return;
         }
         try {
             var login=auth.login(r.getParameter("uid"),r.getParameter("password"));

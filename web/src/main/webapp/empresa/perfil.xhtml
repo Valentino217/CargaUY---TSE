@@ -39,17 +39,17 @@
 
                         <div class="cuy-field">
                             <p:outputLabel for="nombre" value="Nombre Completo" />
-                            <p:inputText id="nombre" value="#{empresaPerfilBean.nombreEdit}" required="true" />
+                            <p:inputText id="nombre" label="Nombre Completo" value="#{empresaPerfilBean.nombreEdit}" required="true" />
                         </div>
 
                         <div class="cuy-field">
                             <p:outputLabel for="mail" value="Correo Electrónico de Notificación" />
-                            <p:inputText id="mail" value="#{empresaPerfilBean.mailEdit}" required="true" />
+                            <p:inputText id="mail" label="Correo Electrónico de Notificación" value="#{empresaPerfilBean.mailEdit}" required="true" />
                         </div>
 
                         <div class="cuy-field">
                             <p:outputLabel for="fechaNac" value="Fecha de Nacimiento" />
-                            <p:datePicker id="fechaNac" value="#{empresaPerfilBean.fechaNacEdit}" pattern="yyyy-MM-dd" showIcon="true"  panelStyleClass="cuy-calendar"  monthNavigator="true"  yearNavigator="select"  showButtonBar="true"  showOtherMonths="true"  yearRange="1900:2026"  showLongMonthNames="true" />
+                            <p:datePicker id="fechaNac" label="Fecha de Nacimiento" value="#{empresaPerfilBean.fechaNacEdit}" pattern="yyyy-MM-dd" showIcon="true"  panelStyleClass="cuy-calendar"  monthNavigator="true"  yearNavigator="select"  showButtonBar="true"  showOtherMonths="true"  yearRange="1900:2026"  showLongMonthNames="true" />
                         </div>
                     </div>
 
@@ -125,15 +125,15 @@
                 <p:outputPanel rendered="#{not empty empresaPerfilBean.empresaSeleccionada}">
                     <div class="cuy-field" style="margin-bottom: 1rem;">
                         <p:outputLabel for="razonEdit" value="Razón Social" />
-                        <p:inputText id="razonEdit" value="#{empresaPerfilBean.razonSocialEdit}" required="true" />
+                        <p:inputText id="razonEdit" label="Razón Social" value="#{empresaPerfilBean.razonSocialEdit}" required="true" />
                     </div>
                     <div class="cuy-field" style="margin-bottom: 1rem;">
                         <p:outputLabel for="pubEdit" value="Nombre Público / Comercial" />
-                        <p:inputText id="pubEdit" value="#{empresaPerfilBean.nombrePublicoEdit}" required="true" />
+                        <p:inputText id="pubEdit" label="Nombre Público / Comercial" value="#{empresaPerfilBean.nombrePublicoEdit}" required="true" />
                     </div>
                     <div class="cuy-field" style="margin-bottom: 1.25rem;">
                         <p:outputLabel for="dirEdit" value="Dirección Fiscal" />
-                        <p:inputText id="dirEdit" value="#{empresaPerfilBean.direccionEdit}" required="true" />
+                        <p:inputText id="dirEdit" label="Dirección Fiscal" value="#{empresaPerfilBean.direccionEdit}" required="true" />
                     </div>
 
                     <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
