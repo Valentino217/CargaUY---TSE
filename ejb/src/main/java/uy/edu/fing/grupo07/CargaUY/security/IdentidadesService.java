@@ -69,10 +69,18 @@ public class IdentidadesService {
         if (v==null) { v=new VinculoEmpresa(u,e); em.persist(v); }
         if(responsable!=null) v.setResponsable(responsable);
         if(chofer!=null) v.setChofer(chofer);
+        if (u instanceof Ciudadano c && e.getCiudadanos() != null) {
+            if (v.isResponsable()) { if (!e.getCiudadanos().contains(c)) e.getCiudadanos().add(c); }
+            else { e.getCiudadanos().remove(c); }
+        }
+        if (u instanceof Chofer ch && e.getChoferes() != null) {
+            if (v.isChofer()) { if (!e.getChoferes().contains(ch)) e.getChoferes().add(ch); }
+            else { e.getChoferes().remove(ch); }
+        }
         // false/false conserva el vínculo sin permisos, útil para trazabilidad.
     }
     
-    public record VinculoVista(int usuario,String nombre,boolean responsable,boolean chofer){
+    public record VinculoVista(int usuario,String nombre,boolean responsable,boolean chofer) implements java.io.Serializable {
     }
 
     public Integer buscarIdPorCi(int ci) {

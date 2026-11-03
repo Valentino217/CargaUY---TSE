@@ -16,8 +16,11 @@ public class CiudadanosApi {
         var r=pdi.consultar((String)req.getAttribute("token"),ci,(String)http.getAttribute("correlacion"));
         var json=Json.createObjectBuilder().add("estado",r.estado().name()).add("mensaje",r.mensaje());
         if(r.ci()!=null)json.add("ci",r.ci());
-        if(r.nombre()!=null)json.add("nombre",r.nombre()).add("apellido",r.apellido())
-            .add("fechaNacimiento",r.fechaNacimiento().toString()).add("vigente",r.vigente());
+        if(r.nombre()!=null)json.add("nombre",r.nombre());
+        if(r.apellido()!=null)json.add("apellido",r.apellido());
+        if(r.fechaNacimiento()!=null)json.add("fechaNacimiento",r.fechaNacimiento().toString());
+        if(r.vigente()!=null)json.add("vigente",r.vigente());
+
         return json.build();
     }
 }

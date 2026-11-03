@@ -9,11 +9,13 @@ COPY pom.xml .
 COPY ejb/pom.xml ejb/
 COPY web/pom.xml web/
 COPY ear/pom.xml ear/
+COPY gub-callback-root/pom.xml gub-callback-root/
 RUN mvn -B -q dependency:go-offline -DskipTests || true
 
 # Después el código fuente
 COPY ejb/src ejb/src
 COPY web/src web/src
+COPY gub-callback-root/src gub-callback-root/src
 RUN mvn -B package -DskipTests
 
 # =====================================================================
@@ -41,6 +43,7 @@ RUN /opt/jboss/wildfly/bin/jboss-cli.sh --file=/opt/jboss/configure-wildfly.cli 
 
 # Copiar el EAR compilado en la etapa 1
 COPY --from=build --chown=jboss:jboss /build/ear/target/CargaUY.ear /opt/jboss/wildfly/standalone/deployments/
+COPY --from=build --chown=jboss:jboss /build/gub-callback-root/target/gub-callback-root.war /opt/jboss/wildfly/standalone/deployments/
 
 EXPOSE 8080 9990
 

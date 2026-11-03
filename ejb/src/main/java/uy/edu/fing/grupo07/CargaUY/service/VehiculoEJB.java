@@ -20,9 +20,9 @@ public class VehiculoEJB implements VehiculoEJBLocal {
     public List<Vehiculo> listarParaActor(String token) {
         var actor=control.exigir(token);
         if(actor.tiene(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.ADMINISTRADOR)) return listarVehiculos();
-        return em.createQuery("select v from Vehiculo v join fetch v.empresa e where e.activa=true "
+        return inicializarRelaciones(em.createQuery("select v from Vehiculo v join fetch v.empresa e where e.activa=true "
             +"and exists(select x from VinculoEmpresa x where x.empresa=e and x.usuario.id=:id and x.responsable=true) "
-            +"order by v.matricula",Vehiculo.class).setParameter("id",actor.id()).getResultList();
+            +"order by v.matricula",Vehiculo.class).setParameter("id",actor.id()).getResultList());
     }
     public List<Empresa> listarEmpresasParaActor(String token) {
         var actor=control.exigir(token);
@@ -37,7 +37,7 @@ public class VehiculoEJB implements VehiculoEJBLocal {
     public Vehiculo buscar(String token,String matricula) {
         Vehiculo v=buscar(matricula);
         if(v!=null) control.empresa(token,v.getEmpresa().getNroEmpresa(),false);
-        return v;
+        return inicializarRelaciones(v);
     }
     public void crear(String token,Vehiculo v) {
         if (v == null || v.getMatricula() == null || v.getMatricula().isBlank()) {
@@ -70,9 +70,32 @@ public class VehiculoEJB implements VehiculoEJBLocal {
 
     public VehiculoEJB() {
     }
+
+    private Vehiculo inicializarRelaciones(Vehiculo v) {
+        if (v != null) {
+            if (v.getItv() != null) v.getItv().size();
+            if (v.getPncs() != null) v.getPncs().size();
+        }
+        return v;
+    }
+
+    private List<Vehiculo> inicializarRelaciones(List<Vehiculo> lista) {
+        if (lista != null) {
+            for (Vehiculo v : lista) inicializarRelaciones(v);
+        }
+        return lista;
+    }
     
     @Override
     public List<Vehiculo> listarVehiculos() {
+        return inicializarRelaciones(em.createQuery(
+            "SELECT v FROM Vehiculo v " +
+            "LEFT JOIN FETCH v.empresa",
+            Vehiculo.class
+        ).getResultList());
+    }
+    @SuppressWarnings("unused")
+    private List<Vehiculo> listarVehiculosInternalUnused() {
         return em.createQuery(
             "SELECT v FROM Vehiculo v " +
             "LEFT JOIN FETCH v.empresa",
@@ -114,7 +137,33 @@ public class VehiculoEJB implements VehiculoEJBLocal {
         if (tieneGuiaEnCurso(vehiculo.getMatricula())) {
             throw new IllegalStateException("No se puede editar el vehículo " + vehiculo.getMatricula() + " porque tiene una guía de viaje EN_CURSO.");
         }
-        em.merge(vehiculo);
+        Vehiculo existente = buscar(vehiculo.getMatricula());
+        if (existente != null) {
+            existente.setMarca(vehiculo.getMarca());
+            existente.setModelo(vehiculo.getModelo());
+            existente.setPeso(vehiculo.getPeso());
+            existente.setCapacidadCarga(vehiculo.getCapacidadCarga());
+            existente.setEstadoHabilitacion(vehiculo.isEstadoHabilitacion());
+            existente.setEmpresa(vehiculo.getEmpresa());
+            if (vehiculo.getPncs() != null && !vehiculo.getPncs().isEmpty()) {
+                for (var pnc : vehiculo.getPncs()) {
+                    if (pnc.getNro() == 0) {
+                        pnc.setVehiculo(existente);
+                        existente.getPncs().add(pnc);
+                    }
+                }
+            }
+            if (vehiculo.getItv() != null && !vehiculo.getItv().isEmpty()) {
+                for (var itv : vehiculo.getItv()) {
+                    if (itv.getNroCertificado() == 0) {
+                        itv.setVehiculo(existente);
+                        existente.getItv().add(itv);
+                    }
+                }
+            }
+        } else {
+            em.merge(vehiculo);
+        }
     }
 
     @Override
@@ -168,7 +217,7 @@ public class VehiculoEJB implements VehiculoEJBLocal {
         if (v == null && !matricula.equals(upper)) {
             v = em.find(Vehiculo.class, upper);
         }
-        return v;
+        return inicializarRelaciones(v);
     }
 
     @Override

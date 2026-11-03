@@ -27,7 +27,7 @@ import java.util.logging.Logger;
  * encargada del procesamiento geoespacial de eventos de tracking y cálculo de desvío (Haversine).
  */
 @ApplicationScoped
-public class FaasTrackingClient {
+public class FaasTrackingClient implements java.io.Serializable {
 
     private static final Logger LOGGER = Logger.getLogger(FaasTrackingClient.class.getName());
     private static final Duration TIMEOUT = Duration.ofSeconds(6);
@@ -35,7 +35,7 @@ public class FaasTrackingClient {
 
     private static final Map<String, double[]> CATALOGO_LOCALIDADES_UY = crearCatalogoLocalidades();
 
-    private final HttpClient httpClient;
+    private transient final HttpClient httpClient;
     private volatile String endpointUrl;
     private final String sharedSecret;
 
@@ -143,7 +143,7 @@ public class FaasTrackingClient {
                 evento.longitud(),
                 evento.guiaId(),
                 evento.incidente(),
-                desvioCalculado
+                desvioCalculado, evento.cantidadKg(), evento.mercaderia(), evento.empresaCarga(), evento.matricula()
         );
 
         String motivoFallback = "Cálculo Haversine ejecutado en modo respaldo local (configure FAAS_TRACKING_URL para nube pública)";
@@ -229,7 +229,7 @@ public class FaasTrackingClient {
                     evento.longitud(),
                     evento.guiaId(),
                     evento.incidente(),
-                    desvioKm
+                    desvioKm, evento.cantidadKg(), evento.mercaderia(), evento.empresaCarga(), evento.matricula()
             );
 
             String timestampFaas = objetoResultado.getString("faasTimestamp", "");

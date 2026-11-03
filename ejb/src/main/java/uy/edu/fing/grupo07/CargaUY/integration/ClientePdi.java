@@ -32,7 +32,7 @@ public class ClientePdi {
     @PostConstruct public void iniciar(){
         endpoint=URI.create(Config.valor("pdi.endpoint","http://localhost:8081/pdi/ws"));
         boolean local=Boolean.parseBoolean(Config.valor("p1.entorno.local","false"))
-            && ("localhost".equals(endpoint.getHost())||"127.0.0.1".equals(endpoint.getHost()));
+            && ("localhost".equals(endpoint.getHost())||"127.0.0.1".equals(endpoint.getHost())||"mock-pdi".equals(endpoint.getHost()));
         if(!"https".equals(endpoint.getScheme())&&!("http".equals(endpoint.getScheme())&&local))
             throw new IllegalStateException("PDI requiere HTTPS fuera del entorno local");
         http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(1)).build();

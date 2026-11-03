@@ -18,6 +18,7 @@ import uy.edu.fing.grupo07.CargaUY.dto.ReportarIncidenteDTO;
 import uy.edu.fing.grupo07.CargaUY.fiscalizacion.MotorFiscalizacionLocal;
 import uy.edu.fing.grupo07.CargaUY.integration.FaasTrackingClient;
 import uy.edu.fing.grupo07.CargaUY.jms.TrackingProducerLocal;
+import uy.edu.fing.grupo07.CargaUY.nosql.PosicionNoSqlRepositoryLocal;
 import uy.edu.fing.grupo07.CargaUY.service.GestionBalanzaServiceLocal;
 import uy.edu.fing.grupo07.CargaUY.service.GestionEventosServiceLocal;
 import uy.edu.fing.grupo07.CargaUY.service.GuiaDeViajeEJBLocal;
@@ -57,6 +58,9 @@ public class DetalleViajeBean implements Serializable {
 
     @EJB
     private MotorFiscalizacionLocal motorFiscalizacion;
+
+    @EJB
+    private PosicionNoSqlRepositoryLocal posicionNoSqlRepository;
 
     @Inject
     private FaasTrackingClient faasTrackingClient;
@@ -340,7 +344,7 @@ public class DetalleViajeBean implements Serializable {
             EventoViajeDTO eventoBase = new EventoViajeDTO(
                     UUID.randomUUID().toString(),
                     LocalDateTime.now(),
-                    TipoEvento.INCIDENTE,
+                    TipoEvento.POSICION,
                     telemetriaLatitud,
                     telemetriaLongitud,
                     guiaIdDto,
@@ -687,6 +691,24 @@ public class DetalleViajeBean implements Serializable {
             return pesadas.size();
         }
         return 0;
+    }
+
+    public boolean isMongoNoSqlOperativo() {
+        return posicionNoSqlRepository != null && posicionNoSqlRepository.estaOperativo();
+    }
+
+    public long getTotalEventosNoSqlGuia() {
+        if (posicionNoSqlRepository != null && guiaIdSeleccionada != null) {
+            return posicionNoSqlRepository.contarEventosPorGuia(guiaIdSeleccionada);
+        }
+        return 0L;
+    }
+
+    public String getDescriptorMongoNoSql() {
+        if (posicionNoSqlRepository != null) {
+            return posicionNoSqlRepository.obtenerDescriptorEndpoint();
+        }
+        return "mongodb://localhost:27017/cargauy_tracking.eventos_posicion";
     }
 
     private void mostrarMensaje(FacesMessage.Severity severidad, String resumen, String detalle) {

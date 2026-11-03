@@ -33,7 +33,7 @@ public class EmpresasServlet extends HttpServlet {
             Object mensaje=r.getSession().getAttribute("mensajeEmpresas");
             if(mensaje!=null){r.setAttribute("mensaje",mensaje);r.getSession().removeAttribute("mensajeEmpresas");}
         } catch(ErrorAcceso e){s.setStatus(e.getEstado());r.setAttribute("error",e.getMessage());}
-          catch(ErrorNegocio|IllegalArgumentException e){s.setStatus(400);r.setAttribute("error",e.getMessage());}
+          catch(ErrorNegocio|IllegalArgumentException|java.time.format.DateTimeParseException|NullPointerException e){s.setStatus(400);r.setAttribute("error",e.getMessage()!=null?e.getMessage():"Parámetros inválidos");}
           catch(EJBException e){fallo(r,s,e);}
         mostrar(r,s);
     }
@@ -100,7 +100,7 @@ public class EmpresasServlet extends HttpServlet {
             s.setStatus(303);
             s.setHeader("Location",r.getContextPath()+"/app/empresa?seccion="+seccion+"&numero="+empresa);
         } catch(ErrorAcceso e){s.setStatus(e.getEstado());r.setAttribute("error",e.getMessage());mostrar(r,s);}
-          catch(ErrorNegocio|IllegalArgumentException e){s.setStatus(400);r.setAttribute("error",e.getMessage());mostrar(r,s);}
+          catch(ErrorNegocio|IllegalArgumentException|java.time.format.DateTimeParseException|NullPointerException e){s.setStatus(400);r.setAttribute("error",e.getMessage()!=null?e.getMessage():"Parámetros inválidos");mostrar(r,s);}
           catch(EJBException e){fallo(r,s,e);mostrar(r,s);}
     }
 

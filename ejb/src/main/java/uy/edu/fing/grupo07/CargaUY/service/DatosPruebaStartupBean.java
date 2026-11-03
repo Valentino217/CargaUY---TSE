@@ -107,6 +107,7 @@ public class DatosPruebaStartupBean {
                 87654321,
                 "ciudadano123"
         );
+        ciudadano.getRoles().add(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.CIUDADANO);
         entityManager.persist(ciudadano);
 
         Chofer chofer = new Chofer(
@@ -116,6 +117,7 @@ public class DatosPruebaStartupBean {
                 11223344,
                 "chofer123"
         );
+        chofer.getRoles().add(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.CHOFER);
         entityManager.persist(chofer);
 
         Chofer choferJuan = new Chofer(
@@ -125,6 +127,7 @@ public class DatosPruebaStartupBean {
                 55667788,
                 "chofer123"
         );
+        choferJuan.getRoles().add(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.CHOFER);
         entityManager.persist(choferJuan);
 
         Funcionario funcionario = new Funcionario(
@@ -136,6 +139,7 @@ public class DatosPruebaStartupBean {
                 101,
                 "Montevideo"
         );
+        funcionario.getRoles().add(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.FUNCIONARIO);
         entityManager.persist(funcionario);
 
         Autoridad autoridad = new Autoridad(
@@ -146,6 +150,7 @@ public class DatosPruebaStartupBean {
                 "autoridad123",
                 "Dirección Nacional de Transporte"
         );
+        autoridad.getRoles().add(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.AUTORIDAD);
         entityManager.persist(autoridad);
 
         Administrador administrador = new Administrador(
@@ -155,6 +160,7 @@ public class DatosPruebaStartupBean {
                 10000001,
                 "admin123"
         );
+        administrador.getRoles().add(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.ADMINISTRADOR);
         entityManager.persist(administrador);
 
         // 2. Rubros y tipos de carga
@@ -218,6 +224,15 @@ public class DatosPruebaStartupBean {
         empresaTransporte.getVehiculos().add(vehiculoHabilitado);
         empresaTransporte.getVehiculos().add(vehiculoInhabilitado);
         entityManager.persist(empresaTransporte);
+        var vinculoResponsable = new uy.edu.fing.grupo07.CargaUY.domain.entity.VinculoEmpresa(ciudadano, empresaTransporte);
+        vinculoResponsable.setResponsable(true);
+        entityManager.persist(vinculoResponsable);
+        var vinculoChofer1 = new uy.edu.fing.grupo07.CargaUY.domain.entity.VinculoEmpresa(chofer, empresaTransporte);
+        vinculoChofer1.setChofer(true);
+        entityManager.persist(vinculoChofer1);
+        var vinculoChofer2 = new uy.edu.fing.grupo07.CargaUY.domain.entity.VinculoEmpresa(choferJuan, empresaTransporte);
+        vinculoChofer2.setChofer(true);
+        entityManager.persist(vinculoChofer2);
 
         // 4. Guía #1: En curso con eventos, pesadas e infracción por exceso de carga detectada
         GuiaDeViaje guiaEnCurso = new GuiaDeViaje(

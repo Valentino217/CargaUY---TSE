@@ -18,8 +18,10 @@ import uy.edu.fing.grupo07.CargaUY.domain.entity.Vehiculo;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.EstadoInfraccion;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoInfraccion;
+import uy.edu.fing.grupo07.CargaUY.dto.EventoViajeDTO;
 import uy.edu.fing.grupo07.CargaUY.exception.BusinessException;
 import uy.edu.fing.grupo07.CargaUY.jms.NotificacionProducerLocal;
+import uy.edu.fing.grupo07.CargaUY.nosql.PosicionNoSqlRepositoryLocal;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -46,6 +48,9 @@ public class MotorFiscalizacionImpl implements MotorFiscalizacionLocal {
     @EJB
     private NotificacionProducerLocal notificacionProducer;
 
+    @EJB
+    private PosicionNoSqlRepositoryLocal posicionNoSqlRepository;
+
     public MotorFiscalizacionImpl() {
     }
 
@@ -56,6 +61,16 @@ public class MotorFiscalizacionImpl implements MotorFiscalizacionLocal {
     public MotorFiscalizacionImpl(EntityManager em, NotificacionProducerLocal notificacionProducer) {
         this.em = em;
         this.notificacionProducer = notificacionProducer;
+    }
+
+    public MotorFiscalizacionImpl(
+            EntityManager em,
+            NotificacionProducerLocal notificacionProducer,
+            PosicionNoSqlRepositoryLocal posicionNoSqlRepository
+    ) {
+        this.em = em;
+        this.notificacionProducer = notificacionProducer;
+        this.posicionNoSqlRepository = posicionNoSqlRepository;
     }
 
     @Override
@@ -389,6 +404,24 @@ public class MotorFiscalizacionImpl implements MotorFiscalizacionLocal {
     }
 
     private EventoViaje buscarEventoConMayorDesvio(GuiaDeViaje guia) {
+        EventoViaje mayor = null;
+
+        if (posicionNoSqlRepository != null && guia.getId() != null) {
+            EventoViajeDTO dtoNoSql = posicionNoSqlRepository.buscarEventoConMayorDesvio(guia.getId());
+            if (dtoNoSql != null && dtoNoSql.distanciaDesvioKm() != null) {
+                EventoViaje evNoSql = new EventoViaje(
+                        dtoNoSql.uuid(),
+                        dtoNoSql.tiempo(),
+                        dtoNoSql.tipo(),
+                        dtoNoSql.latitud(),
+                        dtoNoSql.longitud(),
+                        guia
+                );
+                evNoSql.setDistanciaDesvioKm(dtoNoSql.distanciaDesvioKm());
+                mayor = evNoSql;
+            }
+        }
+
         TypedQuery<EventoViaje> query = em.createQuery(
                 "SELECT e FROM EventoViaje e WHERE e.guia.id = :guiaId AND e.distanciaDesvioKm IS NOT NULL ORDER BY e.distanciaDesvioKm DESC",
                 EventoViaje.class
@@ -399,20 +432,22 @@ public class MotorFiscalizacionImpl implements MotorFiscalizacionLocal {
 
             List<EventoViaje> resultados = query.getResultList();
             if (resultados != null && !resultados.isEmpty()) {
-                return resultados.get(0);
+                EventoViaje candidato = resultados.get(0);
+                if (candidato != null && candidato.getDistanciaDesvioKm() != null) {
+                    if (mayor == null || candidato.getDistanciaDesvioKm() > mayor.getDistanciaDesvioKm()) {
+                        mayor = candidato;
+                    }
+                }
             }
         }
 
         List<EventoViaje> eventosEnMemoria = guia.getEventos();
-        if (eventosEnMemoria == null || eventosEnMemoria.isEmpty()) {
-            return null;
-        }
-
-        EventoViaje mayor = null;
-        for (EventoViaje ev : eventosEnMemoria) {
-            if (ev != null && ev.getDistanciaDesvioKm() != null) {
-                if (mayor == null || ev.getDistanciaDesvioKm() > mayor.getDistanciaDesvioKm()) {
-                    mayor = ev;
+        if (eventosEnMemoria != null) {
+            for (EventoViaje ev : eventosEnMemoria) {
+                if (ev != null && ev.getDistanciaDesvioKm() != null) {
+                    if (mayor == null || ev.getDistanciaDesvioKm() > mayor.getDistanciaDesvioKm()) {
+                        mayor = ev;
+                    }
                 }
             }
         }

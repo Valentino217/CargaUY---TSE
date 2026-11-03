@@ -31,6 +31,12 @@
             <groupId>at.favre.lib</groupId>
             <artifactId>bcrypt</artifactId>
         </dependency>
+
+        <!-- Empaquetar el driver de MongoDB en /lib del EAR para persistencia NoSQL/Time-Series -->
+        <dependency>
+            <groupId>org.mongodb</groupId>
+            <artifactId>mongodb-driver-sync</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

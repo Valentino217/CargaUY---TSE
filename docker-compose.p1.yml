@@ -26,6 +26,11 @@ services:
   mock-balanza:
     build: ./docker/mock-balanza
     ports: ["8082:8080"]
+  mongodb:
+    image: mongo:7
+    ports: ["27017:27017"]
+    volumes: ["mongo_p1:/data/db"]
 volumes:
   ldap_p1:
   keycloak_p1:
+  mongo_p1:

@@ -16,7 +16,7 @@ public class NacimientoPendienteFilter implements Filter {
         String ruta=r.getServletPath();
         if (ruta.startsWith("/api/") || ruta.startsWith("/gub/")
                 || ruta.contains("/jakarta.faces.resource/") || ruta.startsWith("/css/")
-                || ruta.startsWith("/resources/") || ruta.equals("/login") || ruta.equals("/logout")) {
+                || ruta.startsWith("/resources/") || ruta.startsWith("/js/") || ruta.equals("/error.xhtml") || ruta.equals("/login") || ruta.equals("/logout")) {
             chain.doFilter(r,s); return;
         }
         String token=WebSeguridad.token(r);

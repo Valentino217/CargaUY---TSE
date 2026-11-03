@@ -12,9 +12,9 @@ import uy.edu.fing.grupo07.CargaUY.domain.entity.*;
 @LocalBean
 public class GestionPlataformaService {
     @EJB private ControlAcceso control;
-    public record RubroVista(int codigo, String nombre, String descripcion) {}
-    public record TipoCargaVista(int codigo, String descripcion) {}
-    public record ReglaVista(int cargaKg, double desvioKm, long version) {}
+    public record RubroVista(int codigo, String nombre, String descripcion) implements java.io.Serializable {}
+    public record TipoCargaVista(int codigo, String descripcion) implements java.io.Serializable {}
+    public record ReglaVista(int cargaKg, double desvioKm, long version) implements java.io.Serializable {}
 
     @PersistenceContext(unitName = "CargaUYPersistenceUnit")
     private EntityManager em;

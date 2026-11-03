@@ -17,6 +17,7 @@ public class ApiP1 {
     @POST @Path("auth/login") @Consumes(MediaType.APPLICATION_JSON)
     public Response login(JsonObject datos) {
         try {
+            if (datos == null) throw new ErrorAcceso(400, "Cuerpo JSON requerido");
             var l=auth.login(datos.getString("uid",""),datos.getString("password",""));
             return Response.ok(Json.createObjectBuilder().add("token",l.token())
                 .add("vence",l.vence().toString()).build()).header("Cache-Control","no-store").build();
@@ -25,11 +26,12 @@ public class ApiP1 {
     }
     @POST @Path("auth/gub/iniciar") @Consumes(MediaType.APPLICATION_JSON)
     public JsonObject prepararMovil(JsonObject entrada){
-        var i=auth.prepararMovil(entrada.getString("challenge",""));
+        var i=auth.prepararMovil(entrada==null?"":entrada.getString("challenge",""));
         return Json.createObjectBuilder().add("state",i.state()).add("nonce",i.nonce()).add("url",i.url()).build();
     }
     @POST @Path("auth/gub/terminar") @Consumes(MediaType.APPLICATION_JSON)
     public Response terminarMovil(JsonObject entrada){
+        if (entrada == null) return Response.status(400).entity(Json.createObjectBuilder().add("error","Cuerpo JSON requerido").build()).build();
         var l=auth.loginMovil(entrada.getString("code",""),entrada.getString("state",""),entrada.getString("verifier",""));
         // La app movil necesita la CI y el nombre para consultar las guias del chofer logueado.
         return Response.ok(Json.createObjectBuilder().add("token",l.token())

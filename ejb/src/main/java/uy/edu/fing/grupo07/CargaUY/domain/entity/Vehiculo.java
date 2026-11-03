@@ -154,8 +154,8 @@ public class Vehiculo implements Serializable {
      */
     public boolean verificarHabilitacionVigenteEn(LocalDate fechaReferencia) {
         LocalDate ref = fechaReferencia != null ? fechaReferencia : LocalDate.now();
-        boolean itvValido = itvs != null && itvs.stream().anyMatch(i -> i.isVigenteEn(ref));
-        boolean pncValido = pncs != null && pncs.stream().anyMatch(p -> p.isVigenteEn(ref));
+        boolean itvValido = jakarta.persistence.Persistence.getPersistenceUtil().isLoaded(this, "itvs") && itvs != null && itvs.stream().anyMatch(i -> i.isVigenteEn(ref));
+        boolean pncValido = jakarta.persistence.Persistence.getPersistenceUtil().isLoaded(this, "pncs") && pncs != null && pncs.stream().anyMatch(p -> p.isVigenteEn(ref));
         return estadoHabilitacion && itvValido && pncValido;
     }
 
@@ -164,7 +164,7 @@ public class Vehiculo implements Serializable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Vehiculo vehiculo = (Vehiculo) o;
-        return matricula == vehiculo.matricula;
+        return Objects.equals(matricula, vehiculo.matricula);
     }
 
     @Override

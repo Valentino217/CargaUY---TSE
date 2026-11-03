@@ -8,6 +8,7 @@ target/
 .apt_generated_tests
 .factorypath
 /.local-p1/
+docker-compose.p1.override.yml
 
 # OS files
 .DS_Store

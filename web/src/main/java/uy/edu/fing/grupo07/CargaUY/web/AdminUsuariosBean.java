@@ -97,7 +97,7 @@ public class AdminUsuariosBean implements Serializable {
         this.ciForm = u.ci();
         this.passwordForm = null;
         this.nroFuncionarioForm = u.nroFuncionario();
-        this.departamentoForm = u.departamento();
+        this.departamentoForm = (u.departamento() != null && !u.departamento().isBlank()) ? u.departamento() : (u.cargo() != null ? u.cargo() : "");
         this.cargoForm = u.cargo();
     }
 
@@ -113,7 +113,7 @@ public class AdminUsuariosBean implements Serializable {
                     modoEdicion ? null : (passwordForm == null || passwordForm.isBlank() ? "Temporal123!" : passwordForm),
                     nroFuncionarioForm,
                     departamentoForm,
-                    cargoForm
+                    (cargoForm == null || cargoForm.isBlank()) ? departamentoForm : cargoForm
             );
             if (modoEdicion) {
                 perfilesService.modificarUsuario(token, idEdit, versionEdit, datos);

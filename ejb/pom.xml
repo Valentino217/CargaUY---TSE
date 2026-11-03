@@ -104,6 +104,12 @@
             <artifactId>bcrypt</artifactId>
         </dependency>
 
+        <!-- Driver de MongoDB para persistencia NoSQL / serie temporal de eventos de posición (Req. 10) -->
+        <dependency>
+            <groupId>org.mongodb</groupId>
+            <artifactId>mongodb-driver-sync</artifactId>
+        </dependency>
+
         <!-- Mockito para tests unitarios -->
         <dependency>
             <groupId>org.mockito</groupId>

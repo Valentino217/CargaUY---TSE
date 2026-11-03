@@ -10,5 +10,6 @@ public enum TipoEvento {
     CARGA_PARCIAL,
     DESCARGA,
     DESCARGA_PARCIAL,
-    INCIDENTE
+    INCIDENTE,
+    POSICION
 }

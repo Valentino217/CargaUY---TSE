@@ -24,7 +24,7 @@ public class PanelServlet extends HttpServlet {
         try { Object resultado=ejecutar(r); r.setAttribute("resultado",
                 resultado==null?"Operación completada":resultado.toString()); }
         catch(ErrorAcceso e){s.setStatus(e.getEstado());r.setAttribute("error",e.getMessage());}
-        catch(ErrorNegocio|IllegalArgumentException e){s.setStatus(400);r.setAttribute("error",e.getMessage());}
+        catch(ErrorNegocio|IllegalArgumentException|java.time.format.DateTimeParseException|NullPointerException e){s.setStatus(400);r.setAttribute("error",e.getMessage()!=null?e.getMessage():"Parámetros inválidos");}
         catch(EJBException e){
             boolean conflicto=false;
             for(Throwable causa=e;causa!=null;causa=causa.getCause())

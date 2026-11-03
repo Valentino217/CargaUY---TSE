@@ -47,6 +47,7 @@
 
         <version.mockito>5.14.2</version.mockito>
         <version.bcrypt>0.10.2</version.bcrypt>
+        <version.mongodb.driver>5.2.1</version.mongodb.driver>
         <version.jakarta.xml.ws>4.0.2</version.jakarta.xml.ws>
 
         <!-- maven-compiler-plugin -->
@@ -168,6 +169,13 @@
                 <groupId>at.favre.lib</groupId>
                 <artifactId>bcrypt</artifactId>
                 <version>${version.bcrypt}</version>
+            </dependency>
+
+            <!-- Driver síncrono de MongoDB para persistencia NoSQL/Time-Series de posición (Req. 10) -->
+            <dependency>
+                <groupId>org.mongodb</groupId>
+                <artifactId>mongodb-driver-sync</artifactId>
+                <version>${version.mongodb.driver}</version>
             </dependency>
 
             <!-- Mockito para tests unitarios -->

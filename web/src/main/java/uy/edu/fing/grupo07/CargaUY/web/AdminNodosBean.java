@@ -6,6 +6,7 @@ import jakarta.faces.application.FacesMessage;
 import jakarta.faces.context.FacesContext;
 import jakarta.faces.view.ViewScoped;
 import jakarta.inject.Named;
+import uy.edu.fing.grupo07.CargaUY.nosql.PosicionNoSqlRepositoryLocal;
 import uy.edu.fing.grupo07.CargaUY.security.Config;
 import uy.edu.fing.grupo07.CargaUY.service.GestionBalanzaServiceLocal;
 import uy.edu.fing.grupo07.CargaUY.service.GestionPlataformaService;
@@ -30,6 +31,9 @@ public class AdminNodosBean implements Serializable {
 
     @EJB
     private GestionPlataformaService plataformaService;
+
+    @EJB
+    private PosicionNoSqlRepositoryLocal posicionNoSqlRepository;
 
     public record NodoPerifericoVista(
             String codigo,
@@ -110,6 +114,23 @@ public class AdminNodosBean implements Serializable {
                 "java:/jms/queue/FiscalizacionQueue",
                 true,
                 "Consumidor FiscalizacionMDB Activo"
+        ));
+
+        boolean mongoUp = posicionNoSqlRepository != null && posicionNoSqlRepository.estaOperativo();
+        String mongoEndpoint = posicionNoSqlRepository != null
+                ? posicionNoSqlRepository.obtenerDescriptorEndpoint()
+                : "mongodb://localhost:27017/cargauy_tracking.eventos_posicion";
+        long totalEventosMongo = (posicionNoSqlRepository != null) ? posicionNoSqlRepository.contarTotalEventos() : 0L;
+
+        nodos.add(new NodoPerifericoVista(
+                "NOSQL-MONGO-01",
+                "Base NoSQL / Serie Temporal de Posiciones (MongoDB)",
+                "MongoDB 7 Time-Series / GeoJSON",
+                mongoEndpoint,
+                mongoUp,
+                mongoUp
+                        ? "Colección Time-Series Activa (" + totalEventosMongo + " eventos de posición registrados)"
+                        : "Respaldo en Memoria Activo (MongoDB Offline)"
         ));
     }
 

@@ -2,6 +2,9 @@ package uy.edu.fing.grupo07.CargaUY.web;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.ejb.EJB;
@@ -11,7 +14,7 @@ import jakarta.faces.view.ViewScoped;
 import jakarta.inject.Named;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.ITV;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.Vehiculo;
-import uy.edu.fing.grupo07.CargaUY.service.ITVEJB; // Asegúrate de que apunte a tu EJB correspondiente
+import uy.edu.fing.grupo07.CargaUY.service.ITVEJB;
 import uy.edu.fing.grupo07.CargaUY.service.VehiculoEJB;
 
 @Named("ITVBean")
@@ -30,25 +33,30 @@ public class ITVBean implements Serializable {
     private List<Vehiculo> vehiculos;
     private ITV itv;
     private boolean editando;
-    
+
     private String matricula;
-    
-    // Creamos una constante o variable de clase temporal para la simulación
-    private int ciudadanoActual() { return SesionActual.actor().id(); }
 
     @PostConstruct
     public void init() {
-        itvs = itvEJB.listarITVs();
         vehiculos = vehiculoEJB.listarParaActor(SesionActual.token());
+        cargarItvsAutorizadas();
         nuevo();
+    }
+
+    private void cargarItvsAutorizadas() {
+        Set<String> mats = vehiculos == null ? Set.of()
+                : vehiculos.stream().map(Vehiculo::getMatricula).filter(Objects::nonNull).collect(Collectors.toSet());
+        itvs = itvEJB.listarITVs().stream()
+                .filter(i -> i.getVehiculo() != null && mats.contains(i.getVehiculo().getMatricula()))
+                .toList();
     }
 
     public void nuevo() {
         itv = new ITV();
-        matricula = null; // Limpiamos la selección del combo box
+        matricula = null;
         editando = false;
     }
-    
+
     public void guardar() {
         try {
             if (vehiculos == null || matricula == null || matricula.trim().isEmpty()) {
@@ -56,7 +64,6 @@ public class ITVBean implements Serializable {
             }
 
             Vehiculo vehiculoSeleccionado = null;
-
             for (Vehiculo v : vehiculos) {
                 if (v.getMatricula() != null && v.getMatricula().equals(matricula)) {
                     vehiculoSeleccionado = v;
@@ -68,9 +75,8 @@ public class ITVBean implements Serializable {
                 throw new IllegalArgumentException("Vehículo no encontrado en el sistema");
             }
 
-            // Asignamos el objeto Vehiculo completo a la entidad ITV
             itv.setVehiculo(vehiculoSeleccionado);
-            
+
             if (editando) {
                 itvEJB.modificar(itv);
                 mostrarMensaje(FacesMessage.SEVERITY_INFO, "Éxito", "ITV modificada correctamente");
@@ -79,8 +85,8 @@ public class ITVBean implements Serializable {
                 mostrarMensaje(FacesMessage.SEVERITY_INFO, "Éxito", "ITV registrada correctamente");
             }
 
-            itvs = itvEJB.listarITVs();
-            nuevo(); // Limpia el formulario y resetea campos para la siguiente acción
+            cargarItvsAutorizadas();
+            nuevo();
 
         } catch (Exception e) {
             mostrarMensaje(
@@ -90,12 +96,11 @@ public class ITVBean implements Serializable {
             );
         }
     }
-    
+
     public void editar(ITV itvSeleccionada) {
         this.itv = itvSeleccionada;
         this.editando = true;
-        
-        // Precargamos la matrícula para que el h:selectOneMenu se posicione en el camión correcto
+
         if (itvSeleccionada.getVehiculo() != null) {
             this.matricula = itvSeleccionada.getVehiculo().getMatricula();
         } else {
@@ -105,16 +110,19 @@ public class ITVBean implements Serializable {
 
     public void eliminar(ITV itvEliminar) {
         try {
+            if (itvEliminar == null || itvEliminar.getVehiculo() == null || vehiculos == null
+                    || vehiculos.stream().noneMatch(v -> Objects.equals(v.getMatricula(), itvEliminar.getVehiculo().getMatricula()))) {
+                throw new SecurityException("No tiene permisos para eliminar la ITV seleccionada.");
+            }
             itvEJB.eliminar(itvEliminar);
-            itvs = itvEJB.listarITVs();
+            cargarItvsAutorizadas();
 
             mostrarMensaje(
                     FacesMessage.SEVERITY_INFO,
                     "Éxito",
                     "ITV eliminada correctamente"
-                );
+            );
 
-            // CORRECCIÓN: Comprobación basada estrictamente en nroCertificado
             if (this.itv != null && this.itv.getNroCertificado() == itvEliminar.getNroCertificado()) {
                 nuevo();
             }
@@ -127,7 +135,7 @@ public class ITVBean implements Serializable {
             );
         }
     }
-    
+
     private void mostrarMensaje(FacesMessage.Severity severity, String resumen, String detalle) {
         FacesContext.getCurrentInstance().addMessage(
                 null,
@@ -135,10 +143,9 @@ public class ITVBean implements Serializable {
         );
     }
 
-    // GETTERS Y SETTERS
     public List<ITV> getItvs() { return itvs; }
     public void setItvs(List<ITV> itvs) { this.itvs = itvs; }
-    
+
     public List<Vehiculo> getVehiculos() { return vehiculos; }
     public void setVehiculos(List<Vehiculo> vehiculos) { this.vehiculos = vehiculos; }
 

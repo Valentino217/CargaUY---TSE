@@ -2,6 +2,9 @@ package uy.edu.fing.grupo07.CargaUY.web;
 
 import java.io.Serializable;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.ejb.EJB;
@@ -12,43 +15,48 @@ import jakarta.inject.Named;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.PNC;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.Vehiculo;
 import uy.edu.fing.grupo07.CargaUY.service.PNCEJB;
-import uy.edu.fing.grupo07.CargaUY.service.VehiculoEJB; // <-- Asegúrate de importar tu EJB de vehículos
+import uy.edu.fing.grupo07.CargaUY.service.VehiculoEJB;
 
 @Named("PNCBean")
-@ViewScoped 
-public class PNCBean implements Serializable { 
-    
+@ViewScoped
+public class PNCBean implements Serializable {
+
     private static final long serialVersionUID = 1L;
 
     @EJB
     private PNCEJB pncEJB;
 
-    @EJB // <-- Inyectamos el servicio para poder rellenar la lista de vehículos disponibles
-    private VehiculoEJB vehiculoEJB; 
+    @EJB
+    private VehiculoEJB vehiculoEJB;
 
     private List<PNC> pncs;
     private List<Vehiculo> vehiculos;
     private PNC pnc;
     private boolean editando;
-    
+
     private String matricula;
-    
- // Creamos una constante o variable de clase temporal para la simulación
-    private int ciudadanoActual() { return SesionActual.actor().id(); }
 
     @PostConstruct
     public void init() {
-        pncs = pncEJB.listarPNCs();
         vehiculos = vehiculoEJB.listarParaActor(SesionActual.token());
+        cargarPncsAutorizados();
         nuevo();
+    }
+
+    private void cargarPncsAutorizados() {
+        Set<String> mats = vehiculos == null ? Set.of()
+                : vehiculos.stream().map(Vehiculo::getMatricula).filter(Objects::nonNull).collect(Collectors.toSet());
+        pncs = pncEJB.listarPNCs().stream()
+                .filter(p -> p.getVehiculo() != null && mats.contains(p.getVehiculo().getMatricula()))
+                .toList();
     }
 
     public void nuevo() {
         pnc = new PNC();
-        matricula = null; // Limpiamos la selección del combo
+        matricula = null;
         editando = false;
     }
-    
+
     public void guardar() {
         try {
             if (vehiculos == null || matricula == null || matricula.trim().isEmpty()) {
@@ -56,9 +64,7 @@ public class PNCBean implements Serializable {
             }
 
             Vehiculo vehiculoSeleccionado = null;
-
             for (Vehiculo vehiculo : vehiculos) {
-                // CORRECCIÓN: Uso estricto de .equals() para comparar cadenas de texto
                 if (vehiculo.getMatricula() != null && vehiculo.getMatricula().equals(matricula)) {
                     vehiculoSeleccionado = vehiculo;
                     break;
@@ -70,7 +76,7 @@ public class PNCBean implements Serializable {
             }
 
             pnc.setVehiculo(vehiculoSeleccionado);
-            
+
             if (editando) {
                 pncEJB.modificar(pnc);
                 mostrarMensaje(FacesMessage.SEVERITY_INFO, "Éxito", "PNC modificado correctamente");
@@ -79,8 +85,8 @@ public class PNCBean implements Serializable {
                 mostrarMensaje(FacesMessage.SEVERITY_INFO, "Éxito", "PNC registrado correctamente");
             }
 
-            pncs = pncEJB.listarPNCs();
-            nuevo(); // Limpia el formulario y la matrícula para el siguiente registro
+            cargarPncsAutorizados();
+            nuevo();
 
         } catch (Exception e) {
             mostrarMensaje(
@@ -90,12 +96,11 @@ public class PNCBean implements Serializable {
             );
         }
     }
-    
+
     public void editar(PNC pncSeleccionado) {
         this.pnc = pncSeleccionado;
         this.editando = true;
-        
-        // CORRECCIÓN: Precargamos la matrícula en el formulario para que el combo se posicione correctamente
+
         if (pncSeleccionado.getVehiculo() != null) {
             this.matricula = pncSeleccionado.getVehiculo().getMatricula();
         } else {
@@ -105,8 +110,12 @@ public class PNCBean implements Serializable {
 
     public void eliminar(PNC pncEliminar) {
         try {
+            if (pncEliminar == null || pncEliminar.getVehiculo() == null || vehiculos == null
+                    || vehiculos.stream().noneMatch(v -> Objects.equals(v.getMatricula(), pncEliminar.getVehiculo().getMatricula()))) {
+                throw new SecurityException("No tiene permisos para eliminar el PNC seleccionado.");
+            }
             pncEJB.eliminar(pncEliminar);
-            pncs = pncEJB.listarPNCs();
+            cargarPncsAutorizados();
 
             mostrarMensaje(
                     FacesMessage.SEVERITY_INFO,
@@ -126,7 +135,7 @@ public class PNCBean implements Serializable {
             );
         }
     }
-    
+
     private void mostrarMensaje(FacesMessage.Severity severity, String resumen, String detalle) {
         FacesContext.getCurrentInstance().addMessage(
                 null,
@@ -134,10 +143,9 @@ public class PNCBean implements Serializable {
         );
     }
 
-    // GETTERS Y SETTERS
     public List<PNC> getPncs() { return pncs; }
     public void setPncs(List<PNC> pncs) { this.pncs = pncs; }
-    
+
     public List<Vehiculo> getVehiculos() { return vehiculos; }
     public void setVehiculos(List<Vehiculo> vehiculos) { this.vehiculos = vehiculos; }
 

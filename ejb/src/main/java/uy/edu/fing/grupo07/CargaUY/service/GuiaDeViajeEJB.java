@@ -43,8 +43,8 @@ public class GuiaDeViajeEJB implements GuiaDeViajeEJBLocal {
         java.time.LocalDate ref = fechaReferencia != null ? fechaReferencia : java.time.LocalDate.now();
         StringBuilder sb = new StringBuilder();
         if (!v.isEstadoHabilitacion()) sb.append("suspendido administrativamente; ");
-        boolean itv = v.getItv() != null && v.getItv().stream().anyMatch(i -> i.isVigenteEn(ref));
-        boolean pnc = v.getPncs() != null && v.getPncs().stream().anyMatch(p -> p.isVigenteEn(ref));
+        boolean itv = jakarta.persistence.Persistence.getPersistenceUtil().isLoaded(v, "itvs") && v.getItv() != null && v.getItv().stream().anyMatch(i -> i.isVigenteEn(ref));
+        boolean pnc = jakarta.persistence.Persistence.getPersistenceUtil().isLoaded(v, "pncs") && v.getPncs() != null && v.getPncs().stream().anyMatch(p -> p.isVigenteEn(ref));
         if (!itv) sb.append("sin ITV vigente al ").append(ref).append("; ");
         if (!pnc) sb.append("sin PNC vigente al ").append(ref).append("; ");
         return sb.toString().trim();
@@ -136,7 +136,12 @@ public class GuiaDeViajeEJB implements GuiaDeViajeEJBLocal {
     		existente.setDestino(guia.getDestino());
     		existente.setRubroCliente(guia.getRubroCliente());
     		existente.setVolumenCarga(guia.getVolumenCarga());
-            em.merge(guia);
+            if (guia.getEmpresa() != null) existente.setEmpresa(guia.getEmpresa());
+            if (guia.getVehiculo() != null) existente.setVehiculo(guia.getVehiculo());
+            existente.setChofer(guia.getChofer());
+            if (jakarta.persistence.Persistence.getPersistenceUtil().isLoaded(guia, "tiposCarga") && guia.getTiposCarga() != null) {
+                existente.setTiposCarga(guia.getTiposCarga());
+            }
     }
 
     @Override

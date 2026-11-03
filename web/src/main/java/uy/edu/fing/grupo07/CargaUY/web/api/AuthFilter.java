@@ -20,7 +20,10 @@ public class AuthFilter implements ContainerRequestFilter {
         String p=r.getUriInfo().getPath().replaceFirst("^/","");
         if((p.equals("auth/login")||p.equals("auth/gub/iniciar")||p.equals("auth/gub/terminar")||p.equals("auth/dev-chofer"))&&r.getMethod().equals("POST")
                 ||(p.equals("public/health")||p.equals("public/ready"))&&r.getMethod().equals("GET")) return;
-        if(p.equals("chofer/eventos/faas")&&r.getMethod().equals("POST")&&validarSecretoFaas(r)) return;
+        if(p.equals("chofer/eventos/faas")&&r.getMethod().equals("POST")&&validarSecretoFaas(r)) {
+            if(r.getLength()>1_048_576) { r.abortWith(Response.status(413).type(MediaType.APPLICATION_JSON_TYPE).entity(java.util.Map.of("error","Lote demasiado grande")).build()); return; }
+            return;
+        }
         String h=r.getHeaderString("Authorization");
         String token=h!=null&&h.startsWith("Bearer ")?h.substring(7):null;
         try {

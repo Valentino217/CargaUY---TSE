@@ -16,10 +16,14 @@ import uy.edu.fing.grupo07.CargaUY.dto.*;
 import uy.edu.fing.grupo07.CargaUY.exception.BusinessException;
 import uy.edu.fing.grupo07.CargaUY.integration.FaasTrackingClient;
 import uy.edu.fing.grupo07.CargaUY.jms.FiscalizacionProducerLocal;
+import uy.edu.fing.grupo07.CargaUY.nosql.PosicionNoSqlRepositoryLocal;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Stateless
@@ -33,6 +37,9 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
 
     @EJB
     private FiscalizacionProducerLocal fiscalizacionProducer;
+
+    @EJB
+    private PosicionNoSqlRepositoryLocal posicionNoSqlRepository;
 
     public GestionEventosServiceImpl() {
     }
@@ -57,15 +64,35 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
         this.fiscalizacionProducer = fiscalizacionProducer;
     }
 
+    public GestionEventosServiceImpl(
+            EntityManager em,
+            FaasTrackingClient faasTrackingClient,
+            FiscalizacionProducerLocal fiscalizacionProducer,
+            PosicionNoSqlRepositoryLocal posicionNoSqlRepository
+    ) {
+        this.em = em;
+        this.faasTrackingClient = faasTrackingClient;
+        this.fiscalizacionProducer = fiscalizacionProducer;
+        this.posicionNoSqlRepository = posicionNoSqlRepository;
+    }
+
     @Override
     public boolean existeEvento(String uuid) {
         if (uuid == null || uuid.isBlank()) {
             return false;
         }
-        Long count = em.createQuery(
-                "SELECT COUNT(e) FROM EventoViaje e WHERE e.uuid = :uuid", Long.class)
-                .setParameter("uuid", uuid)
-                .getSingleResult();
+        if (posicionNoSqlRepository != null && posicionNoSqlRepository.existeEvento(uuid)) {
+            return true;
+        }
+        if (em == null) {
+            return false;
+        }
+        TypedQuery<Long> q = em.createQuery(
+                "SELECT COUNT(e) FROM EventoViaje e WHERE e.uuid = :uuid", Long.class);
+        if (q == null) {
+            return false;
+        }
+        Long count = q.setParameter("uuid", uuid).getSingleResult();
         return count != null && count > 0;
     }
 
@@ -116,7 +143,44 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
             evento.setIncidente(incidente);
         }
 
-        em.persist(evento);
+        // Requerimiento Opcional 10: los eventos de posición pura (TipoEvento.POSICION) se persisten
+        // en la colección de serie temporal de MongoDB (NoSQL). Si el repositorio NoSQL no está inyectado
+        // (p. ej. dobles de prueba legacy), o si es un hito operativo del viaje, se persiste en JPA primero.
+        if (dto.tipo() != TipoEvento.POSICION || posicionNoSqlRepository == null) {
+            em.persist(evento);
+        }
+
+        if (false) {
+        }
+
+        if (posicionNoSqlRepository != null) {
+            String matriculaGuia = (guia.getVehiculo() != null && guia.getVehiculo().getMatricula() != null)
+                    ? guia.getVehiculo().getMatricula()
+                    : dto.matricula();
+            EventoViajeDTO dtoPosicion = new EventoViajeDTO(
+                    evento.getUuid(),
+                    evento.getTiempo(),
+                    evento.getTipo(),
+                    evento.getLatitud(),
+                    evento.getLongitud(),
+                    guia.getId(),
+                    dto.incidente(),
+                    evento.getDistanciaDesvioKm(),
+                    evento.getCantidadKg(),
+                    evento.getMercaderia(),
+                    evento.getEmpresaCarga(),
+                    matriculaGuia
+            );
+            posicionNoSqlRepository.guardarEventoPosicion(dtoPosicion, guia.getId(), matriculaGuia);
+        }
+
+        // Requerimiento Opcional 10: los eventos de posición pura (TipoEvento.POSICION) se persisten
+        // en la colección de serie temporal de MongoDB (NoSQL). Si el repositorio NoSQL no está inyectado
+        // (p. ej. dobles de prueba legacy), o si es un hito operativo del viaje, se persiste en JPA.
+        if (false) {
+            em.persist(evento);
+        }
+
         if (fiscalizacionProducer != null && guia.getId() != null) {
             fiscalizacionProducer.solicitarEvaluacion(guia.getId());
         }
@@ -317,42 +381,61 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
             throw new BusinessException("El ID de guía no puede ser nulo.");
         }
 
-        List<EventoViaje> eventos = em.createQuery(
-                "SELECT e FROM EventoViaje e LEFT JOIN FETCH e.incidente WHERE e.guia.id = :guiaId ORDER BY e.tiempo ASC",
-                EventoViaje.class)
-                .setParameter("guiaId", guiaId)
-                .getResultList();
+        Map<String, EventoViajeDTO> porUuid = new LinkedHashMap<>();
 
-        List<EventoViajeDTO> dtos = new ArrayList<>();
-        for (EventoViaje ev : eventos) {
-            IncidenteDTO incDto = null;
-            if (ev.getIncidente() != null) {
-                incDto = new IncidenteDTO(ev.getIncidente().getFoto(), ev.getIncidente().getDescripcion());
-            }
-            Long idGuia = null;
-            String matricula = null;
-            if (ev.getGuia() != null) {
-                idGuia = ev.getGuia().getId();
-                if (ev.getGuia().getVehiculo() != null) {
-                    matricula = ev.getGuia().getVehiculo().getMatricula();
+        if (em != null) {
+            TypedQuery<EventoViaje> q = em.createQuery(
+                    "SELECT e FROM EventoViaje e LEFT JOIN FETCH e.incidente WHERE e.guia.id = :guiaId ORDER BY e.tiempo ASC",
+                    EventoViaje.class);
+            if (q != null) {
+                List<EventoViaje> eventos = q.setParameter("guiaId", guiaId).getResultList();
+                if (eventos != null) {
+                    for (EventoViaje ev : eventos) {
+                        IncidenteDTO incDto = null;
+                        if (ev.getIncidente() != null) {
+                            incDto = new IncidenteDTO(ev.getIncidente().getFoto(), ev.getIncidente().getDescripcion());
+                        }
+                        Long idGuia = null;
+                        String matricula = null;
+                        if (ev.getGuia() != null) {
+                            idGuia = ev.getGuia().getId();
+                            if (ev.getGuia().getVehiculo() != null) {
+                                matricula = ev.getGuia().getVehiculo().getMatricula();
+                            }
+                        }
+                        EventoViajeDTO dto = new EventoViajeDTO(
+                                ev.getUuid(),
+                                ev.getTiempo(),
+                                ev.getTipo(),
+                                ev.getLatitud(),
+                                ev.getLongitud(),
+                                idGuia,
+                                incDto,
+                                ev.getDistanciaDesvioKm(),
+                                ev.getCantidadKg(),
+                                ev.getMercaderia(),
+                                ev.getEmpresaCarga(),
+                                matricula
+                        );
+                        porUuid.put(ev.getUuid(), dto);
+                    }
                 }
             }
-            dtos.add(new EventoViajeDTO(
-                    ev.getUuid(),
-                    ev.getTiempo(),
-                    ev.getTipo(),
-                    ev.getLatitud(),
-                    ev.getLongitud(),
-                    idGuia,
-                    incDto,
-                    ev.getDistanciaDesvioKm(),
-                    ev.getCantidadKg(),
-                    ev.getMercaderia(),
-                    ev.getEmpresaCarga(),
-                    matricula
-            ));
         }
 
+        if (posicionNoSqlRepository != null) {
+            List<EventoViajeDTO> eventosNoSql = posicionNoSqlRepository.listarEventosPorGuia(guiaId);
+            if (eventosNoSql != null) {
+                for (EventoViajeDTO evNoSql : eventosNoSql) {
+                    if (evNoSql != null && evNoSql.uuid() != null) {
+                        porUuid.putIfAbsent(evNoSql.uuid(), evNoSql);
+                    }
+                }
+            }
+        }
+
+        List<EventoViajeDTO> dtos = new ArrayList<>(porUuid.values());
+        dtos.sort(Comparator.comparing(ev -> ev.tiempo() != null ? ev.tiempo() : LocalDateTime.MIN));
         return dtos;
     }
 

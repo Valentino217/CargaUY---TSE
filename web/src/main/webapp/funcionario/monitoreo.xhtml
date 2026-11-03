@@ -80,10 +80,16 @@
             <div class="cuy-grid-2">
                 <!-- Columna 1: Eventos de Tracking -->
                 <div class="cuy-card" style="margin-bottom: 0;">
-                    <h3 class="cuy-card-title">
-                        <i class="pi pi-compass" style="color: #2563eb;" />
-                        Línea Temporal de Eventos (#{detalleViajeBean.totalEventos})
-                    </h3>
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.65rem;">
+                        <h3 class="cuy-card-title" style="margin-bottom: 0;">
+                            <i class="pi pi-compass" style="color: #2563eb;" />
+                            Línea Temporal de Eventos (#{detalleViajeBean.totalEventos})
+                        </h3>
+                        <p:tag value="MongoDB NoSQL Time-Series (#{detalleViajeBean.totalEventosNoSqlGuia} pos.)"
+                               severity="#{detalleViajeBean.mongoNoSqlOperativo ? 'success' : 'warning'}"
+                               icon="pi pi-database"
+                               rounded="true" />
+                    </div>
                     <p:dataTable id="tablaEventosViaje"
                                  var="ev"
                                  value="#{detalleViajeBean.eventos}"

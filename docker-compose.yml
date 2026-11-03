@@ -27,23 +27,38 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      mongodb:
+        condition: service_started
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: cargauy
       DB_USER: cargauy
       DB_PASSWORD: cargauy123
+      P1_ENTORNO_LOCAL: "true"
       PDI_ENDPOINT: http://mock-pdi:8080/pdi/ws
       BALANZA_ENDPOINT: http://mock-balanza:8080
+      MONGO_URI: mongodb://mongodb:27017
     ports:
       - "8080:8080"
       - "9990:9990"
+
+  mongodb:
+    image: mongo:7
+    container_name: cargauy-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodata:/data/db
 
   mock-pdi:
     build:
       context: ./docker/mock-pdi
     container_name: cargauy-mock-pdi
     restart: unless-stopped
+    environment:
+      PDI_PUBLIC_ENDPOINT: http://mock-pdi:8080/pdi/ws
     ports:
       - "8081:8080"
 
@@ -57,4 +72,6 @@ services:
 
 volumes:
   pgdata:
+    driver: local
+  mongodata:
     driver: local
