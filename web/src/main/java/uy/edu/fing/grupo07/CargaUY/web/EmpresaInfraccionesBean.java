@@ -5,20 +5,19 @@ import jakarta.ejb.EJB;
 import jakarta.faces.application.FacesMessage;
 import jakarta.faces.context.FacesContext;
 import jakarta.faces.view.ViewScoped;
-import jakarta.inject.Named;
-import uy.edu.fing.grupo07.CargaUY.domain.entity.Empresa;
+import jakarta.inject.Named;import uy.edu.fing.grupo07.CargaUY.domain.entity.CredencialesFirma;import uy.edu.fing.grupo07.CargaUY.domain.entity.Empresa;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.EstadoInfraccion;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoInfraccion;
 import uy.edu.fing.grupo07.CargaUY.dto.DescargoRequestDTO;
 import uy.edu.fing.grupo07.CargaUY.dto.InfraccionDTO;
 import uy.edu.fing.grupo07.CargaUY.service.GestionInfraccionesServiceLocal;
-import uy.edu.fing.grupo07.CargaUY.service.VehiculoEJB;
+import uy.edu.fing.grupo07.CargaUY.service.VehiculoEJB;import uy.edu.fing.grupo07.CargaUY.service.ActaServiceEJB;import java.time.LocalDate;import java.time.format.DateTimeFormatter;import org.primefaces.model.file.UploadedFile;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.stream.Collectors;import org.primefaces.model.StreamedContent;import org.primefaces.model.DefaultStreamedContent;import java.io.ByteArrayInputStream;
 
 /**
  * Managed Bean para /empresa/infracciones.xhtml.
@@ -29,7 +28,7 @@ import java.util.stream.Collectors;
 public class EmpresaInfraccionesBean implements Serializable {
 
     private static final long serialVersionUID = 1L;
-
+ // 1. Inyectas tu EJB    @EJB    private ActaServiceEJB actaEJB;
     @EJB
     private GestionInfraccionesServiceLocal infraccionesService;
 
@@ -39,7 +38,7 @@ public class EmpresaInfraccionesBean implements Serializable {
     private List<InfraccionDTO> infracciones;
     private List<InfraccionDTO> infraccionesFiltradas;
     private InfraccionDTO seleccionada;
-    private String textoDescargo;
+    private String textoDescargo;        //campos para cargar el certificado .p12////////////////////////////////////////////////////////////////////////////////            private UploadedFile certificado;    //recibe el archivo .p12 seleccionado desde el diálogo.    private String passwordCertificado;    //recibe la contraseña ingresada por el inspector.//////////////////////////////////////////////////////////////////////    // Variable para la descarga del PDF    private StreamedContent pdfFirmadoDescarga;
 
     @PostConstruct
     public void init() {
@@ -154,13 +153,13 @@ public class EmpresaInfraccionesBean implements Serializable {
 
     public void setTextoDescargo(String textoDescargo) {
         this.textoDescargo = textoDescargo;
-    }
-
+    }        public void setpasswordCertificado(String password) {    	this.passwordCertificado = password;    }
+        public String getpasswordCertificado() {    	return this.passwordCertificado;    }        public UploadedFile getCertificado() {        return certificado;    }    public void setCertificado(UploadedFile certificado) {        this.certificado = certificado;    }  
     public EstadoInfraccion[] getEstadosInfraccion() {
         return EstadoInfraccion.values();
     }
 
     public TipoInfraccion[] getTiposInfraccion() {
         return TipoInfraccion.values();
-    }
-}
+    }        ////////////////agrego codigo para descargar pdf acta     public StreamedContent emitirYFirmarActa() {           try {                           	      DateTimeFormatter formato = DateTimeFormatter.ofPattern("dd/MM/yyyy");        	       String fechaString =  this.seleccionada.fecha().format(formato);        	      // Le pedimos al EJB que haga el trabajo pesado de PDFBox y Bouncy Castle        	       byte[] pdfOriginal = actaEJB.emitirYFirmarActa(                   this.seleccionada.idCaso(),                   this.seleccionada.nombreEmpresa(),                   this.seleccionada.matricula(),                   fechaString,                   this.seleccionada.tipo().toString(),                   this.seleccionada.evidencia()                   );                                     //abrimos las credenciales        	       CredencialesFirma credenciales = actaEJB.abrirCredenciales(certificado.getContent(), passwordCertificado);                         	      //firmamos el pdf        	               	       byte[] pdfFirmado = actaEJB.firmarPdf(        	    	        pdfOriginal,        	    	        credenciales.getClavePrivada(),        	    	        credenciales.getCertificado()        	    	);                                      // Dejamos el PDF listo                   this.pdfFirmadoDescarga = DefaultStreamedContent.builder()                           .name("Acta_Oficial_" + this.seleccionada.idCaso() + ".pdf")                           .contentType("application/pdf")                           .stream(() -> new ByteArrayInputStream(pdfFirmado))                           .build();                   // RETORNAMOS el archivo para que el navegador lo descargue                   return this.pdfFirmadoDescarga;                                     } catch (Exception e) {                    FacesContext.getCurrentInstance().addMessage(null,                    new FacesMessage(FacesMessage.SEVERITY_ERROR, "Error", e.getMessage()));                                        return null;                 }finally {                        //limpio certificado y password luego de descargar el reporte                	    certificado = null;                	    passwordCertificado = null;                }      }         public StreamedContent getPdfFirmadoDescarga() {        return pdfFirmadoDescarga;     }          public void probarCargaCertificado() {    	    if (certificado == null || certificado.getSize() == 0) {    	        FacesContext.getCurrentInstance().addMessage(null,    	            new FacesMessage(    	                FacesMessage.SEVERITY_ERROR,    	                "Error",    	                "No se recibió ningún certificado."    	            ));    	        return;    	    }else {    	    FacesContext.getCurrentInstance().addMessage(null,    	        new FacesMessage(    	            FacesMessage.SEVERITY_INFO,    	            "Carga correcta",    	            "Archivo: " + certificado.getFileName()    	            + " - Tamaño: " + certificado.getSize() + " bytes"    	        ));    	    }    	        	    //verifico si abre el certificado    	        	    try {    	        byte[] archivo = certificado.getInputStream().readAllBytes();    	        actaEJB.abrirCredenciales(archivo, passwordCertificado);    	        FacesContext.getCurrentInstance().addMessage(null,    	                new FacesMessage("Certificado abierto correctamente"));    	    } catch (Exception e) {    	        FacesContext.getCurrentInstance().addMessage(null,    	                new FacesMessage(FacesMessage.SEVERITY_ERROR,    	                        "Error", "No se pudo abrir el certificado."));    	    }    	        	        	        	        	        	        	        	        	        	        	        	        	}
+  }

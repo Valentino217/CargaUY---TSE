@@ -129,7 +129,8 @@
                                rounded="true" />
                     </p:column>
 
-                    <p:column headerText="Acciones" style="width: 165px; text-align: center;" exportable="false">
+                    <p:column headerText="Acciones" style="width: 200px; text-align: center;" exportable="false">
+                      <div style="display: flex; gap: 0.35rem; justify-content: center;">
                         <p:commandButton value="#{empresaInfraccionesBean.puedePresentarDescargo(inf) ? 'Ver / Descargo' : 'Ver Expediente'}"
                                          icon="#{empresaInfraccionesBean.puedePresentarDescargo(inf) ? 'pi pi-file-edit' : 'pi pi-eye'}"
                                          actionListener="#{empresaInfraccionesBean.seleccionarParaDescargo(inf)}"
@@ -137,6 +138,20 @@
                                          oncomplete="PF('dlgDescargoWidget').show()"
                                          styleClass="#{empresaInfraccionesBean.puedePresentarDescargo(inf) ? 'ui-button-warning' : 'ui-button-outlined ui-button-secondary'}"
                                          style="font-size: 0.82rem;" />
+                         
+                         
+                         <!-- NUEVO BOTÓN (Solo visual por ahora) para agregar las actas -->
+                         <p:commandButton value="Generar Acta"
+                         icon="pi pi-file-pdf"
+                         actionListener="#{empresaInfraccionesBean.seleccionarParaDescargo(inf)}"
+                         update=":dlgActaForm"
+                         oncomplete="PF('dlgActaWidget').show()"
+                         rendered="#{inf.estado().name() eq 'CONFIRMADA'}"
+                         styleClass="ui-button-outlined ui-button-danger"
+                         style="font-size: 0.82rem;" />
+                    
+                    
+                     </div>
                     </p:column>
                 </p:dataTable>
             </div>
@@ -224,5 +239,94 @@
                 </h:panelGroup>
             </h:form>
         </p:dialog>
+        <!-- agrego dialog modal para generar el acta -->
+        <!-- Modal de Emisión y Firma de Acta Oficial -->
+        <p:dialog header="Emisión de Acta Oficial con Firma Digital"
+          widgetVar="dlgActaWidget"
+          modal="true"
+          responsive="true"
+          fitViewport="true"
+          contentStyle="max-height: 70vh; overflow-y: auto;"
+          closeOnEscape="true">
+    
+        <h:form id="dlgActaForm" enctype="multipart/form-data">
+            <h:panelGroup rendered="#{empresaInfraccionesBean.seleccionada != null}">
+              <div class="ui-fluid">
+                
+                <!-- Encabezado del Acta -->
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #dc2626; border-radius: 8px; padding: 0.85rem 1rem; margin-bottom: 1rem;">
+                    <div style="font-size: 0.78rem; color: #64748b; text-transform: uppercase; font-weight: 700;">
+                        Documento Oficial a Emitir
+                    </div>
+                    <div style="font-size: 1.1rem; font-weight: 800; color: #0f2942;">
+                        Acta de Infracción #<h:outputText value="#{empresaInfraccionesBean.seleccionada.idCaso()}" />
+                    </div>
+                </div>
+                <!-- Resumen de los datos que irán impresos en el PDF -->
+                <p:panelGrid columns="2" layout="grid" styleClass="ui-panelgrid-blank" style="margin-bottom: 1rem;">
+                    <h:outputText value="Empresa Infractora:" style="font-weight: 600; color: #475569;" />
+                    <h:outputText value="#{empresaInfraccionesBean.seleccionada.nombreEmpresa()}" />
+                    <h:outputText value="Vehículo / Matrícula:" style="font-weight: 600; color: #475569;" />
+                    <h:outputText value="#{empresaInfraccionesBean.seleccionada.matricula()}" />
+                    <h:outputText value="Fecha de Detección:" style="font-weight: 600; color: #475569;" />
+                    <h:outputText value="#{empresaInfraccionesBean.seleccionada.fecha()}" />
+                    <h:outputText value="Tipo de Infracción:" style="font-weight: 600; color: #475569;" />
+                    <h:outputText value="#{empresaInfraccionesBean.seleccionada.tipo()}" />
+                </p:panelGrid>
+                <!-- Evidencia Técnica -->
+                <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 0.75rem 1rem; margin-bottom: 1rem;">
+                    <strong style="color: #92400e; font-size: 0.82rem;">Evidencia Técnica Registrada:</strong>
+                    <div style="font-family: monospace; font-size: 0.82rem; color: #78350f; margin-top: 0.25rem;">
+                        #{empresaInfraccionesBean.seleccionada.evidencia()}
+                    </div>
+                </div>
+                <!-- Datos del Certificado Digital (Demuestra la Garantía de Integridad) -->
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 0.75rem 1rem; margin-bottom: 1rem; font-size: 0.8rem; color: #166534;">
+                    <i class="pi pi-shield" style="margin-right: 0.3rem;" />
+                    <strong>Firmante Digital:</strong> Autoridad Administrativa de Fiscalización Vial : Demostracion no legal
+                </div>
+            </div>
+            <p:panel>
+            <p:fileUpload
+               mode="simple"
+               skinSimple="true"
+               value="#{empresaInfraccionesBean.certificado}"
+               accept=".p12,.pfx"
+               label="Seleccionar certificado" />
+
+            <p:spacer height="5" />
+
+            <p:password
+               value="#{empresaInfraccionesBean.passwordCertificado}"
+               placeholder="Contraseña del certificado"
+               feedback="false"
+               toggleMask="true"
+               redisplay="false" />
+             <p:commandButton
+                value="Verificar carga"
+                icon="pi pi-check"
+                ajax="true"
+                action="#{empresaInfraccionesBean.probarCargaCertificado}" />
+            </p:panel>
+            <!-- Botones del Modal -->
+            <div style="display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.25rem;">
+                <p:commandButton value="Cancelar"
+                                 type="button"
+                                 icon="pi pi-times"
+                                 onclick="PF('dlgActaWidget').hide()"
+                                 styleClass="ui-button-outlined ui-button-secondary" />
+                <!-- Botón de acción (por ahora visual con type="button") -->
+                <p:commandButton value="Emitir y Firmar Acta Oficial (PDF)"
+                                 ajax="false"
+                                 icon="pi pi-file-pdf"
+                                 styleClass="ui-button-danger">
+                                 <!-- PrimeFaces llama a tu método y descarga el archivo automáticamente -->
+                                 <p:fileDownload value="#{empresaInfraccionesBean.emitirYFirmarActa()}" />
+                </p:commandButton>
+               
+            </div>
+         </h:panelGroup>
+        </h:form>
+       </p:dialog>
     </ui:define>
 </ui:composition>
