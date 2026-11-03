@@ -6,6 +6,9 @@ import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoInfraccion;
 
 import java.io.Serializable;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -49,39 +52,42 @@ public class Infraccion implements Serializable {
     private String evidencia;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "guia_id", nullable = false)
+    @JoinColumn(name = "guia_id", nullable = true)
     private GuiaDeViaje guia;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "vehiculo_matricula", nullable = true)
+    private Vehiculo vehiculo;
 
     @OneToOne(mappedBy = "infraccion", cascade = CascadeType.ALL, optional = true, orphanRemoval = true)
     private Descargo descargo;
 
-    @OneToOne(cascade = CascadeType.PERSIST, optional = true)
-    @JoinColumn(name = "registro_auditoria_id", unique = true)
-    private RegistroAuditoria registroAuditoria;
+    @OneToMany(mappedBy = "infraccion", cascade = CascadeType.PERSIST, fetch = FetchType.LAZY)
+    @OrderBy("timestampCreacion ASC, id ASC")
+    private List<RegistroAuditoria> registrosAuditoria = new ArrayList<>();
 
     public Infraccion() {
     }
 
     public Infraccion(LocalDate fecha, TipoInfraccion tipo, EstadoInfraccion estado, GuiaDeViaje guia) {
-        if (fecha != null) {
-            this.fecha = fecha;
-        } else {
-            this.fecha = LocalDate.now();
-        }
-        this.tipo = tipo;
-        this.estado = estado;
-        this.guia = guia;
+        this(fecha, tipo, estado, guia, (String) null);
     }
 
     public Infraccion(LocalDate fecha, TipoInfraccion tipo, EstadoInfraccion estado, GuiaDeViaje guia, String evidencia) {
-        if (fecha != null) {
-            this.fecha = fecha;
-        } else {
-            this.fecha = LocalDate.now();
-        }
+        this.fecha = fecha != null ? fecha : LocalDate.now();
         this.tipo = tipo;
         this.estado = estado;
         this.guia = guia;
+        this.vehiculo = guia != null ? guia.getVehiculo() : null;
+        this.evidencia = evidencia;
+    }
+
+    public Infraccion(LocalDate fecha, TipoInfraccion tipo, EstadoInfraccion estado, Vehiculo vehiculo, String evidencia) {
+        this.fecha = fecha != null ? fecha : LocalDate.now();
+        this.tipo = tipo;
+        this.estado = estado;
+        this.guia = null;
+        this.vehiculo = vehiculo;
         this.evidencia = evidencia;
     }
 
@@ -155,6 +161,38 @@ public class Infraccion implements Serializable {
 
     public void setGuia(GuiaDeViaje guia) {
         this.guia = guia;
+        if (guia != null && this.vehiculo == null) {
+            this.vehiculo = guia.getVehiculo();
+        }
+    }
+
+    public Vehiculo getVehiculo() {
+        return vehiculo;
+    }
+
+    public void setVehiculo(Vehiculo vehiculo) {
+        this.vehiculo = vehiculo;
+    }
+
+    public Vehiculo resolverVehiculo() {
+        if (vehiculo != null) {
+            return vehiculo;
+        }
+        if (guia != null) {
+            return guia.getVehiculo();
+        }
+        return null;
+    }
+
+    public Empresa resolverEmpresa() {
+        if (guia != null && guia.getEmpresa() != null) {
+            return guia.getEmpresa();
+        }
+        Vehiculo v = resolverVehiculo();
+        if (v != null && v.getEmpresa() != null) {
+            return v.getEmpresa();
+        }
+        return null;
     }
 
     public Descargo getDescargo() {
@@ -168,12 +206,32 @@ public class Infraccion implements Serializable {
         }
     }
 
+    public List<RegistroAuditoria> getRegistrosAuditoria() {
+        return registrosAuditoria != null ? Collections.unmodifiableList(registrosAuditoria) : Collections.emptyList();
+    }
+
+    public void agregarRegistroAuditoria(RegistroAuditoria registro) {
+        if (registro == null) {
+            return;
+        }
+        if (registrosAuditoria == null) {
+            registrosAuditoria = new ArrayList<>();
+        }
+        registro.asociarInfraccion(this);
+        if (!registrosAuditoria.contains(registro)) {
+            registrosAuditoria.add(registro);
+        }
+    }
+
     public RegistroAuditoria getRegistroAuditoria() {
-        return registroAuditoria;
+        if (registrosAuditoria == null || registrosAuditoria.isEmpty()) {
+            return null;
+        }
+        return registrosAuditoria.get(registrosAuditoria.size() - 1);
     }
 
     public void setRegistroAuditoria(RegistroAuditoria registroAuditoria) {
-        this.registroAuditoria = registroAuditoria;
+        agregarRegistroAuditoria(registroAuditoria);
     }
 
     @Override

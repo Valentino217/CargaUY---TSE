@@ -9,4 +9,6 @@ import jakarta.ejb.Local;
 public interface FiscalizacionProducerLocal {
 
     void solicitarEvaluacion(Long guiaId);
+
+    void solicitarEvaluacionSinGuia(String matricula, String detalleActividad);
 }

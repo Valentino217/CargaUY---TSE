@@ -9,6 +9,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -56,7 +57,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -979,15 +983,17 @@ fun TarjetaGuiaViaje(
             )
 
             Spacer(modifier = Modifier.height(12.dp))
+            val viajeFinalizado = viaje.estado.equals("FINALIZADO", ignoreCase = true)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Button(
                     onClick = onRegistrarEvento,
+                    enabled = !viajeFinalizado,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Registrar Evento")
+                    Text(if (viajeFinalizado) "Viaje Finalizado" else "Registrar Evento")
                 }
                 OutlinedButton(
                     onClick = onVerEventos,
@@ -1009,10 +1015,25 @@ fun PantallaRegistrarEvento(
     syncRepository: SyncRepository,
     onEventoRegistrado: (String) -> Unit
 ) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val guiaLocal = remember(guiaId) { syncRepository.dbHelper.obtenerGuiaPorId(guiaId) }
+    var guiaLocal by remember(guiaId) { mutableStateOf(syncRepository.dbHelper.obtenerGuiaPorId(guiaId)) }
+    var estadoGuiaActual by remember(guiaId) { mutableStateOf(guiaLocal?.estado) }
 
-    var tipoSeleccionado by rememberSaveable { mutableStateOf(TipoEventoOption.INICIO) }
+    val opcionesPermitidas = remember(estadoGuiaActual) {
+        TipoEventoOption.opcionesPermitidasParaEstado(estadoGuiaActual)
+    }
+    val viajeFinalizado = estadoGuiaActual.equals("FINALIZADO", ignoreCase = true)
+
+    var tipoSeleccionado by rememberSaveable {
+        mutableStateOf(opcionesPermitidas.firstOrNull() ?: TipoEventoOption.INICIO)
+    }
+
+    LaunchedEffect(opcionesPermitidas) {
+        if (opcionesPermitidas.isNotEmpty() && tipoSeleccionado !in opcionesPermitidas) {
+            tipoSeleccionado = opcionesPermitidas.first()
+        }
+    }
 
     // Coordenadas GPS automaticas con fallback
     var coordenadas by remember { mutableStateOf(syncRepository.obtenerUbicacionActual()) }
@@ -1022,20 +1043,36 @@ fun PantallaRegistrarEvento(
     var queSeCargaDescarga by rememberSaveable { mutableStateOf(guiaLocal?.rubroCliente ?: "") }
     var empresaCarga by rememberSaveable { mutableStateOf(guiaLocal?.empresaRazonSocial ?: "") }
 
-    // Campos 2.E (Incidente)
+    // Campos 2.E (Incidente con foto opcional comprimida en Base64 Data URI)
     var descripcionIncidente by rememberSaveable { mutableStateOf("") }
-    var fotoIncidente by rememberSaveable { mutableStateOf("") }
+    var fotoIncidente by remember { mutableStateOf("") }
 
     var errorValidacion by remember { mutableStateOf<String?>(null) }
     var resultadoRegistro by remember { mutableStateOf<ResultadoOperacionEvento?>(null) }
     var guardando by remember { mutableStateOf(false) }
 
-    // Selector de foto opcional de galeria (Flujo 2.E.3.A)
+    // Selector de foto opcional desde galería (comprimida a JPEG Base64 liviano)
     val selectorFotoLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         if (uri != null) {
-            fotoIncidente = uri.lastPathSegment ?: uri.toString()
+            val dataUri = ImagenUtils.codificarUriADataUri(context, uri)
+            if (dataUri != null) {
+                fotoIncidente = dataUri
+                errorValidacion = null
+            } else {
+                errorValidacion = "No se pudo leer o comprimir la imagen seleccionada."
+            }
+        }
+    }
+
+    // Captura de foto opcional con cámara del dispositivo
+    val camaraFotoLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview()
+    ) { bitmap ->
+        if (bitmap != null) {
+            fotoIncidente = ImagenUtils.codificarBitmapADataUri(bitmap)
+            errorValidacion = null
         }
     }
 
@@ -1053,7 +1090,7 @@ fun PantallaRegistrarEvento(
         )
         Text(
             text = if (guiaLocal != null) {
-                "Guia #${guiaLocal.id}: ${guiaLocal.origen} → ${guiaLocal.destino} (${guiaLocal.estado})"
+                "Guia #${guiaLocal!!.id}: ${guiaLocal!!.origen} → ${guiaLocal!!.destino} (${estadoGuiaActual ?: guiaLocal!!.estado})"
             } else {
                 "Guia #$guiaId"
             },
@@ -1097,137 +1134,206 @@ fun PantallaRegistrarEvento(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        Text(
-            text = "Seleccione el tipo de evento:",
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 15.sp
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        FlowRow(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            TipoEventoOption.entries.forEach { opcion ->
-                FilterChip(
-                    selected = (tipoSeleccionado == opcion),
-                    onClick = {
-                        tipoSeleccionado = opcion
-                        errorValidacion = null
-                    },
-                    label = { Text(opcion.etiqueta) }
+        if (viajeFinalizado) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFDCFCE7)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "Este viaje ya se encuentra FINALIZADO. No se pueden registrar nuevos eventos sobre esta guía.",
+                    color = Color(0xFF166534),
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(14.dp)
                 )
             }
-        }
+        } else {
+            Text(
+                text = "Seleccione el tipo de evento:",
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 15.sp
+            )
+            Spacer(modifier = Modifier.height(8.dp))
 
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = tipoSeleccionado.descripcionAyuda,
-            fontSize = 13.sp,
-            color = Color(0xFF64748B)
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-        HorizontalDivider()
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Formulario dinamico segun el flujo alternativo (2.A, 2.B, 2.C, 2.D, 2.E)
-        when (tipoSeleccionado) {
-            TipoEventoOption.INICIO, TipoEventoOption.FIN -> {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFEFF6FF)),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(14.dp)) {
-                        Text(
-                            text = "Evento: ${tipoSeleccionado.etiqueta}",
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF1E40AF)
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Se guardara automaticamente la fecha/hora actual, las coordenadas de ubicacion (${coordenadas.first}, ${coordenadas.second}) y un identificador unico UUID.",
-                            fontSize = 13.sp,
-                            color = Color(0xFF1E3A8A)
-                        )
-                    }
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                opcionesPermitidas.forEach { opcion ->
+                    FilterChip(
+                        selected = (tipoSeleccionado == opcion),
+                        onClick = {
+                            tipoSeleccionado = opcion
+                            errorValidacion = null
+                        },
+                        label = { Text(opcion.etiqueta) }
+                    )
                 }
             }
 
-            TipoEventoOption.CARGA_PARCIAL, TipoEventoOption.DESCARGA_PARCIAL -> {
-                val esDescarga = (tipoSeleccionado == TipoEventoOption.DESCARGA_PARCIAL)
-                val verbo = if (esDescarga) "descarga" else "carga"
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = tipoSeleccionado.descripcionAyuda,
+                fontSize = 13.sp,
+                color = Color(0xFF64748B)
+            )
 
-                OutlinedTextField(
-                    value = cantidadKg,
-                    onValueChange = { nuevo ->
-                        cantidadKg = nuevo.filter { it.isDigit() || it == '.' }
-                    },
-                    label = { Text("Cantidad de $verbo en Kg *") },
-                    placeholder = { Text("Ej: 5000") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(16.dp))
 
-                Spacer(modifier = Modifier.height(12.dp))
+            // Formulario dinamico segun el flujo alternativo (2.A, 2.B, 2.C, 2.D, 2.E)
+            when (tipoSeleccionado) {
+                TipoEventoOption.INICIO, TipoEventoOption.FIN -> {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFEFF6FF)),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Text(
+                                text = "Evento: ${tipoSeleccionado.etiqueta}",
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF1E40AF)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Se guardara automaticamente la fecha/hora actual, las coordenadas de ubicacion (${coordenadas.first}, ${coordenadas.second}) y un identificador unico UUID.",
+                                fontSize = 13.sp,
+                                color = Color(0xFF1E3A8A)
+                            )
+                        }
+                    }
+                }
 
-                OutlinedTextField(
-                    value = queSeCargaDescarga,
-                    onValueChange = { queSeCargaDescarga = it },
-                    label = { Text(if (esDescarga) "¿Que se descargo? *" else "¿Que se carga? *") },
-                    placeholder = { Text("Ej: Madera") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                TipoEventoOption.CARGA_PARCIAL, TipoEventoOption.DESCARGA_PARCIAL -> {
+                    val esDescarga = (tipoSeleccionado == TipoEventoOption.DESCARGA_PARCIAL)
+                    val verbo = if (esDescarga) "descarga" else "carga"
 
-                Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = cantidadKg,
+                        onValueChange = { nuevo ->
+                            cantidadKg = nuevo.filter { it.isDigit() || it == '.' }
+                        },
+                        label = { Text("Cantidad de $verbo en Kg *") },
+                        placeholder = { Text("Ej: 5000") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
 
-                OutlinedTextField(
-                    value = empresaCarga,
-                    onValueChange = { empresaCarga = it },
-                    label = { Text("Empresa a la que pertenece la carga *") },
-                    placeholder = { Text("Ej: Transportes del Plata S.A.") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
+                    Spacer(modifier = Modifier.height(12.dp))
 
-            TipoEventoOption.INCIDENTE -> {
-                OutlinedTextField(
-                    value = descripcionIncidente,
-                    onValueChange = { descripcionIncidente = it },
-                    label = { Text("Descripcion del incidente *") },
-                    placeholder = { Text("Ej: Pinchadura de neumatico") },
-                    minLines = 3,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                    OutlinedTextField(
+                        value = queSeCargaDescarga,
+                        onValueChange = { queSeCargaDescarga = it },
+                        label = { Text(if (esDescarga) "¿Que se descargo? *" else "¿Que se carga? *") },
+                        placeholder = { Text("Ej: Madera") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                OutlinedTextField(
-                    value = fotoIncidente,
-                    onValueChange = { fotoIncidente = it },
-                    label = { Text("Foto adjunta (TODO)") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                    OutlinedTextField(
+                        value = empresaCarga,
+                        onValueChange = { empresaCarga = it },
+                        label = { Text("Empresa a la que pertenece la carga *") },
+                        placeholder = { Text("Ej: Transportes del Plata S.A.") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                TipoEventoOption.INCIDENTE -> {
+                    OutlinedTextField(
+                        value = descripcionIncidente,
+                        onValueChange = { descripcionIncidente = it },
+                        label = { Text("Descripcion del incidente *") },
+                        placeholder = { Text("Ej: Pinchadura de neumatico") },
+                        minLines = 3,
+                        modifier = Modifier.fillMaxWidth()
+                    )
 
-//                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-//                    OutlinedButton(
-//                        onClick = { selectorFotoLauncher.launch("image/*") }
-//                    ) {
-//                        Text("Adjuntar foto de galeria")
-//                    }
-//                    if (fotoIncidente.isNotBlank()) {
-//                        OutlinedButton(onClick = { fotoIncidente = "" }) {
-//                            Text("Quitar foto")
-//                        }
-//                    }
-//                }
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Text(
+                        text = "Evidencia fotografica (opcional):",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp,
+                        color = Color(0xFF1E293B)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                try {
+                                    selectorFotoLauncher.launch("image/*")
+                                } catch (_: Exception) {
+                                    errorValidacion = "No se pudo abrir la galería de imágenes."
+                                }
+                            }
+                        ) {
+                            Text("Seleccionar de galería")
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                try {
+                                    camaraFotoLauncher.launch(null)
+                                } catch (_: Exception) {
+                                    errorValidacion = "Cámara no disponible en este dispositivo."
+                                }
+                            }
+                        ) {
+                            Text("Tomar foto")
+                        }
+                        if (fotoIncidente.isNotBlank()) {
+                            OutlinedButton(
+                                onClick = { fotoIncidente = "" },
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFDC2626))
+                            ) {
+                                Text("Quitar foto")
+                            }
+                        }
+                    }
+
+                    if (fotoIncidente.isNotBlank()) {
+                        val previewBitmap = remember(fotoIncidente) {
+                            ImagenUtils.decodificarDataUriABitmap(fotoIncidente)
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp)) {
+                                if (previewBitmap != null) {
+                                    Image(
+                                        bitmap = previewBitmap.asImageBitmap(),
+                                        contentDescription = "Vista previa foto del incidente",
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(180.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                    )
+                                    Spacer(modifier = Modifier.height(6.dp))
+                                }
+                                Text(
+                                    text = "Foto adjunta comprimida (${maxOf(1, fotoIncidente.length / 1024)} KB)",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFF0369A1),
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -1248,8 +1354,16 @@ fun PantallaRegistrarEvento(
 
         if (resultadoRegistro != null) {
             Spacer(modifier = Modifier.height(12.dp))
-            val bgRes = if (resultadoRegistro!!.guardadoOffline) Color(0xFFFEF3C7) else Color(0xFFDCFCE7)
-            val txtRes = if (resultadoRegistro!!.guardadoOffline) Color(0xFF92400E) else Color(0xFF166534)
+            val bgRes = when {
+                resultadoRegistro!!.rechazadoPorServidor -> Color(0xFFFEE2E2)
+                resultadoRegistro!!.guardadoOffline -> Color(0xFFFEF3C7)
+                else -> Color(0xFFDCFCE7)
+            }
+            val txtRes = when {
+                resultadoRegistro!!.rechazadoPorServidor -> Color(0xFF991B1B)
+                resultadoRegistro!!.guardadoOffline -> Color(0xFF92400E)
+                else -> Color(0xFF166534)
+            }
             Card(
                 colors = CardDefaults.cardColors(containerColor = bgRes),
                 modifier = Modifier.fillMaxWidth()
@@ -1274,73 +1388,89 @@ fun PantallaRegistrarEvento(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        Button(
-            onClick = {
-                errorValidacion = null
-                var detalleFinal: String? = null
-                var fotoFinal: String? = null
+        if (!viajeFinalizado) {
+            Button(
+                onClick = {
+                    errorValidacion = null
+                    var detalleFinal: String? = null
+                    var fotoFinal: String? = null
+                    var cantidadKgVal: Double? = null
+                    var mercaderiaVal: String? = null
+                    var empresaVal: String? = null
 
-                when (tipoSeleccionado) {
-                    TipoEventoOption.INICIO, TipoEventoOption.FIN -> {
-                        detalleFinal = null
+                    when (tipoSeleccionado) {
+                        TipoEventoOption.INICIO, TipoEventoOption.FIN -> {
+                            detalleFinal = null
+                        }
+
+                        TipoEventoOption.CARGA_PARCIAL, TipoEventoOption.DESCARGA_PARCIAL -> {
+                            val parsedKg = cantidadKg.toDoubleOrNull()
+                            if (parsedKg == null || parsedKg <= 0.0) {
+                                errorValidacion = "Debe ingresar una cantidad en Kg valida mayor a 0."
+                                return@Button
+                            }
+                            if (queSeCargaDescarga.isBlank()) {
+                                errorValidacion = "Debe indicar que mercaderia se carga o descarga."
+                                return@Button
+                            }
+                            if (empresaCarga.isBlank()) {
+                                errorValidacion = "Debe indicar a que empresa pertenece la carga."
+                                return@Button
+                            }
+                            cantidadKgVal = parsedKg
+                            mercaderiaVal = queSeCargaDescarga.trim()
+                            empresaVal = empresaCarga.trim()
+                        }
+
+                        TipoEventoOption.INCIDENTE -> {
+                            if (descripcionIncidente.isBlank()) {
+                                errorValidacion = "Debe ingresar la descripcion del incidente."
+                                return@Button
+                            }
+                            detalleFinal = descripcionIncidente.trim()
+                            fotoFinal = fotoIncidente.trim().takeIf { it.isNotBlank() }
+                        }
                     }
 
-                    TipoEventoOption.CARGA_PARCIAL, TipoEventoOption.DESCARGA_PARCIAL -> {
-                        if (cantidadKg.isBlank() || (cantidadKg.toDoubleOrNull() ?: 0.0) <= 0.0) {
-                            errorValidacion = "Debe ingresar una cantidad en Kg valida mayor a 0."
-                            return@Button
-                        }
-                        if (queSeCargaDescarga.isBlank()) {
-                            errorValidacion = "Debe indicar que mercaderia se carga o descarga."
-                            return@Button
-                        }
-                        if (empresaCarga.isBlank()) {
-                            errorValidacion = "Debe indicar a que empresa pertenece la carga."
-                            return@Button
-                        }
-                        detalleFinal = EventoFormatter.formatearDetalleCargaParcial(
-                            esDescarga = (tipoSeleccionado == TipoEventoOption.DESCARGA_PARCIAL),
-                            cantidadKg = cantidadKg,
-                            mercaderia = queSeCargaDescarga,
-                            empresa = empresaCarga
+                    guardando = true
+                    scope.launch {
+                        val coords = syncRepository.obtenerUbicacionActual()
+                        coordenadas = coords
+                        val res = syncRepository.registrarEvento(
+                            guiaId = guiaId,
+                            tipo = tipoSeleccionado,
+                            latitud = coords.first,
+                            longitud = coords.second,
+                            descripcion = detalleFinal,
+                            foto = fotoFinal,
+                            cedulaChofer = cedulaChofer,
+                            cantidadKg = cantidadKgVal,
+                            mercaderia = mercaderiaVal,
+                            empresaCarga = empresaVal
                         )
-                    }
-
-                    TipoEventoOption.INCIDENTE -> {
-                        if (descripcionIncidente.isBlank()) {
-                            errorValidacion = "Debe ingresar la descripcion del incidente."
-                            return@Button
+                        guardando = false
+                        resultadoRegistro = res
+                        guiaLocal = syncRepository.dbHelper.obtenerGuiaPorId(guiaId)
+                        estadoGuiaActual = guiaLocal?.estado ?: estadoGuiaActual
+                        if (!res.rechazadoPorServidor) {
+                            if (tipoSeleccionado == TipoEventoOption.INCIDENTE) {
+                                descripcionIncidente = ""
+                                fotoIncidente = ""
+                            } else if (tipoSeleccionado == TipoEventoOption.CARGA_PARCIAL || tipoSeleccionado == TipoEventoOption.DESCARGA_PARCIAL) {
+                                cantidadKg = ""
+                            }
                         }
-                        detalleFinal = descripcionIncidente.trim()
-                        fotoFinal = fotoIncidente.trim().takeIf { it.isNotBlank() }
+                        onEventoRegistrado(res.mensajeUsuario)
                     }
-                }
+                },
+                enabled = !guardando,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(if (guardando) "Registrando evento..." else "Confirmar y Registrar Evento")
+            }
 
-                guardando = true
-                scope.launch {
-                    val coords = syncRepository.obtenerUbicacionActual()
-                    coordenadas = coords
-                    val res = syncRepository.registrarEvento(
-                        guiaId = guiaId,
-                        tipo = tipoSeleccionado,
-                        latitud = coords.first,
-                        longitud = coords.second,
-                        descripcion = detalleFinal,
-                        foto = fotoFinal,
-                        cedulaChofer = cedulaChofer
-                    )
-                    guardando = false
-                    resultadoRegistro = res
-                    onEventoRegistrado(res.mensajeUsuario)
-                }
-            },
-            enabled = !guardando,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(if (guardando) "Registrando evento..." else "Confirmar y Registrar Evento")
+            Spacer(modifier = Modifier.height(8.dp))
         }
-
-        Spacer(modifier = Modifier.height(8.dp))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -1371,6 +1501,8 @@ fun PantallaEventosGuia(
 ) {
     var eventos by remember { mutableStateOf<List<EventoLocal>>(emptyList()) }
     var cargando by remember { mutableStateOf(true) }
+    val guiaLocal = remember(guiaId, syncTick) { syncRepository.dbHelper.obtenerGuiaPorId(guiaId) }
+    val viajeFinalizado = guiaLocal?.estado?.equals("FINALIZADO", ignoreCase = true) == true
 
     LaunchedEffect(guiaId, syncTick) {
         cargando = true
@@ -1425,8 +1557,22 @@ fun PantallaEventosGuia(
             ) {
                 items(eventos) { ev ->
                     val esPendiente = ev.estadoSync == EstadoSyncLocal.PENDIENTE.name
-                    val badgeBg = if (esPendiente) Color(0xFFFEF3C7) else Color(0xFFDCFCE7)
-                    val badgeTxt = if (esPendiente) Color(0xFF92400E) else Color(0xFF166534)
+                    val esError = ev.estadoSync == EstadoSyncLocal.ERROR.name
+                    val badgeBg = when {
+                        esError -> Color(0xFFFEE2E2)
+                        esPendiente -> Color(0xFFFEF3C7)
+                        else -> Color(0xFFDCFCE7)
+                    }
+                    val badgeTxt = when {
+                        esError -> Color(0xFF991B1B)
+                        esPendiente -> Color(0xFF92400E)
+                        else -> Color(0xFF166534)
+                    }
+                    val badgeLabel = when {
+                        esError -> "RECHAZADO"
+                        esPendiente -> "PENDIENTE EN TELEFONO"
+                        else -> "SINCRONIZADO"
+                    }
 
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -1450,7 +1596,7 @@ fun PantallaEventosGuia(
                                     shape = RoundedCornerShape(10.dp)
                                 ) {
                                     Text(
-                                        text = if (esPendiente) "PENDIENTE EN TELEFONO" else "SINCRONIZADO",
+                                        text = badgeLabel,
                                         color = badgeTxt,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 11.sp,
@@ -1471,6 +1617,16 @@ fun PantallaEventosGuia(
                                 color = Color(0xFF64748B)
                             )
 
+                            if (ev.cantidadKg != null || !ev.mercaderia.isNullOrBlank() || !ev.empresaCarga.isNullOrBlank()) {
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "Cantidad: ${ev.cantidadKg ?: "-"} Kg • Mercadería: ${ev.mercaderia ?: "-"} • Empresa: ${ev.empresaCarga ?: "-"}",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color(0xFF0F172A)
+                                )
+                            }
+
                             if (!ev.descripcion.isNullOrBlank()) {
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
@@ -1482,11 +1638,35 @@ fun PantallaEventosGuia(
                             }
 
                             if (!ev.foto.isNullOrBlank()) {
-                                Spacer(modifier = Modifier.height(2.dp))
+                                val fotoBitmap = remember(ev.foto) {
+                                    ImagenUtils.decodificarDataUriABitmap(ev.foto)
+                                }
+                                Spacer(modifier = Modifier.height(6.dp))
+                                if (fotoBitmap != null) {
+                                    Image(
+                                        bitmap = fotoBitmap.asImageBitmap(),
+                                        contentDescription = "Foto del incidente",
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(160.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                    )
+                                } else {
+                                    Text(
+                                        text = "Foto adjunta: ${ev.foto}",
+                                        fontSize = 12.sp,
+                                        color = Color(0xFF0369A1)
+                                    )
+                                }
+                            }
+
+                            if (esError && !ev.mensajeSync.isNullOrBlank()) {
+                                Spacer(modifier = Modifier.height(6.dp))
                                 Text(
-                                    text = "Foto adjunta: ${ev.foto}",
+                                    text = "Motivo: ${ev.mensajeSync}",
                                     fontSize = 12.sp,
-                                    color = Color(0xFF0369A1)
+                                    color = Color(0xFF991B1B)
                                 )
                             }
 
@@ -1509,11 +1689,13 @@ fun PantallaEventosGuia(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Button(
-                onClick = { navController.navigate("registrarEvento/$guiaId") },
-                modifier = Modifier.weight(1f)
-            ) {
-                Text("Nuevo Evento")
+            if (!viajeFinalizado) {
+                Button(
+                    onClick = { navController.navigate("registrarEvento/$guiaId") },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Nuevo Evento")
+                }
             }
             OutlinedButton(
                 onClick = { navController.popBackStack() },

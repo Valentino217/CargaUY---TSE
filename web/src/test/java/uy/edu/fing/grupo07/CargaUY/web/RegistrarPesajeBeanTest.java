@@ -136,4 +136,46 @@ class RegistrarPesajeBeanTest {
         verify(balanzaService, times(1)).registrarPesada(any(PesadaBalanzaDTO.class));
         verify(motorFiscalizacion, never()).evaluarGuia(any());
     }
+
+    @Test
+    @DisplayName("registrarPesaje con matrícula manual prevalece sobre la guía preseleccionada por init y dispara VIAJE_SIN_GUIA")
+    void testRegistrarPesajeConMatriculaManualPrevaleceSobreGuiaPreseleccionada() {
+        GuiaDeViaje guiaPreseleccionada = new GuiaDeViaje();
+        guiaPreseleccionada.setId(10L);
+        guiaPreseleccionada.setEstado(TipoEstado.EN_CURSO);
+        when(guiaDeViajeEJB.listarGuias()).thenReturn(List.of(guiaPreseleccionada));
+        when(balanzaService.listarPesadasPorGuia(10L)).thenReturn(Collections.emptyList());
+
+        bean.init();
+        assertEquals(10L, bean.getGuiaIdSeleccionada());
+
+        bean.setMatriculaManual("  STP 9999  ");
+        bean.setPesoRegistrado(42500);
+        bean.setEvaluarInmediato(true);
+
+        PesadaBalanzaDTO pesadaSinGuia = new PesadaBalanzaDTO(
+                77,
+                LocalDate.now(),
+                LocalTime.of(15, 0),
+                42500,
+                "STP 9999",
+                null
+        );
+        when(balanzaService.registrarPesada(any(PesadaBalanzaDTO.class))).thenReturn(pesadaSinGuia);
+        when(motorFiscalizacion.evaluarVehiculoSinGuia(eq("STP 9999"), org.mockito.ArgumentMatchers.anyString()))
+                .thenReturn(true);
+
+        bean.registrarPesaje();
+
+        verify(balanzaService).registrarPesada(org.mockito.ArgumentMatchers.argThat(dto ->
+                dto.guiaId() == null
+                        && "STP 9999".equals(dto.matricula())
+                        && dto.pesoRegistrado() == 42500
+        ));
+        verify(motorFiscalizacion, times(1)).evaluarVehiculoSinGuia(
+                eq("STP 9999"),
+                org.mockito.ArgumentMatchers.contains("42500 kg")
+        );
+        org.junit.jupiter.api.Assertions.assertNull(bean.getMatriculaManual());
+    }
 }

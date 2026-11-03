@@ -227,7 +227,10 @@ class SyncRepository(context: Context) {
         descripcion: String?,
         foto: String?,
         cedulaChofer: Int,
-        uuidPersonalizado: String? = null
+        uuidPersonalizado: String? = null,
+        cantidadKg: Double? = null,
+        mercaderia: String? = null,
+        empresaCarga: String? = null
     ): ResultadoOperacionEvento = withContext(Dispatchers.IO) {
         val uuid = uuidPersonalizado?.takeIf { it.isNotBlank() } ?: UUID.randomUUID().toString()
         val tiempo = obtenerFechaHoraIsoActual()
@@ -241,6 +244,9 @@ class SyncRepository(context: Context) {
             longitud = longitud,
             descripcion = descripcion?.takeIf { it.isNotBlank() },
             foto = foto?.takeIf { it.isNotBlank() },
+            cantidadKg = cantidadKg,
+            mercaderia = mercaderia?.takeIf { it.isNotBlank() },
+            empresaCarga = empresaCarga?.takeIf { it.isNotBlank() },
             estadoSync = EstadoSyncLocal.PENDIENTE.name
         )
 
@@ -254,15 +260,13 @@ class SyncRepository(context: Context) {
             )
         }
 
-        // Actualizar estado local de la guía si es INICIO o FIN
-        if (tipo == TipoEventoOption.INICIO) {
-            dbHelper.actualizarEstadoGuiaLocal(guiaId, "EN_CURSO")
-        } else if (tipo == TipoEventoOption.FIN) {
-            dbHelper.actualizarEstadoGuiaLocal(guiaId, "FINALIZADO")
-        }
-
-        // Si no hay conexión (Flujo 3.A): guardar solo localmente y no enviar al servidor
+        // Si no hay conexión (Flujo 3.A): actualizar estado local de la guía y guardar para sincronizar luego
         if (!hayConexionInternet()) {
+            if (tipo == TipoEventoOption.INICIO) {
+                dbHelper.actualizarEstadoGuiaLocal(guiaId, "EN_CURSO")
+            } else if (tipo == TipoEventoOption.FIN) {
+                dbHelper.actualizarEstadoGuiaLocal(guiaId, "FINALIZADO")
+            }
             servidorAlcanzable = false
             Log.d("CARGAUY", "Sin conexion a internet detectada por el sistema. Guardado offline (Flujo 3.A).")
             return@withContext ResultadoOperacionEvento(
@@ -276,18 +280,19 @@ class SyncRepository(context: Context) {
         return@withContext try {
             Log.d("CARGAUY", "Enviando evento $uuid (${tipo.codigo}) al servidor...")
             asegurarTokenLocal(cedulaChofer)
+            val matriculaCache = dbHelper.obtenerGuiaPorId(guiaId)?.vehiculoMatricula
             val resultados = RetrofitClient.executeWithFallback { api ->
-                api.sincronizarEventos(listOf(eventoLocal.toDto()))
+                api.sincronizarEventos(listOf(eventoLocal.toDto(matriculaCache)))
             }
             servidorAlcanzable = true
             val resultado = resultados.firstOrNull { it.uuid == uuid }
 
-            when (resultado?.estado?.uppercase()) {
-                "ACCEPTED" -> {
+            when (EstadoSyncLocal.desdeRespuestaServidor(resultado?.estado)) {
+                EstadoSyncLocal.SINCRONIZADO -> {
                     dbHelper.actualizarEstadoEvento(
                         uuid,
                         EstadoSyncLocal.SINCRONIZADO,
-                        resultado.mensaje ?: "Sincronizado con el servidor"
+                        resultado?.mensaje ?: "Sincronizado con el servidor"
                     )
                     try {
                         val guiasActualizadas = RetrofitClient.executeWithFallback { api ->
@@ -296,6 +301,11 @@ class SyncRepository(context: Context) {
                         dbHelper.guardarGuiasCache(cedulaChofer, guiasActualizadas)
                     } catch (_: Exception) {
                     }
+                    if (tipo == TipoEventoOption.INICIO) {
+                        dbHelper.actualizarEstadoGuiaLocal(guiaId, "EN_CURSO")
+                    } else if (tipo == TipoEventoOption.FIN) {
+                        dbHelper.actualizarEstadoGuiaLocal(guiaId, "FINALIZADO")
+                    }
                     ResultadoOperacionEvento(
                         evento = eventoLocal.copy(estadoSync = EstadoSyncLocal.SINCRONIZADO.name),
                         guardadoOffline = false,
@@ -303,7 +313,7 @@ class SyncRepository(context: Context) {
                     )
                 }
 
-                "DUPLICATE" -> {
+                EstadoSyncLocal.DUPLICADO -> {
                     dbHelper.eliminarEventoDuplicado(uuid)
                     ResultadoOperacionEvento(
                         evento = eventoLocal.copy(estadoSync = EstadoSyncLocal.DUPLICADO.name),
@@ -313,7 +323,32 @@ class SyncRepository(context: Context) {
                     )
                 }
 
-                else -> {
+                EstadoSyncLocal.ERROR -> {
+                    val msgRechazo = resultado?.mensaje ?: "Transición de viaje no permitida"
+                    dbHelper.actualizarEstadoEvento(
+                        uuid,
+                        EstadoSyncLocal.ERROR,
+                        msgRechazo
+                    )
+                    try {
+                        val guiasActualizadas = RetrofitClient.executeWithFallback { api ->
+                            api.obtenerViajes(cedulaChofer)
+                        }
+                        dbHelper.guardarGuiasCache(cedulaChofer, guiasActualizadas)
+                    } catch (_: Exception) {
+                    }
+                    ResultadoOperacionEvento(
+                        evento = eventoLocal.copy(
+                            estadoSync = EstadoSyncLocal.ERROR.name,
+                            mensajeSync = msgRechazo
+                        ),
+                        guardadoOffline = false,
+                        rechazadoPorServidor = true,
+                        mensajeUsuario = "Evento rechazado por el servidor: $msgRechazo"
+                    )
+                }
+
+                EstadoSyncLocal.PENDIENTE -> {
                     val msgError = resultado?.mensaje ?: "No se pudo confirmar en el servidor"
                     ResultadoOperacionEvento(
                         evento = eventoLocal,
@@ -323,6 +358,11 @@ class SyncRepository(context: Context) {
                 }
             }
         } catch (e: Exception) {
+            if (tipo == TipoEventoOption.INICIO) {
+                dbHelper.actualizarEstadoGuiaLocal(guiaId, "EN_CURSO")
+            } else if (tipo == TipoEventoOption.FIN) {
+                dbHelper.actualizarEstadoGuiaLocal(guiaId, "FINALIZADO")
+            }
             servidorAlcanzable = false
             Log.w("CARGAUY", "Guardado offline por falta de conexion: ${e.message}")
             ResultadoOperacionEvento(
@@ -355,44 +395,62 @@ class SyncRepository(context: Context) {
             )
         }
 
+        var aceptados = 0
+        var duplicados = 0
+        var errores = 0
+
         return@withContext try {
             Log.d("CARGAUY", "Sincronizando lote de ${pendientes.size} eventos pendientes...")
             asegurarTokenLocal(cedulaChofer)
-            val dtos = pendientes.map { it.toDto() }
-            val respuestas = RetrofitClient.executeWithFallback { api ->
-                api.sincronizarEventos(dtos)
+            val eventosPorUuid = pendientes.associateBy { it.uuid }
+            val dtos = pendientes.map { ev ->
+                val mat = dbHelper.obtenerGuiaPorId(ev.guiaId)?.vehiculoMatricula
+                ev.toDto(mat)
             }
-            servidorAlcanzable = true
+            val subLotes = SyncBatchChunker.particionarLotes(dtos)
 
-            var aceptados = 0
-            var duplicados = 0
-            var errores = 0
+            for (subLote in subLotes) {
+                val respuestas = RetrofitClient.executeWithFallback { api ->
+                    api.sincronizarEventos(subLote)
+                }
+                servidorAlcanzable = true
 
-            val mapaRespuestas = respuestas.associateBy { it.uuid }
-            for (ev in pendientes) {
-                val r = mapaRespuestas[ev.uuid]
-                when (r?.estado?.uppercase()) {
-                    "ACCEPTED" -> {
-                        aceptados++
-                        dbHelper.actualizarEstadoEvento(
-                            ev.uuid,
-                            EstadoSyncLocal.SINCRONIZADO,
-                            r.mensaje ?: "Sincronizado correctamente"
-                        )
-                    }
+                val mapaRespuestas = respuestas.associateBy { it.uuid }
+                for (dtoEnviado in subLote) {
+                    val ev = eventosPorUuid[dtoEnviado.uuid] ?: continue
+                    val r = mapaRespuestas[ev.uuid]
+                    when (EstadoSyncLocal.desdeRespuestaServidor(r?.estado)) {
+                        EstadoSyncLocal.SINCRONIZADO -> {
+                            aceptados++
+                            dbHelper.actualizarEstadoEvento(
+                                ev.uuid,
+                                EstadoSyncLocal.SINCRONIZADO,
+                                r?.mensaje ?: "Sincronizado correctamente"
+                            )
+                        }
 
-                    "DUPLICATE" -> {
-                        duplicados++
-                        dbHelper.eliminarEventoDuplicado(ev.uuid)
-                    }
+                        EstadoSyncLocal.DUPLICADO -> {
+                            duplicados++
+                            dbHelper.eliminarEventoDuplicado(ev.uuid)
+                        }
 
-                    else -> {
-                        errores++
-                        dbHelper.actualizarEstadoEvento(
-                            ev.uuid,
-                            EstadoSyncLocal.PENDIENTE,
-                            r?.mensaje ?: "Pendiente de reintento"
-                        )
+                        EstadoSyncLocal.ERROR -> {
+                            errores++
+                            dbHelper.actualizarEstadoEvento(
+                                ev.uuid,
+                                EstadoSyncLocal.ERROR,
+                                r?.mensaje ?: "Rechazado por validación de negocio"
+                            )
+                        }
+
+                        EstadoSyncLocal.PENDIENTE -> {
+                            errores++
+                            dbHelper.actualizarEstadoEvento(
+                                ev.uuid,
+                                EstadoSyncLocal.PENDIENTE,
+                                r?.mensaje ?: "Pendiente de reintento"
+                            )
+                        }
                     }
                 }
             }
@@ -425,7 +483,7 @@ class SyncRepository(context: Context) {
                 partesMensaje.add("Ruta/guia actualizada desde el servidor ")
             }
             if (errores > 0) {
-                partesMensaje.add("$errores eventos quedaron pendientes")
+                partesMensaje.add("$errores eventos rechazados o pendientes")
             }
 
             ResumenSincronizacion(
@@ -439,13 +497,19 @@ class SyncRepository(context: Context) {
         } catch (e: Exception) {
             servidorAlcanzable = false
             Log.w("CARGAUY", "Fallo al sincronizar lote pendiente: ${e.message}")
+            val restantes = (pendientes.size - aceptados - duplicados).coerceAtLeast(0)
+            val msg = if (aceptados + duplicados > 0) {
+                "Sincronizacion parcial ($aceptados sincronizados, $restantes siguen guardados en el telefono esperando red)."
+            } else {
+                "Offline (${pendientes.size} eventos siguen guardados en el telefono esperando red)."
+            }
             ResumenSincronizacion(
                 totalEnviados = pendientes.size,
-                aceptados = 0,
-                duplicados = 0,
-                errores = pendientes.size,
+                aceptados = aceptados,
+                duplicados = duplicados,
+                errores = restantes,
                 rutaActualizada = false,
-                mensaje = "Offline (${pendientes.size} eventos siguen guardados en el telefono esperando red)."
+                mensaje = msg
             )
         }
     }
@@ -474,6 +538,9 @@ class SyncRepository(context: Context) {
                     longitud = rem.longitud,
                     descripcion = rem.incidente?.descripcion,
                     foto = rem.incidente?.foto,
+                    cantidadKg = rem.cantidadKg,
+                    mercaderia = rem.mercaderia,
+                    empresaCarga = rem.empresaCarga,
                     estadoSync = EstadoSyncLocal.SINCRONIZADO.name
                 )
             }

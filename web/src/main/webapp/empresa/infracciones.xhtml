@@ -101,7 +101,7 @@
                     <p:column filterBy="#{inf.matricula()}" filterMatchMode="contains" style="width: 155px;" filterPlaceholder="Guía / Matrícula">
                         <span class="cuy-mono"><i class="pi pi-car" /> #{inf.matricula() != null ? inf.matricula() : 'S/D'}</span>
                         <div style="font-size: 0.78rem; color: #64748b;">
-                            Guía ##{inf.guiaId() != null ? inf.guiaId() : '-'}
+                            #{inf.guiaId() != null ? 'Guía #'.concat(inf.guiaId().toString()) : 'Sin guía activa'}
                         </div>
                     </p:column>
 
@@ -135,7 +135,7 @@
                   widgetVar="dlgDescargoWidget"
                   modal="true"
                   responsive="true"
-                  width="680"
+                  width="740"
                   closeOnEscape="true">
             <h:form id="dlgDescargoForm">
                 <h:panelGroup rendered="#{empresaInfraccionesBean.seleccionada != null}">
@@ -162,7 +162,7 @@
                             </div>
                             <div style="font-family: monospace; font-size: 0.88rem; color: #78350f; white-space: pre-wrap;">#{empresaInfraccionesBean.seleccionada.evidencia()}</div>
                             <div style="margin-top: 0.45rem; font-size: 0.78rem; color: #92400e;">
-                                Fecha Detección: <strong>#{empresaInfraccionesBean.seleccionada.fecha()}</strong> | Guía de Viaje: <strong>##{empresaInfraccionesBean.seleccionada.guiaId()}</strong>
+                                Fecha Detección: <strong>#{empresaInfraccionesBean.seleccionada.fecha()}</strong> | Guía de Viaje: <strong>#{empresaInfraccionesBean.seleccionada.guiaId() != null ? '#'.concat(empresaInfraccionesBean.seleccionada.guiaId().toString()) : 'Sin guía activa'}</strong>
                             </div>
                         </div>
 
@@ -175,6 +175,35 @@
                                 <div style="font-size: 0.88rem; color: #334155;">
                                     #{empresaInfraccionesBean.seleccionada.fundamento()}
                                 </div>
+                            </div>
+                        </h:panelGroup>
+
+                        <!-- Pista de Auditoría Inmutable (Append-Only) -->
+                        <h:panelGroup rendered="#{not empty empresaInfraccionesBean.seleccionada.historialAuditoria()}">
+                            <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-left: 4px solid #059669; border-radius: 8px; padding: 0.9rem 1rem; margin-bottom: 1rem;">
+                                <div style="font-weight: 700; color: #065f46; font-size: 0.85rem; margin-bottom: 0.5rem;">
+                                    <i class="pi pi-lock" /> Historial de Auditoría Inmutable (Append-Only)
+                                </div>
+                                <p:dataTable var="aud"
+                                             value="#{empresaInfraccionesBean.seleccionada.historialAuditoria()}"
+                                             size="small"
+                                             stripedRows="true">
+                                    <p:column headerText="Acción" style="width: 165px;">
+                                        <span class="cuy-mono" style="font-size: 0.76rem; font-weight: 700;">#{aud.accion()}</span>
+                                    </p:column>
+                                    <p:column headerText="Estado" style="width: 110px;">
+                                        <h:outputText value="#{aud.resolucion()}" style="font-size: 0.78rem;" />
+                                    </p:column>
+                                    <p:column headerText="Autor" style="width: 160px;">
+                                        <h:outputText value="#{aud.usuario()}" style="font-size: 0.78rem;" />
+                                    </p:column>
+                                    <p:column headerText="Timestamp" style="width: 150px;">
+                                        <span class="cuy-mono" style="font-size: 0.74rem;">#{aud.timestampCreacion()}</span>
+                                    </p:column>
+                                    <p:column headerText="Fundamento / Detalle">
+                                        <h:outputText value="#{aud.fundamento()}" style="font-size: 0.78rem;" />
+                                    </p:column>
+                                </p:dataTable>
                             </div>
                         </h:panelGroup>
 
@@ -205,7 +234,7 @@
                                          icon="pi pi-send"
                                          rendered="#{empresaInfraccionesBean.puedePresentarDescargo(empresaInfraccionesBean.seleccionada)}"
                                          actionListener="#{empresaInfraccionesBean.enviarDescargo}"
-                                         update=":infraccionesForm:tablaInfracciones :kpiInfGroup"
+                                         update=":infraccionesForm:tablaInfracciones :kpiInfGroup :growl"
                                          oncomplete="if (!args.validationFailed) PF('dlgDescargoWidget').hide()"
                                          styleClass="ui-button-warning" />
                     </div>

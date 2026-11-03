@@ -9,9 +9,6 @@ import jakarta.inject.Named;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.EstadoInfraccion;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoInfraccion;
 import uy.edu.fing.grupo07.CargaUY.dto.InfraccionDTO;
-import uy.edu.fing.grupo07.CargaUY.dto.ResolucionInfraccionDTO;
-import uy.edu.fing.grupo07.CargaUY.fiscalizacion.MotorFiscalizacionLocal;
-import uy.edu.fing.grupo07.CargaUY.jms.FiscalizacionProducerLocal;
 import uy.edu.fing.grupo07.CargaUY.service.GestionInfraccionesServiceLocal;
 
 import java.io.Serializable;
@@ -20,7 +17,8 @@ import java.util.List;
 
 /**
  * Managed Bean para /funcionario/bandeja-fiscalizacion.xhtml.
- * Bandeja interactiva de evaluación de evidencia, revisión de descargos y resolución administrativa.
+ * Bandeja interactiva de evaluación de evidencia, revisión de descargos y resolución administrativa
+ * con control de acceso por sesión autenticada (Punto D.5).
  */
 @Named("bandejaFiscalizacionBean")
 @ViewScoped
@@ -37,6 +35,13 @@ public class BandejaFiscalizacionBean implements Serializable {
 
     private String fundamentosResolucion;
 
+    public BandejaFiscalizacionBean() {
+    }
+
+    public BandejaFiscalizacionBean(GestionInfraccionesServiceLocal infraccionesService) {
+        this.infraccionesService = infraccionesService;
+    }
+
     @PostConstruct
     public void init() {
         cargarCasos();
@@ -44,7 +49,7 @@ public class BandejaFiscalizacionBean implements Serializable {
 
     public void cargarCasos() {
         try {
-            this.casos = infraccionesService.listarInfracciones(null, null);
+            this.casos = infraccionesService.listarInfracciones(SesionActual.token(), null, null);
         } catch (Exception e) {
             this.casos = new ArrayList<>();
             mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error", "No se pudieron cargar los casos: " + e.getMessage());
@@ -65,7 +70,10 @@ public class BandejaFiscalizacionBean implements Serializable {
     public void notificarEmpresa() {
         if (casoSeleccionado == null) return;
         try {
-            casoSeleccionado = infraccionesService.notificarInfraccion(casoSeleccionado.idCaso());
+            casoSeleccionado = infraccionesService.notificarInfraccion(
+                    SesionActual.token(),
+                    casoSeleccionado.idCaso()
+            );
             cargarCasos();
             mostrarMensaje(FacesMessage.SEVERITY_INFO, "Empresa Notificada",
                     "Se envió notificación oficial a la empresa para el caso #" + casoSeleccionado.idCaso());
@@ -79,25 +87,27 @@ public class BandejaFiscalizacionBean implements Serializable {
         if (fundamentosResolucion == null || fundamentosResolucion.isBlank()) {
             mostrarMensaje(FacesMessage.SEVERITY_WARN, "Fundamento Obligatorio",
                     "Debe ingresar los fundamentos técnicos/legales para confirmar la sanción.");
-            FacesContext.getCurrentInstance().validationFailed();
+            marcarValidacionFallida();
             return;
         }
         if (casoSeleccionado.estado() == EstadoInfraccion.DETECTADA) {
             mostrarMensaje(FacesMessage.SEVERITY_WARN, "Notificación Requerida",
                     "Debe notificar formalmente a la empresa antes de poder confirmar una sanción.");
-            FacesContext.getCurrentInstance().validationFailed();
+            marcarValidacionFallida();
             return;
         }
         try {
-            int funcId = obtenerFuncionarioActivoId();
-            ResolucionInfraccionDTO dto = new ResolucionInfraccionDTO(funcId, fundamentosResolucion.trim());
-            casoSeleccionado = infraccionesService.confirmarInfraccion(casoSeleccionado.idCaso(), dto);
+            casoSeleccionado = infraccionesService.confirmarInfraccion(
+                    SesionActual.token(),
+                    casoSeleccionado.idCaso(),
+                    fundamentosResolucion.trim()
+            );
             cargarCasos();
             mostrarMensaje(FacesMessage.SEVERITY_INFO, "Sanción Confirmada",
                     "El caso #" + casoSeleccionado.idCaso() + " quedó CONFIRMADO y sellado en auditoría inmutable.");
         } catch (Exception e) {
             mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error al confirmar sanción", e.getMessage());
-            FacesContext.getCurrentInstance().validationFailed();
+            marcarValidacionFallida();
         }
     }
 
@@ -106,27 +116,32 @@ public class BandejaFiscalizacionBean implements Serializable {
         if (fundamentosResolucion == null || fundamentosResolucion.isBlank()) {
             mostrarMensaje(FacesMessage.SEVERITY_WARN, "Fundamento Obligatorio",
                     "Debe ingresar el motivo de desestimación para el registro de auditoría.");
-            FacesContext.getCurrentInstance().validationFailed();
+            marcarValidacionFallida();
             return;
         }
         try {
-            int funcId = obtenerFuncionarioActivoId();
-            ResolucionInfraccionDTO dto = new ResolucionInfraccionDTO(funcId, fundamentosResolucion.trim());
-            casoSeleccionado = infraccionesService.desestimarInfraccion(casoSeleccionado.idCaso(), dto);
+            casoSeleccionado = infraccionesService.desestimarInfraccion(
+                    SesionActual.token(),
+                    casoSeleccionado.idCaso(),
+                    fundamentosResolucion.trim()
+            );
             cargarCasos();
             mostrarMensaje(FacesMessage.SEVERITY_INFO, "Caso Desestimado",
                     "El expediente #" + casoSeleccionado.idCaso() + " fue DESESTIMADO y archivado.");
         } catch (Exception e) {
             mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error al desestimar", e.getMessage());
-            FacesContext.getCurrentInstance().validationFailed();
+            marcarValidacionFallida();
         }
     }
 
-    private int obtenerFuncionarioActivoId() {
+    private void marcarValidacionFallida() {
         try {
-            return SesionActual.actor().id();
-        } catch (Exception e) {
-            return 1;
+            FacesContext fc = FacesContext.getCurrentInstance();
+            if (fc != null) {
+                fc.validationFailed();
+            }
+        } catch (Throwable ignored) {
+            // Entorno fuera de contenedor JSF (tests unitarios)
         }
     }
 
@@ -154,9 +169,13 @@ public class BandejaFiscalizacionBean implements Serializable {
     }
 
     private void mostrarMensaje(FacesMessage.Severity sev, String res, String det) {
-        FacesContext fc = FacesContext.getCurrentInstance();
-        if (fc != null) {
-            fc.addMessage(null, new FacesMessage(sev, res, det));
+        try {
+            FacesContext fc = FacesContext.getCurrentInstance();
+            if (fc != null) {
+                fc.addMessage(null, new FacesMessage(sev, res, det));
+            }
+        } catch (Throwable ignored) {
+            // Entorno fuera de contenedor JSF (tests unitarios)
         }
     }
 

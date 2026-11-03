@@ -4,6 +4,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import jakarta.annotation.PostConstruct;
+import jakarta.ejb.DependsOn;
 import jakarta.ejb.Singleton;
 import jakarta.ejb.Startup;
 import jakarta.ejb.TransactionAttribute;
@@ -22,6 +23,7 @@ import jakarta.persistence.PersistenceContext;
  */
 @Singleton
 @Startup
+@DependsOn("EsquemaMigracionStartupBean")
 public class AuditoriaTriggerInstaller {
 
     private static final Logger LOG = Logger.getLogger(AuditoriaTriggerInstaller.class.getName());

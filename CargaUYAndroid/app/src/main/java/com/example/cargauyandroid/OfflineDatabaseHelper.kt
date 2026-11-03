@@ -10,7 +10,7 @@ class OfflineDatabaseHelper(context: Context) :
 
     companion object {
         private const val DATABASE_NAME = "cargauy_offline.db"
-        private const val DATABASE_VERSION = 1
+        private const val DATABASE_VERSION = 2
 
         private const val TABLE_GUIAS = "guias_cache"
         private const val TABLE_EVENTOS = "eventos_locales"
@@ -50,6 +50,9 @@ class OfflineDatabaseHelper(context: Context) :
                 longitud REAL NOT NULL,
                 descripcion TEXT,
                 foto TEXT,
+                cantidad_kg REAL,
+                mercaderia TEXT,
+                empresa_carga TEXT,
                 estado_sync TEXT NOT NULL,
                 mensaje_sync TEXT
             )
@@ -58,9 +61,17 @@ class OfflineDatabaseHelper(context: Context) :
     }
 
     override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
-        db.execSQL("DROP TABLE IF EXISTS $TABLE_EVENTOS")
-        db.execSQL("DROP TABLE IF EXISTS $TABLE_GUIAS")
-        onCreate(db)
+        if (oldVersion < 2) {
+            try {
+                db.execSQL("ALTER TABLE $TABLE_EVENTOS ADD COLUMN cantidad_kg REAL")
+                db.execSQL("ALTER TABLE $TABLE_EVENTOS ADD COLUMN mercaderia TEXT")
+                db.execSQL("ALTER TABLE $TABLE_EVENTOS ADD COLUMN empresa_carga TEXT")
+            } catch (_: Exception) {
+                db.execSQL("DROP TABLE IF EXISTS $TABLE_EVENTOS")
+                db.execSQL("DROP TABLE IF EXISTS $TABLE_GUIAS")
+                onCreate(db)
+            }
+        }
     }
 
     fun limpiarBaseDeDatosCompleta() {
@@ -201,6 +212,9 @@ class OfflineDatabaseHelper(context: Context) :
             put("longitud", evento.longitud)
             put("descripcion", evento.descripcion)
             put("foto", evento.foto)
+            if (evento.cantidadKg != null) put("cantidad_kg", evento.cantidadKg) else putNull("cantidad_kg")
+            put("mercaderia", evento.mercaderia)
+            put("empresa_carga", evento.empresaCarga)
             put("estado_sync", evento.estadoSync)
             put("mensaje_sync", evento.mensajeSync)
         }
@@ -254,6 +268,9 @@ class OfflineDatabaseHelper(context: Context) :
             "tiempo ASC"
         )
         cursor.use { c ->
+            val cantIdx = c.getColumnIndex("cantidad_kg")
+            val mercIdx = c.getColumnIndex("mercaderia")
+            val empIdx = c.getColumnIndex("empresa_carga")
             while (c.moveToNext()) {
                 lista.add(
                     EventoLocal(
@@ -265,6 +282,9 @@ class OfflineDatabaseHelper(context: Context) :
                         longitud = c.getDouble(c.getColumnIndexOrThrow("longitud")),
                         descripcion = c.getString(c.getColumnIndexOrThrow("descripcion")),
                         foto = c.getString(c.getColumnIndexOrThrow("foto")),
+                        cantidadKg = if (cantIdx >= 0 && !c.isNull(cantIdx)) c.getDouble(cantIdx) else null,
+                        mercaderia = if (mercIdx >= 0 && !c.isNull(mercIdx)) c.getString(mercIdx) else null,
+                        empresaCarga = if (empIdx >= 0 && !c.isNull(empIdx)) c.getString(empIdx) else null,
                         estadoSync = c.getString(c.getColumnIndexOrThrow("estado_sync")),
                         mensajeSync = c.getString(c.getColumnIndexOrThrow("mensaje_sync"))
                     )

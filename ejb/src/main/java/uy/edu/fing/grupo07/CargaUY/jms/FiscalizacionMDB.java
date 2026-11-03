@@ -52,9 +52,28 @@ public class FiscalizacionMDB implements MessageListener {
                 return;
             }
 
+            String cuerpoTrim = cuerpo.trim();
+            if (cuerpoTrim.startsWith(FiscalizacionMessageProducer.PREFIJO_SIN_GUIA)) {
+                String resto = cuerpoTrim.substring(FiscalizacionMessageProducer.PREFIJO_SIN_GUIA.length());
+                int sep = resto.indexOf('|');
+                String matricula = sep >= 0 ? resto.substring(0, sep).trim() : resto.trim();
+                if (matricula.isEmpty()) {
+                    LOGGER.log(Level.WARNING, "Mensaje SIN_GUIA ignorado en FiscalizacionQueue: matrícula vacía ({0})", cuerpo);
+                    return;
+                }
+                String detalle = sep >= 0 ? resto.substring(sep + 1).trim() : "";
+                boolean generada = motorFiscalizacion.evaluarVehiculoSinGuia(matricula, detalle);
+                LOGGER.log(
+                        Level.INFO,
+                        "Fiscalización VIAJE_SIN_GUIA completada para matrícula {0}. Nueva infracción generada: {1}",
+                        new Object[]{matricula, generada}
+                );
+                return;
+            }
+
             Long guiaId;
             try {
-                guiaId = Long.parseLong(cuerpo.trim());
+                guiaId = Long.parseLong(cuerpoTrim);
             } catch (NumberFormatException nfe) {
                 LOGGER.log(Level.WARNING, "El contenido del mensaje en FiscalizacionQueue no es numérico: {0}", cuerpo);
                 return;

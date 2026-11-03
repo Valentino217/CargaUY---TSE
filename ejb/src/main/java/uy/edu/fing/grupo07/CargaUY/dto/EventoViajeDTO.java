@@ -19,7 +19,11 @@ public record EventoViajeDTO(
         double longitud,
         Long guiaId,
         IncidenteDTO incidente,
-        Double distanciaDesvioKm
+        Double distanciaDesvioKm,
+        Double cantidadKg,
+        String mercaderia,
+        String empresaCarga,
+        String matricula
 ) implements Serializable {
 
     @JsonbCreator
@@ -31,7 +35,11 @@ public record EventoViajeDTO(
             @JsonbProperty("longitud") double longitud,
             @JsonbProperty("guiaId") Long guiaId,
             @JsonbProperty("incidente") IncidenteDTO incidente,
-            @JsonbProperty("distanciaDesvioKm") Double distanciaDesvioKm
+            @JsonbProperty("distanciaDesvioKm") Double distanciaDesvioKm,
+            @JsonbProperty("cantidadKg") Double cantidadKg,
+            @JsonbProperty("mercaderia") String mercaderia,
+            @JsonbProperty("empresaCarga") String empresaCarga,
+            @JsonbProperty("matricula") String matricula
     ) {
         this.uuid = uuid;
         this.tiempo = tiempo;
@@ -41,6 +49,39 @@ public record EventoViajeDTO(
         this.guiaId = guiaId;
         this.incidente = incidente;
         this.distanciaDesvioKm = distanciaDesvioKm;
+        this.cantidadKg = cantidadKg;
+        this.mercaderia = mercaderia;
+        this.empresaCarga = empresaCarga;
+        this.matricula = matricula;
+    }
+
+    public EventoViajeDTO(
+            String uuid,
+            LocalDateTime tiempo,
+            TipoEvento tipo,
+            double latitud,
+            double longitud,
+            Long guiaId,
+            IncidenteDTO incidente,
+            Double distanciaDesvioKm,
+            Double cantidadKg,
+            String mercaderia,
+            String empresaCarga
+    ) {
+        this(uuid, tiempo, tipo, latitud, longitud, guiaId, incidente, distanciaDesvioKm, cantidadKg, mercaderia, empresaCarga, null);
+    }
+
+    public EventoViajeDTO(
+            String uuid,
+            LocalDateTime tiempo,
+            TipoEvento tipo,
+            double latitud,
+            double longitud,
+            Long guiaId,
+            IncidenteDTO incidente,
+            Double distanciaDesvioKm
+    ) {
+        this(uuid, tiempo, tipo, latitud, longitud, guiaId, incidente, distanciaDesvioKm, null, null, null, null);
     }
 
     public EventoViajeDTO(
@@ -52,6 +93,6 @@ public record EventoViajeDTO(
             Long guiaId,
             IncidenteDTO incidente
     ) {
-        this(uuid, tiempo, tipo, latitud, longitud, guiaId, incidente, null);
+        this(uuid, tiempo, tipo, latitud, longitud, guiaId, incidente, null, null, null, null, null);
     }
 }

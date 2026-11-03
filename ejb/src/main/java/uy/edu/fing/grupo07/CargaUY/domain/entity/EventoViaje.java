@@ -44,6 +44,15 @@ public class EventoViaje implements Serializable {
     @Column(name = "distancia_desvio_km")
     private Double distanciaDesvioKm;
 
+    @Column(name = "cantidad_kg")
+    private Double cantidadKg;
+
+    @Column(name = "mercaderia", length = 255)
+    private String mercaderia;
+
+    @Column(name = "empresa_carga", length = 255)
+    private String empresaCarga;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "guia_id", nullable = false)
     private GuiaDeViaje guia;
@@ -122,6 +131,30 @@ public class EventoViaje implements Serializable {
 
     public void setDistanciaDesvioKm(Double distanciaDesvioKm) {
         this.distanciaDesvioKm = distanciaDesvioKm;
+    }
+
+    public Double getCantidadKg() {
+        return cantidadKg;
+    }
+
+    public void setCantidadKg(Double cantidadKg) {
+        this.cantidadKg = cantidadKg;
+    }
+
+    public String getMercaderia() {
+        return mercaderia;
+    }
+
+    public void setMercaderia(String mercaderia) {
+        this.mercaderia = mercaderia;
+    }
+
+    public String getEmpresaCarga() {
+        return empresaCarga;
+    }
+
+    public void setEmpresaCarga(String empresaCarga) {
+        this.empresaCarga = empresaCarga;
     }
 
     public GuiaDeViaje getGuia() {

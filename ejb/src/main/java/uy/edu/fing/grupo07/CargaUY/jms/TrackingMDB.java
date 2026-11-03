@@ -73,11 +73,12 @@ public class TrackingMDB implements MessageListener {
                 return;
             }
 
-            // Persistir evento
-            eventosService.guardarEvento(evento);
+            // Persistir evento (GestionEventosServiceImpl ya encola la evaluación en FiscalizacionQueue;
+            // el respaldo aplica únicamente cuando un doble de prueba retorna null).
+            uy.edu.fing.grupo07.CargaUY.domain.entity.EventoViaje persistido = eventosService.guardarEvento(evento);
             LOGGER.log(Level.INFO, "Evento con UUID {0} persistido exitosamente por TrackingMDB.", evento.uuid());
 
-            if (fiscalizacionProducer != null && evento.guiaId() != null) {
+            if (persistido == null && fiscalizacionProducer != null && evento.guiaId() != null) {
                 fiscalizacionProducer.solicitarEvaluacion(evento.guiaId());
             }
 

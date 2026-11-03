@@ -87,6 +87,35 @@ class ChoferResourceTest {
     }
 
     @Test
+    @DisplayName("POST /eventos/sync con eventos interactivos del chofer (CARGA_PARCIAL, INCIDENTE, FIN) persiste sincrónicamente en orden sin carrera JMS")
+    void testSincronizarEventosInteractivosChoferEvitaReordenamientoConFin() {
+        ChoferResource asyncResource = new ChoferResource(eventosService, trackingProducer);
+
+        EventoViajeDTO evCargaParcial = new EventoViajeDTO(
+                "ev-cp-1", LocalDateTime.now(), TipoEvento.CARGA_PARCIAL, -34.9, -56.1, 20L,
+                null, null, 2500.0, "Soja", "AgroSur", "STP 1234"
+        );
+        EventoViajeDTO evFin = new EventoViajeDTO(
+                "ev-fin-1", LocalDateTime.now().plusMinutes(5), TipoEvento.FIN, -34.8, -56.0, 20L, null
+        );
+
+        when(eventosService.guardarEventosLote(List.of(evCargaParcial)))
+                .thenReturn(List.of(SyncResultDTO.accepted("ev-cp-1")));
+        when(eventosService.guardarEventosLote(List.of(evFin)))
+                .thenReturn(List.of(SyncResultDTO.accepted("ev-fin-1")));
+
+        Response r1 = asyncResource.sincronizarEventos(List.of(evCargaParcial));
+        Response r2 = asyncResource.sincronizarEventos(List.of(evFin));
+
+        assertEquals(Response.Status.OK.getStatusCode(), r1.getStatus());
+        assertEquals(Response.Status.OK.getStatusCode(), r2.getStatus());
+        org.mockito.InOrder inOrder = inOrder(eventosService);
+        inOrder.verify(eventosService).guardarEventosLote(List.of(evCargaParcial));
+        inOrder.verify(eventosService).guardarEventosLote(List.of(evFin));
+        verifyNoInteractions(trackingProducer);
+    }
+
+    @Test
     @DisplayName("POST /eventos/sync con lista nula o vacía debe responder 400 Bad Request")
     void testSincronizarEventosListaVacia() {
         Response respNulo = resource.sincronizarEventos(null);

@@ -53,14 +53,31 @@ public class ChoferResource {
                     .build();
         }
 
-        if (trackingProducer != null) {
+        boolean contieneEventoInteractivoChofer = eventos.stream().anyMatch(ev ->
+                ev != null && (ev.tipo() == uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEvento.INICIO
+                        || ev.tipo() == uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEvento.FIN
+                        || ev.tipo() == uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEvento.CARGA_PARCIAL
+                        || ev.tipo() == uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEvento.DESCARGA_PARCIAL
+                        || ev.tipo() == uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEvento.INCIDENTE)
+        );
+
+        if (trackingProducer != null && !contieneEventoInteractivoChofer) {
             java.util.List<SyncResultDTO> resultados = new java.util.ArrayList<>();
             for (EventoViajeDTO ev : eventos) {
-                if (ev.uuid() != null && eventosService.existeEvento(ev.uuid())) {
+                if (ev == null || ev.uuid() == null || ev.uuid().isBlank()) {
+                    resultados.add(SyncResultDTO.error(ev != null ? ev.uuid() : null, "UUID no puede ser nulo o vacío"));
+                    continue;
+                }
+                if (eventosService.existeEvento(ev.uuid())) {
                     resultados.add(SyncResultDTO.duplicate(ev.uuid()));
-                } else {
+                    continue;
+                }
+                try {
+                    eventosService.validarEventoPreEncolado(ev);
                     trackingProducer.enviarEvento(ev);
                     resultados.add(SyncResultDTO.accepted(ev.uuid()));
+                } catch (uy.edu.fing.grupo07.CargaUY.exception.BusinessException e) {
+                    resultados.add(SyncResultDTO.error(ev.uuid(), e.getMessage()));
                 }
             }
             return Response.ok(resultados).build();
@@ -77,9 +94,11 @@ public class ChoferResource {
     @POST
     @Path("/eventos/faas")
     public Response recibirEventoProcesadoFaas(EventoViajeDTO evento) {
-        if (evento == null || evento.guiaId() == null || evento.uuid() == null || evento.uuid().isBlank()) {
+        boolean tieneIdentificador = evento != null
+                && (evento.guiaId() != null || (evento.matricula() != null && !evento.matricula().isBlank()));
+        if (!tieneIdentificador || evento.uuid() == null || evento.uuid().isBlank()) {
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(Collections.singletonMap("error", "uuid y guiaId son obligatorios en el evento procesado por FaaS."))
+                    .entity(Collections.singletonMap("error", "uuid y (guiaId o matricula) son obligatorios en el evento procesado por FaaS."))
                     .build();
         }
 
@@ -88,8 +107,13 @@ public class ChoferResource {
         }
 
         if (trackingProducer != null) {
-            trackingProducer.enviarEvento(evento);
-            return Response.ok(SyncResultDTO.accepted(evento.uuid())).build();
+            try {
+                eventosService.validarEventoPreEncolado(evento);
+                trackingProducer.enviarEvento(evento);
+                return Response.ok(SyncResultDTO.accepted(evento.uuid())).build();
+            } catch (uy.edu.fing.grupo07.CargaUY.exception.BusinessException e) {
+                return Response.ok(SyncResultDTO.error(evento.uuid(), e.getMessage())).build();
+            }
         }
 
         List<SyncResultDTO> resultados = eventosService.guardarEventosLote(Collections.singletonList(evento));

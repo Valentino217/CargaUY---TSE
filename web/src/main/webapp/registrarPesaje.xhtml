@@ -73,18 +73,21 @@
 
             <p:panel header="Datos del Pesaje">
                 <h:panelGrid columns="2" cellpadding="6">
-                    <h:outputLabel for="guia" value="Guía de Viaje: *" style="font-weight: bold;"/>
+                    <h:outputLabel for="guia" value="Guía de Viaje:" style="font-weight: bold;"/>
                     <h:selectOneMenu id="guia" label="Guía de Viaje"
-                                     value="#{registrarPesajeBean.guiaIdSeleccionada}"
-                                     required="true"
-                                     requiredMessage="Debe seleccionar una guía de viaje.">
-                        <f:selectItem itemLabel="-- Seleccione una guía --" itemValue="#{null}" noSelectionOption="true"/>
+                                     value="#{registrarPesajeBean.guiaIdSeleccionada}">
+                        <f:selectItem itemLabel="-- Sin guía activa (usar matrícula) --" itemValue="#{null}" noSelectionOption="true"/>
                         <f:selectItems value="#{registrarPesajeBean.guiasDisponibles}"
                                        var="g"
                                        itemValue="#{g.id}"
                                        itemLabel="#{registrarPesajeBean.obtenerEtiquetaGuia(g)}"/>
                         <f:ajax listener="#{registrarPesajeBean.onGuiaChange}" render=":formPesaje:tablaPesadas"/>
                     </h:selectOneMenu>
+
+                    <h:outputLabel for="matricula" value="Matrícula (sin guía):" style="font-weight: bold;"/>
+                    <p:inputText id="matricula" label="Matrícula (sin guía)"
+                                 value="#{registrarPesajeBean.matriculaManual}"
+                                 placeholder="Ej: STP 1234"/>
 
                     <h:outputLabel for="peso" value="Peso Registrado (kg): *" style="font-weight: bold;"/>
                     <p:inputNumber id="peso" label="Peso Registrado (kg)"
@@ -94,19 +97,19 @@
                                    requiredMessage="El peso es obligatorio."/>
 
                     <h:outputLabel for="fecha" value="Fecha:" style="font-weight: bold;"/>
-                    <p:datePicker id="fecha" label="Fecha"
+                    <p:datePicker id="fecha"
                                   value="#{registrarPesajeBean.fecha}"
                                   pattern="dd/MM/yyyy" panelStyleClass="cuy-calendar"  monthNavigator="true"  yearNavigator="select"  showButtonBar="true"  showOtherMonths="true"  showIcon="true"  yearRange="1900:2026"  showLongMonthNames="true" />
 
                     <h:outputLabel for="hora" value="Hora:" style="font-weight: bold;"/>
-                    <p:datePicker id="hora" label="Hora"
+                    <p:datePicker id="hora"
                                   value="#{registrarPesajeBean.hora}"
                                   timeOnly="true"
                                   pattern="HH:mm"/>
 
                     <h:outputLabel for="evaluar" value="Opciones:" style="font-weight: bold;"/>
                     <h:panelGroup>
-                        <h:selectBooleanCheckbox id="evaluar" label="Evaluar infracciones de inmediato (muestra resultado en pantalla)" value="#{registrarPesajeBean.evaluarInmediato}"/>
+                        <h:selectBooleanCheckbox id="evaluar" value="#{registrarPesajeBean.evaluarInmediato}"/>
                         <h:outputLabel for="evaluar" value=" Evaluar infracciones de inmediato (muestra resultado en pantalla)"/>
                     </h:panelGroup>
                 </h:panelGrid>

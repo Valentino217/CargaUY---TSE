@@ -376,14 +376,38 @@ public class DatosPruebaStartupBean {
         );
         infraccionConfirmada.setDescargo(descargoGuia3);
 
-        RegistroAuditoria auditoriaGuia3 = new RegistroAuditoria(
+        infraccionConfirmada.agregarRegistroAuditoria(new RegistroAuditoria(
+                infraccionConfirmada,
+                "DETECTADA",
+                LocalDate.now().minusDays(3),
+                "SISTEMA (MotorFiscalizacion)",
+                "CREAR_INFRACCION",
+                "La pesada registrada en balanza fue de 44.200 kg excediendo el límite legal permitido de 40.000 kg."
+        ));
+        infraccionConfirmada.agregarRegistroAuditoria(new RegistroAuditoria(
+                infraccionConfirmada,
+                "NOTIFICADA",
+                LocalDate.now().minusDays(3),
+                "SISTEMA (Notificación Automática)",
+                "NOTIFICAR_INFRACCION",
+                "Notificación automática enviada a la empresa transportista (TransRuta) al generarse el caso de fiscalización."
+        ));
+        infraccionConfirmada.agregarRegistroAuditoria(new RegistroAuditoria(
+                infraccionConfirmada,
+                "EN_DESCARGO",
+                LocalDate.now().minusDays(2),
+                "Empresa Transportista (TransRuta)",
+                "PRESENTAR_DESCARGO",
+                "Se solicita la anulacion. Algo debe estar mal"
+        ));
+        infraccionConfirmada.agregarRegistroAuditoria(new RegistroAuditoria(
+                infraccionConfirmada,
                 "CONFIRMADA",
                 LocalDate.now().minusDays(1),
                 "funcionario@cargauy.gub.uy",
-                "RESOLVER_INFRACCION",
+                "CONFIRMAR_INFRACCION",
                 "Se desestima el descargo presentado. La balanza de pesaje contaba con verificación ."
-        );
-        infraccionConfirmada.setRegistroAuditoria(auditoriaGuia3);
+        ));
 
         guiaFinalizada.getInfracciones().add(infraccionConfirmada);
         entityManager.persist(guiaFinalizada);

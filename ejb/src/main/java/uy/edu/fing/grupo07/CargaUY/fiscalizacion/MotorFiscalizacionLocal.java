@@ -12,4 +12,6 @@ import java.util.List;
 public interface MotorFiscalizacionLocal {
 
     List<TipoInfraccion> evaluarGuia(Long guiaId);
+
+    boolean evaluarVehiculoSinGuia(String matricula, String detalleActividad);
 }

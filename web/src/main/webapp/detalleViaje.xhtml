@@ -353,13 +353,29 @@
                         </p:column>
 
                         <p:column headerText="Detalle / Incidente">
+                            <h:panelGroup rendered="#{ev.cantidadKg() != null or not empty ev.mercaderia() or not empty ev.empresaCarga()}">
+                                <div style="font-size: 0.85rem; color: #1e293b;">
+                                    <h:outputText value="#{ev.cantidadKg()} kg" rendered="#{ev.cantidadKg() != null}"/>
+                                    <h:outputText value=" &#8226; #{ev.mercaderia()}" rendered="#{not empty ev.mercaderia()}"/>
+                                    <h:outputText value=" &#8226; #{ev.empresaCarga()}" rendered="#{not empty ev.empresaCarga()}"/>
+                                </div>
+                            </h:panelGroup>
                             <h:panelGroup rendered="#{ev.incidente() != null}">
                                 <strong style="color: #991b1b;">#{ev.incidente().descripcion()}</strong>
-                                <h:panelGroup rendered="#{ev.incidente().foto() != null and not empty ev.incidente().foto()}">
+                                <h:panelGroup rendered="#{not empty ev.incidente().foto() and ev.incidente().foto().startsWith('data:image/')}">
+                                    <div style="margin-top: 6px;">
+                                        <img src="#{ev.incidente().foto()}"
+                                             alt="Foto del incidente"
+                                             style="max-width: 160px; max-height: 120px; border-radius: 6px; border: 1px solid #cbd5e1; object-fit: cover;"/>
+                                    </div>
+                                </h:panelGroup>
+                                <h:panelGroup rendered="#{not empty ev.incidente().foto() and not ev.incidente().foto().startsWith('data:image/')}">
                                     <br/><small class="muted-text">Foto: #{ev.incidente().foto()}</small>
                                 </h:panelGroup>
                             </h:panelGroup>
-                            <h:outputText value="-" rendered="#{ev.incidente() == null}" styleClass="muted-text"/>
+                            <h:outputText value="-"
+                                          rendered="#{ev.incidente() == null and ev.cantidadKg() == null and empty ev.mercaderia() and empty ev.empresaCarga()}"
+                                          styleClass="muted-text"/>
                         </p:column>
                     </p:dataTable>
                 </p:panel>

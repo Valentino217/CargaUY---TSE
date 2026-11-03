@@ -75,4 +75,21 @@ class FiscalizacionMessageProducerTest {
         assertThrows(RuntimeException.class, () -> producer.solicitarEvaluacion(12L));
         verify(jmsProducer, never()).send(any(Queue.class), any(TextMessage.class));
     }
+
+    @Test
+    @DisplayName("Punto E.8 - solicitarEvaluacionSinGuia publica mensaje SIN_GUIA|matricula|detalle en FiscalizacionQueue")
+    void testSolicitarEvaluacionSinGuiaExitosoYValidacionVacio() throws JMSException {
+        producer.solicitarEvaluacionSinGuia("  ", "detalle");
+        verifyNoInteractions(jmsContext);
+
+        when(jmsContext.createTextMessage(anyString())).thenReturn(textMessage);
+        when(jmsContext.createProducer()).thenReturn(jmsProducer);
+
+        producer.solicitarEvaluacionSinGuia(" 123456 ", "Pesaje\ncon|pipes");
+
+        verify(jmsContext).createTextMessage("SIN_GUIA|123456|Pesaje con/pipes");
+        verify(textMessage).setStringProperty("tipoEvaluacion", "SIN_GUIA");
+        verify(textMessage).setStringProperty("matricula", "123456");
+        verify(jmsProducer).send(fiscalizacionQueue, textMessage);
+    }
 }

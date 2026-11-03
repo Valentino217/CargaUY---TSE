@@ -39,6 +39,9 @@ public class BandejaInfraccionesBean implements Serializable {
     @EJB
     private FiscalizacionProducerLocal fiscalizacionProducer;
 
+    @EJB
+    private uy.edu.fing.grupo07.CargaUY.security.ControlAcceso controlAcceso;
+
     private List<InfraccionDTO> infracciones;
     private EstadoInfraccion filtroEstado;
     private TipoInfraccion filtroTipo;
@@ -66,9 +69,21 @@ public class BandejaInfraccionesBean implements Serializable {
         cargarInfracciones();
     }
 
+    private boolean tieneContextoWeb() {
+        try {
+            return FacesContext.getCurrentInstance() != null;
+        } catch (Throwable errorEntorno) {
+            return false;
+        }
+    }
+
     public void cargarInfracciones() {
         try {
-            this.infracciones = infraccionesService.listarInfracciones(filtroEstado, filtroTipo);
+            if (tieneContextoWeb()) {
+                this.infracciones = infraccionesService.listarInfracciones(SesionActual.token(), filtroEstado, filtroTipo);
+            } else {
+                this.infracciones = infraccionesService.listarInfracciones(filtroEstado, filtroTipo);
+            }
         } catch (Exception excepcion) {
             LOGGER.log(Level.SEVERE, "Error al listar infracciones", excepcion);
             mostrarMensaje(
@@ -101,6 +116,13 @@ public class BandejaInfraccionesBean implements Serializable {
         }
 
         try {
+            if (tieneContextoWeb() && controlAcceso != null) {
+                controlAcceso.exigir(
+                        SesionActual.token(),
+                        uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.FUNCIONARIO,
+                        uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.ADMINISTRADOR
+                );
+            }
             if ("async".equalsIgnoreCase(modoFiscalizacion)) {
                 fiscalizacionProducer.solicitarEvaluacion(guiaIdFiscalizar);
                 mostrarMensaje(

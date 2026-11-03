@@ -343,4 +343,200 @@ class MotorFiscalizacionTest {
         assertTrue(infracciones.isEmpty());
         verify(em, never()).persist(any(Infraccion.class));
     }
+
+    @Test
+    @DisplayName("Punto E.7 / E.c / E.d - Evalúa vigencia de ITV/PNC a la fecha futura de la guía, adjunta auditoría CREAR_INFRACCION y encola notificación")
+    void testHabilitacionVigenteHoyPeroVencidaEnFechaFuturaGuiaGeneraInfraccionYNotifica() {
+        uy.edu.fing.grupo07.CargaUY.jms.NotificacionProducerLocal notifMock =
+                org.mockito.Mockito.mock(uy.edu.fing.grupo07.CargaUY.jms.NotificacionProducerLocal.class);
+        MotorFiscalizacionImpl motorConNotif = new MotorFiscalizacionImpl(em, notifMock);
+
+        Long guiaId = 90L;
+        LocalDate fechaViajeFutura = LocalDate.now().plusDays(20);
+        GuiaDeViaje guia = new GuiaDeViaje();
+        guia.setId(guiaId);
+        guia.setFecha(fechaViajeFutura);
+
+        Vehiculo vehiculo = new Vehiculo("2020", "Volvo", "FH540", 9000, 30000, true, null);
+        // ITV y PNC vigentes HOY, pero vencidos para fechaViajeFutura
+        vehiculo.setItv(List.of(new ITV(LocalDate.now().plusDays(5), vehiculo)));
+        vehiculo.getPncs().add(new PNC(LocalDate.now().plusDays(10), vehiculo));
+        guia.setVehiculo(vehiculo);
+
+        when(em.find(GuiaDeViaje.class, guiaId)).thenReturn(guia);
+        when(em.find(ReglaFiscalizacion.class, 1)).thenReturn(new ReglaFiscalizacion(500, 5.0));
+
+        when(em.createQuery(anyString(), eq(PesadaBalanza.class))).thenReturn(queryPesada);
+        when(queryPesada.setParameter("guiaId", guiaId)).thenReturn(queryPesada);
+        when(queryPesada.setMaxResults(1)).thenReturn(queryPesada);
+        when(queryPesada.getResultList()).thenReturn(Collections.emptyList());
+
+        when(em.createQuery(anyString(), eq(EventoViaje.class))).thenReturn(queryEventoDesvio);
+        when(queryEventoDesvio.setParameter("guiaId", guiaId)).thenReturn(queryEventoDesvio);
+        when(queryEventoDesvio.setMaxResults(1)).thenReturn(queryEventoDesvio);
+        when(queryEventoDesvio.getResultList()).thenReturn(Collections.emptyList());
+
+        when(em.createQuery(anyString(), eq(Long.class))).thenReturn(queryInfraccionesExistentes);
+        when(queryInfraccionesExistentes.setParameter("guiaId", guiaId)).thenReturn(queryInfraccionesExistentes);
+        when(queryInfraccionesExistentes.setParameter("tipo", TipoInfraccion.SIN_HABILITACION))
+                .thenReturn(queryInfraccionesExistentes);
+        when(queryInfraccionesExistentes.getSingleResult()).thenReturn(0L);
+
+        final Infraccion[] capturada = new Infraccion[1];
+        org.mockito.Mockito.doAnswer(inv -> {
+            Infraccion inf = inv.getArgument(0);
+            inf.setIdCaso(501);
+            capturada[0] = inf;
+            return null;
+        }).when(em).persist(any(Infraccion.class));
+
+        List<TipoInfraccion> resultado = motorConNotif.evaluarGuia(guiaId);
+
+        assertEquals(1, resultado.size());
+        assertEquals(TipoInfraccion.SIN_HABILITACION, resultado.get(0));
+        assertNotNull(capturada[0]);
+        assertEquals(1, capturada[0].getRegistrosAuditoria().size());
+        assertEquals("CREAR_INFRACCION", capturada[0].getRegistrosAuditoria().get(0).getAccion());
+        verify(notifMock).solicitarNotificacion(501);
+    }
+
+    @Test
+    @DisplayName("Punto E.7 - No genera SIN_HABILITACION si ITV/PNC hoy están vencidos pero estaban vigentes en la fecha histórica de la guía")
+    void testHabilitacionVencidaHoyPeroVigenteEnFechaHistoricaGuiaNoGeneraInfraccion() {
+        Long guiaId = 91L;
+        LocalDate fechaViajePasada = LocalDate.now().minusDays(15);
+        GuiaDeViaje guia = new GuiaDeViaje();
+        guia.setId(guiaId);
+        guia.setFecha(fechaViajePasada);
+
+        Vehiculo vehiculo = new Vehiculo("2021", "Scania", "R500", 9000, 30000, true, null);
+        // Vencieron hace 3 días, pero hace 15 días estaban plenamente vigentes
+        vehiculo.setItv(List.of(new ITV(LocalDate.now().minusDays(3), vehiculo)));
+        vehiculo.getPncs().add(new PNC(LocalDate.now().minusDays(3), vehiculo));
+        guia.setVehiculo(vehiculo);
+
+        when(em.find(GuiaDeViaje.class, guiaId)).thenReturn(guia);
+        when(em.find(ReglaFiscalizacion.class, 1)).thenReturn(new ReglaFiscalizacion(500, 5.0));
+
+        when(em.createQuery(anyString(), eq(PesadaBalanza.class))).thenReturn(queryPesada);
+        when(queryPesada.setParameter("guiaId", guiaId)).thenReturn(queryPesada);
+        when(queryPesada.setMaxResults(1)).thenReturn(queryPesada);
+        when(queryPesada.getResultList()).thenReturn(Collections.emptyList());
+
+        when(em.createQuery(anyString(), eq(EventoViaje.class))).thenReturn(queryEventoDesvio);
+        when(queryEventoDesvio.setParameter("guiaId", guiaId)).thenReturn(queryEventoDesvio);
+        when(queryEventoDesvio.setMaxResults(1)).thenReturn(queryEventoDesvio);
+        when(queryEventoDesvio.getResultList()).thenReturn(Collections.emptyList());
+
+        List<TipoInfraccion> resultado = motor.evaluarGuia(guiaId);
+
+        assertTrue(resultado.isEmpty());
+        verify(em, never()).persist(any(Infraccion.class));
+    }
+
+    @Test
+    @DisplayName("Punto E.8 / E.c / E.d - evaluarVehiculoSinGuia genera VIAJE_SIN_GUIA sin guía asociada, registra auditoría y encola notificación")
+    void testEvaluarVehiculoSinGuiaGeneraInfraccionYNotifica() {
+        uy.edu.fing.grupo07.CargaUY.jms.NotificacionProducerLocal notifMock =
+                org.mockito.Mockito.mock(uy.edu.fing.grupo07.CargaUY.jms.NotificacionProducerLocal.class);
+        MotorFiscalizacionImpl motorConNotif = new MotorFiscalizacionImpl(em, notifMock);
+
+        Vehiculo camion = new Vehiculo("303030", "Mercedes", "Actros", 9000, 31000, true, null);
+        when(em.find(Vehiculo.class, "303030")).thenReturn(camion);
+
+        @SuppressWarnings("unchecked")
+        TypedQuery<Long> qGuias = org.mockito.Mockito.mock(TypedQuery.class);
+        @SuppressWarnings("unchecked")
+        TypedQuery<Long> qExistentes = org.mockito.Mockito.mock(TypedQuery.class);
+
+        when(em.createQuery(org.mockito.ArgumentMatchers.contains("GuiaDeViaje"), eq(Long.class))).thenReturn(qGuias);
+        when(qGuias.setParameter(anyString(), any())).thenReturn(qGuias);
+        when(qGuias.getSingleResult()).thenReturn(0L);
+
+        when(em.createQuery(org.mockito.ArgumentMatchers.contains("Infraccion"), eq(Long.class))).thenReturn(qExistentes);
+        when(qExistentes.setParameter(anyString(), any())).thenReturn(qExistentes);
+        when(qExistentes.getSingleResult()).thenReturn(0L);
+
+        final Infraccion[] capturada = new Infraccion[1];
+        org.mockito.Mockito.doAnswer(inv -> {
+            Infraccion inf = inv.getArgument(0);
+            inf.setIdCaso(602);
+            capturada[0] = inf;
+            return null;
+        }).when(em).persist(any(Infraccion.class));
+
+        boolean generada = motorConNotif.evaluarVehiculoSinGuia(" 303030 ", "Pesaje balanza Ruta 5 (34200 kg)");
+
+        assertTrue(generada);
+        assertNotNull(capturada[0]);
+        assertEquals(TipoInfraccion.VIAJE_SIN_GUIA, capturada[0].getTipo());
+        org.junit.jupiter.api.Assertions.assertNull(capturada[0].getGuia());
+        assertEquals("303030", capturada[0].getVehiculo().getMatricula());
+        assertEquals(1, capturada[0].getRegistrosAuditoria().size());
+        assertEquals("CREAR_INFRACCION", capturada[0].getRegistrosAuditoria().get(0).getAccion());
+        verify(notifMock).solicitarNotificacion(602);
+    }
+
+    @Test
+    @DisplayName("Punto E.8 - evaluarVehiculoSinGuia valida matrícula vacía, vehículo inexistente, guía EN_CURSO existente y deduplicación diaria")
+    void testEvaluarVehiculoSinGuiaCasosBordeYDeduplicacion() {
+        assertThrows(BusinessException.class, () -> motor.evaluarVehiculoSinGuia(null, "test"));
+        assertThrows(BusinessException.class, () -> motor.evaluarVehiculoSinGuia("   ", "test"));
+
+        // Vehículo no registrado en padrón
+        when(em.find(Vehiculo.class, "999000")).thenReturn(null);
+        org.junit.jupiter.api.Assertions.assertFalse(motor.evaluarVehiculoSinGuia("999000", "Evento GPS"));
+
+        // Vehículo con guía EN_CURSO activa -> no genera infracción
+        Vehiculo camionConGuia = new Vehiculo("111222", "Volvo", "FH", 9000, 30000, true, null);
+        when(em.find(Vehiculo.class, "111222")).thenReturn(camionConGuia);
+
+        @SuppressWarnings("unchecked")
+        TypedQuery<Long> qGuias = org.mockito.Mockito.mock(TypedQuery.class);
+        when(em.createQuery(org.mockito.ArgumentMatchers.contains("GuiaDeViaje"), eq(Long.class))).thenReturn(qGuias);
+        when(qGuias.setParameter(anyString(), any())).thenReturn(qGuias);
+        when(qGuias.getSingleResult()).thenReturn(1L);
+
+        org.junit.jupiter.api.Assertions.assertFalse(motor.evaluarVehiculoSinGuia("111222", "Pesaje"));
+
+        // Vehículo sin guía pero ya fiscalizado hoy por VIAJE_SIN_GUIA -> no duplica
+        when(qGuias.getSingleResult()).thenReturn(0L);
+        @SuppressWarnings("unchecked")
+        TypedQuery<Long> qExistentes = org.mockito.Mockito.mock(TypedQuery.class);
+        when(em.createQuery(org.mockito.ArgumentMatchers.contains("Infraccion"), eq(Long.class))).thenReturn(qExistentes);
+        when(qExistentes.setParameter(anyString(), any())).thenReturn(qExistentes);
+        when(qExistentes.getSingleResult()).thenReturn(1L);
+
+        org.junit.jupiter.api.Assertions.assertFalse(motor.evaluarVehiculoSinGuia("111222", "Segundo pesaje mismo día"));
+        verify(em, never()).persist(any(Infraccion.class));
+    }
+
+    @Test
+    @DisplayName("Punto E.8 - evaluarVehiculoSinGuia resuelve matrícula almacenada con mayúsculas/minúsculas mixtas mediante fallback JPQL")
+    void testEvaluarVehiculoSinGuiaResuelveMatriculaMixtaCaseInsensitive() {
+        Vehiculo camionMixto = new Vehiculo("Stp 7777", "Scania", "R450", 9500, 30500, true, null);
+        jakarta.persistence.Query qVehiculo = org.mockito.Mockito.mock(jakarta.persistence.Query.class);
+        when(em.createQuery(org.mockito.ArgumentMatchers.contains("UPPER(TRIM(v.matricula))"))).thenReturn(qVehiculo);
+        when(qVehiculo.setParameter(eq("mat"), eq("STP 7777"))).thenReturn(qVehiculo);
+        when(qVehiculo.setMaxResults(1)).thenReturn(qVehiculo);
+        when(qVehiculo.getResultList()).thenReturn(List.of(camionMixto));
+
+        @SuppressWarnings("unchecked")
+        TypedQuery<Long> qGuias = org.mockito.Mockito.mock(TypedQuery.class);
+        when(em.createQuery(org.mockito.ArgumentMatchers.contains("GuiaDeViaje"), eq(Long.class))).thenReturn(qGuias);
+        when(qGuias.setParameter(anyString(), any())).thenReturn(qGuias);
+        when(qGuias.getSingleResult()).thenReturn(0L);
+
+        @SuppressWarnings("unchecked")
+        TypedQuery<Long> qExistentes = org.mockito.Mockito.mock(TypedQuery.class);
+        when(em.createQuery(org.mockito.ArgumentMatchers.contains("Infraccion"), eq(Long.class))).thenReturn(qExistentes);
+        when(qExistentes.setParameter(anyString(), any())).thenReturn(qExistentes);
+        when(qExistentes.getSingleResult()).thenReturn(0L);
+
+        assertTrue(motor.evaluarVehiculoSinGuia("stp 7777", "Pesaje balanza"));
+        verify(em).persist(org.mockito.ArgumentMatchers.argThat((Infraccion i) ->
+                i.getTipo() == TipoInfraccion.VIAJE_SIN_GUIA
+                        && i.getVehiculo() == camionMixto
+        ));
+    }
 }
