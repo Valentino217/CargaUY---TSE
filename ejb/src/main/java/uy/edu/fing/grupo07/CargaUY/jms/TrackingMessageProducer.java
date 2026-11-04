@@ -13,18 +13,22 @@ import uy.edu.fing.grupo07.CargaUY.dto.EventoViajeDTO;
 import uy.edu.fing.grupo07.CargaUY.exception.BusinessException;
 
 import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
  * Productor EJB encargado de publicar eventos de tracking en la cola JMS (TrackingQueue).
- * Garantiza absorción de picos y desacople con el cliente móvil/REST (AC012).
+ * Garantiza absorción de picos, trazabilidad distribuida (X-Correlation-ID) y desacople con el cliente móvil/REST (AC012).
  */
 @Stateless
 public class TrackingMessageProducer implements TrackingProducerLocal {
 
     private static final Logger LOGGER = Logger.getLogger(TrackingMessageProducer.class.getName());
     private static final Jsonb jsonb = JsonbBuilder.create();
+
+    public static final AtomicLong mensajesEncolados = new AtomicLong();
 
     @Inject
     private JMSContext jmsContext;
@@ -50,16 +54,23 @@ public class TrackingMessageProducer implements TrackingProducerLocal {
         }
 
         try {
+            String correlacion = (evento.uuid() != null && !evento.uuid().isBlank())
+                    ? evento.uuid().trim()
+                    : UUID.randomUUID().toString();
             String json = jsonb.toJson(evento);
             TextMessage message = jmsContext.createTextMessage(json);
             message.setStringProperty("uuid", evento.uuid());
             message.setLongProperty("guiaId", evento.guiaId() != null ? evento.guiaId() : -1L);
             message.setStringProperty("tipo", evento.tipo() != null ? evento.tipo().name() : "");
+            message.setStringProperty("X-Correlation-ID", correlacion);
 
             JMSProducer producer = jmsContext.createProducer();
             producer.send(trackingQueue, message);
+            mensajesEncolados.incrementAndGet();
 
-            LOGGER.log(Level.INFO, "Evento encolado en TrackingQueue con UUID: {0}", evento.uuid());
+            LOGGER.log(Level.INFO,
+                    "{\"evento\":\"jms.tracking.encolado\",\"correlacion\":\"{0}\",\"uuid\":\"{1}\",\"guiaId\":{2}}",
+                    new Object[]{correlacion, evento.uuid(), evento.guiaId() != null ? evento.guiaId() : -1L});
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error al encolar evento en TrackingQueue", e);
             throw new RuntimeException("Error al enviar evento a la cola de tracking", e);

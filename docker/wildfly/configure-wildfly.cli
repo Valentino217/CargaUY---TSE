@@ -48,6 +48,17 @@ if (outcome != success) of /subsystem=messaging-activemq/server=default/jms-queu
         --entries=[java:/jms/queue/DLQ.TrackingQueue]
 end-if
 
+echo Configurando politica de cola llena y DLQ de TrackingQueue (SAD 5.1)...
+if (outcome != success) of /subsystem=messaging-activemq/server=default/address-setting=TrackingQueue:read-resource
+    /subsystem=messaging-activemq/server=default/address-setting=TrackingQueue:add( \
+        dead-letter-address=DLQ.TrackingQueue, \
+        max-delivery-attempts=5, \
+        redelivery-delay=2000, \
+        max-size-bytes=10485760, \
+        page-size-bytes=2097152, \
+        address-full-policy=PAGE)
+end-if
+
 echo Configurando logging para paquete uy.edu.fing.grupo07...
 if (outcome != success) of /subsystem=logging/logger=uy.edu.fing.grupo07:read-resource
     /subsystem=logging/logger=uy.edu.fing.grupo07:add(level=DEBUG)

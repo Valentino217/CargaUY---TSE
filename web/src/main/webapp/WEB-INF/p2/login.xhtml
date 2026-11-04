@@ -24,10 +24,14 @@
             <form class="login-form" method="post" action="#{request.contextPath}/login">
                 <input type="hidden" name="csrf" value="#{requestScope.csrf}"/>
                 <label for="uid">Usuario
-                    <input id="uid" name="uid" required="required" autocomplete="username" placeholder="Ingresá tu usuario"/>
+                    <input id="uid" name="uid" required="required" autocomplete="username" placeholder="Ingresá tu usuario"
+                           oninvalid="this.setCustomValidity('Por favor, ingresá tu usuario.')"
+                           oninput="this.setCustomValidity('')"/>
                 </label>
                 <label for="password">Contraseña
-                    <input id="password" name="password" type="password" required="required" autocomplete="current-password" placeholder="Ingresá tu contraseña"/>
+                    <input id="password" name="password" type="password" required="required" autocomplete="current-password" placeholder="Ingresá tu contraseña"
+                           oninvalid="this.setCustomValidity('Por favor, ingresá tu contraseña.')"
+                           oninput="this.setCustomValidity('')"/>
                 </label>
                 <button type="submit" class="button-full">Ingresar</button>
             </form>

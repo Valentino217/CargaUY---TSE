@@ -2,7 +2,7 @@ package uy.edu.fing.grupo07.CargaUY.web;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.ejb.EJB;
-import jakarta.enterprise.context.RequestScoped;
+import jakarta.faces.view.ViewScoped;
 import jakarta.inject.Named;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.EstadoInfraccion;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado;
@@ -11,6 +11,7 @@ import uy.edu.fing.grupo07.CargaUY.dto.DashboardResumenDTO;
 import uy.edu.fing.grupo07.CargaUY.service.DashboardServiceLocal;
 
 import java.io.Serializable;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -18,10 +19,10 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Managed Bean para presentar métricas y resúmenes ejecutivos en JSF/PrimeFaces.
+ * Managed Bean para presentar métricas, filtros dinámicos y resúmenes ejecutivos en JSF/PrimeFaces (Sección 3.6.2).
  */
 @Named("dashboardBean")
-@RequestScoped
+@ViewScoped
 public class DashboardBean implements Serializable {
 
     private static final long serialVersionUID = 1L;
@@ -31,6 +32,11 @@ public class DashboardBean implements Serializable {
     private DashboardServiceLocal dashboardService;
 
     private DashboardResumenDTO resumen;
+
+    private String filtroRubro;
+    private String filtroUbicacion;
+    private LocalDate filtroFechaDesde;
+    private LocalDate filtroFechaHasta;
 
     public DashboardBean() {
     }
@@ -42,10 +48,51 @@ public class DashboardBean implements Serializable {
     @PostConstruct
     public void inicializar() {
         try {
-            this.resumen = dashboardService.obtenerResumen();
+            if (tieneFiltrosActivos()) {
+                this.resumen = dashboardService.obtenerResumenFiltrado(
+                        filtroRubro,
+                        filtroUbicacion,
+                        filtroFechaDesde,
+                        filtroFechaHasta
+                );
+            } else {
+                this.resumen = dashboardService.obtenerResumen();
+            }
         } catch (Exception excepcion) {
             LOGGER.log(Level.SEVERE, "Error al obtener métricas del dashboard", excepcion);
         }
+    }
+
+    public void aplicarFiltros() {
+        try {
+            if (tieneFiltrosActivos()) {
+                this.resumen = dashboardService.obtenerResumenFiltrado(
+                        filtroRubro,
+                        filtroUbicacion,
+                        filtroFechaDesde,
+                        filtroFechaHasta
+                );
+            } else {
+                this.resumen = dashboardService.obtenerResumen();
+            }
+        } catch (Exception excepcion) {
+            LOGGER.log(Level.SEVERE, "Error al aplicar filtros del dashboard", excepcion);
+        }
+    }
+
+    public void limpiarFiltros() {
+        this.filtroRubro = null;
+        this.filtroUbicacion = null;
+        this.filtroFechaDesde = null;
+        this.filtroFechaHasta = null;
+        inicializar();
+    }
+
+    private boolean tieneFiltrosActivos() {
+        return (filtroRubro != null && !filtroRubro.isBlank())
+                || (filtroUbicacion != null && !filtroUbicacion.isBlank())
+                || filtroFechaDesde != null
+                || filtroFechaHasta != null;
     }
 
     public long getTotalPesadas() {
@@ -53,6 +100,27 @@ public class DashboardBean implements Serializable {
             return 0L;
         }
         return resumen.totalPesadas();
+    }
+
+    public long getTotalEmpresasHabilitadas() {
+        if (resumen == null) {
+            return 0L;
+        }
+        return resumen.totalEmpresasHabilitadas();
+    }
+
+    public long getTotalVehiculosHabilitados() {
+        if (resumen == null) {
+            return 0L;
+        }
+        return resumen.totalVehiculosHabilitados();
+    }
+
+    public double getTasaConfirmadasSobreDetectadas() {
+        if (resumen == null) {
+            return 0.0;
+        }
+        return resumen.tasaConfirmadasSobreDetectadas();
     }
 
     public List<Map.Entry<TipoEstado, Long>> getListaGuiasPorEstado() {
@@ -88,11 +156,57 @@ public class DashboardBean implements Serializable {
         return new ArrayList<>(mapa.entrySet());
     }
 
+    public List<Map.Entry<String, Long>> getListaViajesPorPeriodo() {
+        if (resumen == null || resumen.viajesPorPeriodo() == null) {
+            return new ArrayList<>();
+        }
+        return new ArrayList<>(resumen.viajesPorPeriodo().entrySet());
+    }
+
+    public List<Map.Entry<String, Double>> getListaVolumenPorRubro() {
+        if (resumen == null || resumen.volumenPorRubro() == null) {
+            return new ArrayList<>();
+        }
+        return new ArrayList<>(resumen.volumenPorRubro().entrySet());
+    }
+
     public DashboardResumenDTO getResumen() {
         return resumen;
     }
 
     public void setResumen(DashboardResumenDTO resumen) {
         this.resumen = resumen;
+    }
+
+    public String getFiltroRubro() {
+        return filtroRubro;
+    }
+
+    public void setFiltroRubro(String filtroRubro) {
+        this.filtroRubro = filtroRubro;
+    }
+
+    public String getFiltroUbicacion() {
+        return filtroUbicacion;
+    }
+
+    public void setFiltroUbicacion(String filtroUbicacion) {
+        this.filtroUbicacion = filtroUbicacion;
+    }
+
+    public LocalDate getFiltroFechaDesde() {
+        return filtroFechaDesde;
+    }
+
+    public void setFiltroFechaDesde(LocalDate filtroFechaDesde) {
+        this.filtroFechaDesde = filtroFechaDesde;
+    }
+
+    public LocalDate getFiltroFechaHasta() {
+        return filtroFechaHasta;
+    }
+
+    public void setFiltroFechaHasta(LocalDate filtroFechaHasta) {
+        this.filtroFechaHasta = filtroFechaHasta;
     }
 }

@@ -12,8 +12,16 @@ import uy.edu.fing.grupo07.CargaUY.service.GestionBalanzaServiceLocal;
 import uy.edu.fing.grupo07.CargaUY.service.GestionPlataformaService;
 
 import java.io.Serializable;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Managed Bean para /admin/nodos.xhtml.
@@ -25,6 +33,7 @@ import java.util.List;
 public class AdminNodosBean implements Serializable {
 
     private static final long serialVersionUID = 1L;
+    private static final Duration PROBE_TIMEOUT = Duration.ofMillis(1500);
 
     @EJB
     private GestionBalanzaServiceLocal balanzaService;
@@ -60,42 +69,56 @@ public class AdminNodosBean implements Serializable {
 
     public void verificarNodos() {
         nodos = new ArrayList<>();
-        boolean balanzaUp = balanzaService != null;
+
+        String envBalanza = System.getenv("BALANZA_ENDPOINT");
+        String balanzaEndpoint = (envBalanza != null && !envBalanza.isBlank()) ? envBalanza : "http://localhost:8082";
+        boolean balanzaUp = balanzaService != null && sondearEndpoint(balanzaEndpoint);
 
         nodos.add(new NodoPerifericoVista(
                 "NODO-BAL-01",
                 "Simulador Periférico de Balanzas en Ruta",
                 "HTTP / JSON",
-                "http://localhost:8082",
+                balanzaEndpoint,
                 balanzaUp,
-                balanzaUp ? "Operativo en Puerto 8082 (Timeout 5s OK)" : "Simulador Externo Offline"
+                balanzaUp ? "Operativo (Sondeo HTTP 200 OK - Timeout 5s)" : "OFFLINE / Degradado (Periférico Inalcanzable)"
         ));
+
+        String pdiEndpoint = Config.valor("pdi.endpoint", "http://localhost:8081/pdi/ws");
+        boolean pdiUp = sondearSocketDesdeUri(pdiEndpoint, 8081);
 
         nodos.add(new NodoPerifericoVista(
                 "NODO-PDI-01",
                 "Plataforma de Interoperabilidad",
                 "SOAP / XML",
-                Config.valor("pdi.endpoint", "http://localhost:8081/pdi/ws"),
-                true,
-                "Conectado (Fallback Resiliente Activo)"
+                pdiEndpoint,
+                pdiUp,
+                pdiUp ? "Conectado (WS-Addressing + Circuit Breaker Activo)" : "OFFLINE / Degradado (Fallback Resiliente Activo)"
         ));
+
+        String ldapEndpoint = Config.valor("ldap.url", "ldap://127.0.0.1:1389");
+        boolean ldapUp = sondearSocketDesdeUri(ldapEndpoint, 1389);
 
         nodos.add(new NodoPerifericoVista(
                 "NODO-LDAP-01",
                 "Directorio Interno OpenLDAP",
                 "LDAPv3",
-                Config.valor("ldap.url", "ldap://127.0.0.1:1389"),
-                true,
-                "Bind Activo (" + Config.valor("ldap.people.dn", "ou=people,dc=cargauy,dc=local") + ")"
+                ldapEndpoint,
+                ldapUp,
+                ldapUp
+                        ? "Bind Activo (" + Config.valor("ldap.people.dn", "ou=people,dc=cargauy,dc=local") + ")"
+                        : "OFFLINE / Degradado (Servidor LDAP Inalcanzable)"
         ));
+
+        String oidcEndpoint = Config.valor("gub.issuer", "http://localhost:8083/realms/cargauy-test");
+        boolean oidcUp = sondearSocketDesdeUri(oidcEndpoint, 8083);
 
         nodos.add(new NodoPerifericoVista(
                 "NODO-OIDC-01",
                 "Proveedor de Identidad Usuario gub.uy",
                 "OIDC / OAuth 2.0 PKCE",
-                Config.valor("gub.issuer", "http://localhost:8083/realms/cargauy-test"),
-                true,
-                "Emisor de Tokens Verificado"
+                oidcEndpoint,
+                oidcUp,
+                oidcUp ? "Emisor de Tokens Verificado" : "OFFLINE / Degradado (IdP OIDC Inalcanzable)"
         ));
 
         nodos.add(new NodoPerifericoVista(
@@ -130,8 +153,47 @@ public class AdminNodosBean implements Serializable {
                 mongoUp,
                 mongoUp
                         ? "Colección Time-Series Activa (" + totalEventosMongo + " eventos de posición registrados)"
-                        : "Respaldo en Memoria Activo (MongoDB Offline)"
+                        : "OFFLINE / Degradado (Respaldo en Memoria Activo)"
         ));
+    }
+
+    private boolean sondearEndpoint(String urlStr) {
+        try {
+            URI uri = URI.create(urlStr);
+            HttpClient client = HttpClient.newBuilder()
+                    .connectTimeout(PROBE_TIMEOUT)
+                    .build();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(uri)
+                    .timeout(PROBE_TIMEOUT)
+                    .header("X-Correlation-ID", UUID.randomUUID().toString())
+                    .GET()
+                    .build();
+            HttpResponse<Void> response = client.send(request, HttpResponse.BodyHandlers.discarding());
+            return response.statusCode() >= 200 && response.statusCode() < 500;
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            return false;
+        } catch (Exception e) {
+            return sondearSocketDesdeUri(urlStr, 8082);
+        }
+    }
+
+    private boolean sondearSocketDesdeUri(String uriStr, int defaultPort) {
+        try {
+            URI uri = URI.create(uriStr);
+            String host = uri.getHost();
+            if (host == null || host.isBlank()) {
+                host = "localhost";
+            }
+            int port = uri.getPort() > 0 ? uri.getPort() : defaultPort;
+            try (Socket socket = new Socket()) {
+                socket.connect(new InetSocketAddress(host, port), (int) PROBE_TIMEOUT.toMillis());
+                return true;
+            }
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public void sondarNodos() {

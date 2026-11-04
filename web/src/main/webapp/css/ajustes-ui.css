@@ -113,9 +113,12 @@ body .ui-dialog {
     border-radius: 12px;
     box-shadow: 0 20px 60px rgb(15 41 66 / 20%);
     max-width: calc(100vw - 24px);
+    overflow: hidden;
 }
 body .ui-dialog .ui-dialog-titlebar { border-radius: 12px 12px 0 0; }
-body .ui-dialog .ui-dialog-content { border-radius: 0 0 12px 12px; }
+body .ui-dialog .ui-dialog-content { border-radius: 0 !important; }
+body .ui-dialog .ui-dialog-buttonpane,
+body .ui-dialog .ui-dialog-footer { border-radius: 0 0 12px 12px !important; }
 body .ui-messages > div,
 body .ui-message { border-radius: 8px; }
 

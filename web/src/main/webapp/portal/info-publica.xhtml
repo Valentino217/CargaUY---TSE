@@ -42,77 +42,84 @@
         <div class="cuy-card">
             <h:form id="formInfoPublica">
                 <p:tabView>
-                    <!-- Tab 1: Listado Público de Actividad de Transporte -->
-                    <p:tab title="Actividad de transporte">
-                        <p:dataTable value="#{portalPublicoBean.guiasPublicas}"
-                                     var="g"
+                    <!-- Tab 1: Actividad de Transporte Agregada por Rubro (k >= 3) -->
+                    <p:tab title="Actividad de transporte agregada">
+                        <p:dataTable value="#{portalPublicoBean.estadisticasActividadAgregada}"
+                                     var="est"
                                      paginator="true"
                                      rows="10"
                                      paginatorPosition="bottom"
-                                     emptyMessage="No hay registros públicos de viajes disponibles."
+                                     emptyMessage="No se alcanza el umbral mínimo de agregación pública (k &#8805; #{portalPublicoBean.umbralMinimoAgregacion}) para publicar estadísticas desagregadas."
                                      stripedRows="true"
                                      size="small">
 
-                            <p:column headerText="Guía #" style="width: 95px; text-align: center;">
-                                <strong>##{g.id}</strong>
+                            <p:column headerText="Ámbito / Corredor">
+                                <strong><h:outputText value="#{est.corredor}" /></strong>
                             </p:column>
 
-                            <p:column headerText="Fecha Operativa" style="width: 140px;">
-                                <h:outputText value="#{g.fecha}" />
+                            <p:column headerText="Rubro / Sector Productivo" filterBy="#{est.rubro}" filterMatchMode="contains">
+                                <h:outputText value="#{est.rubro}" />
                             </p:column>
 
-                            <p:column filterBy="#{g.origen}" filterMatchMode="contains" filterPlaceholder="Corredor (Origen &#8594; Destino)">
-                                <strong>#{g.origen}</strong> &#8594; <strong>#{g.destino}</strong>
+                            <p:column headerText="Viajes Consolidados (k &#8805; #{portalPublicoBean.umbralMinimoAgregacion})" style="width: 210px; text-align: right;">
+                                <strong><h:outputText value="#{est.cantidadViajes}" /></strong>
                             </p:column>
 
-                            <p:column filterBy="#{g.rubroCliente}" filterMatchMode="contains" filterPlaceholder="Rubro Declarado">
-                                <h:outputText value="#{g.rubroCliente}" />
-                            </p:column>
-
-                            <p:column headerText="Volumen de Carga" style="width: 150px; text-align: right;">
-                                <h:outputText value="#{g.volumenCarga}">
+                            <p:column headerText="Volumen Total Transportado" style="width: 210px; text-align: right;">
+                                <h:outputText value="#{est.volumenTotal}">
                                     <f:convertNumber pattern="#,##0.0" />
                                 </h:outputText>
                                 <span> t/m&#179;</span>
                             </p:column>
+                        </p:dataTable>
+                    </p:tab>
 
-                            <p:column headerText="Estado" style="width: 150px; text-align: center;">
-                                <p:tag value="#{g.estado}"
-                                       severity="#{g.estado eq 'FINALIZADO' ? 'success' : (g.estado eq 'EN_CURSO' ? 'info' : 'warning')}" />
+                    <!-- Tab 2: Padrón Agregado de Flota Nacional por Rango de Capacidad (k >= 3) -->
+                    <p:tab title="Estadísticas de flota nacional">
+                        <p:dataTable value="#{portalPublicoBean.estadisticasFlotaAgregada}"
+                                     var="flota"
+                                     paginator="true"
+                                     rows="10"
+                                     paginatorPosition="bottom"
+                                     emptyMessage="No se alcanza el umbral mínimo de agregación pública (k &#8805; #{portalPublicoBean.umbralMinimoAgregacion}) para publicar estadísticas de flota."
+                                     stripedRows="true"
+                                     size="small">
+
+                            <p:column headerText="Categoría de Capacidad">
+                                <strong><h:outputText value="#{flota.categoriaCapacidad}" /></strong>
+                            </p:column>
+
+                            <p:column headerText="Unidades Registradas (k &#8805; #{portalPublicoBean.umbralMinimoAgregacion})" style="width: 210px; text-align: right;">
+                                <strong><h:outputText value="#{flota.cantidadUnidades}" /></strong>
+                            </p:column>
+
+                            <p:column headerText="Unidades Habilitadas" style="width: 180px; text-align: right;">
+                                <h:outputText value="#{flota.unidadesHabilitadas}" />
+                            </p:column>
+
+                            <p:column headerText="Capacidad Promedio (kg)" style="width: 200px; text-align: right;">
+                                <h:outputText value="#{flota.capacidadPromedioKg}">
+                                    <f:convertNumber pattern="#,##0.0" />
+                                </h:outputText>
+                                <span> kg</span>
                             </p:column>
                         </p:dataTable>
                     </p:tab>
 
-                    <!-- Tab 2: Padrón Agregado de Flota Nacional -->
-                    <p:tab title="Padrón de unidades de carga">
-                        <p:dataTable value="#{portalPublicoBean.vehiculosPublicos}"
-                                     var="v"
-                                     paginator="true"
-                                     rows="10"
-                                     paginatorPosition="bottom"
-                                     emptyMessage="No hay vehículos registrados en el padrón público."
+                    <!-- Tab 3: Distribución Consolidada por Estado Operativo -->
+                    <p:tab title="Distribución por estado operativo">
+                        <p:dataTable value="#{portalPublicoBean.guiasPorEstadoEntries}"
+                                     var="estGuia"
+                                     emptyMessage="Sin registros consolidados por estado."
                                      stripedRows="true"
                                      size="small">
 
-                            <p:column filterBy="#{v.matricula}" filterMatchMode="contains" style="width: 140px;" filterPlaceholder="Matrícula">
-                                <strong>#{v.matricula}</strong>
+                            <p:column headerText="Estado Operativo">
+                                <strong><h:outputText value="#{estGuia.key}" /></strong>
                             </p:column>
 
-                            <p:column filterBy="#{v.marca}" filterMatchMode="contains" filterPlaceholder="Marca / Modelo">
-                                #{v.marca} &#8226; #{v.modelo}
-                            </p:column>
-
-                            <p:column headerText="Tara (kg)" style="width: 130px; text-align: right;">
-                                #{v.peso} kg
-                            </p:column>
-
-                            <p:column headerText="Capacidad Máxima (kg)" style="width: 165px; text-align: right;">
-                                <strong>#{v.capacidadCarga} kg</strong>
-                            </p:column>
-
-                            <p:column headerText="Habilitación Operativa" style="width: 170px; text-align: center;">
-                                <p:tag value="#{v.estadoHabilitacion ? 'HABILITADO' : 'NO HABILITADO'}"
-                                       severity="#{v.estadoHabilitacion ? 'success' : 'danger'}" />
+                            <p:column headerText="Total de Viajes" style="width: 180px; text-align: right;">
+                                <strong><h:outputText value="#{estGuia.value}" /></strong>
                             </p:column>
                         </p:dataTable>
                     </p:tab>

@@ -7,7 +7,7 @@ target/
 .apt_generated
 .apt_generated_tests
 .factorypath
-/.local-p1/
+# Archivos temporales locales
 docker-compose.p1.override.yml
 
 # OS files

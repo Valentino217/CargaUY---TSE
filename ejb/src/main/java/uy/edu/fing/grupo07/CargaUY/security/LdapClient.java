@@ -17,7 +17,7 @@ public class LdapClient {
             throw new ErrorAcceso(401, "Credenciales inválidas");
         String url = Config.valor("ldap.url", "ldap://127.0.0.1:1389");
         URI uri = URI.create(url);
-        boolean local = ("127.0.0.1".equals(uri.getHost()) || "localhost".equals(uri.getHost()))
+        boolean local = ("127.0.0.1".equals(uri.getHost()) || "localhost".equals(uri.getHost()) || "ldap".equals(uri.getHost()))
             && Boolean.parseBoolean(Config.valor("p1.entorno.local", "false"));
         if (!"ldaps".equals(uri.getScheme()) && !("ldap".equals(uri.getScheme()) && local))
             throw new ErrorAcceso(503, "LDAP requiere LDAPS fuera del entorno local");

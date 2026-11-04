@@ -9,6 +9,7 @@ import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.net.URI
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
@@ -20,6 +21,10 @@ object RetrofitClient {
             .writeTimeout(8000, TimeUnit.MILLISECONDS)
             .addInterceptor { chain ->
                 val request = chain.request().newBuilder()
+                // Propagación de trazabilidad distribuida (X-Correlation-ID) hacia el backend y colas JMS
+                if (chain.request().header("X-Correlation-ID").isNullOrBlank()) {
+                    request.header("X-Correlation-ID", UUID.randomUUID().toString())
+                }
                 SesionMovil.token.takeIf { it.isNotBlank() }?.let {
                     request.header("Authorization", "Bearer $it")
                 }

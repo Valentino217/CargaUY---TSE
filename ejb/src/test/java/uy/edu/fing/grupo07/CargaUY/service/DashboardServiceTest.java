@@ -97,4 +97,81 @@ class DashboardServiceTest {
         assertEquals(4L, resumen.infraccionesPorTipo().get(TipoInfraccion.EXCESO_DE_CARGA));
         assertEquals(0L, resumen.infraccionesPorTipo().get(TipoInfraccion.SIN_HABILITACION));
     }
+
+    @Test
+    @DisplayName("Debe filtrar métricas del dashboard por rubro, ubicación y rango de fechas")
+    void testObtenerResumenFiltradoYDatosPrueba() {
+        uy.edu.fing.grupo07.CargaUY.domain.entity.GuiaDeViaje g1 = new uy.edu.fing.grupo07.CargaUY.domain.entity.GuiaDeViaje();
+        g1.setEstado(TipoEstado.EN_CURSO);
+        g1.setFecha(java.time.LocalDate.of(2026, 5, 10));
+        g1.setRubroCliente("Madera");
+        g1.setOrigen("Montevideo");
+        g1.setDestino("Rivera");
+        g1.setVolumenCarga(35.0f);
+
+        uy.edu.fing.grupo07.CargaUY.domain.entity.GuiaDeViaje g2 = new uy.edu.fing.grupo07.CargaUY.domain.entity.GuiaDeViaje();
+        g2.setEstado(TipoEstado.FINALIZADO);
+        g2.setFecha(java.time.LocalDate.of(2026, 3, 1));
+        g2.setRubroCliente("Granos");
+        g2.setOrigen("Salto");
+        g2.setDestino("Colonia");
+        g2.setVolumenCarga(20.0f);
+
+        @SuppressWarnings("unchecked")
+        TypedQuery<uy.edu.fing.grupo07.CargaUY.domain.entity.GuiaDeViaje> qGuias = org.mockito.Mockito.mock(TypedQuery.class);
+        when(em.createQuery(contains("SELECT g FROM GuiaDeViaje g"), eq(uy.edu.fing.grupo07.CargaUY.domain.entity.GuiaDeViaje.class))).thenReturn(qGuias);
+        when(qGuias.getResultList()).thenReturn(List.of(g1, g2));
+
+        uy.edu.fing.grupo07.CargaUY.domain.entity.Infraccion inf1 = new uy.edu.fing.grupo07.CargaUY.domain.entity.Infraccion(
+                java.time.LocalDate.of(2026, 5, 10),
+                TipoInfraccion.EXCESO_DE_CARGA,
+                EstadoInfraccion.CONFIRMADA,
+                g1,
+                "Exceso"
+        );
+        @SuppressWarnings("unchecked")
+        TypedQuery<uy.edu.fing.grupo07.CargaUY.domain.entity.Infraccion> qInf = org.mockito.Mockito.mock(TypedQuery.class);
+        when(em.createQuery(contains("SELECT i FROM Infraccion i"), eq(uy.edu.fing.grupo07.CargaUY.domain.entity.Infraccion.class))).thenReturn(qInf);
+        when(qInf.getResultList()).thenReturn(List.of(inf1));
+
+        uy.edu.fing.grupo07.CargaUY.domain.entity.PesadaBalanza p1 = new uy.edu.fing.grupo07.CargaUY.domain.entity.PesadaBalanza(
+                java.time.LocalDate.of(2026, 5, 10),
+                java.time.LocalTime.NOON,
+                42000,
+                g1
+        );
+        @SuppressWarnings("unchecked")
+        TypedQuery<uy.edu.fing.grupo07.CargaUY.domain.entity.PesadaBalanza> qPes = org.mockito.Mockito.mock(TypedQuery.class);
+        when(em.createQuery(contains("SELECT p FROM PesadaBalanza p"), eq(uy.edu.fing.grupo07.CargaUY.domain.entity.PesadaBalanza.class))).thenReturn(qPes);
+        when(qPes.getResultList()).thenReturn(List.of(p1));
+
+        DashboardResumenDTO filtrado = service.obtenerResumenFiltrado(
+                "Madera",
+                "Montevideo",
+                java.time.LocalDate.of(2026, 5, 1),
+                java.time.LocalDate.of(2026, 5, 31)
+        );
+        assertEquals(1L, filtrado.guiasPorEstado().get(TipoEstado.EN_CURSO));
+        assertEquals(1L, filtrado.infraccionesPorEstado().get(EstadoInfraccion.CONFIRMADA));
+        assertEquals(1L, filtrado.totalPesadas());
+        assertEquals(100.0, filtrado.tasaConfirmadasSobreDetectadas());
+
+        // Probar DatosPruebaStartupBean con propiedad p3.datos.prueba=true
+        String prev = System.getProperty("p3.datos.prueba");
+        try {
+            System.setProperty("p3.datos.prueba", "true");
+            @SuppressWarnings("unchecked")
+            TypedQuery<Long> qUsuarios = org.mockito.Mockito.mock(TypedQuery.class);
+            when(em.createQuery(contains("select count(u) from Usuario u"), eq(Long.class))).thenReturn(qUsuarios);
+            when(qUsuarios.getSingleResult()).thenReturn(0L);
+            DatosPruebaStartupBean startup = new DatosPruebaStartupBean(em);
+            startup.inicializar();
+        } finally {
+            if (prev == null) {
+                System.clearProperty("p3.datos.prueba");
+            } else {
+                System.setProperty("p3.datos.prueba", prev);
+            }
+        }
+    }
 }

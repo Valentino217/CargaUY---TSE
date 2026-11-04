@@ -1,7 +1,8 @@
+name: cargauy-p1
+
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: cargauy-postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: cargauy
@@ -10,7 +11,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata_p1:/var/lib/postgresql/data
       - ./docker/postgres/init:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U cargauy -d cargauy"]
@@ -18,16 +19,67 @@ services:
       timeout: 5s
       retries: 5
 
+  ldap:
+    build: ./docker/ldap
+    restart: unless-stopped
+    environment:
+      LDAP_ROOT_PASSWORD: ${LDAP_ROOT_PASSWORD:-vQUP53jJO6NyQD9V8hXK7oFQ-NmPjD9VS1NLoC-INkE}
+      LDAP_APP_PASSWORD: ${LDAP_APP_PASSWORD:-IYHvwHVkJw7rgz0wtnJTYfLNNeMlH5UJf-Io2Art7Vs}
+      LDAP_APP_UID: ${LDAP_APP_UID:-martin.admin}
+    ports:
+      - "1389:1389"
+    volumes:
+      - ldap_p1:/data
+
+  gub:
+    image: quay.io/keycloak/keycloak:26.4.7
+    restart: unless-stopped
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME:-gestor-idp}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD:-nr4i7WZyse1sY3oQkYKI6Nm4z5RjOn7tOJxDjT5EUm8}
+    ports:
+      - "8083:8080"
+    volumes:
+      - ./.local-p1/gub-realm.json:/opt/keycloak/data/import/cargauy-test-realm.json:ro
+      - keycloak_p1:/opt/keycloak/data
+
+  mongodb:
+    image: mongo:7
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_p1:/data/db
+
+  mock-pdi:
+    build: ./docker/mock-pdi
+    restart: unless-stopped
+    environment:
+      PDI_PUBLIC_ENDPOINT: http://localhost:8081/pdi/ws
+      PDI_DELAY_SECONDS: "0"
+    ports:
+      - "8081:8080"
+
+  mock-balanza:
+    build: ./docker/mock-balanza
+    restart: unless-stopped
+    ports:
+      - "8082:8080"
+
   wildfly:
     build:
       context: .
       dockerfile: docker/wildfly/Dockerfile
-    container_name: cargauy-wildfly
     restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
       mongodb:
+        condition: service_started
+      ldap:
+        condition: service_started
+      gub:
         condition: service_started
     environment:
       DB_HOST: postgres
@@ -39,39 +91,14 @@ services:
       PDI_ENDPOINT: http://mock-pdi:8080/pdi/ws
       BALANZA_ENDPOINT: http://mock-balanza:8080
       MONGO_URI: mongodb://mongodb:27017
+      LDAP_URL: ldap://ldap:1389
+      GUB_ISSUER: http://gub:8080/realms/cargauy-test
     ports:
       - "8080:8080"
       - "9990:9990"
 
-  mongodb:
-    image: mongo:7
-    container_name: cargauy-mongodb
-    restart: unless-stopped
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongodata:/data/db
-
-  mock-pdi:
-    build:
-      context: ./docker/mock-pdi
-    container_name: cargauy-mock-pdi
-    restart: unless-stopped
-    environment:
-      PDI_PUBLIC_ENDPOINT: http://mock-pdi:8080/pdi/ws
-    ports:
-      - "8081:8080"
-
-  mock-balanza:
-    build:
-      context: ./docker/mock-balanza
-    container_name: cargauy-mock-balanza
-    restart: unless-stopped
-    ports:
-      - "8082:8080"
-
 volumes:
-  pgdata:
-    driver: local
-  mongodata:
-    driver: local
+  pgdata_p1:
+  ldap_p1:
+  keycloak_p1:
+  mongo_p1:

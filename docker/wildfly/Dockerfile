@@ -26,8 +26,10 @@ FROM quay.io/wildfly/wildfly:41.0.0.Final-jdk21
 
 USER root
 
-# Crear directorio para el módulo JDBC de PostgreSQL
+# Crear directorio para el modulo JDBC de PostgreSQL y alias jakarta.api requerido por WildFly 41
 RUN mkdir -p /opt/jboss/wildfly/modules/org/postgresql/main && \
+    mkdir -p /opt/jboss/wildfly/modules/system/layers/base/jakarta/api/main && \
+    echo '<?xml version="1.0" encoding="UTF-8"?><module-alias name="jakarta.api" target-name="wildflyee.api" xmlns="urn:jboss:module:1.9"/>' > /opt/jboss/wildfly/modules/system/layers/base/jakarta/api/main/module.xml && \
     chown -R jboss:jboss /opt/jboss/wildfly/modules/org
 
 USER jboss

@@ -1,94 +1,124 @@
-# carga.uy (Grupo 07, TSE 2026)
+# carga.uy (Grupo 07 - TSE 2026)
 
-EAR Jakarta EE 10 (`ejb` + `web` + `ear`) sobre **WildFly 41** + **PostgreSQL** + **JMS (ActiveMQ Artemis)**.
+Plataforma de gestión, fiscalización y seguimiento de transporte de carga terrestre para el Ministerio de Transporte y Obras Públicas (MTOP - Uruguay).
 
----
-
-## Opción A: Docker (un solo comando)
-
-Requiere Docker Desktop **corriendo**.
-
-```bash
-docker compose up --build
-```
-
-El EAR se compila dentro de la imagen (Dockerfile multi-stage); no hace falta correr Maven antes.
-
-| Servicio | URL |
-|---|---|
-| Aplicación | http://localhost:8080/CargaUY-web/ |
-| Consola de WildFly | http://localhost:9990 |
-| Mock PDI | http://localhost:8081 |
-| Mock balanza | http://localhost:8082 |
-| PostgreSQL | `localhost:5432`, BD/usuario `cargauy`, contraseña `cargauy123` |
-
-Para empezar con la BD vacía: `docker compose down -v`.
+Arquitectura empresarial **Jakarta EE 10** (`ejb` + `web` + `ear`) sobre **WildFly 41**, **PostgreSQL**, mensajería asíncrona **JMS (ActiveMQ Artemis)**, **MongoDB** (tracking NoSQL), **OpenLDAP** y **Keycloak** (simulador Usuario gub.uy con OIDC/PKCE).
 
 ---
 
-## Opción B: WildFly local (Eclipse / Windows)
+## 🚀 Guía de Inicio Rápido (Paso a Paso)
 
-### 1. Base de datos (una sola vez)
+### ⚠️ Requisitos previos y advertencias importantes
 
-Con `psql` como superusuario (`postgres`):
+Antes de levantar el proyecto, verificá estos 3 puntos para evitar conflictos de puertos o bloqueos:
 
-```sql
-CREATE ROLE cargauy WITH LOGIN PASSWORD 'cargauy123';
-CREATE DATABASE cargauy OWNER cargauy;
-\c cargauy
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-```
-
-### 2. Driver JDBC
-
-Copiar `postgresql-42.7.x.jar` a `<WILDFLY>/standalone/deployments/` (queda registrado como driver `postgresql-42.7.x.jar`).
-
-### 3. Datasource y colas JMS (una sola vez, con WildFly levantado)
-
-Arrancar WildFly con el perfil **full** (incluye JMS): `standalone.bat -c standalone-full.xml`.
-En Eclipse: doble clic en el servidor → *Open launch configuration* → cambiar `--server-config=standalone.xml` por `standalone-full.xml`.
-
-Guardar esto como `setup-local.cli` (ajustando el nombre del driver a la versión que copiaste):
-
-```text
-data-source add --name=PostgreSQLDS --jndi-name=java:jboss/datasources/PostgreSQLDS --driver-name=postgresql-42.7.3.jar --connection-url=jdbc:postgresql://localhost:5432/cargauy --user-name=cargauy --password=cargauy123 --min-pool-size=5 --max-pool-size=25
-
-jms-queue add --queue-address=TrackingQueue --entries=[java:/jms/queue/TrackingQueue,java:jboss/exported/jms/queue/TrackingQueue]
-jms-queue add --queue-address=FiscalizacionQueue --entries=[java:/jms/queue/FiscalizacionQueue,java:jboss/exported/jms/queue/FiscalizacionQueue]
-jms-queue add --queue-address=NotificacionQueue --entries=[java:/jms/queue/NotificacionQueue,java:jboss/exported/jms/queue/NotificacionQueue]
-jms-queue add --queue-address=DLQ.TrackingQueue --entries=[java:/jms/queue/DLQ.TrackingQueue]
-```
-
-y ejecutar:
-
-```powershell
-$env:NOPAUSE="true"
-<WILDFLY>\bin\jboss-cli.bat --connect --file=setup-local.cli
-<WILDFLY>\bin\jboss-cli.bat --connect --command="/subsystem=datasources/data-source=PostgreSQLDS:test-connection-in-pool"
-```
-
-> Si usás `standalone.xml` (sin JMS), las colas no se pueden crear; alcanza mientras nadie use JMS, pero el perfil correcto es `standalone-full.xml`.
-
-### 4. Desplegar
-
-```bash
-mvn clean package
-```
-
-y publicar desde Eclipse, o copiar `ear/target/CargaUY.ear` a `deployments/`.
+1. **Docker Desktop corriendo:** Debe estar abierto y en verde (*Engine running*).
+2. **PostgreSQL local detenido:** Si tenés PostgreSQL instalado como servicio de Windows en tu máquina, **debés detenerlo** (desde `services.msc` → botón derecho en el servicio de PostgreSQL → *Detener*). De lo contrario, ocupará el puerto `5432` y Docker no podrá iniciarse.
+3. **No duplicar WildFly:** Si vas a correr WildFly localmente en Eclipse o consola, no levantes el perfil `app` de Docker para que no choquen en el puerto `8080`.
 
 ---
 
-## Build, tests y cobertura
+### Paso 1: Levantar toda la plataforma con Docker (Todo en uno)
+
+En la raíz del proyecto, ejecutá:
 
 ```bash
-mvn clean verify          # compila, corre tests, genera el reporte JaCoCo y aplica jacoco:check
+docker compose up -d
+```
+*(Si modificaste código Java y querés que Docker recompile la imagen de WildFly, usá `docker compose up --build -d`).*
+
+Este comando levanta automáticamente toda la plataforma con sus puertos mapeados:
+
+| Servicio | URL / Puerto | Descripción |
+|---|---|---|
+| **WildFly (CargaUY)** | `http://localhost:8080/CargaUY-web/` | Servidor de aplicaciones Jakarta EE con el EAR desplegado. |
+| **PostgreSQL** | `localhost:5432` | Base de datos relacional principal (`cargauy` / `cargauy123`). |
+| **OpenLDAP** | `localhost:1389` | Directorio de identidades para funcionarios y administradores. |
+| **Keycloak (gub.uy)** | `http://localhost:8083` | Proveedor OIDC simulador de Usuario gub.uy (Realm `cargauy-test`). |
+| **MongoDB** | `localhost:27017` | Almacén de series temporales para posiciones de tracking. |
+| **Mock PDI (SOAP)** | `http://localhost:8081` | Web Service SOAP simulador de DNIC / Dirección Nacional de Identificación Civil. |
+| **Mock Balanza (REST)** | `http://localhost:8082` | API REST simuladora de balanzas y pesajes en ruta. |
+
+> 💡 **¿Preferís programar y debuggear en Eclipse / Windows con tu WildFly local?**
+> Si querés usar tu propio WildFly en Windows (para debuggear con breakpoints o deploy instantáneo desde el IDE), simplemente apagá el contenedor de WildFly con:
+> ```bash
+> docker compose stop wildfly
+> ```
+> y levantás tu WildFly en Windows (`standalone.bat -c standalone-full.xml`) sin que choquen en el puerto 8080.
+
+---
+
+### Paso 2: Cargar datos de prueba (Seed Data)
+
+Una vez que la aplicación arrancó y creó las tablas en PostgreSQL, cargá los datos iniciales de prueba (empresas transportistas, vehículos con habilitaciones ITV/PNC, tipos de carga, guías de viaje e incidentes de fiscalización). Podés hacerlo con el script helper o con el comando directo:
+
+* **Opción fácil (Script en PowerShell):**
+  ```powershell
+  ./scripts/cargar-datos-prueba.ps1
+  ```
+* **Comando directo (PowerShell):**
+  ```powershell
+  Get-Content scripts/seed-datos-prueba.sql -Raw -Encoding UTF8 | docker exec -i cargauy-p1-postgres-1 psql -U cargauy -d cargauy
+  ```
+* **Comando directo (Bash / Linux / Mac / CMD):**
+  ```bash
+  docker exec -i cargauy-p1-postgres-1 psql -U cargauy -d cargauy < scripts/seed-datos-prueba.sql
+  ```
+
+---
+
+### Paso 3: Ingresar a la plataforma
+
+Accedé en tu navegador a:
+👉 **`http://localhost:8080/CargaUY-web/`**
+
+#### Usuarios de prueba listos para usar:
+
+| Rol / Tipo | Usuario | Contraseña | Vía de Ingreso |
+|---|---|---|---|
+| **Administrador Central** | `admin.central` | `admin123` | Formulario interno (LDAP) |
+| **Administrador de pruebas** | `martin.admin` | `admin123` | Formulario interno (LDAP) |
+| **Autoridad MTOP** | `alberto.autoridad` | `autoridad123` | Formulario interno (LDAP) |
+| **Ciudadano / Chofer** | `ciudadano.prueba` | Consultar `.local-p1/cuentas-locales.txt` | Botón *Ingresar con Usuario gub.uy* |
+| **Consola Keycloak** | `gestor-idp` | Consultar `.local-p1/cuentas-locales.txt` | Consola http://localhost:8083 |
+
+---
+
+## 🛠️ Comandos de utilidad
+
+* **Ver el estado de los contenedores:**
+  ```bash
+  docker compose ps
+  ```
+* **Ver los logs de un servicio (ej. postgres o wildfly):**
+  ```bash
+  docker compose logs -f postgres
+  docker compose logs -f wildfly
+  ```
+* **Detener los servicios sin perder datos:**
+  ```bash
+  docker compose stop
+  ```
+* **Reiniciar todo desde cero (Base de datos limpia):**
+  ```bash
+  docker compose down -v
+  ```
+
+---
+
+## 🧪 Pruebas y cobertura de código (JaCoCo)
+
+Para compilar, ejecutar todos los tests unitarios y de integración, y generar el reporte de cobertura:
+
+```bash
+mvn clean verify
 ```
 
-- Reporte: `ejb/target/site/jacoco/index.html`
-- Umbral mínimo de cobertura: propiedad `jacoco.minimum.coverage` en el `pom.xml` raíz (meta final: `0.80`).
-- El CI (`.gitlab-ci.yml`) corre `build` → `test` (`mvn verify`) → `quality` (Sonar) → `package`.
+* **Reporte HTML de cobertura:** Abrir `ejb/target/site/jacoco/index.html` en el navegador.
+* El pipeline de integración continua (`.gitlab-ci.yml`) verifica automáticamente las fases de `build` → `test` → `quality` (Sonar) → `package`.
 
-## Auditoría inmutable
+---
 
-`registro_auditoria` es append-only: al desplegar, `AuditoriaTriggerInstaller` (EJB `@Startup`) instala un trigger que rechaza `UPDATE` y `DELETE`. Se reinstala en cada deploy porque `drop-and-create` recrea la tabla.
+## 🔒 Auditoría inmutable
+
+La tabla `registro_auditoria` es inmutable (*append-only*): al desplegar el backend, el EJB `@Startup` `AuditoriaTriggerInstaller` instala a nivel de PostgreSQL un trigger que bloquea y rechaza cualquier operación de `UPDATE` o `DELETE`. Se reinstala automáticamente en cada inicialización para garantizar trazabilidad legal inalterable.

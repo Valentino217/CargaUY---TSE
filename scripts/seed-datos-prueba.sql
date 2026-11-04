@@ -290,7 +290,7 @@ INSERT INTO infracciones (id_caso, tipo, estado, fecha, evidencia, fecha_resoluc
  CURRENT_DATE - INTERVAL '1 day', 'CONFIRMADA',
  'Se desestima el descargo presentado. La balanza oficial contaba con calibración metrológica al día.',
  1004, 'STP 1234')
-ON CONFLICT (id_caso) DO UPDATE SET estado = EXCLUDED.estado, resolucion = EXCLUDED.resolucion, fundamento = EXCLUDED.fundamento;
+ON CONFLICT (id_caso) DO UPDATE SET estado = EXCLUDED.estado, resolucion = EXCLUDED.resolucion, fundamento = EXCLUDED.fundamento, evidencia = EXCLUDED.evidencia;
 
 INSERT INTO descargos (id, fecha, descargo, infraccion_id) VALUES
 (6001, CURRENT_DATE - INTERVAL '2 days', 'Se solicita la anulación del acta debido a ráfagas de viento y oscilaciones mecánicas en la plataforma.', 502)

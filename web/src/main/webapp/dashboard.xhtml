@@ -42,24 +42,29 @@
         .nav-links a:hover {
             text-decoration: underline;
         }
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
         .kpi-card {
             background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
             color: white;
             border-radius: 8px;
-            padding: 24px;
-            margin-bottom: 24px;
+            padding: 20px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
         }
         .kpi-title {
-            font-size: 1.15rem;
+            font-size: 1.05rem;
             opacity: 0.95;
             margin: 0;
         }
         .kpi-value {
-            font-size: 2.8rem;
+            font-size: 2.2rem;
             font-weight: 700;
             margin: 0;
         }
@@ -82,7 +87,7 @@
         <div class="header-bar">
             <div>
                 <h1>Dashboard de Control y Supervisión</h1>
-                <small style="color: #64748b;">Métricas consolidadas para las autoridades competentes</small>
+                <small style="color: #64748b;">Métricas consolidadas para las autoridades competentes (Sección 3.6.2)</small>
             </div>
             <div class="nav-links">
                 <a href="index.xhtml">Inicio</a>
@@ -92,14 +97,44 @@
             </div>
         </div>
 
-        <!-- KPI Pesadas Totales -->
-        <div class="kpi-card">
-            <div>
-                <h2 class="kpi-title">Pesadas Totales en Balanza</h2>
-                <small style="opacity: 0.85;">Registros consolidados de control de carga</small>
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div>
+                    <h2 class="kpi-title">Empresas Habilitadas</h2>
+                    <small style="opacity: 0.85;">Padrón activo</small>
+                </div>
+                <div class="kpi-value">
+                    <h:outputText value="#{dashboardBean.totalEmpresasHabilitadas}"/>
+                </div>
             </div>
-            <div class="kpi-value">
-                <h:outputText value="#{dashboardBean.totalPesadas}"/>
+            <div class="kpi-card">
+                <div>
+                    <h2 class="kpi-title">Vehículos Habilitados</h2>
+                    <small style="opacity: 0.85;">Unidades operativas</small>
+                </div>
+                <div class="kpi-value">
+                    <h:outputText value="#{dashboardBean.totalVehiculosHabilitados}"/>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div>
+                    <h2 class="kpi-title">Pesadas en Balanza</h2>
+                    <small style="opacity: 0.85;">Controles registrados</small>
+                </div>
+                <div class="kpi-value">
+                    <h:outputText value="#{dashboardBean.totalPesadas}"/>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div>
+                    <h2 class="kpi-title">Tasa Confirmadas</h2>
+                    <small style="opacity: 0.85;">Sobre total detectadas</small>
+                </div>
+                <div class="kpi-value">
+                    <h:outputText value="#{dashboardBean.tasaConfirmadasSobreDetectadas}">
+                        <f:convertNumber pattern="#0.00"/>
+                    </h:outputText>%
+                </div>
             </div>
         </div>
 
@@ -124,6 +159,34 @@
                     </p:column>
                     <p:column headerText="Cantidad" style="text-align: right; width: 120px;">
                         #{entry.value}
+                    </p:column>
+                </p:dataTable>
+            </p:panel>
+        </div>
+
+        <div class="grid-2">
+            <!-- Tabla: Viajes por Período -->
+            <p:panel header="Cantidad de Viajes por Período">
+                <p:dataTable value="#{dashboardBean.listaViajesPorPeriodo}" var="vp" responsiveLayout="scroll">
+                    <p:column headerText="Período">
+                        <strong>#{vp.key}</strong>
+                    </p:column>
+                    <p:column headerText="Cantidad" style="text-align: right; width: 120px;">
+                        #{vp.value}
+                    </p:column>
+                </p:dataTable>
+            </p:panel>
+
+            <!-- Tabla: Volumen por Rubro -->
+            <p:panel header="Volumen Transportado por Rubro">
+                <p:dataTable value="#{dashboardBean.listaVolumenPorRubro}" var="vr" responsiveLayout="scroll">
+                    <p:column headerText="Rubro">
+                        <strong>#{vr.key}</strong>
+                    </p:column>
+                    <p:column headerText="Volumen (t/m³)" style="text-align: right; width: 140px;">
+                        <h:outputText value="#{vr.value}">
+                            <f:convertNumber pattern="#,##0.0"/>
+                        </h:outputText>
                     </p:column>
                 </p:dataTable>
             </p:panel>

@@ -17,19 +17,73 @@ import uy.edu.fing.grupo07.CargaUY.service.VehiculoEJBLocal;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
  * Managed Bean para las vistas públicas del portal (/portal/*):
- * inicio, validación pública de empresas e información pública agregada.
+ * inicio, validación pública de empresas e información pública agregada con anonimización (Sección 4.2.6 - Ley 18.331).
  */
 @Named("portalPublicoBean")
 @ViewScoped
 public class PortalPublicoBean implements Serializable {
 
     private static final long serialVersionUID = 1L;
+
+    /**
+     * Umbral mínimo de k-anonimato (Sección 4.2.6 / Ley Nº 18.331 de Protección de Datos Personales):
+     * Ninguna agrupación estadística pública se expone con menos de k = 3 registros para impedir
+     * la re-identificación indirecta de una empresa, vehículo o chofer en particular.
+     */
+    public static final int UMBRAL_MINIMO_AGREGACION_K = 3;
+
+    public record EstadisticaCorredorPublico(
+            String corredor,
+            String rubro,
+            long cantidadViajes,
+            double volumenTotal
+    ) implements Serializable {
+        public String getCorredor() {
+            return corredor;
+        }
+
+        public String getRubro() {
+            return rubro;
+        }
+
+        public long getCantidadViajes() {
+            return cantidadViajes;
+        }
+
+        public double getVolumenTotal() {
+            return volumenTotal;
+        }
+    }
+
+    public record EstadisticaFlotaPublica(
+            String categoriaCapacidad,
+            long cantidadUnidades,
+            long unidadesHabilitadas,
+            double capacidadPromedioKg
+    ) implements Serializable {
+        public String getCategoriaCapacidad() {
+            return categoriaCapacidad;
+        }
+
+        public long getCantidadUnidades() {
+            return cantidadUnidades;
+        }
+
+        public long getUnidadesHabilitadas() {
+            return unidadesHabilitadas;
+        }
+
+        public double getCapacidadPromedioKg() {
+            return capacidadPromedioKg;
+        }
+    }
 
     @EJB
     private DashboardServiceLocal dashboardService;
@@ -66,6 +120,138 @@ public class PortalPublicoBean implements Serializable {
             vehiculosPublicos = new ArrayList<>();
             guiasPublicas = new ArrayList<>();
         }
+    }
+
+    public int getUmbralMinimoAgregacion() {
+        return UMBRAL_MINIMO_AGREGACION_K;
+    }
+
+    /**
+     * Devuelve la actividad de transporte agregada aplicando k-anonimato (k >= 3)
+     * sin exponer identificadores de guía, empresa, matrícula ni chofer.
+     */
+    public List<EstadisticaCorredorPublico> getEstadisticasActividadAgregada() {
+        List<EstadisticaCorredorPublico> resultado = new ArrayList<>();
+        if (guiasPublicas == null || guiasPublicas.size() < UMBRAL_MINIMO_AGREGACION_K) {
+            return resultado;
+        }
+
+        Map<String, List<GuiaDeViaje>> porRubro = new LinkedHashMap<>();
+        for (GuiaDeViaje g : guiasPublicas) {
+            if (g == null) {
+                continue;
+            }
+            String rubro = (g.getRubroCliente() != null && !g.getRubroCliente().isBlank())
+                    ? g.getRubroCliente().trim()
+                    : "General";
+            porRubro.computeIfAbsent(rubro, k -> new ArrayList<>()).add(g);
+        }
+
+        List<GuiaDeViaje> residuales = new ArrayList<>();
+        for (Map.Entry<String, List<GuiaDeViaje>> entry : porRubro.entrySet()) {
+            List<GuiaDeViaje> grupo = entry.getValue();
+            if (grupo.size() >= UMBRAL_MINIMO_AGREGACION_K) {
+                double volumen = grupo.stream().mapToDouble(GuiaDeViaje::getVolumenCarga).sum();
+                resultado.add(new EstadisticaCorredorPublico(
+                        "Red Nacional Consolidada",
+                        entry.getKey(),
+                        grupo.size(),
+                        Math.round(volumen * 100.0) / 100.0
+                ));
+            } else {
+                residuales.addAll(grupo);
+            }
+        }
+
+        if (residuales.size() >= UMBRAL_MINIMO_AGREGACION_K) {
+            double volumenResidual = residuales.stream().mapToDouble(GuiaDeViaje::getVolumenCarga).sum();
+            resultado.add(new EstadisticaCorredorPublico(
+                    "Red Nacional Consolidada",
+                    "Otros Rubros (Agrupado por umbral k < " + UMBRAL_MINIMO_AGREGACION_K + ")",
+                    residuales.size(),
+                    Math.round(volumenResidual * 100.0) / 100.0
+            ));
+        } else if (!residuales.isEmpty() && resultado.isEmpty()) {
+            double volumenTotal = guiasPublicas.stream().mapToDouble(GuiaDeViaje::getVolumenCarga).sum();
+            resultado.add(new EstadisticaCorredorPublico(
+                    "Red Nacional Consolidada",
+                    "Consolidado Nacional (k ≥ " + UMBRAL_MINIMO_AGREGACION_K + ")",
+                    guiasPublicas.size(),
+                    Math.round(volumenTotal * 100.0) / 100.0
+            ));
+        }
+
+        return resultado;
+    }
+
+    /**
+     * Devuelve estadísticas agregadas del padrón de vehículos por rango de capacidad aplicando k-anonimato (k >= 3),
+     * sin exponer matrículas individuales ni razón social titular.
+     */
+    public List<EstadisticaFlotaPublica> getEstadisticasFlotaAgregada() {
+        List<EstadisticaFlotaPublica> resultado = new ArrayList<>();
+        if (vehiculosPublicos == null || vehiculosPublicos.size() < UMBRAL_MINIMO_AGREGACION_K) {
+            return resultado;
+        }
+
+        Map<String, List<Vehiculo>> porRango = new LinkedHashMap<>();
+        porRango.put("Liviano (< 10.000 kg)", new ArrayList<>());
+        porRango.put("Mediano (10.000 - 20.000 kg)", new ArrayList<>());
+        porRango.put("Pesado (> 20.000 kg)", new ArrayList<>());
+
+        for (Vehiculo v : vehiculosPublicos) {
+            if (v == null) {
+                continue;
+            }
+            String categoria;
+            if (v.getCapacidadCarga() < 10000) {
+                categoria = "Liviano (< 10.000 kg)";
+            } else if (v.getCapacidadCarga() <= 20000) {
+                categoria = "Mediano (10.000 - 20.000 kg)";
+            } else {
+                categoria = "Pesado (> 20.000 kg)";
+            }
+            porRango.get(categoria).add(v);
+        }
+
+        List<Vehiculo> residuales = new ArrayList<>();
+        for (Map.Entry<String, List<Vehiculo>> entry : porRango.entrySet()) {
+            List<Vehiculo> grupo = entry.getValue();
+            if (grupo.size() >= UMBRAL_MINIMO_AGREGACION_K) {
+                long habilitados = grupo.stream().filter(Vehiculo::isEstadoHabilitacion).count();
+                double promedio = grupo.stream().mapToInt(Vehiculo::getCapacidadCarga).average().orElse(0.0);
+                resultado.add(new EstadisticaFlotaPublica(
+                        entry.getKey(),
+                        grupo.size(),
+                        habilitados,
+                        Math.round(promedio * 100.0) / 100.0
+                ));
+            } else if (!grupo.isEmpty()) {
+                residuales.addAll(grupo);
+            }
+        }
+
+        if (residuales.size() >= UMBRAL_MINIMO_AGREGACION_K) {
+            long habilitados = residuales.stream().filter(Vehiculo::isEstadoHabilitacion).count();
+            double promedio = residuales.stream().mapToInt(Vehiculo::getCapacidadCarga).average().orElse(0.0);
+            resultado.add(new EstadisticaFlotaPublica(
+                    "Otras Categorías (Agrupado por umbral k < " + UMBRAL_MINIMO_AGREGACION_K + ")",
+                    residuales.size(),
+                    habilitados,
+                    Math.round(promedio * 100.0) / 100.0
+            ));
+        } else if (!residuales.isEmpty() && resultado.isEmpty()) {
+            long habilitados = vehiculosPublicos.stream().filter(Vehiculo::isEstadoHabilitacion).count();
+            double promedio = vehiculosPublicos.stream().mapToInt(Vehiculo::getCapacidadCarga).average().orElse(0.0);
+            resultado.add(new EstadisticaFlotaPublica(
+                    "Flota Nacional Consolidada (k ≥ " + UMBRAL_MINIMO_AGREGACION_K + ")",
+                    vehiculosPublicos.size(),
+                    habilitados,
+                    Math.round(promedio * 100.0) / 100.0
+            ));
+        }
+
+        return resultado;
     }
 
     public void buscarEmpresa() {
@@ -163,16 +349,32 @@ public class PortalPublicoBean implements Serializable {
         return empresasPublicas;
     }
 
+    public void setEmpresasPublicas(List<Empresa> empresasPublicas) {
+        this.empresasPublicas = empresasPublicas;
+    }
+
     public List<Empresa> getEmpresasResultado() {
         return empresasResultado;
+    }
+
+    public void setEmpresasResultado(List<Empresa> empresasResultado) {
+        this.empresasResultado = empresasResultado;
     }
 
     public List<Vehiculo> getVehiculosPublicos() {
         return vehiculosPublicos;
     }
 
+    public void setVehiculosPublicos(List<Vehiculo> vehiculosPublicos) {
+        this.vehiculosPublicos = vehiculosPublicos;
+    }
+
     public List<GuiaDeViaje> getGuiasPublicas() {
         return guiasPublicas;
+    }
+
+    public void setGuiasPublicas(List<GuiaDeViaje> guiasPublicas) {
+        this.guiasPublicas = guiasPublicas;
     }
 
     public Empresa getEmpresaInspeccionada() {
@@ -181,5 +383,13 @@ public class PortalPublicoBean implements Serializable {
 
     public void setEmpresaInspeccionada(Empresa empresaInspeccionada) {
         this.empresaInspeccionada = empresaInspeccionada;
+    }
+
+    public DashboardResumenDTO getResumen() {
+        return resumen;
+    }
+
+    public void setResumen(DashboardResumenDTO resumen) {
+        this.resumen = resumen;
     }
 }

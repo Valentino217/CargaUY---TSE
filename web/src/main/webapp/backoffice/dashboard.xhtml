@@ -39,8 +39,69 @@
             </div>
         </div>
 
-        <!-- KPIs de Resumen Ejecutivo -->
+        <!-- Barra de Filtros Analíticos (Sección 3.6.2: Rubro/Tipo de Carga, Ubicación Geográfica, Rango de Fechas) -->
+        <h:form id="dashFiltrosForm">
+            <div class="cuy-card" style="margin-bottom: 1.25rem;">
+                <h3 class="cuy-card-title" style="margin-bottom: 0.75rem;">
+                    <i class="pi pi-filter" style="color: #1d4ed8;" /> Filtros de Análisis Operativo y Territorial
+                </h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.85rem; align-items: end;">
+                    <div>
+                        <p:outputLabel for="filtroRubro" value="Rubro / Tipo de Carga" style="display: block; font-weight: 600; margin-bottom: 0.3rem;" />
+                        <p:inputText id="filtroRubro"
+                                     value="#{dashboardBean.filtroRubro}"
+                                     placeholder="Ej: Forestal, Granos, Lácteos..."
+                                     style="width: 100%;" />
+                    </div>
+                    <div>
+                        <p:outputLabel for="filtroUbicacion" value="Ubicación Geográfica (Origen/Destino)" style="display: block; font-weight: 600; margin-bottom: 0.3rem;" />
+                        <p:inputText id="filtroUbicacion"
+                                     value="#{dashboardBean.filtroUbicacion}"
+                                     placeholder="Ej: Montevideo, Rivera, Ruta 5..."
+                                     style="width: 100%;" />
+                    </div>
+                    <div>
+                        <p:outputLabel for="filtroFechaDesde" value="Fecha Desde" style="display: block; font-weight: 600; margin-bottom: 0.3rem;" />
+                        <p:datePicker id="filtroFechaDesde"
+                                      value="#{dashboardBean.filtroFechaDesde}"
+                                      pattern="yyyy-MM-dd"
+                                      showIcon="true"
+                                      style="width: 100%;" />
+                    </div>
+                    <div>
+                        <p:outputLabel for="filtroFechaHasta" value="Fecha Hasta" style="display: block; font-weight: 600; margin-bottom: 0.3rem;" />
+                        <p:datePicker id="filtroFechaHasta"
+                                      value="#{dashboardBean.filtroFechaHasta}"
+                                      pattern="yyyy-MM-dd"
+                                      showIcon="true"
+                                      style="width: 100%;" />
+                    </div>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <p:commandButton value="Filtrar"
+                                         icon="pi pi-search"
+                                         actionListener="#{dashboardBean.aplicarFiltros}"
+                                         update=":kpiDashGroup :dashTablasForm"
+                                         styleClass="ui-button-primary" />
+                        <p:commandButton value="Limpiar"
+                                         icon="pi pi-times"
+                                         actionListener="#{dashboardBean.limpiarFiltros}"
+                                         update=":dashFiltrosForm :kpiDashGroup :dashTablasForm"
+                                         styleClass="ui-button-secondary ui-button-outlined" />
+                    </div>
+                </div>
+            </div>
+        </h:form>
+
+        <!-- KPIs de Resumen Ejecutivo (Sección 3.6.2) -->
         <h:panelGroup id="kpiDashGroup" layout="block" styleClass="cuy-kpi-grid">
+            <div class="cuy-kpi-card success">
+                <div class="cuy-kpi-label"><i class="pi pi-building" /> Empresas Habilitadas</div>
+                <div class="cuy-kpi-value">#{dashboardBean.totalEmpresasHabilitadas}</div>
+            </div>
+            <div class="cuy-kpi-card">
+                <div class="cuy-kpi-label"><i class="pi pi-truck" /> Vehículos Habilitados</div>
+                <div class="cuy-kpi-value">#{dashboardBean.totalVehiculosHabilitados}</div>
+            </div>
             <div class="cuy-kpi-card">
                 <div class="cuy-kpi-label"><i class="pi pi-sliders-h" /> Total Pesadas en Balanzas</div>
                 <div class="cuy-kpi-value">#{dashboardBean.totalPesadas}</div>
@@ -53,13 +114,17 @@
                 <div class="cuy-kpi-label"><i class="pi pi-ban" /> Sanciones Confirmadas</div>
                 <div class="cuy-kpi-value">#{bandejaFiscalizacionBean.totalConfirmadas}</div>
             </div>
-            <div class="cuy-kpi-card success">
-                <div class="cuy-kpi-label"><i class="pi pi-check-circle" /> Casos Desestimados</div>
-                <div class="cuy-kpi-value">#{bandejaFiscalizacionBean.totalDesestimadas}</div>
+            <div class="cuy-kpi-card warning">
+                <div class="cuy-kpi-label"><i class="pi pi-percentage" /> Tasa Confirmadas / Detectadas</div>
+                <div class="cuy-kpi-value">
+                    <h:outputText value="#{dashboardBean.tasaConfirmadasSobreDetectadas}">
+                        <f:convertNumber pattern="#0.00" />
+                    </h:outputText>%
+                </div>
             </div>
         </h:panelGroup>
 
-        <!-- Desglose por Estado de Guías, Estado de Infracción y Tipo de Infracción en CSS Grid de 3 columnas -->
+        <!-- Desglose por Estado de Guías, Estado de Infracción, Tipo de Infracción, Viajes por Período y Volumen por Rubro -->
         <h:form id="dashTablasForm">
             <div class="cuy-grid-3">
                 <div class="cuy-card" style="margin-bottom: 0;">
@@ -100,6 +165,50 @@
                         </p:column>
                         <p:column headerText="Cantidad" style="width: 100px; text-align: right;">
                             <strong><h:outputText value="#{it.value}" /></strong>
+                        </p:column>
+                    </p:dataTable>
+                </div>
+            </div>
+
+            <div class="cuy-grid-3" style="margin-top: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));">
+                <div class="cuy-card" style="margin-bottom: 0;">
+                    <h3 class="cuy-card-title">
+                        <i class="pi pi-calendar" style="color: #0284c7;" /> Cantidad de Viajes Realizados por Período
+                    </h3>
+                    <p:dataTable id="dtViajesPeriodo"
+                                 var="vp"
+                                 value="#{dashboardBean.listaViajesPorPeriodo}"
+                                 size="small"
+                                 stripedRows="true"
+                                 emptyMessage="Sin viajes registrados para los filtros seleccionados.">
+                        <p:column headerText="Período (AAAA-MM)">
+                            <h:outputText value="#{vp.key}" />
+                        </p:column>
+                        <p:column headerText="Viajes" style="width: 120px; text-align: right;">
+                            <strong><h:outputText value="#{vp.value}" /></strong>
+                        </p:column>
+                    </p:dataTable>
+                </div>
+
+                <div class="cuy-card" style="margin-bottom: 0;">
+                    <h3 class="cuy-card-title">
+                        <i class="pi pi-box" style="color: #059669;" /> Volumen de Carga Transportada por Rubro
+                    </h3>
+                    <p:dataTable id="dtVolumenRubro"
+                                 var="vr"
+                                 value="#{dashboardBean.listaVolumenPorRubro}"
+                                 size="small"
+                                 stripedRows="true"
+                                 emptyMessage="Sin volumen registrado para los filtros seleccionados.">
+                        <p:column headerText="Rubro / Tipo de Carga">
+                            <h:outputText value="#{vr.key}" />
+                        </p:column>
+                        <p:column headerText="Volumen Total (t/m³)" style="width: 160px; text-align: right;">
+                            <strong>
+                                <h:outputText value="#{vr.value}">
+                                    <f:convertNumber pattern="#,##0.0" />
+                                </h:outputText>
+                            </strong>
                         </p:column>
                     </p:dataTable>
                 </div>

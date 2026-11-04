@@ -305,6 +305,63 @@
         .ui-dialog .ui-dialog-content {
             padding: 1.25rem !important;
         }
+        /* Diálogo de Confirmación (p:confirmDialog) */
+        body .ui-dialog.ui-confirm-dialog,
+        .ui-dialog.ui-confirm-dialog {
+            border-radius: 12px !important;
+            overflow: hidden !important;
+            border: 1px solid #cbd5e1 !important;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+        }
+        body .ui-dialog.ui-confirm-dialog .ui-dialog-titlebar,
+        .ui-dialog.ui-confirm-dialog .ui-dialog-titlebar {
+            background: #ffffff !important;
+            border-bottom: 0 none !important;
+            border-radius: 12px 12px 0 0 !important;
+            padding: 1.25rem 1.25rem 0.5rem 1.25rem !important;
+        }
+        body .ui-dialog.ui-confirm-dialog .ui-dialog-content,
+        .ui-dialog.ui-confirm-dialog .ui-dialog-content {
+            padding: 1.5rem 1.25rem 1.25rem 1.25rem !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 1rem !important;
+            background: #ffffff !important;
+            border: 0 none !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            margin: 0 !important;
+        }
+        .ui-dialog.ui-confirm-dialog .ui-confirm-dialog-icon {
+            font-size: 2.2rem !important;
+            color: #d97706 !important;
+            margin: 0 !important;
+            flex-shrink: 0 !important;
+        }
+        .ui-dialog.ui-confirm-dialog .ui-confirm-dialog-message {
+            color: #334155 !important;
+            font-size: 0.95rem !important;
+            line-height: 1.5 !important;
+        }
+        body .ui-dialog.ui-confirm-dialog .ui-dialog-buttonpane,
+        .ui-dialog.ui-confirm-dialog .ui-dialog-buttonpane {
+            border-radius: 0 0 12px 12px !important;
+            background: #f8fafc !important;
+            border-top: 1px solid #e2e8f0 !important;
+            padding: 1rem 1.25rem !important;
+            margin: 0 !important;
+            display: flex !important;
+            justify-content: flex-end !important;
+            align-items: center !important;
+            gap: 0.85rem !important;
+        }
+        .ui-dialog.ui-confirm-dialog .ui-dialog-buttonpane .ui-button {
+            margin: 0 !important;
+            min-width: 110px !important;
+            padding: 0.5rem 1.1rem !important;
+            font-weight: 600 !important;
+            border-radius: 6px !important;
+        }
         .ui-tag {
             font-weight: 700 !important;
             font-size: 0.75rem !important;
@@ -339,7 +396,7 @@
         }
     </style>
     <ui:insert name="head" />
-    <link rel="stylesheet" href="#{request.contextPath}/css/ajustes-ui.css"/>
+    <link rel="stylesheet" href="#{request.contextPath}/css/ajustes-ui.css?v=20261104-fix-dialog"/>
     <link rel="stylesheet" href="#{request.contextPath}/css/calendarios.css"/>
 </h:head>
 
@@ -446,8 +503,8 @@
 
     <!-- Diálogo de Confirmación Global Reutilizable -->
     <h:form id="globalConfirmForm">
-        <p:confirmDialog global="true" showEffect="fade" hideEffect="fade" responsive="true" width="430">
-            <p:commandButton value="Cancelar" type="button" styleClass="ui-confirmdialog-no ui-button-flat ui-button-secondary" icon="pi pi-times" />
+        <p:confirmDialog global="true" showEffect="fade" hideEffect="fade" responsive="true" width="460">
+            <p:commandButton value="Cancelar" type="button" styleClass="ui-confirmdialog-no ui-button-outlined ui-button-secondary" icon="pi pi-times" />
             <p:commandButton value="Confirmar" type="button" styleClass="ui-confirmdialog-yes ui-button-danger" icon="pi pi-check" />
         </p:confirmDialog>
     </h:form>

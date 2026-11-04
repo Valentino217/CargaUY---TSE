@@ -12,7 +12,7 @@
     <header class="header-bar"><h1>Detalle y tracking de viaje</h1><a href="#{request.contextPath}/index.xhtml">Inicio</a></header>
     <section class="card">
         <form method="get" action="#{request.contextPath}/detalle-viaje">
-            <label>Número de guía<input name="guiaId" type="number" min="1" required="required" value="#{param.guiaId}"/></label>
+            <label>Número de guía<input name="guiaId" type="number" min="1" required="required" value="#{param.guiaId}" oninvalid="this.setCustomValidity('Por favor, ingresá el número de guía.')" oninput="this.setCustomValidity('')"/></label>
             <button>Consultar tracking</button>
         </form>
     </section>

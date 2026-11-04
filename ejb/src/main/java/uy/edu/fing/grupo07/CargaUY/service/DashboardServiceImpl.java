@@ -3,17 +3,24 @@ package uy.edu.fing.grupo07.CargaUY.service;
 import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.TypedQuery;
+import uy.edu.fing.grupo07.CargaUY.domain.entity.GuiaDeViaje;
+import uy.edu.fing.grupo07.CargaUY.domain.entity.Infraccion;
+import uy.edu.fing.grupo07.CargaUY.domain.entity.PesadaBalanza;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.EstadoInfraccion;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoInfraccion;
 import uy.edu.fing.grupo07.CargaUY.dto.DashboardResumenDTO;
 
+import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 /**
- * Implementación del servicio de métricas consolidadas del Dashboard (CU-C4 / Autoridad).
+ * Implementación del servicio de métricas consolidadas del Dashboard (CU-C4 / Autoridad - Sección 3.6.2).
  */
 @Stateless
 public class DashboardServiceImpl implements DashboardServiceLocal {
@@ -38,22 +45,265 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
         cargarMetricasInfraccionesPorEstado(infraccionesPorEstado);
         cargarMetricasInfraccionesPorTipo(infraccionesPorTipo);
 
-        Long resultadoPesadas = em.createQuery(
-                "SELECT COUNT(p) FROM PesadaBalanza p",
-                Long.class
-        ).getSingleResult();
+        long totalPesadas = consultarConteo("SELECT COUNT(p) FROM PesadaBalanza p");
+        long totalEmpresasHabilitadas = consultarConteo("SELECT COUNT(e) FROM Empresa e WHERE e.activa = true");
+        long totalVehiculosHabilitados = consultarConteo("SELECT COUNT(v) FROM Vehiculo v WHERE v.estadoHabilitacion = true");
 
-        long totalPesadas = 0L;
-        if (resultadoPesadas != null) {
-            totalPesadas = resultadoPesadas;
-        }
+        Map<String, Long> viajesPorPeriodo = new TreeMap<>();
+        Map<String, Double> volumenPorRubro = new LinkedHashMap<>();
+        cargarViajesYVolumenDesdeGuias(null, null, null, null, viajesPorPeriodo, volumenPorRubro, null);
+
+        double tasaConfirmadasSobreDetectadas = calcularTasaConfirmadas(infraccionesPorEstado);
 
         return new DashboardResumenDTO(
                 guiasPorEstado,
                 infraccionesPorEstado,
                 infraccionesPorTipo,
-                totalPesadas
+                totalPesadas,
+                totalEmpresasHabilitadas,
+                totalVehiculosHabilitados,
+                viajesPorPeriodo,
+                volumenPorRubro,
+                tasaConfirmadasSobreDetectadas
         );
+    }
+
+    @Override
+    public DashboardResumenDTO obtenerResumenFiltrado(
+            String rubro,
+            String ubicacion,
+            LocalDate fechaDesde,
+            LocalDate fechaHasta
+    ) {
+        boolean sinFiltros = (rubro == null || rubro.isBlank())
+                && (ubicacion == null || ubicacion.isBlank())
+                && fechaDesde == null
+                && fechaHasta == null;
+        if (sinFiltros) {
+            return obtenerResumen();
+        }
+
+        Map<TipoEstado, Long> guiasPorEstado = inicializarMapaGuias();
+        Map<EstadoInfraccion, Long> infraccionesPorEstado = inicializarMapaInfraccionesPorEstado();
+        Map<TipoInfraccion, Long> infraccionesPorTipo = inicializarMapaInfraccionesPorTipo();
+        Map<String, Long> viajesPorPeriodo = new TreeMap<>();
+        Map<String, Double> volumenPorRubro = new LinkedHashMap<>();
+
+        cargarViajesYVolumenDesdeGuias(
+                rubro,
+                ubicacion,
+                fechaDesde,
+                fechaHasta,
+                viajesPorPeriodo,
+                volumenPorRubro,
+                guiasPorEstado
+        );
+
+        cargarInfraccionesFiltradas(
+                rubro,
+                ubicacion,
+                fechaDesde,
+                fechaHasta,
+                infraccionesPorEstado,
+                infraccionesPorTipo
+        );
+
+        long totalPesadas = contarPesadasFiltradas(rubro, ubicacion, fechaDesde, fechaHasta);
+        long totalEmpresasHabilitadas = consultarConteo("SELECT COUNT(e) FROM Empresa e WHERE e.activa = true");
+        long totalVehiculosHabilitados = consultarConteo("SELECT COUNT(v) FROM Vehiculo v WHERE v.estadoHabilitacion = true");
+        double tasaConfirmadasSobreDetectadas = calcularTasaConfirmadas(infraccionesPorEstado);
+
+        return new DashboardResumenDTO(
+                guiasPorEstado,
+                infraccionesPorEstado,
+                infraccionesPorTipo,
+                totalPesadas,
+                totalEmpresasHabilitadas,
+                totalVehiculosHabilitados,
+                viajesPorPeriodo,
+                volumenPorRubro,
+                tasaConfirmadasSobreDetectadas
+        );
+    }
+
+    private long consultarConteo(String jpql) {
+        TypedQuery<Long> query = em.createQuery(jpql, Long.class);
+        if (query == null) {
+            return 0L;
+        }
+        Long resultado = query.getSingleResult();
+        return resultado != null ? resultado : 0L;
+    }
+
+    private double calcularTasaConfirmadas(Map<EstadoInfraccion, Long> infraccionesPorEstado) {
+        long totalInfracciones = 0L;
+        for (Long cantidad : infraccionesPorEstado.values()) {
+            if (cantidad != null) {
+                totalInfracciones += cantidad;
+            }
+        }
+        if (totalInfracciones <= 0L) {
+            return 0.0;
+        }
+        long confirmadas = infraccionesPorEstado.getOrDefault(EstadoInfraccion.CONFIRMADA, 0L);
+        return Math.round((confirmadas * 10000.0) / totalInfracciones) / 100.0;
+    }
+
+    private void cargarViajesYVolumenDesdeGuias(
+            String rubro,
+            String ubicacion,
+            LocalDate fechaDesde,
+            LocalDate fechaHasta,
+            Map<String, Long> viajesPorPeriodo,
+            Map<String, Double> volumenPorRubro,
+            Map<TipoEstado, Long> guiasPorEstadoFiltrado
+    ) {
+        TypedQuery<GuiaDeViaje> queryGuias = em.createQuery(
+                "SELECT g FROM GuiaDeViaje g ORDER BY g.fecha ASC",
+                GuiaDeViaje.class
+        );
+        if (queryGuias == null) {
+            return;
+        }
+        List<GuiaDeViaje> guias = queryGuias.getResultList();
+        if (guias == null) {
+            return;
+        }
+        for (GuiaDeViaje g : guias) {
+            if (g == null || !cumpleFiltroGuia(g, rubro, ubicacion, fechaDesde, fechaHasta)) {
+                continue;
+            }
+            if (guiasPorEstadoFiltrado != null && g.getEstado() != null) {
+                guiasPorEstadoFiltrado.merge(g.getEstado(), 1L, Long::sum);
+            }
+            if (g.getFecha() != null) {
+                String periodo = YearMonth.from(g.getFecha()).toString();
+                viajesPorPeriodo.merge(periodo, 1L, Long::sum);
+            }
+            String rubroGuia = (g.getRubroCliente() != null && !g.getRubroCliente().isBlank())
+                    ? g.getRubroCliente().trim()
+                    : "Sin clasificar";
+            volumenPorRubro.merge(rubroGuia, (double) g.getVolumenCarga(), Double::sum);
+        }
+    }
+
+    private void cargarInfraccionesFiltradas(
+            String rubro,
+            String ubicacion,
+            LocalDate fechaDesde,
+            LocalDate fechaHasta,
+            Map<EstadoInfraccion, Long> infraccionesPorEstado,
+            Map<TipoInfraccion, Long> infraccionesPorTipo
+    ) {
+        TypedQuery<Infraccion> queryInf = em.createQuery(
+                "SELECT i FROM Infraccion i",
+                Infraccion.class
+        );
+        if (queryInf == null) {
+            return;
+        }
+        List<Infraccion> infracciones = queryInf.getResultList();
+        if (infracciones == null) {
+            return;
+        }
+        boolean filtraGuia = (rubro != null && !rubro.isBlank()) || (ubicacion != null && !ubicacion.isBlank());
+        for (Infraccion i : infracciones) {
+            if (i == null) {
+                continue;
+            }
+            if (fechaDesde != null && (i.getFecha() == null || i.getFecha().isBefore(fechaDesde))) {
+                continue;
+            }
+            if (fechaHasta != null && (i.getFecha() == null || i.getFecha().isAfter(fechaHasta))) {
+                continue;
+            }
+            if (filtraGuia) {
+                GuiaDeViaje g = i.getGuia();
+                if (g == null || !cumpleFiltroGuia(g, rubro, ubicacion, null, null)) {
+                    continue;
+                }
+            }
+            if (i.getEstado() != null) {
+                infraccionesPorEstado.merge(i.getEstado(), 1L, Long::sum);
+            }
+            if (i.getTipo() != null) {
+                infraccionesPorTipo.merge(i.getTipo(), 1L, Long::sum);
+            }
+        }
+    }
+
+    private long contarPesadasFiltradas(
+            String rubro,
+            String ubicacion,
+            LocalDate fechaDesde,
+            LocalDate fechaHasta
+    ) {
+        TypedQuery<PesadaBalanza> queryPesadas = em.createQuery(
+                "SELECT p FROM PesadaBalanza p",
+                PesadaBalanza.class
+        );
+        if (queryPesadas == null) {
+            return consultarConteo("SELECT COUNT(p) FROM PesadaBalanza p");
+        }
+        List<PesadaBalanza> pesadas = queryPesadas.getResultList();
+        if (pesadas == null) {
+            return 0L;
+        }
+        long conteo = 0L;
+        for (PesadaBalanza p : pesadas) {
+            if (p == null) {
+                continue;
+            }
+            GuiaDeViaje g = p.getGuia();
+            if (g != null && cumpleFiltroGuia(g, rubro, ubicacion, fechaDesde, fechaHasta)) {
+                conteo++;
+            } else if (g == null && (rubro == null || rubro.isBlank()) && (ubicacion == null || ubicacion.isBlank())) {
+                LocalDate fechaPesada = p.getFecha();
+                if (fechaDesde != null && (fechaPesada == null || fechaPesada.isBefore(fechaDesde))) {
+                    continue;
+                }
+                if (fechaHasta != null && (fechaPesada == null || fechaPesada.isAfter(fechaHasta))) {
+                    continue;
+                }
+                conteo++;
+            }
+        }
+        return conteo;
+    }
+
+    private boolean cumpleFiltroGuia(
+            GuiaDeViaje g,
+            String rubro,
+            String ubicacion,
+            LocalDate fechaDesde,
+            LocalDate fechaHasta
+    ) {
+        if (rubro != null && !rubro.isBlank()) {
+            String rFiltro = rubro.trim().toLowerCase();
+            String rGuia = g.getRubroCliente() != null ? g.getRubroCliente().trim().toLowerCase() : "";
+            if (!rGuia.contains(rFiltro)) {
+                return false;
+            }
+        }
+        if (ubicacion != null && !ubicacion.isBlank()) {
+            String uFiltro = ubicacion.trim().toLowerCase();
+            String origen = g.getOrigen() != null ? g.getOrigen().toLowerCase() : "";
+            String destino = g.getDestino() != null ? g.getDestino().toLowerCase() : "";
+            if (!origen.contains(uFiltro) && !destino.contains(uFiltro)) {
+                return false;
+            }
+        }
+        if (fechaDesde != null) {
+            if (g.getFecha() == null || g.getFecha().isBefore(fechaDesde)) {
+                return false;
+            }
+        }
+        if (fechaHasta != null) {
+            if (g.getFecha() == null || g.getFecha().isAfter(fechaHasta)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private Map<TipoEstado, Long> inicializarMapaGuias() {
@@ -81,10 +331,17 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
     }
 
     private void cargarMetricasGuias(Map<TipoEstado, Long> guiasPorEstado) {
-        List<Object[]> filas = em.createQuery(
+        TypedQuery<Object[]> query = em.createQuery(
                 "SELECT g.estado, COUNT(g) FROM GuiaDeViaje g GROUP BY g.estado",
                 Object[].class
-        ).getResultList();
+        );
+        if (query == null) {
+            return;
+        }
+        List<Object[]> filas = query.getResultList();
+        if (filas == null) {
+            return;
+        }
 
         for (Object[] fila : filas) {
             TipoEstado estado = (TipoEstado) fila[0];
@@ -96,10 +353,17 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
     }
 
     private void cargarMetricasInfraccionesPorEstado(Map<EstadoInfraccion, Long> infraccionesPorEstado) {
-        List<Object[]> filas = em.createQuery(
+        TypedQuery<Object[]> query = em.createQuery(
                 "SELECT i.estado, COUNT(i) FROM Infraccion i GROUP BY i.estado",
                 Object[].class
-        ).getResultList();
+        );
+        if (query == null) {
+            return;
+        }
+        List<Object[]> filas = query.getResultList();
+        if (filas == null) {
+            return;
+        }
 
         for (Object[] fila : filas) {
             EstadoInfraccion estado = (EstadoInfraccion) fila[0];
@@ -111,10 +375,17 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
     }
 
     private void cargarMetricasInfraccionesPorTipo(Map<TipoInfraccion, Long> infraccionesPorTipo) {
-        List<Object[]> filas = em.createQuery(
+        TypedQuery<Object[]> query = em.createQuery(
                 "SELECT i.tipo, COUNT(i) FROM Infraccion i GROUP BY i.tipo",
                 Object[].class
-        ).getResultList();
+        );
+        if (query == null) {
+            return;
+        }
+        List<Object[]> filas = query.getResultList();
+        if (filas == null) {
+            return;
+        }
 
         for (Object[] fila : filas) {
             TipoInfraccion tipo = (TipoInfraccion) fila[0];

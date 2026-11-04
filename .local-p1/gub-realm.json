@@ -1,0 +1,284 @@
+{
+  "realm": "cargauy-test",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "clients": [
+    {
+      "clientId": "cargauy",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "Q8Q2y3ul--mRnSceviu_5TkKGKsVk1P3W63nHAT6hrg",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "redirectUris": [
+        "http://localhost:8080/CargaUY-web/gub/callback",
+        "uy.cargauy://oauth/callback",
+        "uy.cargauy:/oauth/callback"
+      ],
+      "webOrigins": [
+        "http://localhost:8080"
+      ],
+      "defaultClientScopes": [
+        "profile",
+        "email"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "id.token.signed.response.alg": "RS256"
+      },
+      "protocolMappers": [
+        {
+          "name": "ci",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "user.attribute": "ci",
+            "claim.name": "ci",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "nacimiento",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "user.attribute": "fechaNacimiento",
+            "claim.name": "fechaNacimiento",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "username": "ciudadano.prueba",
+      "firstName": "Ana",
+      "lastName": "Prueba",
+      "email": "ana@example.invalid",
+      "emailVerified": true,
+      "enabled": true,
+      "attributes": {
+        "ci": ["80000001"],
+        "fechaNacimiento": ["1990-01-01"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "ciudadano123",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "30303030-3030-4030-8030-303030303030",
+      "username": "juan.funcionario",
+      "firstName": "Juan",
+      "lastName": "Funcionario",
+      "email": "funcionario@cargauy.gub.uy",
+      "emailVerified": true,
+      "enabled": true,
+      "attributes": {
+        "ci": ["12345678"],
+        "fechaNacimiento": ["1985-05-20"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "funcionario123",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "31313131-3131-4131-8131-313131313131",
+      "username": "laura.fiscal",
+      "firstName": "Laura",
+      "lastName": "Fiscalizadora",
+      "email": "laura.fiscal@cargauy.gub.uy",
+      "emailVerified": true,
+      "enabled": true,
+      "attributes": {
+        "ci": ["12345679"],
+        "fechaNacimiento": ["1988-11-14"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "funcionario123",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "40404040-4040-4040-8040-404040404040",
+      "username": "pedro.empresario",
+      "firstName": "Pedro",
+      "lastName": "Empresario",
+      "email": "pedro.empresario@transporte.uy",
+      "emailVerified": true,
+      "enabled": true,
+      "attributes": {
+        "ci": ["87654321"],
+        "fechaNacimiento": ["1978-03-10"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "ciudadano123",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "41414141-4141-4141-8141-414141414141",
+      "username": "mariana.logistica",
+      "firstName": "Mariana",
+      "lastName": "Logística",
+      "email": "mariana.logistica@oriental.uy",
+      "emailVerified": true,
+      "enabled": true,
+      "attributes": {
+        "ci": ["23456789"],
+        "fechaNacimiento": ["1982-07-25"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "ciudadano123",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "42424242-4242-4242-8242-424242424242",
+      "username": "gonzalo.norte",
+      "firstName": "Gonzalo",
+      "lastName": "Norte",
+      "email": "gonzalo.norte@expreso.uy",
+      "emailVerified": true,
+      "enabled": true,
+      "attributes": {
+        "ci": ["24681357"],
+        "fechaNacimiento": ["1979-12-05"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "ciudadano123",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "43434343-4343-4343-8343-434343434343",
+      "username": "lucia.ciudadana",
+      "firstName": "Lucía",
+      "lastName": "Ciudadana",
+      "email": "lucia.ciudadana@correo.uy",
+      "emailVerified": true,
+      "enabled": true,
+      "attributes": {
+        "ci": ["45678901"],
+        "fechaNacimiento": ["1995-09-30"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "ciudadano123",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "50505050-5050-4050-8050-505050505050",
+      "username": "carlos.chofer",
+      "firstName": "Carlos",
+      "lastName": "Chofer",
+      "email": "carlos.chofer@transporte.uy",
+      "emailVerified": true,
+      "enabled": true,
+      "attributes": {
+        "ci": ["11223344"],
+        "fechaNacimiento": ["1990-08-15"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "chofer123",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "51515151-5151-4151-8151-515151515151",
+      "username": "juan.chofer",
+      "firstName": "Juan",
+      "lastName": "Chofer",
+      "email": "juan.chofer@transporte.uy",
+      "emailVerified": true,
+      "enabled": true,
+      "attributes": {
+        "ci": ["55667788"],
+        "fechaNacimiento": ["1992-04-12"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "chofer123",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "52525252-5252-4252-8252-525252525252",
+      "username": "roberto.ruta",
+      "firstName": "Roberto",
+      "lastName": "Ruta",
+      "email": "roberto.ruta@oriental.uy",
+      "emailVerified": true,
+      "enabled": true,
+      "attributes": {
+        "ci": ["34567890"],
+        "fechaNacimiento": ["1987-10-02"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "chofer123",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "id": "53535353-5353-4353-8353-535353535353",
+      "username": "diego.chofer",
+      "firstName": "Diego",
+      "lastName": "Tacuarembó",
+      "email": "diego.chofer@expreso.uy",
+      "emailVerified": true,
+      "enabled": true,
+      "attributes": {
+        "ci": ["33445566"],
+        "fechaNacimiento": ["1993-01-18"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "chofer123",
+          "temporary": false
+        }
+      ]
+    }
+  ]
+}
