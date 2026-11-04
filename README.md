@@ -82,6 +82,14 @@ Accedé en tu navegador a:
 | **Ciudadano / Chofer** | `ciudadano.prueba` | Consultar `.local-p1/cuentas-locales.txt` | Botón *Ingresar con Usuario gub.uy* |
 | **Consola Keycloak** | `gestor-idp` | Consultar `.local-p1/cuentas-locales.txt` | Consola http://localhost:8083 |
 
+> [!TIP]
+> **¿Dice "Credenciales incorrectas" al ingresar por LDAP?**
+> 1. Asegurate de haber ejecutado el **Paso 2** (`./scripts/cargar-datos-prueba.ps1`), ya que el usuario debe existir tanto en PostgreSQL como en OpenLDAP.
+> 2. Si tu contenedor de LDAP se creó previamente antes de actualizar, podés sincronizar los usuarios de prueba al instante ejecutando:
+>    - En PowerShell: `./scripts/reparar-ldap.ps1`
+>    - En Linux / Mac / Bash: `./scripts/reparar-ldap.sh`
+>    - O recreando el volumen limpio de LDAP: `docker compose down && docker volume rm cargauy-p1_ldap_p1 && docker compose up --build -d`
+
 ---
 
 ## 🛠️ Comandos de utilidad
