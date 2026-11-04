@@ -107,6 +107,10 @@ Accedé en tu navegador a:
   ```bash
   docker compose stop
   ```
+* **Resetear y recargar datos de prueba limpios (en 2 segundos, sin apagar Docker):**
+  ```powershell
+  ./scripts/reset-datos.ps1
+  ```
 * **Reiniciar todo desde cero (Base de datos limpia):**
   ```bash
   docker compose down -v
