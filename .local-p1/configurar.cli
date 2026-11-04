@@ -1,0 +1,105 @@
+if (outcome == success) of /system-property=p1.entorno.local:read-resource
+/system-property=p1.entorno.local:write-attribute(name=value,value="true")
+else
+/system-property=p1.entorno.local:add(value="true")
+end-if
+if (outcome == success) of /system-property=p1.bootstrap:read-resource
+/system-property=p1.bootstrap:write-attribute(name=value,value="true")
+else
+/system-property=p1.bootstrap:add(value="true")
+end-if
+if (outcome == success) of /system-property=bootstrap.admin.uid:read-resource
+/system-property=bootstrap.admin.uid:write-attribute(name=value,value="martin.admin")
+else
+/system-property=bootstrap.admin.uid:add(value="martin.admin")
+end-if
+if (outcome == success) of /system-property=bootstrap.admin.ci:read-resource
+/system-property=bootstrap.admin.ci:write-attribute(name=value,value="90000001")
+else
+/system-property=bootstrap.admin.ci:add(value="90000001")
+end-if
+if (outcome == success) of /system-property=bootstrap.admin.nombre:read-resource
+/system-property=bootstrap.admin.nombre:write-attribute(name=value,value="Administrador de pruebas")
+else
+/system-property=bootstrap.admin.nombre:add(value="Administrador de pruebas")
+end-if
+if (outcome == success) of /system-property=bootstrap.admin.mail:read-resource
+/system-property=bootstrap.admin.mail:write-attribute(name=value,value="admin@example.invalid")
+else
+/system-property=bootstrap.admin.mail:add(value="admin@example.invalid")
+end-if
+if (outcome == success) of /system-property=bootstrap.admin.nacimiento:read-resource
+/system-property=bootstrap.admin.nacimiento:write-attribute(name=value,value="1990-01-01")
+else
+/system-property=bootstrap.admin.nacimiento:add(value="1990-01-01")
+end-if
+if (outcome == success) of /system-property=ldap.url:read-resource
+/system-property=ldap.url:write-attribute(name=value,value="ldap://127.0.0.1:1389")
+else
+/system-property=ldap.url:add(value="ldap://127.0.0.1:1389")
+end-if
+if (outcome == success) of /system-property=ldap.people.dn:read-resource
+/system-property=ldap.people.dn:write-attribute(name=value,value="ou=people,dc=cargauy,dc=local")
+else
+/system-property=ldap.people.dn:add(value="ou=people,dc=cargauy,dc=local")
+end-if
+if (outcome == success) of /system-property=gub.proveedor:read-resource
+/system-property=gub.proveedor:write-attribute(name=value,value="iduruguay")
+else
+/system-property=gub.proveedor:add(value="iduruguay")
+end-if
+if (outcome == success) of /system-property=gub.issuer:read-resource
+/system-property=gub.issuer:write-attribute(name=value,value="https://auth-testing.iduruguay.gub.uy/oidc/v1")
+else
+/system-property=gub.issuer:add(value="https://auth-testing.iduruguay.gub.uy/oidc/v1")
+end-if
+if (outcome == success) of /system-property=gub.client.id:read-resource
+/system-property=gub.client.id:write-attribute(name=value,value="890192")
+else
+/system-property=gub.client.id:add(value="890192")
+end-if
+if (outcome == success) of /system-property=gub.client.secret:read-resource
+/system-property=gub.client.secret:write-attribute(name=value,value="457d52f181bf11804a3365b49ae4d29a2e03bbabe74997a2f510b179")
+else
+/system-property=gub.client.secret:add(value="457d52f181bf11804a3365b49ae4d29a2e03bbabe74997a2f510b179")
+end-if
+if (outcome == success) of /system-property=gub.redirect:read-resource
+/system-property=gub.redirect:write-attribute(name=value,value="http://localhost:8080/CargaUY-web/gub/callback")
+else
+/system-property=gub.redirect:add(value="http://localhost:8080/CargaUY-web/gub/callback")
+end-if
+if (outcome == success) of /system-property=gub.pkce:read-resource
+/system-property=gub.pkce:write-attribute(name=value,value="false")
+else
+/system-property=gub.pkce:add(value="false")
+end-if
+if (outcome == success) of /system-property=gub.mobile.enabled:read-resource
+/system-property=gub.mobile.enabled:write-attribute(name=value,value="false")
+else
+/system-property=gub.mobile.enabled:add(value="false")
+end-if
+if (outcome == success) of /system-property=gub.document.pais:read-resource
+/system-property=gub.document.pais:write-attribute(name=value,value="Uruguay")
+else
+/system-property=gub.document.pais:add(value="Uruguay")
+end-if
+if (outcome == success) of /system-property=gub.document.tipo:read-resource
+/system-property=gub.document.tipo:write-attribute(name=value,value="DNI")
+else
+/system-property=gub.document.tipo:add(value="DNI")
+end-if
+if (outcome == success) of /system-property=gub.document.asumir.local:read-resource
+/system-property=gub.document.asumir.local:write-attribute(name=value,value="true")
+else
+/system-property=gub.document.asumir.local:add(value="true")
+end-if
+if (outcome == success) of /system-property=pdi.endpoint:read-resource
+/system-property=pdi.endpoint:write-attribute(name=value,value="http://localhost:8081/pdi/ws")
+else
+/system-property=pdi.endpoint:add(value="http://localhost:8081/pdi/ws")
+end-if
+if (outcome == success) of /system-property=p1.pruebas:read-resource
+/system-property=p1.pruebas:write-attribute(name=value,value="false")
+else
+/system-property=p1.pruebas:add(value="false")
+end-if

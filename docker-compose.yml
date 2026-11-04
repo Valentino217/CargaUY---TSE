@@ -68,6 +68,8 @@ services:
       - "8082:8080"
 
   wildfly:
+    env_file:
+      - ./.local-p1/gub-real.env
     build:
       context: .
       dockerfile: docker/wildfly/Dockerfile
@@ -78,8 +80,6 @@ services:
       mongodb:
         condition: service_started
       ldap:
-        condition: service_started
-      gub:
         condition: service_started
     environment:
       DB_HOST: postgres
@@ -98,7 +98,16 @@ services:
       BALANZA_ENDPOINT: http://mock-balanza:8080
       MONGO_URI: mongodb://mongodb:27017
       LDAP_URL: ldap://ldap:1389
-      GUB_ISSUER: http://gub:8080/realms/cargauy-test
+      GUB_PROVEEDOR: iduruguay
+      GUB_ISSUER: https://auth-testing.iduruguay.gub.uy/oidc/v1
+      GUB_JWKS: https://auth-testing.iduruguay.gub.uy/oidc/v2/jwks
+      GUB_CLIENT_ID: "890192"
+      GUB_REDIRECT: http://localhost:8080/CargaUY-web/gub/callback
+      GUB_PKCE: "false"
+      GUB_MOBILE_ENABLED: "false"
+      GUB_DOCUMENT_PAIS: Uruguay
+      GUB_DOCUMENT_TIPO: DNI
+      GUB_DOCUMENT_ASUMIR_LOCAL: "true"
     ports:
       - "8080:8080"
       - "9990:9990"

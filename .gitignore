@@ -13,3 +13,6 @@ docker-compose.p1.override.yml
 # OS files
 .DS_Store
 Thumbs.db
+
+# Configuración privada de Usuario gub.uy para Docker
+/.local-p1/gub-real.env
