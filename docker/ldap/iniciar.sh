@@ -6,6 +6,8 @@ set -eu
 case "$LDAP_APP_UID" in *[!a-zA-Z0-9._-]*|'') echo "UID inválido"; exit 1;; esac
 mkdir -p /data
 ROOT_HASH=$(slappasswd -s "$LDAP_ROOT_PASSWORD")
+ADMIN_HASH=$(slappasswd -s "admin123")
+AUTORIDAD_HASH=$(slappasswd -s "autoridad123")
 APP_HASH=$(slappasswd -s "$LDAP_APP_PASSWORD")
 LISTEN="ldap://0.0.0.0:1389/"
 TLS_CONFIG=""
@@ -49,13 +51,38 @@ dn: ou=people,dc=cargauy,dc=local
 objectClass: organizationalUnit
 ou: people
 
+dn: uid=martin.admin,ou=people,dc=cargauy,dc=local
+objectClass: inetOrgPerson
+uid: martin.admin
+cn: Martin Admin
+sn: Admin
+userPassword: $ADMIN_HASH
+
+dn: uid=admin.central,ou=people,dc=cargauy,dc=local
+objectClass: inetOrgPerson
+uid: admin.central
+cn: Administrador Central
+sn: Central
+userPassword: $ADMIN_HASH
+
+dn: uid=alberto.autoridad,ou=people,dc=cargauy,dc=local
+objectClass: inetOrgPerson
+uid: alberto.autoridad
+cn: Dr. Alberto Director
+sn: Autoridad
+userPassword: $AUTORIDAD_HASH
+EOF
+ if [ "$LDAP_APP_UID" != "martin.admin" ] && [ "$LDAP_APP_UID" != "admin.central" ]; then
+  cat >>/tmp/seed.ldif <<EOF
+
 dn: uid=$LDAP_APP_UID,ou=people,dc=cargauy,dc=local
 objectClass: inetOrgPerson
 uid: $LDAP_APP_UID
-cn: Administrador de pruebas
-sn: Pruebas
+cn: Administrador Personalizado
+sn: Personalizado
 userPassword: $APP_HASH
 EOF
+ fi
  slapadd -f /tmp/slapd.conf -l /tmp/seed.ldif
  rm -f /tmp/seed.ldif
 fi

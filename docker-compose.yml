@@ -24,7 +24,7 @@ services:
     restart: unless-stopped
     environment:
       LDAP_ROOT_PASSWORD: ${LDAP_ROOT_PASSWORD:-vQUP53jJO6NyQD9V8hXK7oFQ-NmPjD9VS1NLoC-INkE}
-      LDAP_APP_PASSWORD: ${LDAP_APP_PASSWORD:-IYHvwHVkJw7rgz0wtnJTYfLNNeMlH5UJf-Io2Art7Vs}
+      LDAP_APP_PASSWORD: ${LDAP_APP_PASSWORD:-admin123}
       LDAP_APP_UID: ${LDAP_APP_UID:-martin.admin}
     ports:
       - "1389:1389"
@@ -88,6 +88,12 @@ services:
       DB_USER: cargauy
       DB_PASSWORD: cargauy123
       P1_ENTORNO_LOCAL: "true"
+      P1_BOOTSTRAP: "true"
+      BOOTSTRAP_ADMIN_UID: "martin.admin"
+      BOOTSTRAP_ADMIN_CI: "90000001"
+      BOOTSTRAP_ADMIN_NOMBRE: "Administrador de pruebas"
+      BOOTSTRAP_ADMIN_MAIL: "admin@example.invalid"
+      BOOTSTRAP_ADMIN_NACIMIENTO: "1990-01-01"
       PDI_ENDPOINT: http://mock-pdi:8080/pdi/ws
       BALANZA_ENDPOINT: http://mock-balanza:8080
       MONGO_URI: mongodb://mongodb:27017

@@ -34,14 +34,14 @@ ON CONFLICT (ci) DO UPDATE SET nombre = EXCLUDED.nombre, mail = EXCLUDED.mail, p
 
 INSERT INTO administradores (usuario_id) VALUES (10) ON CONFLICT (usuario_id) DO NOTHING;
 
--- Asegurar rol al admin LDAP si existe (CI 90000001, martin.admin / admin123)
-INSERT INTO administradores (usuario_id)
-SELECT id FROM usuarios WHERE ci = 90000001
-ON CONFLICT (usuario_id) DO NOTHING;
+-- 4.1.2 Administrador de pruebas (LDAP: martin.admin / admin123)
+INSERT INTO usuarios (id, tipo_usuario, ci, nombre, mail, fecha_nac, password, activo, origen_identidad, uid_externo, version)
+VALUES (11, 'ADMINISTRADOR', 90000001, 'Martin Admin', 'admin@example.invalid', '1990-01-01', 'admin123', true, 'LDAP', 'martin.admin', 1)
+ON CONFLICT (ci) DO UPDATE SET nombre = EXCLUDED.nombre, mail = EXCLUDED.mail, password = EXCLUDED.password, origen_identidad = EXCLUDED.origen_identidad, uid_externo = EXCLUDED.uid_externo;
 
-INSERT INTO usuario_roles (usuario_id, rol)
-SELECT id, 'ADMINISTRADOR' FROM usuarios WHERE ci = 90000001
-ON CONFLICT DO NOTHING;
+INSERT INTO administradores (usuario_id) VALUES (11) ON CONFLICT (usuario_id) DO NOTHING;
+
+INSERT INTO usuario_roles (usuario_id, rol) VALUES (11, 'ADMINISTRADOR') ON CONFLICT DO NOTHING;
 
 -- 4.2 Autoridad MTOP (LDAP: alberto.autoridad / autoridad123)
 INSERT INTO usuarios (id, tipo_usuario, ci, nombre, mail, fecha_nac, password, activo, origen_identidad, uid_externo, version)
