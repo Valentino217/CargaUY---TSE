@@ -62,6 +62,50 @@ public class SesionesService {
         }
         return emitir(u);
     }
+
+    public Login emitirLocal(String identificador, String password) {
+        if (!Boolean.parseBoolean(Config.valor("p1.login.local", "false")))
+            throw new ErrorAcceso(403, "Login local deshabilitado");
+        if (identificador == null || identificador.isBlank() || password == null)
+            throw new ErrorAcceso(401, "Credenciales inválidas");
+
+        String idClean = identificador.trim();
+        Integer ciParsed = null;
+        try {
+            ciParsed = Integer.parseInt(idClean.replace(".", "").replace("-", ""));
+        } catch (NumberFormatException ignored) {}
+
+        String prefix = idClean + "@%";
+
+        List<Usuario> usuarios = em.createQuery(
+            "select u from Usuario u where lower(u.mail) = lower(:id) " +
+            "or lower(u.nombre) = lower(:id) " +
+            "or u.uidExterno = :id " +
+            "or (:ci is not null and u.ci = :ci) " +
+            "or lower(u.mail) like lower(:prefix)",
+            Usuario.class)
+            .setParameter("id", idClean)
+            .setParameter("ci", ciParsed)
+            .setParameter("prefix", prefix)
+            .getResultList();
+
+        Usuario u = usuarios.stream().filter(usr -> {
+            String p = usr.getPassword();
+            if (p == null) return false;
+            if (p.startsWith("$2a$") || p.startsWith("$2b$") || p.startsWith("$2y$")) {
+                try {
+                    return at.favre.lib.crypto.bcrypt.BCrypt.verifyer()
+                        .verify(password.toCharArray(), p).verified;
+                } catch (Exception e) {
+                    return false;
+                }
+            }
+            return Cripto.igual(password, p);
+        }).findFirst().orElseThrow(() -> new ErrorAcceso(401, "Credenciales inválidas"));
+
+        return emitir(u);
+    }
+
     private Login emitir(Usuario u) {
         if (!u.isActivo()) throw new ErrorAcceso(401, "Cuenta no habilitada");
         String token = Cripto.aleatorio();

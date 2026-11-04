@@ -11,9 +11,21 @@ public class AutenticacionService {
     @EJB private FlujosService flujos;
 
     public SesionesService.Login login(String uid, String password) {
-        // No hay fallback a contraseñas de PostgreSQL si LDAP se cae.
-        ldap.autenticar(uid, password);
-        return sesiones.emitirLdap(uid);
+        boolean local = Boolean.parseBoolean(Config.valor("p1.login.local", "false"));
+        try {
+            ldap.autenticar(uid, password);
+            return sesiones.emitirLdap(uid);
+        } catch (ErrorAcceso e) {
+            if (local) {
+                return sesiones.emitirLocal(uid, password);
+            }
+            throw e;
+        } catch (Exception e) {
+            if (local) {
+                return sesiones.emitirLocal(uid, password);
+            }
+            throw new ErrorAcceso(401, "Credenciales inválidas");
+        }
     }
     
     public SesionesService.Login loginGub(String code, String verifier, String nonce) {
