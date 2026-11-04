@@ -121,6 +121,24 @@
             <artifactId>mockito-junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
+         <!-- Apache PDFBox para generar el documento -->
+        <dependency>
+          <groupId>org.apache.pdfbox</groupId>
+          <artifactId>pdfbox</artifactId>
+          <version>2.0.30</version>
+        </dependency>
+        <!-- Bouncy Castle Provider (Algoritmos criptográficos) -->
+        <dependency>
+           <groupId>org.bouncycastle</groupId>
+           <artifactId>bcprov-jdk18on</artifactId>
+           <version>1.78.1</version>
+        </dependency>
+        <!-- Bouncy Castle PKIX (Manejo de certificados y firmas) -->
+        <dependency>
+          <groupId>org.bouncycastle</groupId>
+          <artifactId>bcpkix-jdk18on</artifactId>
+          <version>1.78.1</version>
+        </dependency>
     </dependencies>
 
     <build>
