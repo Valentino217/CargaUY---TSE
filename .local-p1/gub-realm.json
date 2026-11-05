@@ -15,11 +15,16 @@
       "implicitFlowEnabled": false,
       "redirectUris": [
         "http://localhost:8080/CargaUY-web/gub/callback",
+        "https://carga-uy.web.elasticloud.uy/CargaUY-web/gub/callback",
+        "http://carga-uy.web.elasticloud.uy/CargaUY-web/gub/callback",
+        "http://carga-uy.web.elasticloud.uy:8080/CargaUY-web/gub/callback",
         "uy.cargauy://oauth/callback",
         "uy.cargauy:/oauth/callback"
       ],
       "webOrigins": [
-        "http://localhost:8080"
+        "http://localhost:8080",
+        "https://carga-uy.web.elasticloud.uy",
+        "http://carga-uy.web.elasticloud.uy"
       ],
       "defaultClientScopes": [
         "profile",

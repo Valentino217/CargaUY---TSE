@@ -603,12 +603,12 @@ fun MainScreen(
                         }
                         OutlinedButton(
                             onClick = {
-                                RetrofitClient.actualizarBaseUrl("http://10.0.0.16:8080/")
-                                onMensajeGlobal("Cambiado a host LAN 10.0.0.16:8080")
+                                RetrofitClient.actualizarBaseUrl(Constants.CLOUD_URL)
+                                onMensajeGlobal("Cambiado a ElastiCloud (${Constants.CLOUD_URL})")
                             },
                             modifier = Modifier.weight(1f)
                         ) {
-                            Text("10.0.0.16 (LAN)", fontSize = 10.sp)
+                            Text("☁️ ElastiCloud", fontSize = 10.sp)
                         }
                     }
                     Spacer(modifier = Modifier.height(10.dp))

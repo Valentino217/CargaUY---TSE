@@ -1,4 +1,4 @@
-name: cargauy-p1
+version: '3.8'
 
 services:
   postgres:
@@ -69,7 +69,7 @@ services:
 
   wildfly:
     env_file:
-      - ./.local-p1/gub-real.env
+      - .env
     build:
       context: .
       dockerfile: docker/wildfly/Dockerfile
@@ -102,13 +102,14 @@ services:
       GUB_ISSUER: https://auth-testing.iduruguay.gub.uy/oidc/v1
       GUB_JWKS: https://auth-testing.iduruguay.gub.uy/oidc/v2/jwks
       GUB_CLIENT_ID: "890192"
-      GUB_REDIRECT: http://localhost:8080/CargaUY-web/gub/callback
+      GUB_REDIRECT: ${GUB_REDIRECT:-https://carga-uy.web.elasticloud.uy/CargaUY-web/gub/callback}
       GUB_PKCE: "false"
       GUB_MOBILE_ENABLED: "false"
       GUB_DOCUMENT_PAIS: Uruguay
       GUB_DOCUMENT_TIPO: DNI
       GUB_DOCUMENT_ASUMIR_LOCAL: "true"
     ports:
+      - "80:8080"
       - "8080:8080"
       - "9990:9990"
 

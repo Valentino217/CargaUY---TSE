@@ -62,7 +62,7 @@ object RetrofitClient {
 
     // Inicializar URL base según si corre en emulador o dispositivo real
     var activeBaseUrl: String by mutableStateOf(
-        if (esEmulador()) "http://10.0.2.2:8080/" else Constants.BASE_URL
+        Constants.BASE_URL
     )
 
     fun actualizarBaseUrl(nuevaUrl: String) {
@@ -84,7 +84,7 @@ object RetrofitClient {
     suspend fun <T> executeWithFallback(block: suspend (ViajesApi) -> T): T {
         // En emulador, priorizar 10.0.2.2; en físico, priorizar la IP activa y candidatos
         val urlsOrdenadas = if (esEmulador()) {
-            (listOf(activeBaseUrl, "http://10.0.2.2:8080/") + Constants.CANDIDATE_URLS).distinct()
+            (listOf(activeBaseUrl) + Constants.CANDIDATE_URLS).distinct()
         } else {
             (listOf(activeBaseUrl) + Constants.CANDIDATE_URLS).distinct()
         }
@@ -120,6 +120,8 @@ object RetrofitClient {
             val hostActivo = try { URI(activeBaseUrl).host } catch (_: Exception) { null }
 
             val hostDestino = when {
+                hostOriginal.contains("gub.uy") || hostOriginal.contains("elasticloud.uy") -> hostOriginal
+                hostActivo != null && hostActivo.contains("elasticloud.uy") -> hostActivo
                 // Si estamos en emulador y la conexión activa es local o 10.0.2.2, Keycloak está en 10.0.2.2:8083
                 esEmulador() && (hostActivo == null || hostActivo == "10.0.2.2" || hostActivo == "localhost" || hostActivo == "127.0.0.1") -> "10.0.2.2"
                 // Si la conexión activa es una IP LAN específica (ej. 10.0.0.16), Keycloak está en esa misma IP LAN
