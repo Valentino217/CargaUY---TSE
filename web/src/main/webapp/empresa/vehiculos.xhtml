@@ -1,4 +1,4 @@
-<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+﻿<ui:composition xmlns="http://www.w3.org/1999/xhtml"
                 xmlns:h="jakarta.faces.html"
                 xmlns:f="jakarta.faces.core"
                 xmlns:ui="jakarta.faces.facelets"
@@ -20,7 +20,7 @@
                 <p:commandButton value="Registrar Nuevo Vehículo"
                                  icon="pi pi-plus"
                                  actionListener="#{VehiculoBean.nuevo}"
-                                 update=":dialogVehiculoForm"
+                                 update=":dialogVehiculo"
                                  oncomplete="PF('wvDialogVehiculo').show()"
                                  styleClass="ui-button-primary" />
             </h:form>
@@ -83,7 +83,7 @@
                                          title="#{VehiculoBean.tieneGuiaEnCurso(v) ? 'Vehículo con viaje EN_CURSO (bloqueado a edición)' : 'Editar unidad'}"
                                          disabled="#{VehiculoBean.tieneGuiaEnCurso(v)}"
                                          actionListener="#{VehiculoBean.editar(v)}"
-                                         update=":dialogVehiculoForm"
+                                         update=":dialogVehiculo"
                                          oncomplete="if (!args.validationFailed) PF('wvDialogVehiculo').show()"
                                          styleClass="ui-button-outlined ui-button-info ui-button-sm"
                                          style="margin-right: 0.4rem;" />
@@ -127,7 +127,6 @@
                     <div class="cuy-field">
                         <p:outputLabel for="empresaSelect" value="Empresa" />
                         <p:selectOneMenu id="empresaSelect" label="Empresa" value="#{VehiculoBean.empresaId}" required="true">
-                            <f:selectItem itemLabel="Seleccione empresa..." itemValue="0" noSelectionOption="true" />
                             <f:selectItems value="#{VehiculoBean.empresas}"
                                            var="emp"
                                            itemLabel="#{emp.razonSocial} (##{emp.nroEmpresa})"
@@ -165,8 +164,8 @@
                 </div>
 
                 <div style="margin: 1.15rem 0 1.35rem 0; padding: 0.75rem 1rem; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 0.6rem;">
-                    <p:selectBooleanCheckbox id="habCheck" label="Unidad habilitada operativamente para asignación de viajes" value="#{VehiculoBean.vehiculo.estadoHabilitacion}" />
-                    <p:outputLabel for="habCheck" value="Unidad habilitada operativamente para asignación de viajes" style="font-weight: 600; color: #0f2942; margin: 0;" />
+                    <p:selectBooleanCheckbox id="habCheck" label="Vehículo habilitado para circular" value="#{VehiculoBean.vehiculo.estadoHabilitacion}" />
+                    <p:outputLabel for="habCheck" value="Vehículo habilitado para circular" style="font-weight: 600; color: #0f2942; margin: 0;" />
                 </div>
 
                 <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
@@ -176,7 +175,7 @@
                                      onclick="PF('wvDialogVehiculo').hide()"
                                      styleClass="ui-button-secondary ui-button-outlined"
                                      style="width: auto;" />
-                    <p:commandButton value="Guardar Unidad"
+                    <p:commandButton value="Guardar Vehículo"
                                      icon="pi pi-check"
                                      actionListener="#{VehiculoBean.guardar}"
                                      process="@form"

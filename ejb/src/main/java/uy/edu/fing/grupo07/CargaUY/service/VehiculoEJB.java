@@ -20,13 +20,18 @@ public class VehiculoEJB implements VehiculoEJBLocal {
     public List<Vehiculo> listarParaActor(String token) {
         var actor=control.exigir(token);
         if(actor.tiene(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.ADMINISTRADOR)) return listarVehiculos();
-        return inicializarRelaciones(em.createQuery("select v from Vehiculo v join fetch v.empresa e where e.activa=true "
-            +"and exists(select x from VinculoEmpresa x where x.empresa=e and x.usuario.id=:id and x.responsable=true) "
+        return inicializarRelaciones(em.createQuery("select v from Vehiculo v join fetch v.empresa where v.empresa.activa=true "
+            +"and exists(select x from VinculoEmpresa x where x.empresa=v.empresa and x.usuario.id=:id and x.responsable=true) "
             +"order by v.matricula",Vehiculo.class).setParameter("id",actor.id()).getResultList());
     }
     public List<Empresa> listarEmpresasParaActor(String token) {
         var actor=control.exigir(token);
         if(actor.tiene(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.ADMINISTRADOR)) return listarEmpresas();
+        if(actor.tiene(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.CHOFER)) {
+            return em.createQuery("select e from Empresa e where e.activa=true and exists(select x from VinculoEmpresa x "
+                +"where x.empresa=e and x.usuario.id=:id and x.chofer=true)", Empresa.class)
+                .setParameter("id", actor.id()).getResultList();
+        }
         return em.createQuery("select e from Empresa e where e.activa=true and exists(select x from VinculoEmpresa x "
             +"where x.empresa=e and x.usuario.id=:id and x.responsable=true)",Empresa.class)
             .setParameter("id",actor.id()).getResultList();
@@ -73,6 +78,7 @@ public class VehiculoEJB implements VehiculoEJBLocal {
 
     private Vehiculo inicializarRelaciones(Vehiculo v) {
         if (v != null) {
+            if (v.getEmpresa() != null) v.getEmpresa().getRazonSocial();
             if (v.getItv() != null) v.getItv().size();
             if (v.getPncs() != null) v.getPncs().size();
         }
@@ -222,25 +228,23 @@ public class VehiculoEJB implements VehiculoEJBLocal {
 
     @Override
     public List<Vehiculo> listarVehiculosPorCiudadano(int ciudadanoId) {
-        return em.createQuery(
+        return inicializarRelaciones(em.createQuery(
             "SELECT DISTINCT v FROM Vehiculo v " +
             "JOIN FETCH v.empresa " +
-            "JOIN v.empresa e " +
-            "JOIN e.ciudadanos c " +
-            "WHERE c.id = :ciudadanoId " +
+            "WHERE v.empresa.nroEmpresa IN (SELECT ve.empresa.nroEmpresa FROM VinculoEmpresa ve WHERE ve.usuario.id = :ciudadanoId AND ve.responsable = true AND ve.empresa.activa = true) " +
             "ORDER BY v.matricula",
             Vehiculo.class
         )
         .setParameter("ciudadanoId", ciudadanoId)
-        .getResultList();
+        .getResultList());
     }
     
     @Override
     public List<Empresa> listarEmpresasPorCiudadano(int ciudadanoId) {
         return em.createQuery(
             "SELECT DISTINCT e FROM Empresa e " +
-            "JOIN e.ciudadanos c " +
-            "WHERE c.id = :ciudadanoId",
+            "" +
+            "WHERE e.nroEmpresa IN (SELECT ve.empresa.nroEmpresa FROM VinculoEmpresa ve WHERE ve.usuario.id = :ciudadanoId AND ve.responsable = true AND ve.empresa.activa = true)",
             Empresa.class
         )
         .setParameter("ciudadanoId", ciudadanoId)
@@ -249,7 +253,7 @@ public class VehiculoEJB implements VehiculoEJBLocal {
     
     @Override
     public List<Vehiculo> listarVehiculosPorEmpresa(int nroEmpresa) {
-        return em.createQuery(
+        return inicializarRelaciones(em.createQuery(
             "SELECT v FROM Vehiculo v " +
             "JOIN FETCH v.empresa " +
             "WHERE v.empresa.nroEmpresa = :nroEmpresa " +
@@ -257,7 +261,7 @@ public class VehiculoEJB implements VehiculoEJBLocal {
             Vehiculo.class
         )
         .setParameter("nroEmpresa", nroEmpresa)
-        .getResultList();
+        .getResultList());
     }
 
     /** Vehículo apto hoy = habilitación base + ITV vigente + PNC vigente. */

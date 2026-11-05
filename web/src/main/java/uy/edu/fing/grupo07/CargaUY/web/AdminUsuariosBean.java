@@ -15,6 +15,7 @@ import uy.edu.fing.grupo07.CargaUY.service.GestionPerfilesService;
 import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
@@ -53,8 +54,11 @@ public class AdminUsuariosBean implements Serializable {
 
     private UsuarioResumen usuarioIdentidadSel;
     private String origenIdentidadForm = "LDAP";
+    private String uidExternoActual;
     private String uidExternoForm;
     private List<String> rolesSeleccionados = new ArrayList<>();
+    private String rolUnicoSeleccionado = "CIUDADANO_COMUN";
+    private String passwordLdapForm;
 
     @PostConstruct
     public void init() {
@@ -74,7 +78,7 @@ public class AdminUsuariosBean implements Serializable {
         this.modoEdicion = false;
         this.idEdit = 0;
         this.versionEdit = 0;
-        this.tipoForm = TipoUsuario.CIUDADANO;
+        this.tipoForm = TipoUsuario.ADMINISTRADOR;
         this.nombreForm = "";
         this.mailForm = "";
         this.fechaNacForm = LocalDate.of(1990, 1, 1);
@@ -122,6 +126,7 @@ public class AdminUsuariosBean implements Serializable {
                 int nuevoId = perfilesService.crearUsuario(token, datos);
                 mostrarMensaje(FacesMessage.SEVERITY_INFO, "Usuario Creado", "Se registró el usuario #" + nuevoId + " (" + nombreForm + ")");
             }
+
             cargarUsuarios();
         } catch (Exception e) {
             mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error al guardar usuario", e.getMessage());
@@ -149,19 +154,42 @@ public class AdminUsuariosBean implements Serializable {
         }
         boolean interno = u != null && ("ADMINISTRADOR".equals(u.tipo()) || "AUTORIDAD".equals(u.tipo()));
         this.origenIdentidadForm = interno ? "LDAP" : "GUB";
+        if (u != null && u.roles() != null && !u.roles().isEmpty()) {
+            this.rolUnicoSeleccionado = u.roles().iterator().next().name();
+        } else if (u != null && u.tipo() != null) {
+            this.rolUnicoSeleccionado = u.tipo();
+        } else {
+            this.rolUnicoSeleccionado = "CIUDADANO_COMUN";
+        }
         this.uidExternoForm = "";
+        this.uidExternoActual = null;
+        if (u != null) {
+            try {
+                String[] info = identidadesService.consultarIdentidad(SesionActual.token(), u.id());
+                if (info != null && info.length >= 2) {
+                    if (info[0] != null && !info[0].isBlank()) {
+                        this.origenIdentidadForm = info[0];
+                    }
+                    this.uidExternoActual = info[1];
+                    this.uidExternoForm = info[1] != null ? info[1] : "";
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        this.passwordLdapForm = "";
     }
 
     public void guardarRoles() {
-        if (usuarioIdentidadSel == null || rolesSeleccionados == null || rolesSeleccionados.isEmpty()) {
+        if (usuarioIdentidadSel == null || rolUnicoSeleccionado == null || rolUnicoSeleccionado.isBlank()) {
             mostrarMensaje(FacesMessage.SEVERITY_WARN, "Validación", "Seleccione al menos un rol.");
             return;
         }
         try {
-            Set<TipoUsuario> set = EnumSet.noneOf(TipoUsuario.class);
-            for (String r : rolesSeleccionados) {
-                set.add(TipoUsuario.valueOf(r));
-            }
+            Set<TipoUsuario> set = Collections.singleton(TipoUsuario.valueOf(rolUnicoSeleccionado));
+
+
+
+
             identidadesService.roles(SesionActual.token(), usuarioIdentidadSel.id(), set);
             cargarUsuarios();
             mostrarMensaje(FacesMessage.SEVERITY_INFO, "Roles Actualizados",
@@ -177,7 +205,8 @@ public class AdminUsuariosBean implements Serializable {
             return;
         }
         try {
-            identidadesService.vincular(SesionActual.token(), usuarioIdentidadSel.id(), origenIdentidadForm, uidExternoForm.trim());
+            identidadesService.vincular(SesionActual.token(), usuarioIdentidadSel.id(), origenIdentidadForm, uidExternoForm.trim(), passwordLdapForm);
+            this.uidExternoActual = uidExternoForm.trim();
             cargarUsuarios();
             mostrarMensaje(FacesMessage.SEVERITY_INFO, "Identidad Vinculada",
                     "Se vinculó la identidad " + origenIdentidadForm + " (" + uidExternoForm + ") al usuario #" + usuarioIdentidadSel.id());
@@ -305,6 +334,14 @@ public class AdminUsuariosBean implements Serializable {
         this.origenIdentidadForm = origenIdentidadForm;
     }
 
+    public String getUidExternoActual() {
+        return uidExternoActual;
+    }
+
+    public void setUidExternoActual(String uidExternoActual) {
+        this.uidExternoActual = uidExternoActual;
+    }
+
     public String getUidExternoForm() {
         return uidExternoForm;
     }
@@ -319,6 +356,22 @@ public class AdminUsuariosBean implements Serializable {
 
     public void setRolesSeleccionados(List<String> rolesSeleccionados) {
         this.rolesSeleccionados = rolesSeleccionados;
+    }
+
+    public String getRolUnicoSeleccionado() {
+        return rolUnicoSeleccionado;
+    }
+
+    public void setRolUnicoSeleccionado(String rolUnicoSeleccionado) {
+        this.rolUnicoSeleccionado = rolUnicoSeleccionado;
+    }
+
+    public String getPasswordLdapForm() {
+        return passwordLdapForm;
+    }
+
+    public void setPasswordLdapForm(String passwordLdapForm) {
+        this.passwordLdapForm = passwordLdapForm;
     }
 
     public TipoUsuario[] getTiposUsuario() {

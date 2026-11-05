@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml"
       xmlns:h="jakarta.faces.html"
       xmlns:f="jakarta.faces.core"
@@ -144,15 +144,15 @@
                     </p:panelGrid>
                 </p:panel>
 
-                <!-- Card 2: Evidencia Técnica -->
-                <p:panel header="Evidencia Técnica del Motor" styleClass="mb-4">
+                <!-- Card 2: Evidencia -->
+                <p:panel header="Evidencia" styleClass="mb-4">
                     <div class="box-evidencia">
                         <h:outputText value="#{detalleInfraccionBean.infraccion.evidencia()}"/>
                     </div>
                 </p:panel>
 
                 <!-- Card 3: Descargos de la Empresa -->
-                <p:panel header="Descargo de la Empresa Transportista" styleClass="mb-4">
+                <p:panel header="Descargo de la Empresa" styleClass="mb-4">
                     <h:panelGroup rendered="#{not empty detalleInfraccionBean.infraccion.textoDescargo()}">
                         <p style="margin-bottom: 8px;">
                             <strong>Fecha Presentación: </strong>
@@ -191,7 +191,7 @@
 
                         <!-- Resolver -->
                         <div>
-                            <h3 style="color: #1e3a8a; font-size: 1rem; margin-bottom: 12px;">Resolución Administrativa</h3>
+                            <h3 style="color: #1e3a8a; font-size: 1rem; margin-bottom: 12px;">Resolución</h3>
                             <div style="display: flex; flex-direction: column; gap: 12px; max-width: 600px;">
                                 <div>
                                     <p:outputLabel for="fundamentoDes" value="Fundamento de Resolución / Desestimación: " style="font-weight: bold; display: block; margin-bottom: 6px;"/>
@@ -207,8 +207,8 @@
                     </p:panel>
                 </h:panelGroup>
 
-                <!-- Card 5: Historial Completo de Auditoría Inmutable (Append-Only) -->
-                <p:panel header="Pista de Auditoría Inmutable (Append-Only)" styleClass="mb-4">
+                <!-- Card 5: Historial -->
+                <p:panel header="Historial" styleClass="mb-4">
                     <h:panelGroup rendered="#{detalleInfraccionBean.resuelta}">
                         <p style="margin-top: 0; margin-bottom: 12px;">
                             <strong>Resolución Final: </strong>

@@ -76,12 +76,17 @@ public class VehiculoBean implements Serializable {
 
     @PostConstruct
     public void init() {
+        String token = SesionActual.token();
         try {
-            vehiculos = vehiculoEJB.listarParaActor(SesionActual.token());
-            empresas = vehiculoEJB.listarEmpresasParaActor(SesionActual.token());
+            empresas = vehiculoEJB.listarEmpresasParaActor(token);
+        } catch (Exception e) {
+            empresas = new ArrayList<>();
+            mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error", "No se pudieron cargar las empresas: " + extraerMensaje(e));
+        }
+        try {
+            vehiculos = vehiculoEJB.listarParaActor(token);
         } catch (Exception e) {
             vehiculos = new ArrayList<>();
-            empresas = new ArrayList<>();
             mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error", "No se pudo inicializar la flota: " + extraerMensaje(e));
         }
         nuevo();
@@ -230,7 +235,7 @@ public class VehiculoBean implements Serializable {
         copia.setModelo(v.getModelo());
         copia.setPeso(v.getPeso());
         copia.setCapacidadCarga(v.getCapacidadCarga());
-        copia.setEstadoHabilitacion(v.isEstadoHabilitacion());
+        copia.setEstadoHabilitacion(v.isEstadoHabilitacion() && estaApto(v));
         copia.setEmpresa(v.getEmpresa());
 
         this.vehiculo = copia;

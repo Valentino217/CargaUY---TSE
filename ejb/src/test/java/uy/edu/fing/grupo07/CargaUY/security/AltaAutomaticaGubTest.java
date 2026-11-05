@@ -47,7 +47,7 @@ class AltaAutomaticaGubTest {
         assertNull(nuevo.getFechaNac());
         assertEquals("GUB",nuevo.getOrigenIdentidad());
         assertEquals("identidad-verificada",nuevo.getUidExterno());
-        assertEquals(Set.of(TipoUsuario.CIUDADANO),nuevo.getRoles());
+        assertEquals(Set.of(TipoUsuario.CIUDADANO_COMUN),nuevo.getRoles());
         assertEquals("{GUB}",nuevo.getPassword());
         assertEquals(42,login.usuario().id());
         assertEquals(43,login.token().length());

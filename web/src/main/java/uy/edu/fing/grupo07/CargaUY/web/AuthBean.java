@@ -124,6 +124,11 @@ public class AuthBean implements Serializable {
         return actor != null && actor.tiene(TipoUsuario.CHOFER);
     }
 
+    public boolean esCiudadanoComun() {
+        Acceso actor = resolverAcceso();
+        return actor != null && actor.tiene(TipoUsuario.CIUDADANO_COMUN);
+    }
+
     public UsuarioActivoVista getUsuarioActivo() {
         Acceso actor = resolverAcceso();
         if (actor == null) {
@@ -141,13 +146,16 @@ public class AuthBean implements Serializable {
             return "Administrador";
         }
         if (actor.tiene(TipoUsuario.AUTORIDAD)) {
-            return "Autoridad MTOP";
+            return "Autoridad";
         }
         if (actor.tiene(TipoUsuario.FUNCIONARIO)) {
-            return "Funcionario Fiscalizador";
+            return "Funcionario";
         }
         if (actor.tiene(TipoUsuario.CIUDADANO)) {
             return "Ciudadano Empresa";
+        }
+        if (actor.tiene(TipoUsuario.CIUDADANO_COMUN)) {
+            return "Ciudadano";
         }
         if (actor.tiene(TipoUsuario.CHOFER)) {
             return "Chofer";

@@ -2,12 +2,7 @@
 -- CargaUY - Limpieza completa de tablas (Reset de base de datos)
 -- ============================================================================
 
-DO $$
-BEGIN
-    IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_auditoria_inmutable') THEN
-        ALTER TABLE registro_auditoria DISABLE TRIGGER trg_auditoria_inmutable;
-    END IF;
-END $$;
+ALTER TABLE registro_auditoria DISABLE TRIGGER ALL;
 
 TRUNCATE TABLE 
   registro_auditoria,
@@ -41,9 +36,4 @@ TRUNCATE TABLE
   reglas_fiscalizacion
 RESTART IDENTITY CASCADE;
 
-DO $$
-BEGIN
-    IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_auditoria_inmutable') THEN
-        ALTER TABLE registro_auditoria ENABLE TRIGGER trg_auditoria_inmutable;
-    END IF;
-END $$;
+ALTER TABLE registro_auditoria ENABLE TRIGGER ALL;

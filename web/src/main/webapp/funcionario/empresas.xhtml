@@ -1,4 +1,4 @@
-<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+﻿<ui:composition xmlns="http://www.w3.org/1999/xhtml"
                 xmlns:h="jakarta.faces.html"
                 xmlns:f="jakarta.faces.core"
                 xmlns:ui="jakarta.faces.facelets"
@@ -12,7 +12,7 @@
             <div>
                 <h1 class="cuy-page-title">
                     <i class="pi pi-building" style="color: #1d4ed8;" />
-                    Padrón de Empresas Transportistas e Interoperabilidad PDI
+                    Gestión de Empresas
                 </h1>
             </div>
             <div style="display: flex; gap: 0.6rem;">
@@ -25,7 +25,7 @@
                     <p:commandButton value="Nueva Empresa"
                                      icon="pi pi-plus"
                                      actionListener="#{funcionarioEmpresasBean.prepararNuevaEmpresa}"
-                                     update=":dlgEmpresaForm"
+                                     update=":dlgEmpresaDialog"
                                      oncomplete="PF('dlgEmpresaWidget').show()"
                                      styleClass="ui-button-primary" />
                 </h:form>
@@ -105,7 +105,7 @@
                             <p:commandButton icon="pi pi-pencil"
                                              title="Editar Empresa"
                                              actionListener="#{funcionarioEmpresasBean.prepararEdicionEmpresa(emp)}"
-                                             update=":dlgEmpresaForm"
+                                             update=":dlgEmpresaDialog"
                                              oncomplete="PF('dlgEmpresaWidget').show()"
                                              styleClass="ui-button-outlined ui-button-info ui-button-sm" />
 
@@ -140,7 +140,7 @@
         </h:form>
 
         <!-- Modal Crear / Editar Empresa -->
-        <p:dialog header="#{funcionarioEmpresasBean.modoEdicion ? 'Editar Empresa Transportista' : 'Registrar Nueva Empresa'}"
+        <p:dialog id="dlgEmpresaDialog" header="#{funcionarioEmpresasBean.modoEdicion ? 'Editar Empresa Transportista' : 'Registrar Nueva Empresa'}"
                   widgetVar="dlgEmpresaWidget"
                   modal="true"
                   responsive="true"
@@ -267,6 +267,18 @@
                         </p:column>
                         <p:column headerText="Chofer" style="width: 120px; text-align: center;">
                             <p:tag value="#{v.chofer() ? 'SÍ' : 'NO'}" severity="#{v.chofer() ? 'info' : 'secondary'}" rounded="true" />
+                        </p:column>
+                        <p:column headerText="Acción" style="width: 110px; text-align: center;">
+                            <p:commandButton icon="pi pi-user-minus"
+                                             title="Desvincular de la empresa"
+                                             actionListener="#{funcionarioEmpresasBean.desvincular(v)}"
+                                             process="@this"
+                                             update="tablaVinculos :growl"
+                                             styleClass="ui-button-outlined ui-button-danger ui-button-sm">
+                                <p:confirm header="Confirmar Desvinculación"
+                                           message="¿Desea desvincular a #{v.nombre()} de esta empresa?"
+                                           icon="pi pi-exclamation-triangle" />
+                            </p:commandButton>
                         </p:column>
                     </p:dataTable>
                 </h:panelGroup>

@@ -1,4 +1,4 @@
-<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+﻿<ui:composition xmlns="http://www.w3.org/1999/xhtml"
                 xmlns:h="jakarta.faces.html"
                 xmlns:f="jakarta.faces.core"
                 xmlns:ui="jakarta.faces.facelets"
@@ -22,19 +22,51 @@
         </div>
 
         <div class="cuy-grid-cards">
+            <!-- Accesos Ciudadano Común -->
+            <ui:fragment rendered="#{authBean.esCiudadanoComun()}">
+                <div class="cuy-card" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <h3 class="cuy-card-title"><i class="pi pi-info-circle" style="color: #2563eb;" /> Portal de Transparencia</h3>
+                        <p style="font-size: 0.92rem; color: #475569; line-height: 1.5; margin-top: 0;">
+                            Su cuenta ciudadana cuenta con acceso directo al portal de datos abiertos y validación oficial de empresas de transporte. Si requiere operar como empresa o chofer, contacte al administrador.
+                        </p>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;">
+                        <p:button value="Información Pública" outcome="/portal/info-publica" icon="pi pi-chart-bar" styleClass="ui-button-primary" />
+                        <p:button value="Validar Empresa" outcome="/portal/validar-empresa" icon="pi pi-verified" styleClass="ui-button-outlined" />
+                    </div>
+                </div>
+            </ui:fragment>
+
+            <!-- Accesos Chofer -->
+            <ui:fragment rendered="#{authBean.esChofer()}">
+                <div class="cuy-card" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <h3 class="cuy-card-title"><i class="pi pi-compass" style="color: #059669;" /> Mis Viajes y Empresas</h3>
+                        <p style="font-size: 0.92rem; color: #475569; line-height: 1.5; margin-top: 0;">
+                            Consulte las guías de viaje asignadas a su nombre y las empresas transportistas en las cuales presta servicios.
+                        </p>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;">
+                        <p:button value="Mis Viajes" outcome="/chofer/mis-viajes" icon="pi pi-compass" styleClass="ui-button-primary" />
+                    </div>
+                </div>
+            </ui:fragment>
+
             <!-- Accesos Ciudadano Empresa -->
             <ui:fragment rendered="#{authBean.esCiudadanoEmpresa()}">
                 <div class="cuy-card" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: space-between;">
                     <div>
                         <h3 class="cuy-card-title"><i class="pi pi-car" style="color: #2563eb;" /> Flota y Guías de Viaje</h3>
                         <p style="font-size: 0.92rem; color: #475569; line-height: 1.5; margin-top: 0;">
-                            Administre el padrón de unidades de su empresa, asigne choferes y emita nuevas Guías de Viaje.
+                            Administre los vehículos de su empresa, asigne choferes y emita nuevas Guías de Viaje.
                         </p>
                     </div>
                     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;">
                         <p:button value="Mis Vehículos" outcome="/empresa/vehiculos" icon="pi pi-car" styleClass="ui-button-primary" />
                         <p:button value="Guías de Viaje" outcome="/empresa/viajes" icon="pi pi-compass" styleClass="ui-button-outlined" />
                         <p:button value="Infracciones" outcome="/empresa/infracciones" icon="pi pi-exclamation-triangle" styleClass="ui-button-outlined ui-button-warning" />
+                        <p:button value="Mi Perfil" outcome="/empresa/perfil" icon="pi pi-id-card" styleClass="ui-button-outlined" />
                     </div>
                 </div>
             </ui:fragment>
@@ -61,9 +93,9 @@
             <ui:fragment rendered="#{authBean.esAutoridad()}">
                 <div class="cuy-card" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: space-between;">
                     <div>
-                        <h3 class="cuy-card-title"><i class="pi pi-chart-bar" style="color: #d97706;" /> Dashboard de Autoridades</h3>
+                        <h3 class="cuy-card-title"><i class="pi pi-chart-bar" style="color: #d97706;" /> Dashboard</h3>
                         <p style="font-size: 0.92rem; color: #475569; line-height: 1.5; margin-top: 0;">
-                            Indicadores ejecutivos de pesajes, guías e infracciones
+                            Indicadores ejecutivos de pesajes, guías e infracciones con trazabilidad completa.
                         </p>
                     </div>
                     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;">
@@ -78,12 +110,13 @@
                     <div>
                         <h3 class="cuy-card-title"><i class="pi pi-cog" style="color: #dc2626;" /> Administración de Plataforma</h3>
                         <p style="font-size: 0.92rem; color: #475569; line-height: 1.5; margin-top: 0;">
-                            Gestión de usuarios y roles, monitoreo de nodos periféricos y parametrización de umbrales
+                            Gestión de usuarios y roles, monitoreo de nodos periféricos y parametrización de catálogos y umbrales.
                         </p>
                     </div>
                     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;">
                         <p:button value="Usuarios y Roles" outcome="/admin/usuarios" icon="pi pi-users" styleClass="ui-button-primary" />
-                        <p:button value="Nodos Periféricos" outcome="/admin/nodos" icon="pi pi-server" styleClass="ui-button-outlined" />
+                        <p:button value="Nodos" outcome="/admin/nodos" icon="pi pi-server" styleClass="ui-button-outlined" />
+                        <p:button value="Catálogos" outcome="/admin/catalogos" icon="pi pi-tags" styleClass="ui-button-outlined" />
                         <p:button value="Parámetros de Fiscalización" outcome="/admin/reglas-fiscalizacion" icon="pi pi-sliders-h" styleClass="ui-button-outlined ui-button-danger" />
                     </div>
                 </div>

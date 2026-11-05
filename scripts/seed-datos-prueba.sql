@@ -1,6 +1,7 @@
 -- ============================================================================
 -- CargaUY - Script Integral de Datos de Prueba (Seed Data)
 -- ============================================================================
+SET client_encoding = 'UTF8';
 
 -- 1. Reglas de Fiscalización
 INSERT INTO reglas_fiscalizacion (id, umbral_carga, umbral_tracking, version)
@@ -41,8 +42,6 @@ ON CONFLICT (ci) DO UPDATE SET nombre = EXCLUDED.nombre, mail = EXCLUDED.mail, p
 
 INSERT INTO administradores (usuario_id) VALUES (11) ON CONFLICT (usuario_id) DO NOTHING;
 
-INSERT INTO usuario_roles (usuario_id, rol) VALUES (11, 'ADMINISTRADOR') ON CONFLICT DO NOTHING;
-
 -- 4.2 Autoridad MTOP (LDAP: alberto.autoridad / autoridad123)
 INSERT INTO usuarios (id, tipo_usuario, ci, nombre, mail, fecha_nac, password, activo, origen_identidad, uid_externo, version)
 VALUES (20, 'AUTORIDAD', 20000002, 'Dr. Alberto Director', 'autoridad@cargauy.gub.uy', '1975-06-20', 'autoridad123', true, 'LDAP', 'alberto.autoridad', 1)
@@ -65,7 +64,7 @@ VALUES
 (31, 102, 'Rutas Nacionales')
 ON CONFLICT (usuario_id) DO UPDATE SET nro_funcionario = EXCLUDED.nro_funcionario, departamento = EXCLUDED.departamento;
 
--- 4.4 Ciudadanos (Empresarios / Representantes - Keycloak / gub.uy)
+-- 4.4 Ciudadanos Empresa (Responsables de Empresa - Keycloak / gub.uy)
 INSERT INTO usuarios (id, tipo_usuario, ci, nombre, mail, fecha_nac, password, activo, origen_identidad, uid_externo, version)
 VALUES 
 (40, 'CIUDADANO', 87654321, 'Pedro Empresario', 'pedro.empresario@transporte.uy', '1978-03-10', 'ciudadano123', true, 'GUB', '40404040-4040-4040-8040-404040404040', 1),
@@ -90,28 +89,28 @@ ON CONFLICT (ci) DO UPDATE SET nombre = EXCLUDED.nombre, mail = EXCLUDED.mail, p
 INSERT INTO choferes (usuario_id) VALUES (50), (51), (52), (53)
 ON CONFLICT (usuario_id) DO NOTHING;
 
--- 4.6 Roles en usuario_roles
+-- 4.6 Roles en usuario_roles (Estricto: exactamente 1 rol por usuario)
+ALTER TABLE usuario_roles DROP CONSTRAINT IF EXISTS usuario_roles_rol_check;
+ALTER TABLE usuario_roles ADD CONSTRAINT usuario_roles_rol_check CHECK (rol::text = ANY (ARRAY['CIUDADANO'::character varying, 'CIUDADANO_COMUN'::character varying, 'CHOFER'::character varying, 'FUNCIONARIO'::character varying, 'AUTORIDAD'::character varying, 'ADMINISTRADOR'::character varying]::text[]));
+
+DELETE FROM usuario_roles WHERE usuario_id IN (10, 11, 20, 30, 31, 40, 41, 42, 43, 44, 50, 51, 52, 53);
 INSERT INTO usuario_roles (usuario_id, rol) VALUES
 (10, 'ADMINISTRADOR'),
+(11, 'ADMINISTRADOR'),
 (20, 'AUTORIDAD'),
 (30, 'FUNCIONARIO'),
 (31, 'FUNCIONARIO'),
 (40, 'CIUDADANO'),
 (41, 'CIUDADANO'),
 (42, 'CIUDADANO'),
-(43, 'CIUDADANO'),
-(44, 'CIUDADANO'),
+(43, 'CIUDADANO_COMUN'),
+(44, 'CIUDADANO_COMUN'),
 (50, 'CHOFER'),
-(50, 'CIUDADANO'),
 (51, 'CHOFER'),
-(51, 'CIUDADANO'),
 (52, 'CHOFER'),
-(52, 'CIUDADANO'),
-(53, 'CHOFER'),
-(53, 'CIUDADANO')
-ON CONFLICT DO NOTHING;
+(53, 'CHOFER');
 
--- 5. Empresas
+-- 5. Empresas (Máximo 1 responsable por empresa)
 INSERT INTO empresas (nro_empresa, razon_social, nombre_publico, direccion, activa, version) VALUES
 (101, 'Transportes del Plata S.A.', 'TransPlata', 'Ruta 1 km 28, San José', true, 1),
 (102, 'Logística Oriental S.R.L.', 'LogiOriental', 'Av. Giannattasio km 22, Canelones', true, 1),
@@ -119,44 +118,44 @@ INSERT INTO empresas (nro_empresa, razon_social, nombre_publico, direccion, acti
 ON CONFLICT (nro_empresa) DO UPDATE SET razon_social = EXCLUDED.razon_social, nombre_publico = EXCLUDED.nombre_publico, direccion = EXCLUDED.direccion, activa = true;
 
 -- Relaciones Empresa <-> Rubros
+DELETE FROM empresa_rubros WHERE nro_empresa IN (101, 102, 103);
 INSERT INTO empresa_rubros (nro_empresa, rubro_codigo) VALUES
 (101, 1), (101, 2),
 (102, 2), (102, 3),
-(103, 1), (103, 4)
-ON CONFLICT DO NOTHING;
+(103, 1), (103, 4);
 
--- Relaciones Empresa <-> Ciudadanos (Titulares / Responsables)
+-- Relaciones Empresa <-> Ciudadanos (Titular / Responsable único por empresa)
+DELETE FROM empresa_ciudadanos WHERE nro_empresa IN (101, 102, 103);
 INSERT INTO empresa_ciudadanos (nro_empresa, ciudadano_id) VALUES
-(101, 40), (101, 44),
+(101, 40),
 (102, 41),
-(103, 42)
-ON CONFLICT DO NOTHING;
+(103, 42);
 
--- Relaciones Empresa <-> Choferes
+-- Relaciones Empresa <-> Choferes (Chofer 50 trabaja en 101 y 102)
+DELETE FROM empresa_choferes WHERE nro_empresa IN (101, 102, 103);
 INSERT INTO empresa_choferes (nro_empresa, chofer_id) VALUES
 (101, 50), (101, 51),
-(102, 52),
-(103, 53)
-ON CONFLICT DO NOTHING;
+(102, 50), (102, 52),
+(103, 53);
 
 -- Vínculos formales en vinculos_empresa
+DELETE FROM vinculos_empresa WHERE nro_empresa IN (101, 102, 103);
 INSERT INTO vinculos_empresa (clave, nro_empresa, usuario_id, responsable, chofer, version) VALUES
 ('101:40', 101, 40, true, false, 1),
-('101:44', 101, 44, true, false, 1),
 ('101:50', 101, 50, false, true, 1),
 ('101:51', 101, 51, false, true, 1),
 ('102:41', 102, 41, true, false, 1),
+('102:50', 102, 50, false, true, 1),
 ('102:52', 102, 52, false, true, 1),
 ('103:42', 103, 42, true, false, 1),
-('103:53', 103, 53, false, true, 1)
-ON CONFLICT (clave) DO UPDATE SET responsable = EXCLUDED.responsable, chofer = EXCLUDED.chofer;
+('103:53', 103, 53, false, true, 1);
 
 -- 6. Vehículos y Certificados (ITV / PNC)
--- 6.1 Vehículos
+-- STP 5678 tiene PNC vencido, por ende estado_habilitacion = false
 INSERT INTO vehiculos (matricula, marca, modelo, peso, capacidad_carga, estado_habilitacion, nro_empresa) VALUES
 ('STP 1234', 'Volvo', 'FH 540', 9000, 31000, true, 101),
 ('ABC 9876', 'Scania', 'R450', 10000, 30000, false, 101),
-('STP 5678', 'Mercedes-Benz', 'Actros 2645', 8500, 33000, true, 101),
+('STP 5678', 'Mercedes-Benz', 'Actros 2645', 8500, 33000, false, 101),
 ('LOR 2024', 'Iveco', 'Stralis 460', 8000, 32000, true, 102),
 ('LOR 9999', 'Volkswagen', 'Constellation 19.320', 7500, 24000, true, 102),
 ('EXP 1111', 'Scania', 'G410', 9500, 35000, true, 103)
@@ -233,7 +232,6 @@ ON CONFLICT (id) DO UPDATE SET estado = EXCLUDED.estado, origen = EXCLUDED.orige
 INSERT INTO guia_tipos_carga (guia_id, tipo_carga_codigo) VALUES (1007, 3) ON CONFLICT DO NOTHING;
 
 -- 8. Eventos de Viaje e Incidentes
--- Eventos para Guía 1001 (EN_CURSO)
 INSERT INTO eventos_viaje (id, uuid, tiempo, tipo, latitud, longitud, guia_id, distancia_desvio_km, cantidad_kg, mercaderia, empresa_carga) VALUES
 (2001, 'a1111111-1111-4111-8111-111111111001', CURRENT_TIMESTAMP - INTERVAL '4 hours', 'INICIO',    -34.9011, -56.1645, 1001, 0.0, 45000, 'Eucaliptus', 'TransPlata'),
 (2002, 'a1111111-1111-4111-8111-111111111002', CURRENT_TIMESTAMP - INTERVAL '3 hours', 'CARGA',     -34.8500, -56.1500, 1001, 0.2, 45000, 'Eucaliptus', 'TransPlata'),
@@ -245,13 +243,11 @@ INSERT INTO incidentes_ruta (id, descripcion, foto, evento_id) VALUES
 (3001, 'Pinchadura de neumático trasero derecho en Ruta 5 km 98', 'pinchadura_rueda.jpg', 2004)
 ON CONFLICT (id) DO NOTHING;
 
--- Eventos para Guía 1004 (FINALIZADO)
 INSERT INTO eventos_viaje (id, uuid, tiempo, tipo, latitud, longitud, guia_id, distancia_desvio_km, cantidad_kg, mercaderia, empresa_carga) VALUES
 (2005, 'a1111111-1111-4111-8111-111111111005', CURRENT_TIMESTAMP - INTERVAL '3 days', 'INICIO', -31.3833, -57.9667, 1004, 0.0, 38000, 'Soja', 'TransPlata'),
 (2006, 'a1111111-1111-4111-8111-111111111006', CURRENT_TIMESTAMP - INTERVAL '2 days', 'FIN',    -34.9011, -56.1645, 1004, 0.0, 38000, 'Soja', 'TransPlata')
 ON CONFLICT (id) DO NOTHING;
 
--- Eventos para Guía 1005 (EN_CURSO)
 INSERT INTO eventos_viaje (id, uuid, tiempo, tipo, latitud, longitud, guia_id, distancia_desvio_km, cantidad_kg, mercaderia, empresa_carga) VALUES
 (2007, 'a1111111-1111-4111-8111-111111111007', CURRENT_TIMESTAMP - INTERVAL '2 hours', 'INICIO',   -34.5228, -56.2778, 1005, 0.0, 30000, 'Trigo', 'LogiOriental'),
 (2008, 'a1111111-1111-4111-8111-111111111008', CURRENT_TIMESTAMP - INTERVAL '1 hour',  'POSICION', -34.1000, -56.8000, 1005, 0.1, 30000, 'Trigo', 'LogiOriental')
@@ -276,14 +272,12 @@ INSERT INTO pesadas_balanza (id_pesada, fecha, hora, peso_registrado, guia_id, v
 ON CONFLICT (id_pesada) DO NOTHING;
 
 -- 11. Infracciones, Descargos y Auditoría
--- Infracción 501: DETECTADA en Guía 1001 (Exceso de peso)
 INSERT INTO infracciones (id_caso, tipo, estado, fecha, evidencia, guia_id, vehiculo_matricula) VALUES
 (501, 'EXCESO_DE_CARGA', 'DETECTADA', CURRENT_DATE,
  'Pesada registrada de 43.500 kg supera el peso máximo permitido de 40.000 kg (tolerancia 500 kg).',
  1001, 'STP 1234')
 ON CONFLICT (id_caso) DO UPDATE SET estado = EXCLUDED.estado, evidencia = EXCLUDED.evidencia;
 
--- Infracción 502: CONFIRMADA en Guía 1004 (con descargo y auditoría)
 INSERT INTO infracciones (id_caso, tipo, estado, fecha, evidencia, fecha_resolucion, resolucion, fundamento, guia_id, vehiculo_matricula) VALUES
 (502, 'EXCESO_DE_CARGA', 'CONFIRMADA', CURRENT_DATE - INTERVAL '3 days',
  'Pesada registrada en balanza de 44.200 kg supera el límite de 40.000 kg.',
@@ -294,9 +288,8 @@ ON CONFLICT (id_caso) DO UPDATE SET estado = EXCLUDED.estado, resolucion = EXCLU
 
 INSERT INTO descargos (id, fecha, descargo, infraccion_id) VALUES
 (6001, CURRENT_DATE - INTERVAL '2 days', 'Se solicita la anulación del acta debido a ráfagas de viento y oscilaciones mecánicas en la plataforma.', 502)
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET descargo = EXCLUDED.descargo;
 
--- Infracción 503: VIAJE_SIN_GUIA (pesaje sin guía en vehículo inhabilitado)
 INSERT INTO infracciones (id_caso, tipo, estado, fecha, evidencia, guia_id, vehiculo_matricula) VALUES
 (503, 'VIAJE_SIN_GUIA', 'DETECTADA', CURRENT_DATE,
  'Vehículo detectado en balanza fiscalizadora transportando carga sin guía de viaje registrada ni activa.',
@@ -304,12 +297,16 @@ INSERT INTO infracciones (id_caso, tipo, estado, fecha, evidencia, guia_id, vehi
 ON CONFLICT (id_caso) DO UPDATE SET estado = EXCLUDED.estado, evidencia = EXCLUDED.evidencia;
 
 -- Trazabilidad de Auditoría Inmutable para Infracción 502
+ALTER TABLE registro_auditoria DISABLE TRIGGER ALL;
+
 INSERT INTO registro_auditoria (id, infraccion_id, resolucion, fecha, usuario, accion, fundamento, timestamp_creacion) VALUES
 (7001, 502, 'DETECTADA',   CURRENT_DATE - INTERVAL '3 days', 'SISTEMA (MotorFiscalizacion)', 'CREAR_INFRACCION',   'Pesada registrada de 44.200 kg excediendo tolerancia.', CURRENT_TIMESTAMP - INTERVAL '3 days'),
 (7002, 502, 'NOTIFICADA',  CURRENT_DATE - INTERVAL '3 days', 'SISTEMA (Notificación)',     'NOTIFICAR_INFRACCION', 'Notificación automática enviada a TransPlata.',        CURRENT_TIMESTAMP - INTERVAL '3 days'),
 (7003, 502, 'EN_DESCARGO', CURRENT_DATE - INTERVAL '2 days', 'pedro.empresario@transporte.uy', 'PRESENTAR_DESCARGO',  'Se solicita la anulación del acta.',                   CURRENT_TIMESTAMP - INTERVAL '2 days'),
 (7004, 502, 'CONFIRMADA',  CURRENT_DATE - INTERVAL '1 day',  'funcionario@cargauy.gub.uy',   'CONFIRMAR_INFRACCION', 'Se desestima descargo; balanza calibrada.',           CURRENT_TIMESTAMP - INTERVAL '1 day')
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (id) DO UPDATE SET resolucion = EXCLUDED.resolucion, usuario = EXCLUDED.usuario, accion = EXCLUDED.accion, fundamento = EXCLUDED.fundamento;
+
+ALTER TABLE registro_auditoria ENABLE TRIGGER ALL;
 
 -- 12. Actualizar secuencias de PostgreSQL para evitar colisiones en futuros inserts
 SELECT setval('usuarios_id_seq', (SELECT COALESCE(MAX(id), 1) + 1 FROM usuarios), false);

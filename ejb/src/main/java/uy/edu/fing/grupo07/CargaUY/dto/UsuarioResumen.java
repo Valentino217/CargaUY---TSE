@@ -21,10 +21,12 @@ public record UsuarioResumen(int id, String tipo, String nombre, String mail,
     public java.util.Set<TipoUsuario> getRoles() { return roles; }
 	
     public static UsuarioResumen desde(Usuario u) {
-        String tipo = u instanceof Ciudadano ? "CIUDADANO"
+        String tipo = (u.getRoles() != null && !u.getRoles().isEmpty())
+            ? u.getRoles().iterator().next().name()
+            : (u instanceof Ciudadano ? "CIUDADANO"
             : u instanceof Chofer ? "CHOFER"
             : u instanceof Funcionario ? "FUNCIONARIO"
-            : u instanceof Autoridad ? "AUTORIDAD" : "ADMINISTRADOR";
+            : u instanceof Autoridad ? "AUTORIDAD" : "ADMINISTRADOR");
         return new UsuarioResumen(u.getId(), tipo, u.getNombre(), u.getMail(),
             u.getFechaNac(), u.getCi(), u.isActivo(),
             u instanceof Funcionario f ? f.getNroFuncionario() : null,

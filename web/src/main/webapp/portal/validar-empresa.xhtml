@@ -1,4 +1,4 @@
-<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+﻿<ui:composition xmlns="http://www.w3.org/1999/xhtml"
                 xmlns:h="jakarta.faces.html"
                 xmlns:f="jakarta.faces.core"
                 xmlns:ui="jakarta.faces.facelets"
@@ -27,7 +27,7 @@
                                      placeholder="Ingrese Nro. de Empresa, Razón Social o Nombre Público..."
                                      style="width: 100%;" />
                     </span>
-                    <p:commandButton value="Validar en Padrón"
+                    <p:commandButton value="Consultar"
                                      icon="pi pi-search"
                                      actionListener="#{portalPublicoBean.buscarEmpresa}"
                                      update=":formTablaValidacion"
@@ -78,7 +78,7 @@
                                rounded="true" />
                     </p:column>
 
-                    <p:column headerText="Estado Registral" style="width: 150px; text-align: center;">
+                    <p:column headerText="Estado" style="width: 150px; text-align: center;">
                         <p:tag value="#{emp.activa ? 'HABILITADA' : 'INACTIVA / BAJA'}"
                                severity="#{emp.activa ? 'success' : 'danger'}"
                                icon="#{emp.activa ? 'pi pi-check-circle' : 'pi pi-times-circle'}"

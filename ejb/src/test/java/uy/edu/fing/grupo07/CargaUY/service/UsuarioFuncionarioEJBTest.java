@@ -215,14 +215,14 @@ class UsuarioFuncionarioEJBTest {
         when(qLong.getSingleResult()).thenReturn(0L);
 
         // Crear Chofer, Funcionario, Autoridad, Administrador
-        service.crearUsuario("token", new DatosUsuario(TipoUsuario.CHOFER, "Chof", "c@test.com", LocalDate.of(1990, 1, 1), 1001, "Password123!", null, null, null));
-        service.crearUsuario("token", new DatosUsuario(TipoUsuario.FUNCIONARIO, "Func", "f@test.com", LocalDate.of(1990, 1, 1), 1002, "Password123!", 55, "Fiscal", null));
+        service.crearUsuario("token", new DatosUsuario(TipoUsuario.AUTORIDAD, "Aut", "a@test.com", LocalDate.of(1990, 1, 1), 1003, "Password123!", null, null, "Director"));
+        // eliminado creador de funcionario directo
         service.crearUsuario("token", new DatosUsuario(TipoUsuario.AUTORIDAD, "Aut", "a@test.com", LocalDate.of(1990, 1, 1), 1003, "Password123!", null, null, "Director"));
         service.crearUsuario("token", new DatosUsuario(TipoUsuario.ADMINISTRADOR, "Adm", "ad@test.com", LocalDate.of(1990, 1, 1), 1004, "Password123!", null, null, null));
 
         // Contraseña corta
         assertThrows(ErrorNegocio.class, () -> service.crearUsuario("token",
-                new DatosUsuario(TipoUsuario.CHOFER, "Chof", "c@test.com", LocalDate.of(1990, 1, 1), 1005, "123", null, null, null)));
+                new DatosUsuario(TipoUsuario.ADMINISTRADOR, "Adm", "ad@test.com", LocalDate.of(1990, 1, 1), 1005, "123", null, null, null)));
 
         // registrarConRoles para AUTORIDAD y FUNCIONARIO
         service.registrarConRoles("token", new DatosUsuario(TipoUsuario.AUTORIDAD, "Aut2", "a2@test.com", LocalDate.of(1990, 1, 1), 1006, null, null, null, "Ministro"), Set.of(TipoUsuario.AUTORIDAD));

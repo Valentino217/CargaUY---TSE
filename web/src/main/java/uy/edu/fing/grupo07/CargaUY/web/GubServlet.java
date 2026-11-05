@@ -20,6 +20,7 @@ public class GubServlet extends HttpServlet {
             s.sendRedirect(GubOidcClient.autorizacion()+"?response_type=code"
                 +"&scope="+GubOidcClient.url(GubOidcClient.scopes())+"&client_id="+GubOidcClient.url(GubOidcClient.clientId())
                 +"&redirect_uri="+GubOidcClient.url(GubOidcClient.redirect())
+                +"&prompt=login"
                 +"&state="+state+"&nonce="+nonce+(GubOidcClient.pkce()?"&code_challenge="+Cripto.pkce(verifier)
                 +"&code_challenge_method=S256":""));
             return;

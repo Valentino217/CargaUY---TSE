@@ -37,7 +37,7 @@ public class SesionesService {
             // El proveedor real no entrega nacimiento: se completa luego en Mi perfil.
             // La identidad se vincula automáticamente solo al crear una cuenta nueva.
             Ciudadano c = new Ciudadano(i.nombre(), i.mail(), i.nacimiento(), i.ci(), "{GUB}");
-            c.getRoles().add(TipoUsuario.CIUDADANO);
+            c.getRoles().add(TipoUsuario.CIUDADANO_COMUN);
             c.setOrigenIdentidad("GUB"); c.setUidExterno(i.subject());
             em.persist(c); em.flush(); u = c;
         }

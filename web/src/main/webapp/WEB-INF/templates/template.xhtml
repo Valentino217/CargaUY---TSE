@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml"
       xmlns:h="jakarta.faces.html"
       xmlns:f="jakarta.faces.core"
@@ -469,6 +469,9 @@
                     <p:menuitem value="Validar permisos" icon="pi pi-verified" outcome="/empresa/validar-permisos.xhtml" />
                 </p:submenu>
 
+                <!-- 2.5 CHOFER -->
+                <p:menuitem value="Mis Viajes" icon="pi pi-compass" outcome="/chofer/mis-viajes.xhtml" rendered="#{authBean.esChofer()}" />
+
                 <!-- 3. FUNCIONARIO -->
                 <p:submenu label="Fiscalización y Ruta" icon="pi pi-shield" rendered="#{authBean.esFuncionario()}">
                     <p:menuitem value="Empresas Registradas" icon="pi pi-building" outcome="/funcionario/empresas.xhtml" />
@@ -479,7 +482,7 @@
                 </p:submenu>
 
                 <!-- 4. AUTORIDADES (BACKOFFICE ANALÍTICO) -->
-                <p:menuitem value="Dashboard Analítico"
+                <p:menuitem value="Dashboard"
                             icon="pi pi-chart-line"
                             outcome="/backoffice/dashboard.xhtml"
                             rendered="#{authBean.esAutoridad()}" />
@@ -487,7 +490,8 @@
                 <!-- 5. ADMINISTRADORES -->
                 <p:submenu label="Administración" icon="pi pi-cog" rendered="#{authBean.esAdministrador()}">
                     <p:menuitem value="Usuarios y Roles" icon="pi pi-users" outcome="/admin/usuarios.xhtml" />
-                    <p:menuitem value="Nodos Periféricos y Catálogos" icon="pi pi-server" outcome="/admin/nodos.xhtml" />
+                    <p:menuitem value="Nodos" icon="pi pi-server" outcome="/admin/nodos.xhtml" />
+                    <p:menuitem value="Catálogos de Plataforma" icon="pi pi-tags" outcome="/admin/catalogos.xhtml" />
                     <p:menuitem value="Parámetros de Fiscalización" icon="pi pi-sliders-h" outcome="/admin/reglas-fiscalizacion.xhtml" />
                     <p:menuitem value="Validar permisos" icon="pi pi-verified" outcome="/empresa/validar-permisos.xhtml" />
                 </p:submenu>

@@ -180,6 +180,18 @@ public class FuncionarioEmpresasBean implements Serializable {
         }
     }
 
+    public void desvincular(IdentidadesService.VinculoVista v) {
+        if (empresaSeleccionada == null || v == null) return;
+        try {
+            identidadesService.desvincular(SesionActual.token(), empresaSeleccionada.numero(), v.usuario());
+            cargarVinculos();
+            cargarEmpresas();
+            mostrarMensaje(FacesMessage.SEVERITY_INFO, "Usuario Desvinculado", "Se desvinculó a " + v.nombre() + " de la empresa #" + empresaSeleccionada.numero());
+        } catch (Exception e) {
+            mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error al desvincular", e.getMessage());
+        }
+    }
+
     public void consultarEnPdi() {
         if (ciConsultaPdi == null || ciConsultaPdi <= 0) {
             mostrarMensaje(FacesMessage.SEVERITY_WARN, "Validación", "Ingrese una Cédula de Identidad válida.");

@@ -1,4 +1,4 @@
-<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+﻿<ui:composition xmlns="http://www.w3.org/1999/xhtml"
                 xmlns:h="jakarta.faces.html"
                 xmlns:f="jakarta.faces.core"
                 xmlns:ui="jakarta.faces.facelets"
@@ -29,7 +29,7 @@
         <!-- KPIs -->
         <h:panelGroup id="kpiFlotaFisc" layout="block" styleClass="cuy-kpi-grid">
             <div class="cuy-kpi-card">
-                <div class="cuy-kpi-label"><i class="pi pi-truck" /> Total Unidades en Padrón</div>
+                <div class="cuy-kpi-label"><i class="pi pi-truck" /> Total Vehículos</div>
                 <div class="cuy-kpi-value">#{fiscalizacionFlotaBean.totalUnidades}</div>
             </div>
             <div class="cuy-kpi-card success">
@@ -82,7 +82,7 @@
                         </div>
                     </p:column>
 
-                    <p:column headerText="Habilitación Base" style="width: 140px; text-align: center;">
+                    <p:column headerText="Habilitación" style="width: 140px; text-align: center;">
                         <p:tag value="#{veh.estadoHabilitacion ? 'HABILITADO' : 'SUSPENDIDO'}"
                                severity="#{veh.estadoHabilitacion ? 'success' : 'danger'}"
                                rounded="true" />

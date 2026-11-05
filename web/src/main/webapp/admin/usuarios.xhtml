@@ -1,4 +1,4 @@
-<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+﻿<ui:composition xmlns="http://www.w3.org/1999/xhtml"
                 xmlns:h="jakarta.faces.html"
                 xmlns:f="jakarta.faces.core"
                 xmlns:ui="jakarta.faces.facelets"
@@ -20,7 +20,7 @@
                     <p:commandButton value="Nuevo Usuario"
                                      icon="pi pi-user-plus"
                                      actionListener="#{adminUsuariosBean.prepararNuevoUsuario}"
-                                     update=":dlgUsuarioForm"
+                                     update=":dlgUsuarioDialog"
                                      oncomplete="PF('dlgUsuarioWidget').show()"
                                      styleClass="ui-button-primary" />
                 </h:form>
@@ -61,7 +61,7 @@
                     <f:facet name="header">
                         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
                             <span style="font-weight: 700; color: #0f2942;">
-                                <i class="pi pi-id-card" style="margin-right: 0.4rem;" /> Padrón de Usuarios y Permisos
+                                <i class="pi pi-id-card" style="margin-right: 0.4rem;" /> Usuarios del Sistema
                             </span>
                             <span class="ui-input-icon-left">
                                 <i class="pi pi-search" />
@@ -121,12 +121,12 @@
                             <p:commandButton icon="pi pi-pencil"
                                              title="Editar Datos del Usuario"
                                              actionListener="#{adminUsuariosBean.prepararEdicionUsuario(u)}"
-                                             update=":dlgUsuarioForm"
+                                             update=":dlgUsuarioDialog"
                                              oncomplete="PF('dlgUsuarioWidget').show()"
                                              styleClass="ui-button-outlined ui-button-info ui-button-sm" />
 
                             <p:commandButton icon="pi pi-key"
-                                             title="Asignar Roles y Vincular Identidad LDAP / gub.uy"
+                                             title="Asignar Rol RBAC y Sincronizar LDAP"
                                              actionListener="#{adminUsuariosBean.prepararRolesEIdentidad(u)}"
                                              update=":dlgIdentidadForm"
                                              oncomplete="PF('dlgIdentidadWidget').show()"
@@ -156,22 +156,26 @@
         </h:form>
 
         <!-- Modal Crear / Editar Usuario -->
-        <p:dialog header="#{adminUsuariosBean.modoEdicion ? 'Editar Usuario' : 'Registrar Nuevo Usuario'}"
+        <p:dialog id="dlgUsuarioDialog"
+                  header="#{adminUsuariosBean.modoEdicion ? 'Editar Usuario' : 'Registrar Nuevo Usuario'}"
                   widgetVar="dlgUsuarioWidget"
                   modal="true"
                   responsive="true"
                   width="580"
                   closeOnEscape="true">
             <h:form id="dlgUsuarioForm" styleClass="ui-fluid">
+                <ui:fragment rendered="#{not adminUsuariosBean.modoEdicion}">
+                    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 0.65rem 0.85rem; margin-bottom: 1rem; font-size: 0.82rem; color: #1e40af;">
+                        <i class="pi pi-info-circle" style="margin-right: 0.35rem;" />
+                        <strong>Nota:</strong> El alta manual está habilitada únicamente para cuentas institucionales que ingresan por LDAP (ADMINISTRADOR y AUTORIDAD). Los ciudadanos y choferes deben auto-registrarse vía gub.uy.
+                    </div>
+                </ui:fragment>
                 <div class="cuy-form-grid-2">
                     <div class="cuy-field">
-                        <p:outputLabel for="tipoUsr" value="Tipo / Rol Base" />
-                        <p:selectOneMenu id="tipoUsr" label="Tipo / Rol Base" value="#{adminUsuariosBean.tipoForm}" disabled="#{adminUsuariosBean.modoEdicion}">
-                            <f:selectItem itemLabel="CIUDADANO (Empresa)" itemValue="CIUDADANO" />
-                            <f:selectItem itemLabel="CHOFER" itemValue="CHOFER" />
-                            <f:selectItem itemLabel="FUNCIONARIO" itemValue="FUNCIONARIO" />
-                            <f:selectItem itemLabel="AUTORIDAD" itemValue="AUTORIDAD" />
+                        <p:outputLabel for="tipoUsr" value="Rol" />
+                        <p:selectOneMenu id="tipoUsr" label="Rol Base" value="#{adminUsuariosBean.tipoForm}" disabled="#{adminUsuariosBean.modoEdicion}">
                             <f:selectItem itemLabel="ADMINISTRADOR" itemValue="ADMINISTRADOR" />
+                            <f:selectItem itemLabel="AUTORIDAD" itemValue="AUTORIDAD" />
                         </p:selectOneMenu>
                     </div>
                     <div class="cuy-field">
@@ -188,11 +192,11 @@
                     </div>
                     <div class="cuy-field">
                         <p:outputLabel for="fnacUsr" value="Fecha de Nacimiento *" />
-                        <p:datePicker id="fnacUsr" label="Fecha de Nacimiento" value="#{adminUsuariosBean.fechaNacForm}" pattern="yyyy-MM-dd" showIcon="true" required="true"  panelStyleClass="cuy-calendar"  monthNavigator="true"  yearNavigator="select"  showButtonBar="true"  showOtherMonths="true"  yearRange="1900:2026"  showLongMonthNames="true" />
+                        <p:datePicker id="fnacUsr" label="Fecha de Nacimiento" value="#{adminUsuariosBean.fechaNacForm}" pattern="yyyy-MM-dd" showIcon="true" required="true" panelStyleClass="cuy-calendar" monthNavigator="true" yearNavigator="select" showButtonBar="true" showOtherMonths="true" yearRange="1900:2026" showLongMonthNames="true" />
                     </div>
                     <ui:fragment rendered="#{not adminUsuariosBean.modoEdicion}">
                         <div class="cuy-field">
-                            <p:outputLabel for="pwdUsr" value="Contraseña Inicial" />
+                            <p:outputLabel for="pwdUsr" value="Contraseña Inicial LDAP" />
                             <p:password id="pwdUsr" label="Contraseña Inicial" value="#{adminUsuariosBean.passwordForm}" redisplay="true" />
                         </div>
                     </ui:fragment>
@@ -202,7 +206,7 @@
                     </div>
                     <div class="cuy-field">
                         <p:outputLabel for="depUsr" value="Departamento / Cargo (Si aplica)" />
-                        <p:inputText id="depUsr" label="Departamento / Cargo (Si aplica)" value="#{adminUsuariosBean.departamentoForm}" placeholder="Ej. Fiscalización Vial" />
+                        <p:inputText id="depUsr" label="Departamento / Cargo (Si aplica)" value="#{adminUsuariosBean.departamentoForm}" placeholder="Ej. Dirección Nacional de Transporte" />
                     </div>
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.25rem;">
@@ -210,7 +214,7 @@
                     <p:commandButton value="Guardar Usuario"
                                      icon="pi pi-check"
                                      actionListener="#{adminUsuariosBean.guardarUsuario}"
-                                     update=":usuariosForm:tablaUsuarios :kpiUsrGroup"
+                                     update=":usuariosForm:tablaUsuarios :kpiUsrGroup :growl"
                                      oncomplete="if (!args.validationFailed) PF('dlgUsuarioWidget').hide()"
                                      styleClass="ui-button-primary"
                                      style="width: auto;" />
@@ -218,8 +222,8 @@
             </h:form>
         </p:dialog>
 
-        <!-- Modal Roles e Identidad Federada (LDAP / gub.uy) -->
-        <p:dialog header="Asignación de Roles RBAC y Federación de Identidad"
+        <!-- Modal Roles e Identidad Federada (RBAC y Sincronización LDAP) -->
+        <p:dialog header="Asignar Rol"
                   widgetVar="dlgIdentidadWidget"
                   modal="true"
                   responsive="true"
@@ -229,57 +233,60 @@
                 <h:panelGroup rendered="#{adminUsuariosBean.usuarioIdentidadSel != null}">
                     <div style="background: #f8fafc; padding: 0.8rem 1rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 1rem;">
                         <strong>#{adminUsuariosBean.usuarioIdentidadSel.nombre()}</strong> (ID ##{adminUsuariosBean.usuarioIdentidadSel.id()})
+                        <div style="font-size: 0.78rem; color: #64748b;">
+                            Origen de cuenta: <strong>#{adminUsuariosBean.origenIdentidadForm}</strong> | UID: #{empty adminUsuariosBean.uidExternoActual ? 'No asignado' : adminUsuariosBean.uidExternoActual}
+                        </div>
                     </div>
 
-                    <!-- Bloque 1: Roles -->
+                    <!-- Bloque 1: Rol Único RBAC -->
                     <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
-                        <div style="font-weight: 700; color: #0f2942; margin-bottom: 0.5rem;">
-                            <i class="pi pi-shield" style="color: #2563eb;" /> Roles Habilitados
+                        <div style="font-weight: 700; color: #0f2942; margin-bottom: 0.65rem;">
+                            <i class="pi pi-shield" style="color: #2563eb;" /> Rol del usuario
                         </div>
-                        <p:selectManyCheckbox value="#{adminUsuariosBean.rolesSeleccionados}" layout="responsive" columns="2">
-                            <f:selectItem itemLabel="CIUDADANO" itemValue="CIUDADANO" />
-                            <f:selectItem itemLabel="CHOFER" itemValue="CHOFER" />
-                            <f:selectItem itemLabel="FUNCIONARIO" itemValue="FUNCIONARIO" />
-                            <f:selectItem itemLabel="AUTORIDAD" itemValue="AUTORIDAD" />
-                            <f:selectItem itemLabel="ADMINISTRADOR" itemValue="ADMINISTRADOR" />
-                        </p:selectManyCheckbox>
-                        <div style="margin-top: 0.75rem; text-align: right;">
-                            <p:commandButton value="Actualizar Roles"
+                        <p:selectOneRadio value="#{adminUsuariosBean.rolUnicoSeleccionado}" layout="responsive" columns="1" style="line-height: 1.8;">
+                            <f:selectItem itemLabel="Ciudadano" itemValue="CIUDADANO_COMUN" />
+                            <f:selectItem itemLabel="Ciudadano Empresa" itemValue="CIUDADANO" />
+                            <f:selectItem itemLabel="Chofer" itemValue="CHOFER" />
+                            <f:selectItem itemLabel="Funcionario" itemValue="FUNCIONARIO" />
+                            <f:selectItem itemLabel="Autoridad" itemValue="AUTORIDAD" />
+                            <f:selectItem itemLabel="Administrador" itemValue="ADMINISTRADOR" />
+                        </p:selectOneRadio>
+                        <div style="margin-top: 0.85rem; text-align: right;">
+                            <p:commandButton value="Actualizar Rol"
                                              icon="pi pi-save"
                                              actionListener="#{adminUsuariosBean.guardarRoles}"
-                                             update=":usuariosForm:tablaUsuarios"
+                                             update=":usuariosForm:tablaUsuarios :dlgIdentidadForm :growl"
                                              styleClass="ui-button-primary"
                                              style="width: auto;" />
                         </div>
                     </div>
 
-                    <!-- Bloque 2: Identidad Federada -->
-                    <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem;">
+                    <!-- Bloque 2: Identidad LDAP (Solo aplicable a Administrador y Autoridad) -->
+                    <h:panelGroup layout="block"
+                                  rendered="#{adminUsuariosBean.origenIdentidadForm eq 'LDAP' or adminUsuariosBean.usuarioIdentidadSel.tipo() eq 'ADMINISTRADOR' or adminUsuariosBean.usuarioIdentidadSel.tipo() eq 'AUTORIDAD'}"
+                                  style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem;">
                         <div style="font-weight: 700; color: #0f2942; margin-bottom: 0.75rem;">
-                            <i class="pi pi-key" style="color: #d97706;" /> Vincular Proveedor Externo (OpenLDAP / gub.uy)
+                            <i class="pi pi-key" style="color: #d97706;" /> Vincular cuenta LDAP
                         </div>
                         <div class="cuy-form-grid-2">
                             <div class="cuy-field">
-                                <p:outputLabel for="origIdSel" value="Proveedor" />
-                                <p:selectOneMenu id="origIdSel" label="Proveedor" value="#{adminUsuariosBean.origenIdentidadForm}">
-                                    <f:selectItem itemLabel="OpenLDAP (Staff)" itemValue="LDAP" />
-                                    <f:selectItem itemLabel="Usuario gub.uy (OIDC)" itemValue="GUB" />
-                                </p:selectOneMenu>
+                                <p:outputLabel for="uidExtInput" value="UID OpenLDAP" />
+                                <p:inputText id="uidExtInput" label="UID OpenLDAP" value="#{adminUsuariosBean.uidExternoForm}" placeholder="Ej. martin.admin" />
                             </div>
                             <div class="cuy-field">
-                                <p:outputLabel for="uidExtInput" value="UID / Subject Externo" />
-                                <p:inputText id="uidExtInput" label="UID / Subject Externo" value="#{adminUsuariosBean.uidExternoForm}" placeholder="Ej. martin.admin" />
+                                <p:outputLabel for="pwdLdapInput" value="Contraseña LDAP" />
+                                <p:password id="pwdLdapInput" label="Contraseña LDAP" value="#{adminUsuariosBean.passwordLdapForm}" redisplay="true" placeholder="Dejar en blanco para conservar" />
                             </div>
                         </div>
                         <div style="margin-top: 0.85rem; text-align: right;">
-                            <p:commandButton value="Vincular Identidad"
+                            <p:commandButton value="Vincular y Sincronizar LDAP"
                                              icon="pi pi-link"
                                              actionListener="#{adminUsuariosBean.vincularIdentidadExterna}"
-                                             update=":usuariosForm:tablaUsuarios"
+                                             update=":usuariosForm:tablaUsuarios :growl"
                                              styleClass="ui-button-warning"
                                              style="width: auto;" />
                         </div>
-                    </div>
+                    </h:panelGroup>
                 </h:panelGroup>
             </h:form>
         </p:dialog>

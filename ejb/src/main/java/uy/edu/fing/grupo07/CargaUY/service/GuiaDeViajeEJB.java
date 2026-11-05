@@ -19,13 +19,34 @@ import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado;
 public class GuiaDeViajeEJB implements GuiaDeViajeEJBLocal {
     @jakarta.ejb.EJB private uy.edu.fing.grupo07.CargaUY.security.ControlAcceso control;
     @jakarta.ejb.EJB private uy.edu.fing.grupo07.CargaUY.jms.FiscalizacionProducerLocal fiscalizacionProducer;
+    private GuiaDeViaje inicializarRelaciones(GuiaDeViaje g) {
+        if (g != null) {
+            if (g.getEmpresa() != null) g.getEmpresa().getRazonSocial();
+            if (g.getVehiculo() != null) g.getVehiculo().getMatricula();
+            if (g.getChofer() != null) g.getChofer().getNombre();
+        }
+        return g;
+    }
+
+    private List<GuiaDeViaje> inicializarRelaciones(List<GuiaDeViaje> lista) {
+        if (lista != null) {
+            for (GuiaDeViaje g : lista) inicializarRelaciones(g);
+        }
+        return lista;
+    }
+
     public List<GuiaDeViaje> listarParaActor(String token) {
         var actor=control.exigir(token);
         if(actor.tiene(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.ADMINISTRADOR)) return listarGuias();
-        return em.createQuery("select g from GuiaDeViaje g join fetch g.empresa e left join fetch g.vehiculo "
-            +"left join fetch g.chofer where e.activa=true and exists(select v from VinculoEmpresa v "
-            +"where v.empresa=e and v.usuario.id=:id and v.responsable=true) order by g.fecha desc",GuiaDeViaje.class)
-            .setParameter("id",actor.id()).getResultList();
+        if(actor.tiene(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.CHOFER)) {
+            return inicializarRelaciones(em.createQuery("select g from GuiaDeViaje g join fetch g.empresa left join fetch g.vehiculo "
+                +"left join fetch g.chofer where g.chofer.id=:id order by g.fecha desc", GuiaDeViaje.class)
+                .setParameter("id", actor.id()).getResultList());
+        }
+        return inicializarRelaciones(em.createQuery("select g from GuiaDeViaje g join fetch g.empresa left join fetch g.vehiculo "
+            +"left join fetch g.chofer where g.empresa.activa=true and exists(select v from VinculoEmpresa v "
+            +"where v.empresa=g.empresa and v.usuario.id=:id and v.responsable=true) order by g.fecha desc",GuiaDeViaje.class)
+            .setParameter("id",actor.id()).getResultList());
     }
     public List<Usuario> listarChoferesPorEmpresa(String token,int empresa) {
         control.empresa(token,empresa,false); return listarChoferesPorEmpresa(empresa);
@@ -204,8 +225,8 @@ public class GuiaDeViajeEJB implements GuiaDeViajeEJBLocal {
             "LEFT JOIN FETCH g.chofer " +
             "WHERE g.empresa IN (" +
             "    SELECT e FROM Empresa e " +
-            "    JOIN e.ciudadanos c " +
-            "    WHERE c.id = :ciudadanoId" +
+            "    WHERE e.nroEmpresa IN (SELECT ve.empresa.nroEmpresa FROM VinculoEmpresa ve WHERE ve.usuario.id = :ciudadanoId AND ve.responsable = true AND ve.empresa.activa = true)" +
+            "" +
             ") " +
             "ORDER BY g.fecha DESC",
             GuiaDeViaje.class

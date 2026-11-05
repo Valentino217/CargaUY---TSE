@@ -1,4 +1,4 @@
-<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+﻿<ui:composition xmlns="http://www.w3.org/1999/xhtml"
                 xmlns:h="jakarta.faces.html"
                 xmlns:f="jakarta.faces.core"
                 xmlns:ui="jakarta.faces.facelets"
@@ -20,7 +20,7 @@
                 <p:commandButton value="Emitir Nueva Guía de Viaje"
                                  icon="pi pi-plus-circle"
                                  actionListener="#{GuiaDeViajeBean.nuevo}"
-                                 update=":dialogGuiaForm"
+                                 update=":dialogGuia"
                                  oncomplete="PF('wvDialogGuia').show()"
                                  styleClass="ui-button-primary" />
             </h:form>
@@ -80,7 +80,7 @@
                             <p:commandButton icon="pi pi-pencil"
                                              title="Editar Guía"
                                              actionListener="#{GuiaDeViajeBean.editar(g)}"
-                                             update=":dialogGuiaForm"
+                                             update=":dialogGuia"
                                              oncomplete="PF('wvDialogGuia').show()"
                                              styleClass="ui-button-outlined ui-button-info ui-button-sm"
                                              style="margin-right: 0.35rem;" />
@@ -103,7 +103,7 @@
                                              update="tablaGuias :growl"
                                              styleClass="ui-button-success ui-button-sm">
                                 <p:confirm header="Iniciar Viaje"
-                                           message="¿Confirma el inicio operativo del viaje de la guía ##{g.id}? El estado pasará a EN_CURSO."
+                                           message="¿Confirma iniciar el viaje de la guía ##{g.id}? El estado pasará a EN_CURSO."
                                            icon="pi pi-play" />
                             </p:commandButton>
                         </h:panelGroup>
@@ -145,7 +145,7 @@
                   closeOnEscape="true">
 
             <h:form id="dialogGuiaForm" styleClass="ui-fluid">
-                <p:fieldset legend="1. Empresa y Asignación de Recursos" style="margin-bottom: 1rem;">
+                <p:fieldset legend="1. Empresa, Vehículo y Chofer" style="margin-bottom: 1rem;">
                     <div class="cuy-form-grid-3">
                         <div class="cuy-field">
                             <p:outputLabel for="empSelect" value="Empresa" />
@@ -183,7 +183,7 @@
                     </div>
                 </p:fieldset>
 
-                <p:fieldset legend="2. Detalles de Ruta y Carga Declarada" style="margin-bottom: 1.25rem;">
+                <p:fieldset legend="2. Datos del Viaje y Carga" style="margin-bottom: 1.25rem;">
                     <div class="cuy-form-grid-2">
                         <div class="cuy-field">
                             <p:outputLabel for="origenSelect" value="Localidad de Origen" />

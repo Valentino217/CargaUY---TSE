@@ -27,6 +27,9 @@ public class GestionPerfilesService {
 
     public int crearUsuario(String token, DatosUsuario d) {
         control.admin(token);
+        if (d.tipo() != ADMINISTRADOR && d.tipo() != AUTORIDAD) {
+            throw new ErrorNegocio("Solo se pueden crear directamente usuarios internos (ADMINISTRADOR y AUTORIDAD). Los usuarios externos deben registrarse mediante Usuario gub.uy.");
+        }
         validarUsuario(d);
         long existentes = em.createQuery(
             "select count(u) from Usuario u where u.ci = :ci", Long.class)
@@ -41,13 +44,14 @@ public class GestionPerfilesService {
         try { hash = BCrypt.withDefaults().hashToString(12, caracteres); }
         finally { Arrays.fill(caracteres, '\0'); }
         Usuario u = switch (d.tipo()) {
-            case CIUDADANO -> new Ciudadano();
+            case CIUDADANO, CIUDADANO_COMUN -> new Ciudadano();
             case CHOFER -> new Chofer();
             case FUNCIONARIO -> new Funcionario();
             case AUTORIDAD -> new Autoridad();
             case ADMINISTRADOR -> new Administrador();
         };
         copiarDatos(u, d);
+        u.setOrigenIdentidad("LDAP");
         u.setPassword(hash);
         u.getRoles().add(d.tipo());
         em.persist(u);
@@ -80,7 +84,7 @@ public class GestionPerfilesService {
             .setParameter("ci",datos.ci()).getSingleResult();
         if(existentes>0)throw new ErrorNegocio("Ya existe un usuario con esa CI");
         Usuario usuario=switch(tipo){
-            case CIUDADANO -> new Ciudadano();case CHOFER -> new Chofer();case FUNCIONARIO -> new Funcionario();
+            case CIUDADANO, CIUDADANO_COMUN -> new Ciudadano();case CHOFER -> new Chofer();case FUNCIONARIO -> new Funcionario();
             case ADMINISTRADOR -> new Administrador();case AUTORIDAD -> new Autoridad();
         };
         copiarDatos(usuario,datos);
@@ -113,7 +117,7 @@ public class GestionPerfilesService {
         if(u.getVersion()!=versionEsperada) throw new ErrorAcceso(409,"Perfil modificado; recargá");
         validarUsuario(d, u instanceof Ciudadano && "GUB".equals(u.getOrigenIdentidad())
                 && u.getFechaNac() == null);
-        if (!clase(d.tipo()).isInstance(u) || u.getCi() != d.ci())
+        if ((!clase(d.tipo()).isInstance(u) && (u.getRoles() == null || !u.getRoles().contains(d.tipo()))) || u.getCi() != d.ci())
             throw new ErrorNegocio("Esta operación no cambia tipo ni CI");
         // La edición de perfil no cambia credenciales.
         copiarDatos(u, d);
@@ -241,7 +245,7 @@ public class GestionPerfilesService {
     }
     private Class<? extends Usuario> clase(TipoUsuario tipo) {
         return switch (tipo) {
-            case CIUDADANO -> Ciudadano.class;
+            case CIUDADANO, CIUDADANO_COMUN -> Ciudadano.class;
             case CHOFER -> Chofer.class;
             case FUNCIONARIO -> Funcionario.class;
             case AUTORIDAD -> Autoridad.class;

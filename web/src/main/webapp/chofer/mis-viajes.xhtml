@@ -1,0 +1,125 @@
+﻿<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/templates/template.xhtml">
+
+    <ui:define name="title">Mis Viajes y Empresas</ui:define>
+
+    <ui:define name="content">
+        <div class="cuy-page-header">
+            <div>
+                <h1 class="cuy-page-title">
+                    <i class="pi pi-compass" style="color: #2563eb;" />
+                    Portal del Chofer - Mis Viajes y Empresas
+                </h1>
+                <p class="cuy-page-subtitle">
+                    Consulte las empresas donde se encuentra habilitado y las guías de viaje asignadas a su cargo.
+                </p>
+            </div>
+            <div>
+                <h:form id="refrescarChoferForm" style="margin: 0;">
+                    <p:commandButton value="Actualizar"
+                                     icon="pi pi-refresh"
+                                     actionListener="#{choferViajesBean.recargar}"
+                                     update=":choferEmpresasForm :choferGuiasForm :growl"
+                                     styleClass="ui-button-outlined ui-button-secondary" />
+                </h:form>
+            </div>
+        </div>
+
+        <!-- Bloque 1: Empresas donde está contratado / habilitado el Chofer -->
+        <h:form id="choferEmpresasForm">
+            <div class="cuy-card">
+                <h3 class="cuy-card-title">
+                    <i class="pi pi-building" style="color: #2563eb;" /> Empresas donde presto servicios
+                </h3>
+                <p:dataTable id="tablaEmpresasChofer"
+                             value="#{choferViajesBean.empresasAsignadas}"
+                             var="emp"
+                             size="small"
+                             stripedRows="true"
+                             emptyMessage="No se encuentra vinculado como chofer a ninguna empresa de transporte actualmente.">
+
+                    <p:column headerText="Nro. Empresa / RUT" style="width: 160px; text-align: center;">
+                        <span class="cuy-mono">##{emp.nroEmpresa}</span>
+                    </p:column>
+
+                    <p:column headerText="Razón Social">
+                        <strong>#{emp.razonSocial}</strong>
+                    </p:column>
+
+                    <p:column headerText="Nombre Público / Comercial">
+                        #{emp.nombrePublico}
+                    </p:column>
+
+                    <p:column headerText="Dirección">
+                        #{emp.direccion}
+                    </p:column>
+
+                    <p:column headerText="Estado" style="width: 140px; text-align: center;">
+                        <p:tag value="#{emp.activa ? 'HABILITADA' : 'INACTIVA'}"
+                               severity="#{emp.activa ? 'success' : 'danger'}"
+                               rounded="true" />
+                    </p:column>
+                </p:dataTable>
+            </div>
+        </h:form>
+
+        <!-- Bloque 2: Guías de Viaje Asignadas al Chofer -->
+        <h:form id="choferGuiasForm" style="margin-top: 1.25rem;">
+            <div class="cuy-card">
+                <h3 class="cuy-card-title">
+                    <i class="pi pi-map" style="color: #059669;" /> Guías de Viaje Asignadas
+                </h3>
+                <p:dataTable id="tablaGuiasChofer"
+                             value="#{choferViajesBean.guiasAsignadas}"
+                             var="g"
+                             paginator="true"
+                             rows="10"
+                             paginatorPosition="bottom"
+                             stripedRows="true"
+                             size="small"
+                             emptyMessage="No registra guías de viaje asignadas a su nombre.">
+
+                    <p:column headerText="Guía #" style="width: 90px; text-align: center;">
+                        <span class="cuy-mono">##{g.id}</span>
+                    </p:column>
+
+                    <p:column headerText="Fecha" style="width: 110px;">
+                        <h:outputText value="#{g.fecha}" />
+                    </p:column>
+
+                    <p:column headerText="Empresa">
+                        <strong>#{g.empresa.razonSocial}</strong>
+                    </p:column>
+
+                    <p:column headerText="Vehículo / Matrícula" style="width: 140px;">
+                        <span class="cuy-mono"><i class="pi pi-car" /> #{g.vehiculo.matricula}</span>
+                    </p:column>
+
+                    <p:column headerText="Origen &#8594; Destino">
+                        #{g.origen} &#8594; #{g.destino}
+                    </p:column>
+
+                    <p:column headerText="Rubro / Carga" style="width: 150px;">
+                        #{g.rubroCliente}
+                    </p:column>
+
+                    <p:column headerText="Volumen" style="width: 110px; text-align: right;">
+                        <h:outputText value="#{g.volumenCarga}">
+                            <f:convertNumber pattern="#,##0" />
+                        </h:outputText> kg
+                    </p:column>
+
+                    <p:column headerText="Estado" style="width: 140px; text-align: center;">
+                        <p:tag value="#{g.estado}"
+                               severity="#{g.estado.name() eq 'FINALIZADO' ? 'success' : (g.estado.name() eq 'EN_CURSO' ? 'info' : 'warning')}"
+                               rounded="true" />
+                    </p:column>
+                </p:dataTable>
+            </div>
+        </h:form>
+    </ui:define>
+</ui:composition>

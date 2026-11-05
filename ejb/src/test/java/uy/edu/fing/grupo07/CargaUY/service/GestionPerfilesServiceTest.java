@@ -165,7 +165,7 @@ class GestionPerfilesServiceTest {
         doAnswer(invocacion -> {
             Usuario u = invocacion.getArgument(0); u.setId(7); guardado.set(u); return null;
         }).when(em).persist(any(Usuario.class));
-        DatosUsuario datos = new DatosUsuario(TipoUsuario.CIUDADANO, "Ana",
+        DatosUsuario datos = new DatosUsuario(TipoUsuario.ADMINISTRADOR, "Ana",
             "ana@example.com", LocalDate.of(1990,1,1), 12345678,
             "ClavePrueba123!", null, null, null);
         assertEquals(7, servicio(em).crearUsuario("token", datos));
@@ -180,7 +180,7 @@ class GestionPerfilesServiceTest {
         when(em.createQuery("select count(u) from Usuario u where u.ci = :ci", Long.class)).thenReturn(q);
         when(q.setParameter("ci", 12345678)).thenReturn(q);
         when(q.getSingleResult()).thenReturn(1L);
-        DatosUsuario datos = new DatosUsuario(TipoUsuario.CIUDADANO, "Ana",
+        DatosUsuario datos = new DatosUsuario(TipoUsuario.ADMINISTRADOR, "Ana",
             "ana@example.com", LocalDate.of(1990,1,1), 12345678,
             "ClavePrueba123!", null, null, null);
         assertThrows(ErrorNegocio.class, () -> servicio(em).crearUsuario("token", datos));

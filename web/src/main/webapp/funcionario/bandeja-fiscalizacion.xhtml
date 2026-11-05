@@ -1,4 +1,4 @@
-<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+﻿<ui:composition xmlns="http://www.w3.org/1999/xhtml"
                 xmlns:h="jakarta.faces.html"
                 xmlns:f="jakarta.faces.core"
                 xmlns:ui="jakarta.faces.facelets"
@@ -15,7 +15,7 @@
                     Bandeja de Trabajo de Fiscalización e Infracciones
                 </h1>
                 <p class="cuy-page-subtitle">
-                    Evaluación de evidencia técnica, revisión de descargos de empresas y resolución administrativa con pista de auditoría inmutable
+                    Evaluación de evidencia técnica, revisión de descargos de empresas y resolución administrativa con historial
                 </p>
             </div>
             <div style="display: flex; gap: 0.6rem;">
@@ -68,52 +68,71 @@
                             <span style="font-weight: 700; color: #0f2942;">
                                 <i class="pi pi-briefcase" style="margin-right: 0.4rem;" /> Expedientes Activos e Históricos
                             </span>
-                            <span class="ui-input-icon-left">
-                                <i class="pi pi-search" />
-                                <p:inputText id="globalFilter"
-                                             onkeyup="PF('dtBandeja').filter()"
-                                             placeholder="Buscar por empresa, matrícula, tipo o estado..."
-                                             style="width: 300px;" />
-                            </span>
                         </div>
                     </f:facet>
 
-                    <p:column headerText="Caso #" style="width: 85px; text-align: center;">
+                    <p:column headerText="Caso #" filterBy="#{caso.idCaso()}" filterMatchMode="contains" filterPlaceholder="Nro. Caso" style="width: 100px; text-align: center;">
                         <span class="cuy-mono">#<h:outputText value="#{caso.idCaso()}" /></span>
                     </p:column>
 
-                    <p:column headerText="Fecha" style="width: 110px;">
+                    <p:column headerText="Fecha" filterBy="#{caso.fecha()}" filterMatchMode="contains" filterPlaceholder="Fecha" style="width: 125px;">
                         <h:outputText value="#{caso.fecha()}" />
                     </p:column>
 
-                    <p:column filterBy="#{caso.nombreEmpresa()}" filterMatchMode="contains" filterPlaceholder="Empresa / Unidad">
+                    <p:column headerText="Empresa / Unidad" filterBy="#{caso.nombreEmpresa()} #{caso.matricula()}" filterMatchMode="contains" filterPlaceholder="Empresa o matrícula">
                         <strong style="color: #0f2942;">#{caso.nombreEmpresa() != null ? caso.nombreEmpresa() : 'Empresa N/D'}</strong>
                         <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.15rem;">
                             Matrícula: <span class="cuy-mono">#{caso.matricula() != null ? caso.matricula() : 'S/D'}</span> | #{caso.guiaId() != null ? 'Guía #'.concat(caso.guiaId().toString()) : 'Sin guía activa'}
                         </div>
                     </p:column>
 
-                    <p:column filterBy="#{caso.tipo()}" filterMatchMode="contains" style="width: 185px;" filterPlaceholder="Tipo Infracción">
+                    <p:column headerText="Tipo Infracción" filterBy="#{caso.tipo()}" filterMatchMode="exact" style="width: 185px;">
+                        <f:facet name="filter">
+                            <p:selectOneMenu onchange="PF('dtBandeja').filter()" styleClass="ui-custom-filter" style="width: 100%;">
+                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItems value="#{bandejaFiscalizacionBean.tiposInfraccion}" />
+                            </p:selectOneMenu>
+                        </f:facet>
                         <p:tag value="#{caso.tipo()}"
                                severity="#{(caso.tipo().name() eq 'EXCESO_DE_CARGA' or caso.tipo().name() eq 'EXCESO_PESO') ? 'danger' : ((caso.tipo().name() eq 'DESVIO_DE_RUTA' or caso.tipo().name() eq 'DESVIO_RUTA') ? 'warning' : 'info')}"
                                icon="pi pi-exclamation-triangle"
                                rounded="true" />
                     </p:column>
 
-                    <p:column headerText="Descargo Empresa" style="width: 150px; text-align: center;">
+                    <p:column headerText="Descargo" filterBy="#{not empty caso.textoDescargo() ? 'CON_DESCARGO' : 'SIN_DESCARGO'}" filterMatchMode="exact" style="width: 150px; text-align: center;">
+                        <f:facet name="filter">
+                            <p:selectOneMenu onchange="PF('dtBandeja').filter()" styleClass="ui-custom-filter" style="width: 100%;">
+                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItem itemLabel="Con descargo" itemValue="CON_DESCARGO" />
+                                <f:selectItem itemLabel="Sin descargo" itemValue="SIN_DESCARGO" />
+                            </p:selectOneMenu>
+                        </f:facet>
                         <p:tag value="#{not empty caso.textoDescargo() ? 'CON DESCARGO' : 'SIN DESCARGO'}"
                                severity="#{not empty caso.textoDescargo() ? 'warning' : 'secondary'}"
                                icon="#{not empty caso.textoDescargo() ? 'pi pi-comment' : 'pi pi-minus'}"
                                rounded="true" />
                     </p:column>
 
-                    <p:column filterBy="#{caso.estado()}" filterMatchMode="contains" style="width: 150px; text-align: center;" filterPlaceholder="Estado">
+                    <p:column headerText="Estado" filterBy="#{caso.estado()}" filterMatchMode="exact" style="width: 150px; text-align: center;">
+                        <f:facet name="filter">
+                            <p:selectOneMenu onchange="PF('dtBandeja').filter()" styleClass="ui-custom-filter" style="width: 100%;">
+                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItems value="#{bandejaFiscalizacionBean.estadosInfraccion}" />
+                            </p:selectOneMenu>
+                        </f:facet>
                         <p:tag value="#{caso.estado()}"
                                severity="#{caso.estado().name() eq 'CONFIRMADA' ? 'danger' : (caso.estado().name() eq 'DESESTIMADA' ? 'success' : (caso.estado().name() eq 'EN_DESCARGO' ? 'warning' : 'info'))}"
                                rounded="true" />
                     </p:column>
 
-                    <p:column headerText="Gestión" style="width: 165px; text-align: center;" exportable="false">
+                    <p:column headerText="Gestión" filterBy="#{(caso.estado().name() eq 'CONFIRMADA' or caso.estado().name() eq 'DESESTIMADA') ? 'AUDITORIA' : 'RESOLVER'}" filterMatchMode="exact" style="width: 175px; text-align: center;" exportable="false">
+                        <f:facet name="filter">
+                            <p:selectOneMenu onchange="PF('dtBandeja').filter()" styleClass="ui-custom-filter" style="width: 100%;">
+                                <f:selectItem itemLabel="Todas" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItem itemLabel="Evaluar / Resolver" itemValue="RESOLVER" />
+                                <f:selectItem itemLabel="Ver Auditoría" itemValue="AUDITORIA" />
+                            </p:selectOneMenu>
+                        </f:facet>
                         <p:commandButton value="#{(caso.estado().name() eq 'CONFIRMADA' or caso.estado().name() eq 'DESESTIMADA') ? 'Ver Auditoría' : 'Evaluar / Resolver'}"
                                          icon="#{(caso.estado().name() eq 'CONFIRMADA' or caso.estado().name() eq 'DESESTIMADA') ? 'pi pi-eye' : 'pi pi-check-square'}"
                                          actionListener="#{bandejaFiscalizacionBean.seleccionarCaso(caso)}"
@@ -126,16 +145,19 @@
             </div>
         </h:form>
 
-        <!-- Modal Evaluar / Resolver Expediente -->
+        <!-- Modal Evaluar / Resolver Expediente con Scrollbar y Viewport Amplio -->
         <p:dialog header="Expediente"
                   widgetVar="dlgResolverWidget"
                   modal="true"
                   responsive="true"
-                  width="740"
+                  width="1050"
+                  style="min-width: 850px; max-width: 96vw;"
+                  fitViewport="true"
+                  contentStyle="max-height: 75vh; overflow-y: auto;"
                   closeOnEscape="true">
             <h:form id="dlgResolverForm">
                 <h:panelGroup rendered="#{bandejaFiscalizacionBean.casoSeleccionado != null}">
-                    <div class="ui-fluid">
+                    <div class="ui-fluid" style="max-height: 68vh; overflow-y: auto; padding-right: 10px;">
                         <!-- Resumen superior -->
                         <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 1rem;">
                             <div>
@@ -155,7 +177,7 @@
                         <!-- Evidencia técnica -->
                         <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid #2563eb; border-radius: 8px; padding: 0.9rem 1rem; margin-bottom: 1rem;">
                             <div style="font-weight: 700; color: #1e3a8a; font-size: 0.85rem; margin-bottom: 0.3rem;">
-                                <i class="pi pi-microchip" /> Evidencia Técnica del Motor de Fiscalización (#{bandejaFiscalizacionBean.casoSeleccionado.fecha()})
+                                <i class="pi pi-microchip" /> Evidencia (#{bandejaFiscalizacionBean.casoSeleccionado.fecha()})
                             </div>
                             <div style="font-family: monospace; font-size: 0.88rem; color: #1e40af; white-space: pre-wrap;">#{bandejaFiscalizacionBean.casoSeleccionado.evidencia()}</div>
                         </div>
@@ -180,29 +202,30 @@
                             </h:panelGroup>
                         </div>
 
-                        <!-- Pista de Auditoría Inmutable (Append-Only) -->
+                        <!-- Historial -->
                         <h:panelGroup rendered="#{not empty bandejaFiscalizacionBean.casoSeleccionado.historialAuditoria()}">
                             <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-left: 4px solid #059669; border-radius: 8px; padding: 0.9rem 1rem; margin-bottom: 1rem;">
                                 <div style="font-weight: 700; color: #065f46; font-size: 0.85rem; margin-bottom: 0.5rem;">
-                                    <i class="pi pi-lock" /> Historial de Auditoría Inmutable (Append-Only)
+                                    <i class="pi pi-lock" /> Historial
                                 </div>
                                 <p:dataTable var="aud"
                                              value="#{bandejaFiscalizacionBean.casoSeleccionado.historialAuditoria()}"
                                              size="small"
-                                             stripedRows="true">
-                                    <p:column headerText="Acción" style="width: 165px;">
+                                             stripedRows="true"
+                                             reflow="false">
+                                    <p:column headerText="Acción" style="width: 160px; min-width: 140px;">
                                         <span class="cuy-mono" style="font-size: 0.76rem; font-weight: 700;">#{aud.accion()}</span>
                                     </p:column>
-                                    <p:column headerText="Estado" style="width: 110px;">
+                                    <p:column headerText="Estado" style="width: 110px; min-width: 95px;">
                                         <h:outputText value="#{aud.resolucion()}" style="font-size: 0.78rem;" />
                                     </p:column>
-                                    <p:column headerText="Autor" style="width: 160px;">
+                                    <p:column headerText="Autor" style="width: 160px; min-width: 130px;">
                                         <h:outputText value="#{aud.usuario()}" style="font-size: 0.78rem;" />
                                     </p:column>
-                                    <p:column headerText="Timestamp" style="width: 150px;">
+                                    <p:column headerText="Timestamp" style="width: 155px; min-width: 135px; word-break: break-all;">
                                         <span class="cuy-mono" style="font-size: 0.74rem;">#{aud.timestampCreacion()}</span>
                                     </p:column>
-                                    <p:column headerText="Fundamento / Detalle">
+                                    <p:column headerText="Fundamento / Detalle" style="min-width: 250px;">
                                         <h:outputText value="#{aud.fundamento()}" style="font-size: 0.78rem;" />
                                     </p:column>
                                 </p:dataTable>
@@ -259,7 +282,7 @@
                                              oncomplete="if (!args.validationFailed) PF('dlgResolverWidget').hide()"
                                              styleClass="ui-button-danger">
                                 <p:confirm header="Confirmar Sanción Administrativa"
-                                           message="¿Confirma la aplicación de sanción firme sobre el expediente ##{bandejaFiscalizacionBean.casoSeleccionado.idCaso()}? Esta acción sella un registro de auditoría inmutable."
+                                           message="¿Confirma la aplicación de sanción firme sobre el expediente ##{bandejaFiscalizacionBean.casoSeleccionado.idCaso()}? Esta acción sella un registro de auditoría."
                                            icon="pi pi-exclamation-triangle" />
                             </p:commandButton>
                         </div>

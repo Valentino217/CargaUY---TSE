@@ -128,7 +128,7 @@ class IdentidadesYBootstrapTest {
         // roles validaciones
         when(control.admin("t")).thenReturn(new Acceso(1, 11111111, "Admin", Set.of(TipoUsuario.ADMINISTRADOR)));
         assertEquals(400, assertThrows(ErrorAcceso.class, () -> service.roles("t", 1, Set.of())).getEstado());
-        assertEquals(409, assertThrows(ErrorAcceso.class, () -> service.roles("t", 1, Set.of(TipoUsuario.ADMINISTRADOR, TipoUsuario.CIUDADANO))).getEstado());
+        assertEquals(400, assertThrows(ErrorAcceso.class, () -> service.roles("t", 1, Set.of(TipoUsuario.ADMINISTRADOR, TipoUsuario.CIUDADANO))).getEstado());
         assertEquals(409, assertThrows(ErrorAcceso.class, () -> service.roles("t", 1, Set.of(TipoUsuario.AUTORIDAD))).getEstado());
 
         Ciudadano ciu = new Ciudadano("Ciu", "c@test.com", LocalDate.of(1995, 5, 5), 22222222, "{GUB}");
@@ -138,8 +138,8 @@ class IdentidadesYBootstrapTest {
         when(em.find(Usuario.class, 2)).thenReturn(ciu);
 
         assertEquals(409, assertThrows(ErrorAcceso.class, () -> service.roles("t", 2, Set.of(TipoUsuario.ADMINISTRADOR))).getEstado());
-        service.roles("t", 2, Set.of(TipoUsuario.CIUDADANO, TipoUsuario.CHOFER));
-        assertTrue(ciu.getRoles().contains(TipoUsuario.CHOFER));
+        service.roles("t", 2, Set.of(TipoUsuario.CIUDADANO));
+        assertTrue(ciu.getRoles().contains(TipoUsuario.CIUDADANO));
 
         // vinculo y funcionEmpresa
         assertEquals(400, assertThrows(ErrorAcceso.class, () -> service.funcionEmpresa("t", 10, 2, TipoUsuario.FUNCIONARIO, true)).getEstado());
@@ -147,12 +147,12 @@ class IdentidadesYBootstrapTest {
         Empresa emp = new Empresa(10, "Emp SA", "Emp", "Dir");
         when(em.find(Empresa.class, 10)).thenReturn(emp);
 
-        service.vinculo("t", 10, 2, true, true);
+        service.vinculo("t", 10, 2, true, false);
         assertTrue(emp.getCiudadanos().contains(ciu));
 
         VinculoEmpresa vinc = new VinculoEmpresa(ciu, emp);
         vinc.setResponsable(true);
-        vinc.setChofer(true);
+
         when(em.find(VinculoEmpresa.class, VinculoEmpresa.clave(10, 2))).thenReturn(vinc);
         service.funcionEmpresa("t", 10, 2, TipoUsuario.CIUDADANO, false);
         assertFalse(vinc.isResponsable());

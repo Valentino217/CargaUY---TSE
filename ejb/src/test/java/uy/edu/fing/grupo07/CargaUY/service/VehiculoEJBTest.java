@@ -293,12 +293,12 @@ class VehiculoEJBTest {
     @Test
     @DisplayName("listarVehiculosPorCiudadano y listarEmpresasPorCiudadano ejecutan consultas")
     void testConsultasPorCiudadano() throws Exception {
-        when(em.createQuery(contains("JOIN e.ciudadanos c"), eq(Vehiculo.class))).thenReturn(qVehiculos);
+        when(em.createQuery(contains(":ciudadanoId"), eq(Vehiculo.class))).thenReturn(qVehiculos);
         when(qVehiculos.setParameter("ciudadanoId", 5)).thenReturn(qVehiculos);
         when(qVehiculos.getResultList()).thenReturn(List.of(vehiculo));
         assertEquals(1, vehiculoEJB.listarVehiculosPorCiudadano(5).size());
 
-        when(em.createQuery(contains("JOIN e.ciudadanos c"), eq(Empresa.class))).thenReturn(qEmpresas);
+        when(em.createQuery(contains(":ciudadanoId"), eq(Empresa.class))).thenReturn(qEmpresas);
         when(qEmpresas.setParameter("ciudadanoId", 5)).thenReturn(qEmpresas);
         when(qEmpresas.getResultList()).thenReturn(List.of(emp));
         assertEquals(1, vehiculoEJB.listarEmpresasPorCiudadano(5).size());

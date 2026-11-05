@@ -16,6 +16,9 @@ public class IntegracionSesionFilter implements Filter {
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {
+        request.setCharacterEncoding("UTF-8");
+        response.setCharacterEncoding("UTF-8");
+
         var r = (HttpServletRequest) request;
         var s = (HttpServletResponse) response;
         if (r.getRequestURI().contains("/jakarta.faces.resource/")) {
@@ -85,6 +88,9 @@ public class IntegracionSesionFilter implements Filter {
         }
         if (p.startsWith("/empresa/")) {
             return actor.tiene(TipoUsuario.CIUDADANO) || actor.tiene(TipoUsuario.FUNCIONARIO);
+        }
+        if (p.startsWith("/chofer/")) {
+            return actor.tiene(TipoUsuario.CHOFER);
         }
         boolean gestion = p.equals("/GuiaDeViajeJSF.xhtml") || p.equals("/VehiculoJSF.xhtml")
             || p.equals("/ITV.xhtml") || p.equals("/PNC.xhtml");

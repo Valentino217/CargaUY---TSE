@@ -9,7 +9,6 @@ import jakarta.inject.Named;
 import uy.edu.fing.grupo07.CargaUY.nosql.PosicionNoSqlRepositoryLocal;
 import uy.edu.fing.grupo07.CargaUY.security.Config;
 import uy.edu.fing.grupo07.CargaUY.service.GestionBalanzaServiceLocal;
-import uy.edu.fing.grupo07.CargaUY.service.GestionPlataformaService;
 
 import java.io.Serializable;
 import java.net.InetSocketAddress;
@@ -25,21 +24,17 @@ import java.util.UUID;
 
 /**
  * Managed Bean para /admin/nodos.xhtml.
- * Gestión y monitoreo de nodos periféricos (Balanzas, PDI, LDAP, gub.uy, Colas JMS)
- * y administración de catálogos de plataforma (Rubros y Tipos de Carga).
+ * Gestión y monitoreo en tiempo real de nodos periféricos (Balanzas, PDI, LDAP, gub.uy, Colas JMS, NoSQL).
  */
 @Named("adminNodosBean")
 @ViewScoped
 public class AdminNodosBean implements Serializable {
 
     private static final long serialVersionUID = 1L;
-    private static final Duration PROBE_TIMEOUT = Duration.ofMillis(1500);
+    private static final Duration PROBE_TIMEOUT = Duration.ofMillis(350);
 
     @EJB
     private GestionBalanzaServiceLocal balanzaService;
-
-    @EJB
-    private GestionPlataformaService plataformaService;
 
     @EJB
     private PosicionNoSqlRepositoryLocal posicionNoSqlRepository;
@@ -54,92 +49,105 @@ public class AdminNodosBean implements Serializable {
     ) implements Serializable {}
 
     private List<NodoPerifericoVista> nodos;
-    private List<GestionPlataformaService.RubroVista> rubros;
-    private List<GestionPlataformaService.TipoCargaVista> tiposCarga;
-
-    private String nuevoRubroNombre;
-    private String nuevoRubroDesc;
-    private String nuevoTipoCargaDesc;
 
     @PostConstruct
     public void init() {
         verificarNodos();
-        cargarCatalogos();
     }
 
     public void verificarNodos() {
         nodos = new ArrayList<>();
 
+        // 1. Balanza
         String envBalanza = System.getenv("BALANZA_ENDPOINT");
         String balanzaEndpoint = (envBalanza != null && !envBalanza.isBlank()) ? envBalanza : "http://localhost:8082";
-        boolean balanzaUp = balanzaService != null && sondearEndpoint(balanzaEndpoint);
+        boolean balanzaUp = probarSocket("mock-balanza", 8080)
+                || probarSocket("localhost", 8082)
+                || (balanzaService != null && sondearEndpoint(balanzaEndpoint));
 
         nodos.add(new NodoPerifericoVista(
                 "NODO-BAL-01",
-                "Simulador Periférico de Balanzas en Ruta",
-                "HTTP / JSON",
+                "Simulador Balanza",
+                "HTTP",
                 balanzaEndpoint,
                 balanzaUp,
-                balanzaUp ? "Operativo (Sondeo HTTP 200 OK - Timeout 5s)" : "OFFLINE / Degradado (Periférico Inalcanzable)"
+                balanzaUp ? "Operativo" : "OFFLINE"
         ));
 
+        // 2. PDI (DNIC)
         String pdiEndpoint = Config.valor("pdi.endpoint", "http://localhost:8081/pdi/ws");
-        boolean pdiUp = sondearSocketDesdeUri(pdiEndpoint, 8081);
+        boolean pdiUp = probarSocket("mock-pdi", 8080)
+                || probarSocket("localhost", 8081)
+                || sondearSocketDesdeUri(pdiEndpoint, 8081);
 
         nodos.add(new NodoPerifericoVista(
                 "NODO-PDI-01",
-                "Plataforma de Interoperabilidad",
-                "SOAP / XML",
+                "Servicio PDI (DNIC)",
+                "SOAP",
                 pdiEndpoint,
                 pdiUp,
-                pdiUp ? "Conectado (WS-Addressing + Circuit Breaker Activo)" : "OFFLINE / Degradado (Fallback Resiliente Activo)"
+                pdiUp ? "Operativo" : "OFFLINE"
         ));
 
+        // 3. LDAP
         String ldapEndpoint = Config.valor("ldap.url", "ldap://127.0.0.1:1389");
-        boolean ldapUp = sondearSocketDesdeUri(ldapEndpoint, 1389);
+        boolean ldapUp = probarSocket("ldap", 1389)
+                || probarSocket("127.0.0.1", 1389)
+                || sondearSocketDesdeUri(ldapEndpoint, 1389);
 
         nodos.add(new NodoPerifericoVista(
                 "NODO-LDAP-01",
-                "Directorio Interno OpenLDAP",
-                "LDAPv3",
+                "Directorio OpenLDAP",
+                "LDAP",
                 ldapEndpoint,
                 ldapUp,
-                ldapUp
-                        ? "Bind Activo (" + Config.valor("ldap.people.dn", "ou=people,dc=cargauy,dc=local") + ")"
-                        : "OFFLINE / Degradado (Servidor LDAP Inalcanzable)"
+                ldapUp ? "Operativo" : "OFFLINE"
         ));
 
+        // 4. gub.uy (Keycloak local o testing)
         String oidcEndpoint = Config.valor("gub.issuer", "http://localhost:8083/realms/cargauy-test");
-        boolean oidcUp = sondearSocketDesdeUri(oidcEndpoint, 8083);
+        boolean oidcUp = probarSocket("gub", 8080)
+                || probarSocket("localhost", 8083)
+                || sondearSocketDesdeUri(oidcEndpoint, 8083);
+
+        String oidcDisplay = oidcEndpoint;
+        if (probarSocket("gub", 8080) || probarSocket("localhost", 8083)) {
+            oidcDisplay = "http://localhost:8083/realms/cargauy-test";
+        }
 
         nodos.add(new NodoPerifericoVista(
                 "NODO-OIDC-01",
-                "Proveedor de Identidad Usuario gub.uy",
-                "OIDC / OAuth 2.0 PKCE",
-                oidcEndpoint,
+                "Login gub.uy (Keycloak)",
+                "OIDC",
+                oidcDisplay,
                 oidcUp,
-                oidcUp ? "Emisor de Tokens Verificado" : "OFFLINE / Degradado (IdP OIDC Inalcanzable)"
+                oidcUp ? "Operativo" : "OFFLINE"
         ));
 
+        // 5. Colas JMS Artemis
         nodos.add(new NodoPerifericoVista(
                 "JMS-TRACKING",
-                "Cola Asíncrona de Eventos de Viaje",
-                "Jakarta Messaging (Artemis)",
+                "Cola de Tracking GPS",
+                "JMS",
                 "java:/jms/queue/TrackingQueue",
                 true,
-                "Consumidor TrackingMDB Activo (maxSession=10)"
+                "Operativo"
         ));
 
         nodos.add(new NodoPerifericoVista(
                 "JMS-FISC",
-                "Cola Asíncrona del Motor de Fiscalización",
-                "Jakarta Messaging (Artemis)",
+                "Cola de Fiscalización",
+                "JMS",
                 "java:/jms/queue/FiscalizacionQueue",
                 true,
-                "Consumidor FiscalizacionMDB Activo"
+                "Operativo"
         ));
 
-        boolean mongoUp = posicionNoSqlRepository != null && posicionNoSqlRepository.estaOperativo();
+        // 6. MongoDB NoSQL
+        boolean mongoUp = (posicionNoSqlRepository != null && posicionNoSqlRepository.estaOperativo())
+                || probarSocket("mongodb", 27017)
+                || probarSocket("localhost", 27017);
+
         String mongoEndpoint = posicionNoSqlRepository != null
                 ? posicionNoSqlRepository.obtenerDescriptorEndpoint()
                 : "mongodb://localhost:27017/cargauy_tracking.eventos_posicion";
@@ -147,13 +155,11 @@ public class AdminNodosBean implements Serializable {
 
         nodos.add(new NodoPerifericoVista(
                 "NOSQL-MONGO-01",
-                "Base NoSQL / Serie Temporal de Posiciones (MongoDB)",
-                "MongoDB 7 Time-Series / GeoJSON",
+                "Base NoSQL (MongoDB)",
+                "MongoDB",
                 mongoEndpoint,
                 mongoUp,
-                mongoUp
-                        ? "Colección Time-Series Activa (" + totalEventosMongo + " eventos de posición registrados)"
-                        : "OFFLINE / Degradado (Respaldo en Memoria Activo)"
+                mongoUp ? "Operativo (" + totalEventosMongo + " eventos)" : "OFFLINE"
         ));
     }
 
@@ -186,11 +192,46 @@ public class AdminNodosBean implements Serializable {
             if (host == null || host.isBlank()) {
                 host = "localhost";
             }
-            int port = uri.getPort() > 0 ? uri.getPort() : defaultPort;
-            try (Socket socket = new Socket()) {
-                socket.connect(new InetSocketAddress(host, port), (int) PROBE_TIMEOUT.toMillis());
+            int port = uri.getPort();
+            if (port <= 0) {
+                if ("https".equalsIgnoreCase(uri.getScheme())) {
+                    port = 443;
+                } else if ("http".equalsIgnoreCase(uri.getScheme())) {
+                    port = 80;
+                } else {
+                    port = defaultPort;
+                }
+            }
+            if (probarSocket(host, port)) {
                 return true;
             }
+            if ("localhost".equalsIgnoreCase(host) || "127.0.0.1".equals(host)) {
+                if (port == 8083 || uriStr.contains("realms") || uriStr.contains("gub")) {
+                    if (probarSocket("gub", 8080)) return true;
+                }
+                if (port == 1389) {
+                    if (probarSocket("ldap", 1389)) return true;
+                }
+                if (port == 8081 || uriStr.contains("pdi")) {
+                    if (probarSocket("mock-pdi", 8080)) return true;
+                }
+                if (port == 8082 || uriStr.contains("balanza")) {
+                    if (probarSocket("mock-balanza", 8080)) return true;
+                }
+                if (port == 27017) {
+                    if (probarSocket("mongodb", 27017)) return true;
+                }
+            }
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private boolean probarSocket(String host, int port) {
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress(host, port), (int) PROBE_TIMEOUT.toMillis());
+            return true;
         } catch (Exception e) {
             return false;
         }
@@ -199,68 +240,6 @@ public class AdminNodosBean implements Serializable {
     public void sondarNodos() {
         verificarNodos();
         mostrarMensaje(FacesMessage.SEVERITY_INFO, "Sondeo Completado", "Se actualizó el estado de salud de todos los nodos periféricos.");
-    }
-
-    public void cargarCatalogos() {
-        try {
-            String token = SesionActual.token();
-            rubros = plataformaService.listarRubros(token);
-            tiposCarga = plataformaService.listarTiposCarga(token);
-        } catch (Exception e) {
-            rubros = new ArrayList<>();
-            tiposCarga = new ArrayList<>();
-        }
-    }
-
-    public void crearRubro() {
-        if (nuevoRubroNombre == null || nuevoRubroNombre.isBlank()) {
-            mostrarMensaje(FacesMessage.SEVERITY_WARN, "Validación", "El nombre del rubro es obligatorio.");
-            return;
-        }
-        try {
-            plataformaService.crearRubro(SesionActual.token(), nuevoRubroNombre, nuevoRubroDesc);
-            nuevoRubroNombre = "";
-            nuevoRubroDesc = "";
-            cargarCatalogos();
-            mostrarMensaje(FacesMessage.SEVERITY_INFO, "Rubro Creado", "Se registró el nuevo rubro en el catálogo.");
-        } catch (Exception e) {
-            mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error al crear rubro", e.getMessage());
-        }
-    }
-
-    public void eliminarRubro(int codigo) {
-        try {
-            plataformaService.eliminarRubro(SesionActual.token(), codigo);
-            cargarCatalogos();
-            mostrarMensaje(FacesMessage.SEVERITY_INFO, "Rubro Eliminado", "Se eliminó el rubro #" + codigo);
-        } catch (Exception e) {
-            mostrarMensaje(FacesMessage.SEVERITY_ERROR, "No se puede eliminar", e.getMessage());
-        }
-    }
-
-    public void crearTipoCarga() {
-        if (nuevoTipoCargaDesc == null || nuevoTipoCargaDesc.isBlank()) {
-            mostrarMensaje(FacesMessage.SEVERITY_WARN, "Validación", "La descripción del tipo de carga es obligatoria.");
-            return;
-        }
-        try {
-            plataformaService.crearTipoCarga(SesionActual.token(), nuevoTipoCargaDesc);
-            nuevoTipoCargaDesc = "";
-            cargarCatalogos();
-            mostrarMensaje(FacesMessage.SEVERITY_INFO, "Tipo de Carga Creado", "Se agregó el tipo de carga al catálogo.");
-        } catch (Exception e) {
-            mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error", e.getMessage());
-        }
-    }
-
-    public void eliminarTipoCarga(int codigo) {
-        try {
-            plataformaService.eliminarTipoCarga(SesionActual.token(), codigo);
-            cargarCatalogos();
-            mostrarMensaje(FacesMessage.SEVERITY_INFO, "Tipo de Carga Eliminado", "Se eliminó el tipo de carga #" + codigo);
-        } catch (Exception e) {
-            mostrarMensaje(FacesMessage.SEVERITY_ERROR, "No se puede eliminar", e.getMessage());
-        }
     }
 
     private void mostrarMensaje(FacesMessage.Severity sev, String res, String det) {
@@ -272,37 +251,5 @@ public class AdminNodosBean implements Serializable {
 
     public List<NodoPerifericoVista> getNodos() {
         return nodos;
-    }
-
-    public List<GestionPlataformaService.RubroVista> getRubros() {
-        return rubros;
-    }
-
-    public List<GestionPlataformaService.TipoCargaVista> getTiposCarga() {
-        return tiposCarga;
-    }
-
-    public String getNuevoRubroNombre() {
-        return nuevoRubroNombre;
-    }
-
-    public void setNuevoRubroNombre(String nuevoRubroNombre) {
-        this.nuevoRubroNombre = nuevoRubroNombre;
-    }
-
-    public String getNuevoRubroDesc() {
-        return nuevoRubroDesc;
-    }
-
-    public void setNuevoRubroDesc(String nuevoRubroDesc) {
-        this.nuevoRubroDesc = nuevoRubroDesc;
-    }
-
-    public String getNuevoTipoCargaDesc() {
-        return nuevoTipoCargaDesc;
-    }
-
-    public void setNuevoTipoCargaDesc(String nuevoTipoCargaDesc) {
-        this.nuevoTipoCargaDesc = nuevoTipoCargaDesc;
     }
 }

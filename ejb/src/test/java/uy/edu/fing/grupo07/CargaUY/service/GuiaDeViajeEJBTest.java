@@ -245,7 +245,7 @@ class GuiaDeViajeEJBTest {
     @Test
     @DisplayName("listarGuiasPorCiudadano ejecuta consulta filtrada por ciudadano")
     void testListarGuiasPorCiudadano() {
-        when(em.createQuery(contains("WHERE c.id = :ciudadanoId"), eq(GuiaDeViaje.class))).thenReturn(qGuias);
+        when(em.createQuery(contains(":ciudadanoId"), eq(GuiaDeViaje.class))).thenReturn(qGuias);
         when(qGuias.setParameter("ciudadanoId", 7)).thenReturn(qGuias);
         when(qGuias.getResultList()).thenReturn(List.of(guia));
 

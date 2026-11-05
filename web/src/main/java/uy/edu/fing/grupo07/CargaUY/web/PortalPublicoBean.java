@@ -195,9 +195,9 @@ public class PortalPublicoBean implements Serializable {
         }
 
         Map<String, List<Vehiculo>> porRango = new LinkedHashMap<>();
-        porRango.put("Liviano (< 10.000 kg)", new ArrayList<>());
-        porRango.put("Mediano (10.000 - 20.000 kg)", new ArrayList<>());
-        porRango.put("Pesado (> 20.000 kg)", new ArrayList<>());
+        porRango.put("Transporte Liviano (hasta 10 t)", new ArrayList<>());
+        porRango.put("Transporte Mediano (10 a 20 t)", new ArrayList<>());
+        porRango.put("Transporte Pesado (más de 20 t)", new ArrayList<>());
 
         for (Vehiculo v : vehiculosPublicos) {
             if (v == null) {
@@ -205,11 +205,11 @@ public class PortalPublicoBean implements Serializable {
             }
             String categoria;
             if (v.getCapacidadCarga() < 10000) {
-                categoria = "Liviano (< 10.000 kg)";
+                categoria = "Transporte Liviano (hasta 10 t)";
             } else if (v.getCapacidadCarga() <= 20000) {
-                categoria = "Mediano (10.000 - 20.000 kg)";
+                categoria = "Transporte Mediano (10 a 20 t)";
             } else {
-                categoria = "Pesado (> 20.000 kg)";
+                categoria = "Transporte Pesado (más de 20 t)";
             }
             porRango.get(categoria).add(v);
         }
@@ -302,6 +302,14 @@ public class PortalPublicoBean implements Serializable {
         return vehiculosPublicos.stream()
                 .filter(v -> v.getEmpresa() != null && v.getEmpresa().getNroEmpresa() == nroEmpresa && v.isEstadoHabilitacion())
                 .count();
+    }
+
+    public int getTotalEmpresasRegistradas() {
+        return getTotalEmpresasActivas();
+    }
+
+    public int getTotalViajes() {
+        return getTotalViajesRegistrados();
     }
 
     public int getTotalEmpresasActivas() {

@@ -1,35 +1,39 @@
-<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+﻿<ui:composition xmlns="http://www.w3.org/1999/xhtml"
                 xmlns:h="jakarta.faces.html"
                 xmlns:f="jakarta.faces.core"
                 xmlns:ui="jakarta.faces.facelets"
                 xmlns:p="http://primefaces.org/ui"
                 template="/WEB-INF/templates/template.xhtml">
 
-    <ui:define name="title">Información Pública Agregada</ui:define>
+    <ui:define name="title">Portal de Transparencia e Información Pública</ui:define>
 
     <ui:define name="content">
-
         <div class="cuy-page-header">
             <div>
                 <h1 class="cuy-page-title">
-                    Información Pública y Estadísticas Agregadas
+                    <i class="pi pi-chart-bar" style="color: #2563eb;" />
+                    Información Pública de Cargas y Transporte
                 </h1>
+                <p class="cuy-page-subtitle">
+                    Portal de datos abiertos y transparencia activa del Sistema de Control de Transporte de Carga.
+                </p>
             </div>
         </div>
 
+        <!-- KPIs de Información Pública -->
         <div class="cuy-kpi-grid">
-            <div class="cuy-kpi-card">
-                <div class="cuy-kpi-label"><i class="pi pi-compass" /> Total Guías Emitidas</div>
-                <div class="cuy-kpi-value">#{portalPublicoBean.totalViajesRegistrados}</div>
-            </div>
-
             <div class="cuy-kpi-card success">
-                <div class="cuy-kpi-label"><i class="pi pi-building" /> Empresas Activas</div>
+                <div class="cuy-kpi-label"><i class="pi pi-building" /> Empresas Habilitadas</div>
                 <div class="cuy-kpi-value">#{portalPublicoBean.totalEmpresasActivas}</div>
             </div>
 
+            <div class="cuy-kpi-card">
+                <div class="cuy-kpi-label"><i class="pi pi-compass" /> Total Guías de Viaje</div>
+                <div class="cuy-kpi-value">#{portalPublicoBean.totalViajesRegistrados}</div>
+            </div>
+
             <div class="cuy-kpi-card warning">
-                <div class="cuy-kpi-label"><i class="pi pi-truck" /> Unidades en Padrón</div>
+                <div class="cuy-kpi-label"><i class="pi pi-truck" /> Vehículos Registrados</div>
                 <div class="cuy-kpi-value">#{portalPublicoBean.totalVehiculosRegistrados}</div>
             </div>
 
@@ -42,26 +46,26 @@
         <div class="cuy-card">
             <h:form id="formInfoPublica">
                 <p:tabView>
-                    <!-- Tab 1: Actividad de Transporte Agregada por Rubro (k >= 3) -->
+                    <!-- Tab 1: Actividad de Transporte Agregada por Rubro -->
                     <p:tab title="Actividad de transporte agregada">
                         <p:dataTable value="#{portalPublicoBean.estadisticasActividadAgregada}"
                                      var="est"
                                      paginator="true"
                                      rows="10"
                                      paginatorPosition="bottom"
-                                     emptyMessage="No se alcanza el umbral mínimo de agregación pública (k &#8805; #{portalPublicoBean.umbralMinimoAgregacion}) para publicar estadísticas desagregadas."
+                                     emptyMessage="No hay datos registrados para publicar estadísticas desagregadas."
                                      stripedRows="true"
                                      size="small">
 
-                            <p:column headerText="Ámbito / Corredor">
+                            <p:column headerText="Ámbito / Corredor" filterBy="#{est.corredor}" filterMatchMode="contains" filterPlaceholder="Filtrar corredor">
                                 <strong><h:outputText value="#{est.corredor}" /></strong>
                             </p:column>
 
-                            <p:column headerText="Rubro / Sector Productivo" filterBy="#{est.rubro}" filterMatchMode="contains">
+                            <p:column headerText="Rubro / Sector Productivo" filterBy="#{est.rubro}" filterMatchMode="contains" filterPlaceholder="Filtrar rubro">
                                 <h:outputText value="#{est.rubro}" />
                             </p:column>
 
-                            <p:column headerText="Viajes Consolidados (k &#8805; #{portalPublicoBean.umbralMinimoAgregacion})" style="width: 210px; text-align: right;">
+                            <p:column headerText="Viajes Consolidados" style="width: 210px; text-align: right;">
                                 <strong><h:outputText value="#{est.cantidadViajes}" /></strong>
                             </p:column>
 
@@ -74,22 +78,22 @@
                         </p:dataTable>
                     </p:tab>
 
-                    <!-- Tab 2: Padrón Agregado de Flota Nacional por Rango de Capacidad (k >= 3) -->
+                    <!-- Tab 2: Flota Nacional -->
                     <p:tab title="Estadísticas de flota nacional">
                         <p:dataTable value="#{portalPublicoBean.estadisticasFlotaAgregada}"
                                      var="flota"
                                      paginator="true"
                                      rows="10"
                                      paginatorPosition="bottom"
-                                     emptyMessage="No se alcanza el umbral mínimo de agregación pública (k &#8805; #{portalPublicoBean.umbralMinimoAgregacion}) para publicar estadísticas de flota."
+                                     emptyMessage="No hay datos de flota para publicar estadísticas."
                                      stripedRows="true"
                                      size="small">
 
-                            <p:column headerText="Categoría de Capacidad">
+                            <p:column headerText="Categoría de Capacidad" filterBy="#{flota.categoriaCapacidad}" filterMatchMode="contains" filterPlaceholder="Filtrar categoría">
                                 <strong><h:outputText value="#{flota.categoriaCapacidad}" /></strong>
                             </p:column>
 
-                            <p:column headerText="Unidades Registradas (k &#8805; #{portalPublicoBean.umbralMinimoAgregacion})" style="width: 210px; text-align: right;">
+                            <p:column headerText="Unidades Registradas" style="width: 210px; text-align: right;">
                                 <strong><h:outputText value="#{flota.cantidadUnidades}" /></strong>
                             </p:column>
 
@@ -106,15 +110,15 @@
                         </p:dataTable>
                     </p:tab>
 
-                    <!-- Tab 3: Distribución Consolidada por Estado Operativo -->
-                    <p:tab title="Distribución por estado operativo">
+                    <!-- Tab 3: Distribución Consolidada por Estado -->
+                    <p:tab title="Distribución por estado">
                         <p:dataTable value="#{portalPublicoBean.guiasPorEstadoEntries}"
                                      var="estGuia"
                                      emptyMessage="Sin registros consolidados por estado."
                                      stripedRows="true"
                                      size="small">
 
-                            <p:column headerText="Estado Operativo">
+                            <p:column headerText="Estado" filterBy="#{estGuia.key}" filterMatchMode="contains" filterPlaceholder="Filtrar estado">
                                 <strong><h:outputText value="#{estGuia.key}" /></strong>
                             </p:column>
 

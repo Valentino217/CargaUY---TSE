@@ -80,12 +80,21 @@ public class GuiaDeViajeBean implements Serializable {
 
     @PostConstruct
     public void init() {
+        String token = SesionActual.token();
         try {
-            guias = GuiaDeViajeEJB.listarParaActor(SesionActual.token());
-            empresas = vehiculoEJB.listarEmpresasParaActor(SesionActual.token());
+            empresas = vehiculoEJB.listarEmpresasParaActor(token);
+        } catch (Exception excepcion) {
+            empresas = new ArrayList<>();
+            mostrarMensaje(
+                    FacesMessage.SEVERITY_ERROR,
+                    "Error",
+                    "No se pudieron cargar las empresas: " + extraerMensaje(excepcion)
+            );
+        }
+        try {
+            guias = GuiaDeViajeEJB.listarParaActor(token);
         } catch (Exception excepcion) {
             guias = new ArrayList<>();
-            empresas = new ArrayList<>();
             mostrarMensaje(
                     FacesMessage.SEVERITY_ERROR,
                     "Error",

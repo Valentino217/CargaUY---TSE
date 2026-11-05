@@ -1,0 +1,101 @@
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/templates/template.xhtml">
+
+    <ui:define name="title">Catálogos de Plataforma</ui:define>
+
+    <ui:define name="content">
+        <div class="cuy-page-header">
+            <div>
+                <h1 class="cuy-page-title">
+                    <i class="pi pi-tags" style="color: #1d4ed8;" />
+                    Administración de Catálogos Maestros
+                </h1>
+                <p class="cuy-page-subtitle">
+                    Mantenimiento de rubros productivos y tipos de carga habilitados en el sistema de transporte.
+                </p>
+            </div>
+            <div>
+                <h:form id="refrescarCatalogosForm" style="margin: 0;">
+                    <p:commandButton value="Actualizar Catálogos"
+                                     icon="pi pi-refresh"
+                                     actionListener="#{adminCatalogosBean.cargarCatalogos}"
+                                     update=":catalogosForm :growl"
+                                     styleClass="ui-button-outlined ui-button-secondary" />
+                </h:form>
+            </div>
+        </div>
+
+        <!-- Catálogos Maestros: Rubros y Tipos de Carga en 2 columnas -->
+        <h:form id="catalogosForm">
+            <div class="cuy-grid-2">
+                <!-- Rubros -->
+                <div class="cuy-card" style="margin-bottom: 0;">
+                    <h3 class="cuy-card-title">
+                        <i class="pi pi-tags" style="color: #2563eb;" /> Catálogo de Rubros de Actividad
+                    </h3>
+                    <div style="display: flex; gap: 0.5rem; margin-bottom: 0.85rem;">
+                        <p:inputText value="#{adminCatalogosBean.nuevoRubroNombre}" placeholder="Nombre del rubro..." style="flex: 1;" />
+                        <p:inputText value="#{adminCatalogosBean.nuevoRubroDesc}" placeholder="Descripción..." style="flex: 1;" />
+                        <p:commandButton value="Agregar"
+                                         icon="pi pi-plus"
+                                         actionListener="#{adminCatalogosBean.crearRubro}"
+                                         update="tablaRubrosAdmin :growl"
+                                         styleClass="ui-button-primary" />
+                    </div>
+                    <p:dataTable id="tablaRubrosAdmin" var="rub" value="#{adminCatalogosBean.rubros}" size="small" stripedRows="true" paginator="true" rows="8">
+                        <p:column headerText="Cód." style="width: 70px;">
+                            <span class="cuy-mono">##{rub.codigo()}</span>
+                        </p:column>
+                        <p:column headerText="Rubro">
+                            <strong>#{rub.nombre()}</strong>
+                            <div style="font-size: 0.78rem; color: #64748b;">#{rub.descripcion()}</div>
+                        </p:column>
+                        <p:column headerText="Baja" style="width: 70px; text-align: center;">
+                            <p:commandButton icon="pi pi-trash"
+                                             actionListener="#{adminCatalogosBean.eliminarRubro(rub.codigo())}"
+                                             update="tablaRubrosAdmin :growl"
+                                             styleClass="ui-button-outlined ui-button-danger ui-button-sm">
+                                 <p:confirm header="Eliminar Rubro" message="¿Eliminar el rubro #{rub.nombre()}?" icon="pi pi-exclamation-triangle" />
+                            </p:commandButton>
+                        </p:column>
+                    </p:dataTable>
+                </div>
+
+                <!-- Tipos de Carga -->
+                <div class="cuy-card" style="margin-bottom: 0;">
+                    <h3 class="cuy-card-title">
+                        <i class="pi pi-box" style="color: #059669;" /> Catálogo de Tipos de Carga
+                    </h3>
+                    <div style="display: flex; gap: 0.5rem; margin-bottom: 0.85rem;">
+                        <p:inputText value="#{adminCatalogosBean.nuevoTipoCargaDesc}" placeholder="Descripción del tipo de carga (ej. Celulosa, Granel)..." style="flex: 1;" />
+                        <p:commandButton value="Agregar"
+                                         icon="pi pi-plus"
+                                         actionListener="#{adminCatalogosBean.crearTipoCarga}"
+                                         update="tablaTiposCargaAdmin :growl"
+                                         styleClass="ui-button-primary" />
+                    </div>
+                    <p:dataTable id="tablaTiposCargaAdmin" var="tc" value="#{adminCatalogosBean.tiposCarga}" size="small" stripedRows="true" paginator="true" rows="8">
+                        <p:column headerText="Cód." style="width: 70px;">
+                            <span class="cuy-mono">##{tc.codigo()}</span>
+                        </p:column>
+                        <p:column headerText="Descripción">
+                            <strong>#{tc.descripcion()}</strong>
+                        </p:column>
+                        <p:column headerText="Baja" style="width: 70px; text-align: center;">
+                            <p:commandButton icon="pi pi-trash"
+                                             actionListener="#{adminCatalogosBean.eliminarTipoCarga(tc.codigo())}"
+                                             update="tablaTiposCargaAdmin :growl"
+                                             styleClass="ui-button-outlined ui-button-danger ui-button-sm">
+                                <p:confirm header="Eliminar Tipo de Carga" message="¿Eliminar #{tc.descripcion()}?" icon="pi pi-exclamation-triangle" />
+                            </p:commandButton>
+                        </p:column>
+                    </p:dataTable>
+                </div>
+            </div>
+        </h:form>
+    </ui:define>
+</ui:composition>
