@@ -75,12 +75,12 @@ services:
       dockerfile: docker/wildfly/Dockerfile
     restart: unless-stopped
     depends_on:
-      postgres:
-        condition: service_healthy
-      mongodb:
-        condition: service_started
-      ldap:
-        condition: service_started
+      - postgres
+      - mongodb
+      - ldap
+
+
+
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
