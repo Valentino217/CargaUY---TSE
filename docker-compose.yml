@@ -56,7 +56,7 @@ services:
     build: ./docker/mock-pdi
     restart: unless-stopped
     environment:
-      PDI_PUBLIC_ENDPOINT: http://localhost:8081/pdi/ws
+      PDI_PUBLIC_ENDPOINT: http://mock-pdi:8080/pdi/ws
       PDI_DELAY_SECONDS: "0"
     ports:
       - "8081:8080"
