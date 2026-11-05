@@ -35,6 +35,8 @@ services:
     image: quay.io/keycloak/keycloak:26.4.7
     restart: unless-stopped
     command: ["start-dev", "--import-realm"]
+    security_opt:
+      - seccomp:unconfined
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME:-gestor-idp}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD:-nr4i7WZyse1sY3oQkYKI6Nm4z5RjOn7tOJxDjT5EUm8}
@@ -73,6 +75,8 @@ services:
     build:
       context: .
       dockerfile: docker/wildfly/Dockerfile
+    security_opt:
+      - seccomp:unconfined
     restart: unless-stopped
     depends_on:
       - postgres

@@ -39,9 +39,10 @@ COPY --chown=jboss:jboss docker/wildfly/postgresql-42.7.4.jar /opt/jboss/wildfly
 COPY --chown=jboss:jboss docker/wildfly/module.xml /opt/jboss/wildfly/modules/org/postgresql/main/
 
 # Copiar y ejecutar script de configuración CLI contra standalone-full.xml
-COPY --chown=jboss:jboss docker/wildfly/configure-wildfly.cli /opt/jboss/
-RUN /opt/jboss/wildfly/bin/jboss-cli.sh --file=/opt/jboss/configure-wildfly.cli && \
-    rm -rf /opt/jboss/wildfly/standalone/configuration/standalone_xml_history
+# Copiar configuración standalone-full.xml con PostgreSQLDS y colas JMS preconfiguradas
+COPY --chown=jboss:jboss docker/wildfly/standalone-full.xml /opt/jboss/wildfly/standalone/configuration/standalone-full.xml
+# Configuración aplicada directamente via standalone-full.xml
+
 
 # Copiar el EAR compilado en la etapa 1
 COPY --from=build --chown=jboss:jboss /build/ear/target/CargaUY.ear /opt/jboss/wildfly/standalone/deployments/
