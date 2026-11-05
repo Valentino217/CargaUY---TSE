@@ -1,9 +1,7 @@
-FROM debian:bookworm-slim
-RUN apt-get update -o Acquire::AllowInsecureRepositories=true -o Acquire::AllowDowngradeToInsecureRepositories=true || true && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-unauthenticated --no-install-recommends debian-archive-keyring ca-certificates || true && \
-    apt-get update && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends slapd ldap-utils && \
-    rm -rf /var/lib/apt/lists/*
+FROM alpine:3.19
+RUN apk add --no-cache openldap openldap-clients openldap-back-mdb && \
+    mkdir -p /etc/ldap && ln -s /etc/openldap/schema /etc/ldap/schema && \
+    mkdir -p /usr/lib/ldap && ln -s /usr/lib/openldap/* /usr/lib/ldap/
 COPY iniciar.sh /iniciar.sh
 RUN chmod 755 /iniciar.sh
 EXPOSE 1389
