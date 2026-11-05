@@ -32,29 +32,36 @@
         <!-- Tabla de Nodos -->
         <h:form id="nodosForm">
             <div class="cuy-card">
-                <p:dataTable id="tablaNodos"
+                <p:dataTable id="tablaNodos" widgetVar="dtNodos"
                              var="nodo"
                              value="#{adminNodosBean.nodos}"
                              stripedRows="true"
                              size="small">
 
-                    <p:column headerText="Código" style="width: 135px;">
+                    <p:column headerText="Código" filterBy="#{nodo.codigo()}" filterMatchMode="contains" filterPlaceholder="Código" style="width: 135px;">
                         <span class="cuy-mono">#{nodo.codigo()}</span>
                     </p:column>
 
-                    <p:column headerText="Nodo / Subsistema">
+                    <p:column headerText="Nodo / Subsistema" filterBy="#{nodo.nombre()}" filterMatchMode="contains" filterPlaceholder="Nombre" style="width: 250px;">
                         <strong style="color: #0f2942;">#{nodo.nombre()}</strong>
                     </p:column>
 
-                    <p:column headerText="Protocolo" style="width: 140px;">
+                    <p:column headerText="Protocolo" filterBy="#{nodo.tipo()}" filterMatchMode="contains" filterPlaceholder="Protocolo" style="width: 140px;">
                         <p:tag value="#{nodo.tipo()}" severity="info" rounded="true" />
                     </p:column>
 
-                    <p:column headerText="Endpoint / Destino">
+                    <p:column headerText="Endpoint / Destino" filterBy="#{nodo.endpoint()}" filterMatchMode="contains" filterPlaceholder="Endpoint">
                         <span class="cuy-mono" style="font-size: 0.78rem;">#{nodo.endpoint()}</span>
                     </p:column>
 
-                    <p:column headerText="Estado" style="width: 140px; text-align: center;">
+                    <p:column headerText="Estado" filterBy="#{nodo.online() ? 'ONLINE' : 'OFFLINE'}" filterMatchMode="exact" style="width: 155px; text-align: center;">
+                        <f:facet name="filter">
+                            <p:selectOneMenu onchange="PF('dtNodos').filter()" styleClass="ui-custom-filter" style="width: 100%;">
+                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItem itemLabel="ONLINE" itemValue="ONLINE" />
+                                <f:selectItem itemLabel="OFFLINE" itemValue="OFFLINE" />
+                            </p:selectOneMenu>
+                        </f:facet>
                         <p:tag value="#{nodo.online() ? 'ONLINE' : 'OFFLINE'}"
                                severity="#{nodo.online() ? 'success' : 'danger'}"
                                icon="#{nodo.online() ? 'pi pi-check-circle' : 'pi pi-times-circle'}"

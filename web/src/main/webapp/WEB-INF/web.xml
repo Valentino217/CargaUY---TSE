@@ -6,6 +6,17 @@
          version="6.0">
 
     <filter>
+        <filter-name>CharacterEncodingFilter</filter-name>
+        <filter-class>uy.edu.fing.grupo07.CargaUY.web.CharacterEncodingFilter</filter-class>
+    </filter>
+    <filter-mapping>
+        <filter-name>CharacterEncodingFilter</filter-name>
+        <url-pattern>/*</url-pattern>
+        <dispatcher>REQUEST</dispatcher>
+        <dispatcher>FORWARD</dispatcher>
+    </filter-mapping>
+
+    <filter>
         <filter-name>NacimientoPendiente</filter-name>
         <filter-class>uy.edu.fing.grupo07.CargaUY.web.NacimientoPendienteFilter</filter-class>
     </filter>
@@ -25,6 +36,11 @@
         <servlet-name>FacesServlet</servlet-name>
         <url-pattern>*.xhtml</url-pattern>
     </servlet-mapping>
+
+    <context-param>
+        <param-name>jakarta.faces.FACELETS_ENCODING</param-name>
+        <param-value>UTF-8</param-value>
+    </context-param>
 
     <context-param>
         <param-name>primefaces.THEME</param-name>

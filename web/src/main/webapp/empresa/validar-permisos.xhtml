@@ -100,46 +100,80 @@
                     </div>
 
                     <!-- Tabla de Flota -->
-                    <p:dataTable value="#{validacionPermisosBean.resultado.unidades()}"
+                    <p:dataTable id="tablaValidarPermisos"
+                                 widgetVar="dtValidarPermisos"
+                                 value="#{validacionPermisosBean.resultado.unidades()}"
                                  var="u"
                                  emptyMessage="Sin vehículos registrados: información insuficiente para evaluar la flota."
                                  stripedRows="true"
                                  size="small"
                                  reflow="true">
 
-                        <p:column headerText="Matrícula" style="width: 130px; text-align: center;">
+                        <p:column headerText="Matrícula" filterBy="#{u.matricula()}" filterMatchMode="contains" filterPlaceholder="Matrícula" style="width: 130px; text-align: center;">
                             <span class="cuy-mono" style="font-weight: 700; font-size: 0.95rem;">
                                 <h:outputText value="#{u.matricula()}"/>
                             </span>
                         </p:column>
 
-                        <p:column headerText="Habilitación Admin." style="width: 170px; text-align: center;">
+                        <p:column headerText="Habilitación Admin." filterBy="#{u.habilitacionAdministrativa() ? 'HABILITADA' : 'INHABILITADA'}" filterMatchMode="exact" style="width: 175px; text-align: center;">
+                            <f:facet name="filter">
+                                <p:selectOneMenu onchange="PF('dtValidarPermisos').filter()" styleClass="ui-custom-filter" style="width: 100%;">
+                                    <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                    <f:selectItem itemLabel="HABILITADA" itemValue="HABILITADA" />
+                                    <f:selectItem itemLabel="INHABILITADA" itemValue="INHABILITADA" />
+                                </p:selectOneMenu>
+                            </f:facet>
                             <p:tag value="#{u.habilitacionAdministrativa() ? 'HABILITADA' : 'INHABILITADA'}"
                                    severity="#{u.habilitacionAdministrativa() ? 'success' : 'danger'}"
                                    rounded="true" />
                         </p:column>
 
-                        <p:column headerText="PNC" style="width: 130px; text-align: center;">
+                        <p:column headerText="PNC" filterBy="#{u.estadoPnc()}" filterMatchMode="exact" style="width: 140px; text-align: center;">
+                            <f:facet name="filter">
+                                <p:selectOneMenu onchange="PF('dtValidarPermisos').filter()" styleClass="ui-custom-filter" style="width: 100%;">
+                                    <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                    <f:selectItem itemLabel="VIGENTE" itemValue="VIGENTE" />
+                                    <f:selectItem itemLabel="POR VENCER" itemValue="POR VENCER" />
+                                    <f:selectItem itemLabel="VENCIDO" itemValue="VENCIDO" />
+                                    <f:selectItem itemLabel="SIN REGISTRO" itemValue="SIN REGISTRO" />
+                                </p:selectOneMenu>
+                            </f:facet>
                             <p:tag value="#{u.estadoPnc()}"
                                    severity="#{u.estadoPnc() eq 'VIGENTE' ? 'success' : 'warning'}"
                                    rounded="true" />
                         </p:column>
 
-                        <p:column headerText="Vencimiento PNC" style="width: 140px; text-align: center;">
+                        <p:column headerText="Vencimiento PNC" filterBy="#{u.vencimientoPnc()}" filterMatchMode="contains" filterPlaceholder="Vence PNC" style="width: 140px; text-align: center;">
                             <h:outputText value="#{u.vencimientoPnc() != null ? u.vencimientoPnc() : 'S/D'}"/>
                         </p:column>
 
-                        <p:column headerText="ITV" style="width: 130px; text-align: center;">
+                        <p:column headerText="ITV" filterBy="#{u.estadoItv()}" filterMatchMode="exact" style="width: 140px; text-align: center;">
+                            <f:facet name="filter">
+                                <p:selectOneMenu onchange="PF('dtValidarPermisos').filter()" styleClass="ui-custom-filter" style="width: 100%;">
+                                    <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                    <f:selectItem itemLabel="VIGENTE" itemValue="VIGENTE" />
+                                    <f:selectItem itemLabel="POR VENCER" itemValue="POR VENCER" />
+                                    <f:selectItem itemLabel="VENCIDO" itemValue="VENCIDO" />
+                                    <f:selectItem itemLabel="SIN REGISTRO" itemValue="SIN REGISTRO" />
+                                </p:selectOneMenu>
+                            </f:facet>
                             <p:tag value="#{u.estadoItv()}"
                                    severity="#{u.estadoItv() eq 'VIGENTE' ? 'success' : 'warning'}"
                                    rounded="true" />
                         </p:column>
 
-                        <p:column headerText="Vencimiento ITV" style="width: 140px; text-align: center;">
+                        <p:column headerText="Vencimiento ITV" filterBy="#{u.vencimientoItv()}" filterMatchMode="contains" filterPlaceholder="Vence ITV" style="width: 140px; text-align: center;">
                             <h:outputText value="#{u.vencimientoItv() != null ? u.vencimientoItv() : 'S/D'}"/>
                         </p:column>
 
-                        <p:column headerText="Resultado Unidad" style="width: 160px; text-align: center;">
+                        <p:column headerText="Resultado Unidad" filterBy="#{u.resultado()}" filterMatchMode="exact" style="width: 165px; text-align: center;">
+                            <f:facet name="filter">
+                                <p:selectOneMenu onchange="PF('dtValidarPermisos').filter()" styleClass="ui-custom-filter" style="width: 100%;">
+                                    <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                    <f:selectItem itemLabel="HABILITADA" itemValue="HABILITADA" />
+                                    <f:selectItem itemLabel="INHABILITADA" itemValue="INHABILITADA" />
+                                </p:selectOneMenu>
+                            </f:facet>
                             <p:tag value="#{u.resultado()}"
                                    severity="#{u.resultado() eq 'HABILITADA' ? 'success' : 'danger'}"
                                    icon="#{u.resultado() eq 'HABILITADA' ? 'pi pi-check' : 'pi pi-times'}"

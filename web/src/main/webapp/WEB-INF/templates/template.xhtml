@@ -462,10 +462,10 @@
                 <!-- 2. CIUDADANO EMPRESA -->
                 <p:submenu label="Mi Empresa" icon="pi pi-building" rendered="#{authBean.esCiudadanoEmpresa()}">
                     <p:menuitem value="Perfil y Empresas" icon="pi pi-id-card" outcome="/empresa/perfil.xhtml" />
-                    <p:menuitem value="Flota de Vehículos" icon="pi pi-car" outcome="/empresa/vehiculos.xhtml" />
+                    <p:menuitem value="Vehículos" icon="pi pi-car" outcome="/empresa/vehiculos.xhtml" />
                     <p:menuitem value="Guías de Viaje" icon="pi pi-map" outcome="/empresa/viajes.xhtml" />
                     <p:separator />
-                    <p:menuitem value="Infracciones y Descargos" icon="pi pi-exclamation-circle" outcome="/empresa/infracciones.xhtml" />
+                    <p:menuitem value="Infracciones" icon="pi pi-exclamation-circle" outcome="/empresa/infracciones.xhtml" />
                     <p:menuitem value="Validar permisos" icon="pi pi-verified" outcome="/empresa/validar-permisos.xhtml" />
                 </p:submenu>
 
@@ -474,9 +474,9 @@
 
                 <!-- 3. FUNCIONARIO -->
                 <p:submenu label="Fiscalización y Ruta" icon="pi pi-shield" rendered="#{authBean.esFuncionario()}">
-                    <p:menuitem value="Empresas Registradas" icon="pi pi-building" outcome="/funcionario/empresas.xhtml" />
-                    <p:menuitem value="Fiscalización de Flota (ITV / PNC)" icon="pi pi-check-square" outcome="/funcionario/fiscalizacion-vehiculos.xhtml" />
-                    <p:menuitem value="Monitoreo de Viajes y Balanzas" icon="pi pi-compass" outcome="/funcionario/monitoreo.xhtml" />
+                    <p:menuitem value="Empresas" icon="pi pi-building" outcome="/funcionario/empresas.xhtml" />
+                    <p:menuitem value="Documentación de Vehículos" icon="pi pi-check-square" outcome="/funcionario/fiscalizacion-vehiculos.xhtml" />
+                    <p:menuitem value="Monitoreo de Viajes" icon="pi pi-compass" outcome="/funcionario/monitoreo.xhtml" />
                     <p:separator />
                     <p:menuitem value="Bandeja de Fiscalización" icon="pi pi-inbox" outcome="/funcionario/bandeja-fiscalizacion.xhtml" />
                 </p:submenu>
@@ -491,8 +491,8 @@
                 <p:submenu label="Administración" icon="pi pi-cog" rendered="#{authBean.esAdministrador()}">
                     <p:menuitem value="Usuarios y Roles" icon="pi pi-users" outcome="/admin/usuarios.xhtml" />
                     <p:menuitem value="Nodos" icon="pi pi-server" outcome="/admin/nodos.xhtml" />
-                    <p:menuitem value="Catálogos de Plataforma" icon="pi pi-tags" outcome="/admin/catalogos.xhtml" />
-                    <p:menuitem value="Parámetros de Fiscalización" icon="pi pi-sliders-h" outcome="/admin/reglas-fiscalizacion.xhtml" />
+                    <p:menuitem value="Catálogos" icon="pi pi-tags" outcome="/admin/catalogos.xhtml" />
+                    <p:menuitem value="Reglas de Fiscalización" icon="pi pi-sliders-h" outcome="/admin/reglas-fiscalizacion.xhtml" />
                     <p:menuitem value="Validar permisos" icon="pi pi-verified" outcome="/empresa/validar-permisos.xhtml" />
                 </p:submenu>
 

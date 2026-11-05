@@ -183,3 +183,17 @@ body .cuy-kpi-card .cuy-kpi-label > .pi {
     line-height: 1;
     font-size: 1.75rem;
 }
+
+/* Modal de Expediente Amplio y Auditoria Inmutable */
+body .cuy-modal-expediente.ui-dialog {
+    width: 90vw !important;
+    max-width: 1100px !important;
+    min-width: min(850px, 95vw) !important;
+}
+body .cuy-modal-expediente .ui-dialog-content {
+    max-height: 75vh !important;
+    overflow-y: auto !important;
+}
+.cuy-modal-expediente .cuy-aud-col-fixed {
+    white-space: nowrap !important;
+}

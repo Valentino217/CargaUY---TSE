@@ -15,7 +15,7 @@
                     Bandeja de Trabajo de Fiscalización e Infracciones
                 </h1>
                 <p class="cuy-page-subtitle">
-                    Evaluación de evidencia técnica, revisión de descargos de empresas y resolución administrativa con historial
+                    Bandeja de expedientes de infracción y descargos
                 </p>
             </div>
             <div style="display: flex; gap: 0.6rem;">
@@ -66,7 +66,7 @@
                     <f:facet name="header">
                         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
                             <span style="font-weight: 700; color: #0f2942;">
-                                <i class="pi pi-briefcase" style="margin-right: 0.4rem;" /> Expedientes Activos e Históricos
+                                <i class="pi pi-briefcase" style="margin-right: 0.4rem;" /> Expedientes
                             </span>
                         </div>
                     </f:facet>
@@ -150,10 +150,8 @@
                   widgetVar="dlgResolverWidget"
                   modal="true"
                   responsive="true"
-                  width="1050"
-                  style="min-width: 850px; max-width: 96vw;"
+                  styleClass="cuy-modal-expediente"
                   fitViewport="true"
-                  contentStyle="max-height: 75vh; overflow-y: auto;"
                   closeOnEscape="true">
             <h:form id="dlgResolverForm">
                 <h:panelGroup rendered="#{bandejaFiscalizacionBean.casoSeleccionado != null}">
@@ -213,20 +211,20 @@
                                              size="small"
                                              stripedRows="true"
                                              reflow="false">
-                                    <p:column headerText="Acción" style="width: 160px; min-width: 140px;">
+                                    <p:column headerText="Acción" style="width: 170px; min-width: 140px;" styleClass="cuy-aud-col-fixed">
                                         <span class="cuy-mono" style="font-size: 0.76rem; font-weight: 700;">#{aud.accion()}</span>
                                     </p:column>
-                                    <p:column headerText="Estado" style="width: 110px; min-width: 95px;">
+                                    <p:column headerText="Estado" style="width: 120px; min-width: 100px;" styleClass="cuy-aud-col-fixed">
                                         <h:outputText value="#{aud.resolucion()}" style="font-size: 0.78rem;" />
                                     </p:column>
-                                    <p:column headerText="Autor" style="width: 160px; min-width: 130px;">
+                                    <p:column headerText="Autor" style="width: 180px; min-width: 140px;" styleClass="cuy-aud-col-fixed">
                                         <h:outputText value="#{aud.usuario()}" style="font-size: 0.78rem;" />
                                     </p:column>
-                                    <p:column headerText="Timestamp" style="width: 155px; min-width: 135px; word-break: break-all;">
+                                    <p:column headerText="Timestamp" style="width: 175px; min-width: 150px;" styleClass="cuy-aud-col-fixed">
                                         <span class="cuy-mono" style="font-size: 0.74rem;">#{aud.timestampCreacion()}</span>
                                     </p:column>
                                     <p:column headerText="Fundamento / Detalle" style="min-width: 250px;">
-                                        <h:outputText value="#{aud.fundamento()}" style="font-size: 0.78rem;" />
+                                        <h:outputText value="#{aud.fundamento()}" style="font-size: 0.78rem; white-space: normal;" />
                                     </p:column>
                                 </p:dataTable>
                             </div>

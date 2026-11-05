@@ -1,4 +1,4 @@
-<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+﻿<ui:composition xmlns="http://www.w3.org/1999/xhtml"
                 xmlns:h="jakarta.faces.html"
                 xmlns:f="jakarta.faces.core"
                 xmlns:ui="jakarta.faces.facelets"
@@ -27,7 +27,7 @@
                                      icon="pi pi-cloud-download"
                                      actionListener="#{detalleViajeBean.sincronizarMockBalanza}"
                                      update=":monitoreoForm :growl"
-                                     title="Sincronizar pesada del mock periférico (si el camión no tiene guía EN_CURSO, dispara fiscalización VIAJE_SIN_GUIA)"
+                                     title="Simular pesaje de balanza"
                                      styleClass="ui-button-outlined ui-button-info" />
                     <p:commandButton value="Registrar Pesaje Manual"
                                      icon="pi pi-sliders-h"
@@ -70,7 +70,7 @@
                                severity="#{detalleViajeBean.guiaActual.estado.name() eq 'EN_CURSO' ? 'info' : (detalleViajeBean.guiaActual.estado.name() eq 'FINALIZADO' ? 'success' : 'warning')}"
                                rounded="true" />
                         <div style="font-size: 0.9rem; color: #0f2942; font-weight: 700; margin-top: 0.4rem;">
-                            Volumen / Peso Declarado: <h:outputText value="#{detalleViajeBean.guiaActual.volumenCarga}"><f:convertNumber pattern="#,##0" /></h:outputText> kg
+                            Peso de la carga: <h:outputText value="#{detalleViajeBean.guiaActual.volumenCarga}"><f:convertNumber pattern="#,##0" /></h:outputText> kg
                         </div>
                     </h:panelGroup>
                 </div>

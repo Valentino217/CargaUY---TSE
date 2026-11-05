@@ -29,7 +29,7 @@
         <!-- KPIs -->
         <h:panelGroup id="kpiInfGroup" layout="block" styleClass="cuy-kpi-grid">
             <div class="cuy-kpi-card warning">
-                <div class="cuy-kpi-label"><i class="pi pi-bell" /> Notificadas / Pendientes</div>
+                <div class="cuy-kpi-label"><i class="pi pi-bell" /> Pendientes</div>
                 <div class="cuy-kpi-value">#{empresaInfraccionesBean.totalActivas}</div>
             </div>
             <div class="cuy-kpi-card">
@@ -37,7 +37,7 @@
                 <div class="cuy-kpi-value">#{empresaInfraccionesBean.totalEnDescargo}</div>
             </div>
             <div class="cuy-kpi-card danger">
-                <div class="cuy-kpi-label"><i class="pi pi-ban" /> Sanciones Confirmadas</div>
+                <div class="cuy-kpi-label"><i class="pi pi-ban" /> Confirmadas</div>
                 <div class="cuy-kpi-value">#{empresaInfraccionesBean.totalConfirmadas}</div>
             </div>
         </h:panelGroup>
@@ -48,7 +48,7 @@
                 <div>
                     <strong style="color: #92400e; font-size: 0.95rem;">Notificación de Fiscalización</strong>
                     <div style="color: #78350f; font-size: 0.85rem; margin-top: 0.15rem;">
-                        Su empresa tiene <strong>#{empresaInfraccionesBean.totalActivas}</strong> infracción(es) notificada(s) formalmente por la autoridad administrativa pendiente(s) de presentar descargo.
+                        Su empresa tiene <strong>#{empresaInfraccionesBean.totalActivas}</strong> infracción(es) pendiente(s) de presentar descargo.
                     </div>
                 </div>
             </div>
@@ -151,10 +151,8 @@
                   widgetVar="dlgDescargoWidget"
                   modal="true"
                   responsive="true"
-                  width="1050"
-                  style="min-width: 850px; max-width: 96vw;"
+                  styleClass="cuy-modal-expediente"
                   fitViewport="true"
-                  contentStyle="max-height: 75vh; overflow-y: auto;"
                   closeOnEscape="true">
             <h:form id="dlgDescargoForm">
                 <h:panelGroup rendered="#{empresaInfraccionesBean.seleccionada != null}">
@@ -208,20 +206,20 @@
                                              size="small"
                                              stripedRows="true"
                                              reflow="false">
-                                    <p:column headerText="Acción" style="width: 160px; min-width: 140px;">
+                                    <p:column headerText="Acción" style="width: 170px; min-width: 140px;" styleClass="cuy-aud-col-fixed">
                                         <span class="cuy-mono" style="font-size: 0.76rem; font-weight: 700;">#{aud.accion()}</span>
                                     </p:column>
-                                    <p:column headerText="Estado" style="width: 110px; min-width: 95px;">
+                                    <p:column headerText="Estado" style="width: 120px; min-width: 100px;" styleClass="cuy-aud-col-fixed">
                                         <h:outputText value="#{aud.resolucion()}" style="font-size: 0.78rem;" />
                                     </p:column>
-                                    <p:column headerText="Autor" style="width: 160px; min-width: 130px;">
+                                    <p:column headerText="Autor" style="width: 180px; min-width: 140px;" styleClass="cuy-aud-col-fixed">
                                         <h:outputText value="#{aud.usuario()}" style="font-size: 0.78rem;" />
                                     </p:column>
-                                    <p:column headerText="Timestamp" style="width: 155px; min-width: 135px; word-break: break-all;">
+                                    <p:column headerText="Timestamp" style="width: 175px; min-width: 150px;" styleClass="cuy-aud-col-fixed">
                                         <span class="cuy-mono" style="font-size: 0.74rem;">#{aud.timestampCreacion()}</span>
                                     </p:column>
                                     <p:column headerText="Fundamento / Detalle" style="min-width: 250px;">
-                                        <h:outputText value="#{aud.fundamento()}" style="font-size: 0.78rem;" />
+                                        <h:outputText value="#{aud.fundamento()}" style="font-size: 0.78rem; white-space: normal;" />
                                     </p:column>
                                 </p:dataTable>
                             </div>

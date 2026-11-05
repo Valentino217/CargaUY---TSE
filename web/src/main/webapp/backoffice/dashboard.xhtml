@@ -235,13 +235,6 @@
                             <span style="font-weight: 700; color: #0f2942;">
                                 <i class="pi pi-table" style="margin-right: 0.4rem;" /> Expedientes
                             </span>
-                            <span class="ui-input-icon-left">
-                                <i class="pi pi-search" />
-                                <p:inputText id="globalFilter"
-                                             onkeyup="PF('dtConsolidada').filter()"
-                                             placeholder="Buscar..."
-                                             style="width: 240px;" />
-                            </span>
                         </div>
                     </f:facet>
 
@@ -310,10 +303,8 @@
                   widgetVar="dlgResolverDashWidget"
                   modal="true"
                   responsive="true"
-                  width="1050"
-                  style="min-width: 850px; max-width: 96vw;"
+                  styleClass="cuy-modal-expediente"
                   fitViewport="true"
-                  contentStyle="max-height: 75vh; overflow-y: auto;"
                   closeOnEscape="true">
             <h:form id="dlgResolverDashForm">
                 <h:panelGroup rendered="#{bandejaFiscalizacionBean.casoSeleccionado != null}">

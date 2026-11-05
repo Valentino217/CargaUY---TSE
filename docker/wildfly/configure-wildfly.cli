@@ -64,5 +64,8 @@ if (outcome != success) of /subsystem=logging/logger=uy.edu.fing.grupo07:read-re
     /subsystem=logging/logger=uy.edu.fing.grupo07:add(level=DEBUG)
 end-if
 
+echo Configurando default-encoding UTF-8 en Undertow...
+/subsystem=undertow/servlet-container=default:write-attribute(name=default-encoding,value=UTF-8)
+
 echo Configuración finalizada con éxito.
 stop-embedded-server

@@ -12,7 +12,7 @@
             <div>
                 <h1 class="cuy-page-title">
                     <i class="pi pi-sliders-h" style="color: #1d4ed8;" />
-                    Parámetros y Umbrales de Fiscalización
+                    Reglas de Fiscalización
                 </h1>
             </div>
         </div>
@@ -21,11 +21,11 @@
             <!-- KPIs del estado actual -->
             <div class="cuy-kpi-grid">
                 <div class="cuy-kpi-card warning">
-                    <div class="cuy-kpi-label"><i class="pi pi-box" /> Umbral Tolerancia de Carga</div>
+                    <div class="cuy-kpi-label"><i class="pi pi-box" /> Tolerancia de Carga</div>
                     <div class="cuy-kpi-value">+#{adminReglasBean.cargaKg} kg</div>
                 </div>
                 <div class="cuy-kpi-card">
-                    <div class="cuy-kpi-label"><i class="pi pi-compass" /> Umbral Tolerancia Desvío de Ruta</div>
+                    <div class="cuy-kpi-label"><i class="pi pi-compass" /> Tolerancia de Desvío</div>
                     <div class="cuy-kpi-value">#{adminReglasBean.desvioKm} km</div>
                 </div>
             </div>
@@ -50,7 +50,7 @@
                                        minValue="0"
                                        required="true" />
                         <small style="color: #64748b; display: block;">
-                            Margen permitido por encima de la capacidad del vehículo o peso declarado en guía.
+                            Tolerancia de peso permitida en balanza.
                         </small>
                     </div>
 
@@ -75,13 +75,13 @@
                                      update=":reglasForm"
                                      styleClass="ui-button-outlined ui-button-secondary" />
 
-                    <p:commandButton value="Aplicar umbrales"
+                    <p:commandButton value="Guardar cambios"
                                      icon="pi pi-bolt"
                                      actionListener="#{adminReglasBean.guardarReglas}"
                                      update=":reglasForm"
                                      styleClass="ui-button-primary">
-                        <p:confirm header="Confirmar Cambio de Umbrales"
-                                   message="¿Confirma aplicar inmediatamente los nuevos umbrales en el Motor de Fiscalización?"
+                        <p:confirm header="Confirmar cambios"
+                                   message="¿Confirma aplicar las nuevas reglas de fiscalización?"
                                    icon="pi pi-exclamation-triangle" />
                     </p:commandButton>
                 </div>

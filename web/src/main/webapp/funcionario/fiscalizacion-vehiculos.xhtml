@@ -12,12 +12,12 @@
             <div>
                 <h1 class="cuy-page-title">
                     <i class="pi pi-car" style="color: #1d4ed8;" />
-                    Fiscalización Documental de Flotas (ITV y PNC)
+                    Documentación de Vehículos
                 </h1>
             </div>
             <div>
                 <h:form id="refreshFlotaForm" style="margin: 0;">
-                    <p:commandButton value="Actualizar Estado Documental"
+                    <p:commandButton value="Actualizar estado"
                                      icon="pi pi-refresh"
                                      actionListener="#{fiscalizacionFlotaBean.cargarFlota}"
                                      update=":flotaFiscForm :kpiFlotaFisc"
@@ -54,41 +54,50 @@
                              paginatorPosition="bottom"
                              stripedRows="true"
                              size="small"
-                             emptyMessage="No hay unidades vehiculares registradas en el sistema.">
+                             emptyMessage="No hay vehículos registrados.">
 
                     <f:facet name="header">
                         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
                             <span style="font-weight: 700; color: #0f2942;">
-                                <i class="pi pi-shield" style="margin-right: 0.4rem;" /> Permisos
-                            </span>
-                            <span class="ui-input-icon-left">
-                                <i class="pi pi-search" />
-                                <p:inputText id="globalFilter"
-                                             onkeyup="PF('dtFlotaFisc').filter()"
-                                             placeholder="Buscar por matrícula, marca o modelo..."
-                                             style="width: 280px;" />
+                                <i class="pi pi-shield" style="margin-right: 0.4rem;" /> Documentación de Vehículos
                             </span>
                         </div>
                     </f:facet>
 
-                    <p:column filterBy="#{veh.matricula}" filterMatchMode="contains" style="width: 130px;" filterPlaceholder="Matrícula">
+                    <p:column headerText="Matrícula" filterBy="#{veh.matricula}" filterMatchMode="contains" style="width: 130px;" filterPlaceholder="Matrícula">
                         <span class="cuy-mono"><i class="pi pi-car" /> #{veh.matricula}</span>
                     </p:column>
 
-                    <p:column filterBy="#{veh.marca}" filterMatchMode="contains" filterPlaceholder="Unidad (Marca / Modelo)">
+                    <p:column headerText="Marca y Modelo" filterBy="#{veh.marca}" filterMatchMode="contains" filterPlaceholder="Marca y Modelo">
                         <strong style="color: #0f2942;">#{veh.marca} #{veh.modelo}</strong>
                         <div style="font-size: 0.78rem; color: #64748b;">
                             Capacidad: <h:outputText value="#{veh.capacidadCarga}"><f:convertNumber pattern="#,##0" /></h:outputText> kg | Peso: <h:outputText value="#{veh.peso}"><f:convertNumber pattern="#,##0" /></h:outputText> kg
                         </div>
                     </p:column>
 
-                    <p:column headerText="Habilitación" style="width: 140px; text-align: center;">
+                    <p:column headerText="Habilitación" filterBy="#{veh.estadoHabilitacion ? 'HABILITADO' : 'SUSPENDIDO'}" filterMatchMode="exact" style="width: 150px; text-align: center;">
+                        <f:facet name="filter">
+                            <p:selectOneMenu onchange="PF('dtFlotaFisc').filter()" styleClass="ui-custom-filter" style="width: 100%;">
+                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItem itemLabel="HABILITADO" itemValue="HABILITADO" />
+                                <f:selectItem itemLabel="SUSPENDIDO" itemValue="SUSPENDIDO" />
+                            </p:selectOneMenu>
+                        </f:facet>
                         <p:tag value="#{veh.estadoHabilitacion ? 'HABILITADO' : 'SUSPENDIDO'}"
                                severity="#{veh.estadoHabilitacion ? 'success' : 'danger'}"
                                rounded="true" />
                     </p:column>
 
-                    <p:column headerText="Vigencia ITV" style="width: 185px; text-align: center;">
+                    <p:column headerText="Vigencia ITV" filterBy="#{fiscalizacionFlotaBean.obtenerEstadoVigencia(fiscalizacionFlotaBean.obtenerVencimientoItv(veh.matricula))}" filterMatchMode="exact" style="width: 185px; text-align: center;">
+                        <f:facet name="filter">
+                            <p:selectOneMenu onchange="PF('dtFlotaFisc').filter()" styleClass="ui-custom-filter" style="width: 100%;">
+                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItem itemLabel="VIGENTE" itemValue="VIGENTE" />
+                                <f:selectItem itemLabel="POR VENCER" itemValue="POR VENCER" />
+                                <f:selectItem itemLabel="VENCIDO" itemValue="VENCIDO" />
+                                <f:selectItem itemLabel="SIN REGISTRO" itemValue="SIN REGISTRO" />
+                            </p:selectOneMenu>
+                        </f:facet>
                         <ui:param name="vencItv" value="#{fiscalizacionFlotaBean.obtenerVencimientoItv(veh.matricula)}" />
                         <p:tag value="#{fiscalizacionFlotaBean.obtenerEstadoVigencia(vencItv)}"
                                severity="#{fiscalizacionFlotaBean.obtenerSeveridadVigencia(vencItv)}"
@@ -99,7 +108,16 @@
                         </div>
                     </p:column>
 
-                    <p:column headerText="Vigencia Permiso (PNC)" style="width: 185px; text-align: center;">
+                    <p:column headerText="Vigencia Permiso" filterBy="#{fiscalizacionFlotaBean.obtenerEstadoVigencia(fiscalizacionFlotaBean.obtenerVencimientoPnc(veh.matricula))}" filterMatchMode="exact" style="width: 185px; text-align: center;">
+                        <f:facet name="filter">
+                            <p:selectOneMenu onchange="PF('dtFlotaFisc').filter()" styleClass="ui-custom-filter" style="width: 100%;">
+                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItem itemLabel="VIGENTE" itemValue="VIGENTE" />
+                                <f:selectItem itemLabel="POR VENCER" itemValue="POR VENCER" />
+                                <f:selectItem itemLabel="VENCIDO" itemValue="VENCIDO" />
+                                <f:selectItem itemLabel="SIN REGISTRO" itemValue="SIN REGISTRO" />
+                            </p:selectOneMenu>
+                        </f:facet>
                         <ui:param name="vencPnc" value="#{fiscalizacionFlotaBean.obtenerVencimientoPnc(veh.matricula)}" />
                         <p:tag value="#{fiscalizacionFlotaBean.obtenerEstadoVigencia(vencPnc)}"
                                severity="#{fiscalizacionFlotaBean.obtenerSeveridadVigencia(vencPnc)}"
@@ -110,13 +128,20 @@
                         </div>
                     </p:column>
 
-                    <p:column headerText="Aptitud" style="width: 150px; text-align: center;">
+                    <p:column headerText="Apto para circular" filterBy="#{fiscalizacionFlotaBean.tieneDocumentacionEnRegla(veh) ? 'APTO RUTA' : 'BLOQUEADO'}" filterMatchMode="exact" style="width: 160px; text-align: center;">
+                        <f:facet name="filter">
+                            <p:selectOneMenu onchange="PF('dtFlotaFisc').filter()" styleClass="ui-custom-filter" style="width: 100%;">
+                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItem itemLabel="APTO RUTA" itemValue="APTO RUTA" />
+                                <f:selectItem itemLabel="BLOQUEADO" itemValue="BLOQUEADO" />
+                            </p:selectOneMenu>
+                        </f:facet>
                         <p:tag value="#{fiscalizacionFlotaBean.tieneDocumentacionEnRegla(veh) ? 'APTO RUTA' : 'BLOQUEADO / ALERTA'}"
                                severity="#{fiscalizacionFlotaBean.tieneDocumentacionEnRegla(veh) ? 'success' : 'danger'}"
                                rounded="true" />
                     </p:column>
 
-                    <p:column headerText="Certificados / Estado" style="width: 195px; text-align: center;" exportable="false">
+                    <p:column headerText="Acciones" style="width: 195px; text-align: center;" exportable="false">
                         <div style="display: flex; justify-content: center; gap: 0.35rem;">
                             <p:commandButton value="Emitir / Renovar"
                                              icon="pi pi-calendar-plus"

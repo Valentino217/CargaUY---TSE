@@ -65,35 +65,35 @@
                     <f:facet name="header">
                         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
                             <span style="font-weight: 700; color: #0f2942;">
-                                <i class="pi pi-list" style="margin-right: 0.4rem;" /> Registro Nacional de Empresas de Transporte
-                            </span>
-                            <span class="ui-input-icon-left">
-                                <i class="pi pi-search" />
-                                <p:inputText id="globalFilter"
-                                             onkeyup="PF('dtEmpFunc').filter()"
-                                             placeholder="Filtrar por N°, razón social o nombre..."
-                                             style="width: 280px;" />
+                                <i class="pi pi-list" style="margin-right: 0.4rem;" /> Registro de Empresas
                             </span>
                         </div>
                     </f:facet>
 
-                    <p:column filterBy="#{emp.numero()}" filterMatchMode="contains" style="width: 120px;" filterPlaceholder="N° Empresa">
+                    <p:column headerText="N° Empresa" filterBy="#{emp.numero()}" filterMatchMode="contains" style="width: 120px;" filterPlaceholder="N° Empresa">
                         <span class="cuy-mono">#<h:outputText value="#{emp.numero()}" /></span>
                     </p:column>
 
-                    <p:column filterBy="#{emp.razonSocial()}" filterMatchMode="contains" filterPlaceholder="Razón Social">
+                    <p:column headerText="Razón Social" filterBy="#{emp.razonSocial()}" filterMatchMode="contains" filterPlaceholder="Razón Social">
                         <strong style="color: #0f2942;">#{emp.razonSocial()}</strong>
                     </p:column>
 
-                    <p:column filterBy="#{emp.nombrePublico()}" filterMatchMode="contains" filterPlaceholder="Nombre Comercial">
+                    <p:column headerText="Nombre Comercial" filterBy="#{emp.nombrePublico()}" filterMatchMode="contains" filterPlaceholder="Nombre Comercial">
                         <h:outputText value="#{emp.nombrePublico()}" />
                     </p:column>
 
-                    <p:column headerText="Dirección Fiscal">
+                    <p:column headerText="Dirección" filterBy="#{emp.direccion()}" filterMatchMode="contains" filterPlaceholder="Dirección">
                         <h:outputText value="#{emp.direccion()}" />
                     </p:column>
 
-                    <p:column headerText="Estado" style="width: 135px; text-align: center;">
+                    <p:column headerText="Estado" filterBy="#{emp.activa() ? 'HABILITADA' : 'INACTIVA'}" filterMatchMode="exact" style="width: 155px; text-align: center;">
+                        <f:facet name="filter">
+                            <p:selectOneMenu onchange="PF('dtEmpFunc').filter()" styleClass="ui-custom-filter" style="width: 100%;">
+                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItem itemLabel="HABILITADA" itemValue="HABILITADA" />
+                                <f:selectItem itemLabel="INACTIVA" itemValue="INACTIVA" />
+                            </p:selectOneMenu>
+                        </f:facet>
                         <p:tag value="#{emp.activa() ? 'HABILITADA' : 'INACTIVA'}"
                                severity="#{emp.activa() ? 'success' : 'danger'}"
                                icon="#{emp.activa() ? 'pi pi-check' : 'pi pi-ban'}"
@@ -173,8 +173,8 @@
                                  placeholder="Ej. Transportes del Sur S.A." />
                 </div>
                 <div class="cuy-field" style="margin-bottom: 1.25rem;">
-                    <p:outputLabel for="dirEmp" value="Dirección Fiscal" />
-                    <p:inputText id="dirEmp" label="Dirección Fiscal"
+                    <p:outputLabel for="dirEmp" value="Dirección" />
+                    <p:inputText id="dirEmp" label="Dirección"
                                  value="#{funcionarioEmpresasBean.direccionForm}"
                                  required="true"
                                  placeholder="Ej. Ruta 5 Km 24, Canelones" />
@@ -236,7 +236,6 @@
                                 <p:selectOneMenu id="funcVincSelect" label="Función" value="#{funcionarioEmpresasBean.funcionVinculo}">
                                     <f:selectItem itemLabel="Responsable" itemValue="RESPONSABLE" />
                                     <f:selectItem itemLabel="Chofer" itemValue="CHOFER" />
-                                    <f:selectItem itemLabel="Revocar Vínculo" itemValue="NINGUNO" />
                                 </p:selectOneMenu>
                             </div>
                         </div>
@@ -295,7 +294,7 @@
             <h:form id="dlgPdiForm">
                 <div class="ui-fluid">
                     <p style="margin-top: 0; font-size: 0.88rem; color: #475569;">
-                        Verifique datos patronímicos de ciudadanos directamente contra el servicio web SOAP de la Plataforma de Interoperabilidad (PDI).
+                        Consultar datos de la persona por cédula en PDI.
                     </p>
                     <div style="display: flex; gap: 0.75rem; align-items: flex-end; margin-bottom: 1rem;">
                         <div class="cuy-field" style="flex: 1;">
