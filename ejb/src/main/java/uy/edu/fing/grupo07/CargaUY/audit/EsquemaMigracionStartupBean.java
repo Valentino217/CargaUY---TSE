@@ -27,6 +27,8 @@ public class EsquemaMigracionStartupBean {
     private static final Logger LOG = Logger.getLogger(EsquemaMigracionStartupBean.class.getName());
 
     static final List<String> SENTENCIAS_DDL = List.of(
+            "ALTER TABLE IF EXISTS guias_de_viaje ADD COLUMN IF NOT EXISTS corredor_vial VARCHAR(250)",
+            "ALTER TABLE IF EXISTS guias_de_viaje ADD COLUMN IF NOT EXISTS polilinea_ruta VARCHAR(4000)",
             "ALTER TABLE IF EXISTS eventos_viaje ADD COLUMN IF NOT EXISTS distancia_desvio_km DOUBLE PRECISION",
             "ALTER TABLE IF EXISTS puntos_tracking ADD COLUMN IF NOT EXISTS distancia_desvio_km DOUBLE PRECISION",
             "ALTER TABLE IF EXISTS eventos_viaje ADD COLUMN IF NOT EXISTS cantidad_kg DOUBLE PRECISION",
@@ -82,7 +84,7 @@ public class EsquemaMigracionStartupBean {
             for (String sql : SENTENCIAS_DDL) {
                 em.createNativeQuery(sql).executeUpdate();
             }
-            LOG.info("Migración incremental de esquema (eventos, VIAJE_SIN_GUIA y auditoría 1:N) aplicada correctamente.");
+            LOG.info("Migración incremental de esquema (rutas reales, eventos, VIAJE_SIN_GUIA y auditoría 1:N) aplicada correctamente.");
         } catch (RuntimeException e) {
             LOG.log(Level.WARNING, "No se pudo ejecutar la migración incremental automática de esquema PostgreSQL", e);
         }

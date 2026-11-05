@@ -367,7 +367,12 @@ public class DetalleViajeBean implements Serializable {
                 }
             }
 
-            FaasTrackingClient.ResultadoFaas resultadoFaas = cliente.procesarEvento(eventoBase, origen, destino);
+            FaasTrackingClient.ResultadoFaas resultadoFaas = cliente.procesarEvento(
+                    eventoBase,
+                    origen,
+                    destino,
+                    guiaReferencia != null ? guiaReferencia.getPolilineaRuta() : null
+            );
             EventoViajeDTO eFaas = resultadoFaas.eventoEnriquecido();
             EventoViajeDTO eventoEnriquecido = new EventoViajeDTO(
                     eFaas.uuid(),

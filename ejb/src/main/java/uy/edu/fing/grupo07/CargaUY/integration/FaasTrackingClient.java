@@ -2,6 +2,7 @@ package uy.edu.fing.grupo07.CargaUY.integration;
 
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.json.Json;
+import jakarta.json.JsonArrayBuilder;
 import jakarta.json.JsonNumber;
 import jakarta.json.JsonObject;
 import jakarta.json.JsonObjectBuilder;
@@ -13,27 +14,22 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.text.Normalizer;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
  * Cliente HTTP para la invocación de la función Serverless (FaaS) en nube pública
- * encargada del procesamiento geoespacial de eventos de tracking y cálculo de desvío (Haversine).
+ * encargada del procesamiento geoespacial de eventos de tracking y cálculo de desvío
+ * sobre polilíneas reales de la Red Vial Nacional de Uruguay (MTOP).
  */
 @ApplicationScoped
 public class FaasTrackingClient implements java.io.Serializable {
 
     private static final Logger LOGGER = Logger.getLogger(FaasTrackingClient.class.getName());
     private static final Duration TIMEOUT = Duration.ofSeconds(6);
-    private static final double RADIO_TIERRA_KM = 6371.0088;
-
-    private static final Map<String, double[]> CATALOGO_LOCALIDADES_UY = crearCatalogoLocalidades();
 
     private transient final HttpClient httpClient;
     private volatile String endpointUrl;
@@ -94,45 +90,62 @@ public class FaasTrackingClient implements java.io.Serializable {
     }
 
     /**
-     * Envía un evento de tracking a la función FaaS por HTTPS para calcular el desvío en kilómetros.
-     * Si el endpoint cloud no está configurado o falla por red, aplica el cálculo geométrico de respaldo
-     * para no interrumpir la operación del sistema.
+     * Envía un evento de tracking a la función FaaS por HTTPS para calcular el desvío en kilómetros
+     * respecto a la polilínea de rutas nacionales entre origen y destino.
      */
     public ResultadoFaas procesarEvento(EventoViajeDTO evento, String origen, String destino) {
+        return procesarEvento(evento, origen, destino, null);
+    }
+
+    /**
+     * Envía un evento de tracking a la función FaaS por HTTPS incluyendo la polilínea planificada de la guía.
+     * Valida estrictamente que las localidades de origen y destino sean reconocidas en Uruguay (sin fallback silencioso).
+     */
+    public ResultadoFaas procesarEvento(
+            EventoViajeDTO evento,
+            String origen,
+            String destino,
+            String polilineaSerializada
+    ) {
         if (evento == null) {
             throw new IllegalArgumentException("El evento de viaje no puede ser nulo.");
         }
-
-        String origenSeguro = "Montevideo";
-        if (origen != null && !origen.isBlank()) {
-            origenSeguro = origen.trim();
+        if (origen == null || origen.isBlank()) {
+            throw new IllegalArgumentException("La localidad de origen es obligatoria para calcular el desvío.");
+        }
+        if (destino == null || destino.isBlank()) {
+            throw new IllegalArgumentException("La localidad de destino es obligatoria para calcular el desvío.");
         }
 
-        String destinoSeguro = "Rivera";
-        if (destino != null && !destino.isBlank()) {
-            destinoSeguro = destino.trim();
+        String origenLimpio = origen.trim();
+        String destinoLimpio = destino.trim();
+
+        // Validar estrictamente las localidades y resolver la polilínea de ruta real en Uruguay
+        RedVialUruguay.RutaPlanificada rutaPlanificada = RedVialUruguay.calcularRuta(origenLimpio, destinoLimpio);
+        List<double[]> polilinea = RedVialUruguay.deserializarPolilinea(polilineaSerializada);
+        if (polilinea.isEmpty()) {
+            polilinea = rutaPlanificada.polilinea();
         }
 
         if (endpointUrl != null && !endpointUrl.isBlank()) {
             try {
-                return invocarFuncionRemota(evento, origenSeguro, destinoSeguro);
+                return invocarFuncionRemota(evento, origenLimpio, destinoLimpio, polilinea, rutaPlanificada.corredorVial());
             } catch (InterruptedException ie) {
                 Thread.currentThread().interrupt();
-                LOGGER.log(Level.WARNING, "Invocación a FaaS interrumpida, aplicando cálculo de respaldo", ie);
+                LOGGER.log(Level.WARNING, "Invocación a FaaS interrumpida, aplicando cálculo de polilínea local", ie);
             } catch (Exception ex) {
                 LOGGER.log(
                         Level.WARNING,
-                        "No se pudo contactar el FaaS remoto en {0} ({1}). Aplicando cálculo Haversine de respaldo.",
+                        "No se pudo contactar el FaaS remoto en {0} ({1}). Aplicando cálculo sobre polilínea vial de respaldo.",
                         new Object[]{endpointUrl, ex.getMessage()}
                 );
             }
         }
 
-        double desvioCalculado = calcularDesvioPuntoASegmentoKm(
+        double desvioCalculado = RedVialUruguay.calcularDesvioPolilineaKm(
                 evento.latitud(),
                 evento.longitud(),
-                origenSeguro,
-                destinoSeguro
+                polilinea
         );
 
         EventoViajeDTO enriquecido = new EventoViajeDTO(
@@ -143,12 +156,18 @@ public class FaasTrackingClient implements java.io.Serializable {
                 evento.longitud(),
                 evento.guiaId(),
                 evento.incidente(),
-                desvioCalculado, evento.cantidadKg(), evento.mercaderia(), evento.empresaCarga(), evento.matricula()
+                desvioCalculado,
+                evento.cantidadKg(),
+                evento.mercaderia(),
+                evento.empresaCarga(),
+                evento.matricula()
         );
 
-        String motivoFallback = "Cálculo Haversine ejecutado en modo respaldo local (configure FAAS_TRACKING_URL para nube pública)";
+        String motivoFallback = "Cálculo sobre polilínea vial (" + rutaPlanificada.corredorVial()
+                + ") ejecutado en motor local";
         if (endpointUrl != null && !endpointUrl.isBlank()) {
-            motivoFallback = "FaaS remoto no disponible en " + endpointUrl + "; calculado con respaldo Haversine local";
+            motivoFallback = "FaaS remoto no disponible en " + endpointUrl
+                    + "; calculado sobre polilínea vial (" + rutaPlanificada.corredorVial() + ")";
         }
 
         return new ResultadoFaas(enriquecido, desvioCalculado, false, motivoFallback);
@@ -157,7 +176,9 @@ public class FaasTrackingClient implements java.io.Serializable {
     private ResultadoFaas invocarFuncionRemota(
             EventoViajeDTO evento,
             String origen,
-            String destino
+            String destino,
+            List<double[]> polilinea,
+            String corredorVial
     ) throws Exception {
         LocalDateTime tiempoEfectivo = evento.tiempo();
         if (tiempoEfectivo == null) {
@@ -169,11 +190,18 @@ public class FaasTrackingClient implements java.io.Serializable {
             tipoStr = evento.tipo().name();
         }
 
+        JsonArrayBuilder waypointsBuilder = Json.createArrayBuilder();
+        for (double[] wp : polilinea) {
+            waypointsBuilder.add(Json.createArrayBuilder().add(wp[0]).add(wp[1]));
+        }
+
         JsonObjectBuilder builder = Json.createObjectBuilder()
                 .add("latitud", evento.latitud())
                 .add("longitud", evento.longitud())
                 .add("origen", origen)
                 .add("destino", destino)
+                .add("corredorVial", corredorVial != null ? corredorVial : "")
+                .add("waypoints", waypointsBuilder)
                 .add("tipo", tipoStr)
                 .add("tiempo", tiempoEfectivo.toString());
 
@@ -229,11 +257,15 @@ public class FaasTrackingClient implements java.io.Serializable {
                     evento.longitud(),
                     evento.guiaId(),
                     evento.incidente(),
-                    desvioKm, evento.cantidadKg(), evento.mercaderia(), evento.empresaCarga(), evento.matricula()
+                    desvioKm,
+                    evento.cantidadKg(),
+                    evento.mercaderia(),
+                    evento.empresaCarga(),
+                    evento.matricula()
             );
 
             String timestampFaas = objetoResultado.getString("faasTimestamp", "");
-            String detalle = "Procesado en Cloud FaaS (" + endpointUrl + ")";
+            String detalle = "Procesado en Cloud FaaS (" + endpointUrl + ") sobre " + corredorVial;
             if (!timestampFaas.isBlank()) {
                 detalle = detalle + " [" + timestampFaas + "]";
             }
@@ -243,8 +275,8 @@ public class FaasTrackingClient implements java.io.Serializable {
     }
 
     /**
-     * Calcula la distancia mínima en kilómetros (Haversine punto-a-segmento)
-     * desde el punto (latP, lonP) hacia el corredor entre origen y destino.
+     * Calcula la distancia mínima en kilómetros desde el punto (latP, lonP) hacia la polilínea
+     * de rutas nacionales que une {@code nombreOrigen} y {@code nombreDestino}.
      */
     public double calcularDesvioPuntoASegmentoKm(
             double latP,
@@ -252,150 +284,25 @@ public class FaasTrackingClient implements java.io.Serializable {
             String nombreOrigen,
             String nombreDestino
     ) {
-        double[] coordsOrigen = resolverCoordenadasLocalidad(nombreOrigen);
-        double[] coordsDestino = resolverCoordenadasLocalidad(nombreDestino);
-
-        double latA = coordsOrigen[0];
-        double lonA = coordsOrigen[1];
-        double latB = coordsDestino[0];
-        double lonB = coordsDestino[1];
-
-        double latMediaRad = Math.toRadians((latA + latB + latP) / 3.0);
-        double escalaLon = Math.cos(latMediaRad);
-
-        double ax = lonA * escalaLon;
-        double ay = latA;
-        double bx = lonB * escalaLon;
-        double by = latB;
-        double px = lonP * escalaLon;
-        double py = latP;
-
-        double dx = bx - ax;
-        double dy = by - ay;
-        double normaCuadrada = (dx * dx) + (dy * dy);
-
-        if (normaCuadrada < 1e-12) {
-            double distanciaPunto = distanciaHaversineKm(latP, lonP, latA, lonA);
-            return Math.round(distanciaPunto * 100.0) / 100.0;
-        }
-
-        double t = (((px - ax) * dx) + ((py - ay) * dy)) / normaCuadrada;
-        double tAcotado = t;
-        if (tAcotado < 0.0) {
-            tAcotado = 0.0;
-        } else if (tAcotado > 1.0) {
-            tAcotado = 1.0;
-        }
-
-        double latC = latA + (tAcotado * (latB - latA));
-        double lonC = lonA + (tAcotado * (lonB - lonA));
-
-        double distancia = distanciaHaversineKm(latP, lonP, latC, lonC);
-        return Math.round(distancia * 100.0) / 100.0;
+        RedVialUruguay.RutaPlanificada ruta = RedVialUruguay.calcularRuta(nombreOrigen, nombreDestino);
+        return RedVialUruguay.calcularDesvioPolilineaKm(latP, lonP, ruta.polilinea());
     }
 
     public double[] obtenerPuntoMedioEnRuta(String nombreOrigen, String nombreDestino) {
-        double[] coordsOrigen = resolverCoordenadasLocalidad(nombreOrigen);
-        double[] coordsDestino = resolverCoordenadasLocalidad(nombreDestino);
-
-        double latMedia = Math.round(((coordsOrigen[0] + coordsDestino[0]) / 2.0) * 10000.0) / 10000.0;
-        double lonMedia = Math.round(((coordsOrigen[1] + coordsDestino[1]) / 2.0) * 10000.0) / 10000.0;
-        return new double[]{latMedia, lonMedia};
+        return RedVialUruguay.obtenerPuntoEnPolilinea(RedVialUruguay.calcularRuta(nombreOrigen, nombreDestino).polilinea());
     }
 
     public double[] obtenerPuntoDesviadoDeRuta(String nombreOrigen, String nombreDestino) {
-        double[] puntoMedio = obtenerPuntoMedioEnRuta(nombreOrigen, nombreDestino);
-        // Desplazar ~0.35 grados en latitud y longitud (~45 km fuera del corredor)
-        double latDesviada = Math.round((puntoMedio[0] - 0.35) * 10000.0) / 10000.0;
-        double lonDesviada = Math.round((puntoMedio[1] + 0.45) * 10000.0) / 10000.0;
-        return new double[]{latDesviada, lonDesviada};
+        return RedVialUruguay.obtenerPuntoDesviadoDePolilinea(RedVialUruguay.calcularRuta(nombreOrigen, nombreDestino).polilinea());
     }
 
+    /**
+     * Resuelve las coordenadas geográficas de una localidad oficial de Uruguay.
+     * Lanza {@link IllegalArgumentException} si la localidad no existe en el catálogo nacional.
+     */
     public double[] resolverCoordenadasLocalidad(String nombreLugar) {
-        String clave = normalizarTexto(nombreLugar);
-        if (CATALOGO_LOCALIDADES_UY.containsKey(clave)) {
-            return CATALOGO_LOCALIDADES_UY.get(clave);
-        }
-
-        for (Map.Entry<String, double[]> entry : CATALOGO_LOCALIDADES_UY.entrySet()) {
-            String localidad = entry.getKey();
-            if (!clave.isEmpty() && (localidad.contains(clave) || clave.contains(localidad))) {
-                return entry.getValue();
-            }
-        }
-
-        return CATALOGO_LOCALIDADES_UY.get("montevideo");
-    }
-
-    private static double distanciaHaversineKm(double lat1, double lon1, double lat2, double lon2) {
-        double phi1 = Math.toRadians(lat1);
-        double phi2 = Math.toRadians(lat2);
-        double dPhi = Math.toRadians(lat2 - lat1);
-        double dLambda = Math.toRadians(lon2 - lon1);
-
-        double senoPhi = Math.sin(dPhi / 2.0);
-        double senoLambda = Math.sin(dLambda / 2.0);
-        double a = (senoPhi * senoPhi)
-                + (Math.cos(phi1) * Math.cos(phi2) * (senoLambda * senoLambda));
-        double resto = 1.0 - a;
-        if (resto < 0.0) {
-            resto = 0.0;
-        }
-        double c = 2.0 * Math.atan2(Math.sqrt(a), Math.sqrt(resto));
-        return RADIO_TIERRA_KM * c;
-    }
-
-    private static String normalizarTexto(String texto) {
-        if (texto == null) {
-            return "";
-        }
-        String minusculas = texto.trim().toLowerCase(Locale.ROOT);
-        String descompuesto = Normalizer.normalize(minusculas, Normalizer.Form.NFD);
-        return descompuesto.replaceAll("\\p{M}", "");
-    }
-
-    private static Map<String, double[]> crearCatalogoLocalidades() {
-        Map<String, double[]> mapa = new HashMap<>();
-        mapa.put("montevideo", new double[]{-34.9011, -56.1645});
-        mapa.put("puerto de montevideo", new double[]{-34.9033, -56.2114});
-        mapa.put("canelones", new double[]{-34.5228, -56.2778});
-        mapa.put("las piedras", new double[]{-34.7303, -56.2192});
-        mapa.put("pando", new double[]{-34.7167, -55.9583});
-        mapa.put("ciudad de la costa", new double[]{-34.8167, -55.9500});
-        mapa.put("san jose", new double[]{-34.3375, -56.7136});
-        mapa.put("san jose de mayo", new double[]{-34.3375, -56.7136});
-        mapa.put("libertad", new double[]{-34.6333, -56.6167});
-        mapa.put("colonia", new double[]{-34.4626, -57.8398});
-        mapa.put("colonia del sacramento", new double[]{-34.4626, -57.8398});
-        mapa.put("nueva palmira", new double[]{-33.8703, -58.4117});
-        mapa.put("carmelo", new double[]{-34.0002, -58.2840});
-        mapa.put("mercedes", new double[]{-33.2524, -58.0305});
-        mapa.put("soriano", new double[]{-33.2524, -58.0305});
-        mapa.put("fray bentos", new double[]{-33.1165, -58.3107});
-        mapa.put("rio negro", new double[]{-33.1165, -58.3107});
-        mapa.put("young", new double[]{-32.6983, -57.6269});
-        mapa.put("paysandu", new double[]{-32.3171, -58.0807});
-        mapa.put("salto", new double[]{-31.3833, -57.9667});
-        mapa.put("artigas", new double[]{-30.4000, -56.4667});
-        mapa.put("bella union", new double[]{-30.2597, -57.6008});
-        mapa.put("rivera", new double[]{-30.9053, -55.5508});
-        mapa.put("tacuarembo", new double[]{-31.7169, -55.9811});
-        mapa.put("paso de los toros", new double[]{-32.8167, -56.5167});
-        mapa.put("durazno", new double[]{-33.3806, -56.5236});
-        mapa.put("florida", new double[]{-34.0956, -56.2142});
-        mapa.put("flores", new double[]{-33.5165, -56.8996});
-        mapa.put("trinidad", new double[]{-33.5165, -56.8996});
-        mapa.put("lavalleja", new double[]{-34.3759, -55.2377});
-        mapa.put("minas", new double[]{-34.3759, -55.2377});
-        mapa.put("maldonado", new double[]{-34.9000, -54.9500});
-        mapa.put("punta del este", new double[]{-34.9667, -54.9500});
-        mapa.put("rocha", new double[]{-34.4833, -54.3333});
-        mapa.put("chuy", new double[]{-33.6978, -53.4616});
-        mapa.put("treinta y tres", new double[]{-33.2333, -54.3833});
-        mapa.put("cerro largo", new double[]{-32.3703, -54.1675});
-        mapa.put("melo", new double[]{-32.3703, -54.1675});
-        mapa.put("rio branco", new double[]{-32.5986, -53.3858});
-        return mapa;
+        RedVialUruguay.NodoVial nodo = RedVialUruguay.resolverNodo(nombreLugar);
+        return new double[]{nodo.latitud(), nodo.longitud()};
     }
 
     public String getEndpointUrl() {

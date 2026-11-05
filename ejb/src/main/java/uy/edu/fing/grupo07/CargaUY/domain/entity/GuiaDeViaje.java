@@ -2,6 +2,7 @@ package uy.edu.fing.grupo07.CargaUY.domain.entity;
 
 import jakarta.persistence.*;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado;
+import uy.edu.fing.grupo07.CargaUY.integration.RedVialUruguay;
 
 import java.io.Serializable;
 import java.time.LocalDate;
@@ -30,6 +31,12 @@ public class GuiaDeViaje implements Serializable {
 
     @Column(nullable = false, length = 150)
     private String destino;
+
+    @Column(name = "corredor_vial", length = 250)
+    private String corredorVial;
+
+    @Column(name = "polilinea_ruta", length = 4000)
+    private String polilineaRuta;
 
     @Column(name = "rubro_cliente", nullable = false, length = 100)
     private String rubroCliente;
@@ -95,6 +102,21 @@ public class GuiaDeViaje implements Serializable {
         this.vehiculo = vehiculo;
         this.chofer = chofer;
         this.estado = TipoEstado.SIN_INICIAR;
+        actualizarRutaPlanificada();
+    }
+
+    /**
+     * Calcula y almacena la polilínea vial real y el corredor de rutas nacionales MTOP
+     * cuando el origen y el destino corresponden a localidades del catálogo oficial de Uruguay.
+     */
+    public void actualizarRutaPlanificada() {
+        if (origen != null && destino != null
+                && RedVialUruguay.esLocalidadValida(origen)
+                && RedVialUruguay.esLocalidadValida(destino)) {
+            RedVialUruguay.RutaPlanificada ruta = RedVialUruguay.calcularRuta(origen, destino);
+            this.corredorVial = ruta.corredorVial();
+            this.polilineaRuta = RedVialUruguay.serializarPolilinea(ruta.polilinea());
+        }
     }
 
     public Long getId() {
@@ -127,6 +149,22 @@ public class GuiaDeViaje implements Serializable {
 
     public void setDestino(String destino) {
         this.destino = destino;
+    }
+
+    public String getCorredorVial() {
+        return corredorVial;
+    }
+
+    public void setCorredorVial(String corredorVial) {
+        this.corredorVial = corredorVial;
+    }
+
+    public String getPolilineaRuta() {
+        return polilineaRuta;
+    }
+
+    public void setPolilineaRuta(String polilineaRuta) {
+        this.polilineaRuta = polilineaRuta;
     }
 
     public String getRubroCliente() {

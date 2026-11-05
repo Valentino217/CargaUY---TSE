@@ -24,6 +24,10 @@ public class GuiaDeViajeEJB implements GuiaDeViajeEJBLocal {
             if (g.getEmpresa() != null) g.getEmpresa().getRazonSocial();
             if (g.getVehiculo() != null) g.getVehiculo().getMatricula();
             if (g.getChofer() != null) g.getChofer().getNombre();
+            if (g.getCorredorVial() == null || g.getCorredorVial().isBlank()
+                    || g.getPolilineaRuta() == null || g.getPolilineaRuta().isBlank()) {
+                g.actualizarRutaPlanificada();
+            }
         }
         return g;
     }
@@ -130,6 +134,9 @@ public class GuiaDeViajeEJB implements GuiaDeViajeEJBLocal {
     
     @Override
     public void crear(GuiaDeViaje guia) {
+        if (guia != null) {
+            guia.actualizarRutaPlanificada();
+        }
         em.persist(guia);
     }
 
@@ -155,6 +162,7 @@ public class GuiaDeViajeEJB implements GuiaDeViajeEJBLocal {
     		existente.setFecha(guia.getFecha());
     		existente.setOrigen(guia.getOrigen());
     		existente.setDestino(guia.getDestino());
+    		existente.actualizarRutaPlanificada();
     		existente.setRubroCliente(guia.getRubroCliente());
     		existente.setVolumenCarga(guia.getVolumenCarga());
             if (guia.getEmpresa() != null) existente.setEmpresa(guia.getEmpresa());
@@ -205,20 +213,20 @@ public class GuiaDeViajeEJB implements GuiaDeViajeEJBLocal {
     //lista todas las guias en el sistema
     @Override
     public List<GuiaDeViaje> listarGuias() {
-        return em.createQuery(
+        return inicializarRelaciones(em.createQuery(
             "SELECT g FROM GuiaDeViaje g " +
             "LEFT JOIN FETCH g.empresa " +
             "LEFT JOIN FETCH g.vehiculo " +
             "LEFT JOIN FETCH g.chofer " +
             "ORDER BY g.fecha DESC",
             GuiaDeViaje.class
-        ).getResultList();
+        ).getResultList());
     }
     
  // Lista las guías de las empresas asociadas al ciudadano
     @Override
     public List<GuiaDeViaje> listarGuiasPorCiudadano(int ciudadanoId) {
-        return em.createQuery(
+        return inicializarRelaciones(em.createQuery(
             "SELECT DISTINCT g FROM GuiaDeViaje g " +
             "JOIN FETCH g.empresa " +
             "LEFT JOIN FETCH g.vehiculo " +
@@ -232,7 +240,7 @@ public class GuiaDeViajeEJB implements GuiaDeViajeEJBLocal {
             GuiaDeViaje.class
         )
         .setParameter("ciudadanoId", ciudadanoId)
-        .getResultList();
+        .getResultList());
     }
 
     //buscar guia por id
@@ -252,7 +260,7 @@ public class GuiaDeViajeEJB implements GuiaDeViajeEJBLocal {
         .setParameter("id", id)
         .getResultList();
 
-        return list.isEmpty() ? null : list.get(0);
+        return list.isEmpty() ? null : inicializarRelaciones(list.get(0));
     }
 
 }

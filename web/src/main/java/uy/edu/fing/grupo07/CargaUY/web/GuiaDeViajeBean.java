@@ -15,6 +15,7 @@ import uy.edu.fing.grupo07.CargaUY.domain.entity.Empresa;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.GuiaDeViaje;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.Usuario;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.Vehiculo;
+import uy.edu.fing.grupo07.CargaUY.integration.RedVialUruguay;
 import uy.edu.fing.grupo07.CargaUY.service.GuiaDeViajeEJB;
 import uy.edu.fing.grupo07.CargaUY.service.VehiculoEJB;
 
@@ -23,29 +24,8 @@ import uy.edu.fing.grupo07.CargaUY.service.VehiculoEJB;
 public class GuiaDeViajeBean implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    private static final List<String> LOCALIDADES_CARGA_URUGUAY = List.of(
-            "Puerto de Montevideo (Montevideo)",
-            "Ruta 5 Km 24 - Polo Logístico (Canelones)",
-            "Puerto de Nueva Palmira (Colonia)",
-            "Fray Bentos - Planta UPM I (Río Negro)",
-            "Paso de los Toros - Planta UPM II (Tacuarembó)",
-            "Tacuarembó - Polo Forestal (Tacuarembó)",
-            "Rivera - Frontera Seca / Puerto Seco (Rivera)",
-            "Paysandú - Zona Industrial / Puerto (Paysandú)",
-            "Salto - Central Hortícola del Norte (Salto)",
-            "Durazno - Nodo Logístico Ruta 5 (Durazno)",
-            "Young - Acopio Agrícola (Río Negro)",
-            "Dolores - Polo Granelero (Soriano)",
-            "Mercedes - Ruta 2 (Soriano)",
-            "Melo - Ruta 8 (Cerro Largo)",
-            "Río Branco - Frontera Yaguarón (Cerro Largo)",
-            "Treinta y Tres - Cuenca Arrocera (Treinta y Tres)",
-            "Rocha - Ruta 9 (Rocha)",
-            "Chuy - Frontera Brasil (Rocha)",
-            "Minas - Planta Cementera Ruta 8 (Lavalleja)",
-            "San José de Mayo - Ruta 3 (San José)",
-            "Colonia del Sacramento (Colonia)"
-    );
+    private static final List<String> LOCALIDADES_CARGA_URUGUAY =
+            RedVialUruguay.listarNombresLocalidadesOficiales();
 
     private static final List<String> RUBROS_CARGA = List.of(
             "Forestal / Madera para Celulosa",
@@ -130,6 +110,7 @@ public class GuiaDeViajeBean implements Serializable {
         guia.setFecha(java.time.LocalDate.now());
         guia.setOrigen(LOCALIDADES_CARGA_URUGUAY.get(2)); // Nueva Palmira por defecto
         guia.setDestino(LOCALIDADES_CARGA_URUGUAY.get(0)); // Puerto de Montevideo por defecto
+        guia.actualizarRutaPlanificada();
         guia.setRubroCliente(RUBROS_CARGA.get(1));
         guia.setVolumenCarga(28000.0f);
         editando = false;
@@ -209,6 +190,7 @@ public class GuiaDeViajeBean implements Serializable {
             }
 
             guia.setChofer(choferSeleccionado);
+            guia.actualizarRutaPlanificada();
 
             if (editando) {
                 GuiaDeViajeEJB.modificar(SesionActual.token(), guia);

@@ -129,7 +129,7 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
             FaasTrackingClient.ResultadoFaas resultadoFaas = faasTrackingClient.procesarEvento(
                     dto,
                     guia.getOrigen(),
-                    guia.getDestino()
+                    guia.getDestino(), guia.getPolilineaRuta()
             );
             evento.setDistanciaDesvioKm(resultadoFaas.distanciaDesvioKm());
         }
