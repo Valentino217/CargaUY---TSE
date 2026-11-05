@@ -104,20 +104,39 @@ public class AdminNodosBean implements Serializable {
                 ldapUp ? "Operativo" : "OFFLINE"
         ));
 
-        // 4. gub.uy (Keycloak local o testing)
+        // 4. gub.uy (ID Uruguay oficial o Keycloak mock opcional)
         String oidcEndpoint = Config.valor("gub.issuer", "http://localhost:8083/realms/cargauy-test");
-        boolean oidcUp = probarSocket("gub", 8080)
-                || probarSocket("localhost", 8083)
-                || sondearSocketDesdeUri(oidcEndpoint, 8083);
-
+        boolean esLocalOidc = oidcEndpoint.contains("localhost") || oidcEndpoint.contains("127.0.0.1") || oidcEndpoint.contains("cargauy-test");
+        
+        boolean oidcUp;
+        String oidcNombre;
         String oidcDisplay = oidcEndpoint;
-        if (probarSocket("gub", 8080) || probarSocket("localhost", 8083)) {
-            oidcDisplay = "http://localhost:8083/realms/cargauy-test";
+
+        if (esLocalOidc) {
+            oidcUp = probarSocket("gub", 8080)
+                    || probarSocket("localhost", 8083)
+                    || sondearSocketDesdeUri(oidcEndpoint, 8083);
+            oidcNombre = "Login gub.uy (Keycloak local)";
+            if (oidcUp) {
+                oidcDisplay = "http://localhost:8083/realms/cargauy-test";
+            }
+        } else {
+            // Entorno oficial gub.uy / AGESIC (ID Uruguay)
+            oidcNombre = "Login gub.uy (ID Uruguay)";
+            oidcUp = sondearSocketDesdeUri(oidcEndpoint, 443);
+            if (!oidcUp) {
+                try {
+                    URI u = URI.create(oidcEndpoint);
+                    oidcUp = probarSocket(u.getHost(), 443, 1500);
+                } catch (Exception ignored) {
+                    oidcUp = false;
+                }
+            }
         }
 
         nodos.add(new NodoPerifericoVista(
                 "NODO-OIDC-01",
-                "Login gub.uy (Keycloak)",
+                oidcNombre,
                 "OIDC",
                 oidcDisplay,
                 oidcUp,
@@ -229,8 +248,12 @@ public class AdminNodosBean implements Serializable {
     }
 
     private boolean probarSocket(String host, int port) {
+        return probarSocket(host, port, (int) PROBE_TIMEOUT.toMillis());
+    }
+
+    private boolean probarSocket(String host, int port, int timeoutMs) {
         try (Socket socket = new Socket()) {
-            socket.connect(new InetSocketAddress(host, port), (int) PROBE_TIMEOUT.toMillis());
+            socket.connect(new InetSocketAddress(host, port), timeoutMs);
             return true;
         } catch (Exception e) {
             return false;

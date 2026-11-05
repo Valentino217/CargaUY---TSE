@@ -36,21 +36,6 @@ public class IntegracionSesionFilter implements Filter {
 
         String p = r.getServletPath();
 
-        // 1. Vistas públicas del Portal (/portal/*) permiten acceso anónimo o autenticado
-        if (p != null && p.startsWith("/portal/")) {
-            String token = WebSeguridad.token(r);
-            if (token != null && !token.isBlank()) {
-                try {
-                    Acceso actor = auth.validarToken(token);
-                    r.setAttribute("actor", actor);
-                } catch (Exception ignored) {
-                    // Si el token expiró, continúa como visitante anónimo en el portal público
-                }
-            }
-            chain.doFilter(r, s);
-            return;
-        }
-
         try {
             Acceso actor = auth.validarToken(WebSeguridad.token(r));
             boolean permitido = evaluarPermisoRuta(p, r.getMethod(), actor);
@@ -73,7 +58,7 @@ public class IntegracionSesionFilter implements Filter {
         if (actor.tiene(TipoUsuario.ADMINISTRADOR)) {
             return true;
         }
-        if (p == null || p.equals("/index.xhtml")) {
+        if (p == null || p.equals("/index.xhtml") || p.startsWith("/portal/")) {
             return true;
         }
         if (p.startsWith("/admin/")) {

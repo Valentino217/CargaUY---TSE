@@ -1,9 +1,13 @@
-﻿<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
                 xmlns:h="jakarta.faces.html"
                 xmlns:f="jakarta.faces.core"
                 xmlns:ui="jakarta.faces.facelets"
                 xmlns:p="http://primefaces.org/ui"
                 template="/WEB-INF/templates/template.xhtml">
+
+    <f:metadata>
+        <f:viewAction action="#{authBean.verificarAutenticacion}" />
+    </f:metadata>
 
     <ui:define name="title">Portal de Transparencia e Información Pública</ui:define>
 
@@ -14,9 +18,6 @@
                     <i class="pi pi-chart-bar" style="color: #2563eb;" />
                     Información Pública de Cargas y Transporte
                 </h1>
-                <p class="cuy-page-subtitle">
-                    Portal de datos abiertos y transparencia activa del Sistema de Control de Transporte de Carga.
-                </p>
             </div>
         </div>
 

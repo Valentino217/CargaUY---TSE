@@ -7,6 +7,7 @@ import jakarta.persistence.TypedQuery;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.GuiaDeViaje;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.Infraccion;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.PesadaBalanza;
+import uy.edu.fing.grupo07.CargaUY.domain.entity.TipoCarga;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.EstadoInfraccion;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoInfraccion;
@@ -14,6 +15,7 @@ import uy.edu.fing.grupo07.CargaUY.dto.DashboardResumenDTO;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +38,43 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
     }
 
     @Override
+    public List<String> listarRubrosDisponibles() {
+        List<String> rubros = new ArrayList<>();
+        try {
+            List<String> deRubros = em.createQuery("SELECT DISTINCT r.nombre FROM Rubro r ORDER BY r.nombre", String.class).getResultList();
+            if (deRubros != null) {
+                for (String r : deRubros) {
+                    if (r != null && !r.isBlank() && !rubros.contains(r.trim())) {
+                        rubros.add(r.trim());
+                    }
+                }
+            }
+            List<String> deGuias = em.createQuery("SELECT DISTINCT g.rubroCliente FROM GuiaDeViaje g WHERE g.rubroCliente IS NOT NULL", String.class).getResultList();
+            if (deGuias != null) {
+                for (String r : deGuias) {
+                    if (r != null && !r.isBlank() && !r.contains("?")) {
+                        String normalizado = r.trim();
+                        if (!rubros.contains(normalizado)) {
+                            rubros.add(normalizado);
+                        }
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return rubros;
+    }
+
+    @Override
+    public List<String> listarTiposCargaDisponibles() {
+        try {
+            return em.createQuery("SELECT DISTINCT t.desc FROM TipoCarga t ORDER BY t.desc", String.class).getResultList();
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
+
+    @Override
     public DashboardResumenDTO obtenerResumen() {
         Map<TipoEstado, Long> guiasPorEstado = inicializarMapaGuias();
         Map<EstadoInfraccion, Long> infraccionesPorEstado = inicializarMapaInfraccionesPorEstado();
@@ -51,7 +90,7 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
 
         Map<String, Long> viajesPorPeriodo = new TreeMap<>();
         Map<String, Double> volumenPorRubro = new LinkedHashMap<>();
-        cargarViajesYVolumenDesdeGuias(null, null, null, null, viajesPorPeriodo, volumenPorRubro, null);
+        cargarViajesYVolumenDesdeGuias(null, null, null, null, null, viajesPorPeriodo, volumenPorRubro, null);
 
         double tasaConfirmadasSobreDetectadas = calcularTasaConfirmadas(infraccionesPorEstado);
 
@@ -75,7 +114,19 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
             LocalDate fechaDesde,
             LocalDate fechaHasta
     ) {
+        return obtenerResumenFiltrado(rubro, null, ubicacion, fechaDesde, fechaHasta);
+    }
+
+    @Override
+    public DashboardResumenDTO obtenerResumenFiltrado(
+            String rubro,
+            String tipoCarga,
+            String ubicacion,
+            LocalDate fechaDesde,
+            LocalDate fechaHasta
+    ) {
         boolean sinFiltros = (rubro == null || rubro.isBlank())
+                && (tipoCarga == null || tipoCarga.isBlank())
                 && (ubicacion == null || ubicacion.isBlank())
                 && fechaDesde == null
                 && fechaHasta == null;
@@ -91,6 +142,7 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
 
         cargarViajesYVolumenDesdeGuias(
                 rubro,
+                tipoCarga,
                 ubicacion,
                 fechaDesde,
                 fechaHasta,
@@ -101,6 +153,7 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
 
         cargarInfraccionesFiltradas(
                 rubro,
+                tipoCarga,
                 ubicacion,
                 fechaDesde,
                 fechaHasta,
@@ -108,7 +161,7 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
                 infraccionesPorTipo
         );
 
-        long totalPesadas = contarPesadasFiltradas(rubro, ubicacion, fechaDesde, fechaHasta);
+        long totalPesadas = contarPesadasFiltradas(rubro, tipoCarga, ubicacion, fechaDesde, fechaHasta);
         long totalEmpresasHabilitadas = consultarConteo("SELECT COUNT(e) FROM Empresa e WHERE e.activa = true");
         long totalVehiculosHabilitados = consultarConteo("SELECT COUNT(v) FROM Vehiculo v WHERE v.estadoHabilitacion = true");
         double tasaConfirmadasSobreDetectadas = calcularTasaConfirmadas(infraccionesPorEstado);
@@ -151,6 +204,7 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
 
     private void cargarViajesYVolumenDesdeGuias(
             String rubro,
+            String tipoCarga,
             String ubicacion,
             LocalDate fechaDesde,
             LocalDate fechaHasta,
@@ -170,7 +224,7 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
             return;
         }
         for (GuiaDeViaje g : guias) {
-            if (g == null || !cumpleFiltroGuia(g, rubro, ubicacion, fechaDesde, fechaHasta)) {
+            if (g == null || !cumpleFiltroGuia(g, rubro, tipoCarga, ubicacion, fechaDesde, fechaHasta)) {
                 continue;
             }
             if (guiasPorEstadoFiltrado != null && g.getEstado() != null) {
@@ -189,6 +243,7 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
 
     private void cargarInfraccionesFiltradas(
             String rubro,
+            String tipoCarga,
             String ubicacion,
             LocalDate fechaDesde,
             LocalDate fechaHasta,
@@ -206,7 +261,9 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
         if (infracciones == null) {
             return;
         }
-        boolean filtraGuia = (rubro != null && !rubro.isBlank()) || (ubicacion != null && !ubicacion.isBlank());
+        boolean filtraGuia = (rubro != null && !rubro.isBlank())
+                || (tipoCarga != null && !tipoCarga.isBlank())
+                || (ubicacion != null && !ubicacion.isBlank());
         for (Infraccion i : infracciones) {
             if (i == null) {
                 continue;
@@ -219,7 +276,7 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
             }
             if (filtraGuia) {
                 GuiaDeViaje g = i.getGuia();
-                if (g == null || !cumpleFiltroGuia(g, rubro, ubicacion, null, null)) {
+                if (g == null || !cumpleFiltroGuia(g, rubro, tipoCarga, ubicacion, null, null)) {
                     continue;
                 }
             }
@@ -234,6 +291,7 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
 
     private long contarPesadasFiltradas(
             String rubro,
+            String tipoCarga,
             String ubicacion,
             LocalDate fechaDesde,
             LocalDate fechaHasta
@@ -255,9 +313,9 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
                 continue;
             }
             GuiaDeViaje g = p.getGuia();
-            if (g != null && cumpleFiltroGuia(g, rubro, ubicacion, fechaDesde, fechaHasta)) {
+            if (g != null && cumpleFiltroGuia(g, rubro, tipoCarga, ubicacion, fechaDesde, fechaHasta)) {
                 conteo++;
-            } else if (g == null && (rubro == null || rubro.isBlank()) && (ubicacion == null || ubicacion.isBlank())) {
+            } else if (g == null && (rubro == null || rubro.isBlank()) && (tipoCarga == null || tipoCarga.isBlank()) && (ubicacion == null || ubicacion.isBlank())) {
                 LocalDate fechaPesada = p.getFecha();
                 if (fechaDesde != null && (fechaPesada == null || fechaPesada.isBefore(fechaDesde))) {
                     continue;
@@ -274,6 +332,7 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
     private boolean cumpleFiltroGuia(
             GuiaDeViaje g,
             String rubro,
+            String tipoCarga,
             String ubicacion,
             LocalDate fechaDesde,
             LocalDate fechaHasta
@@ -282,6 +341,21 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
             String rFiltro = rubro.trim().toLowerCase();
             String rGuia = g.getRubroCliente() != null ? g.getRubroCliente().trim().toLowerCase() : "";
             if (!rGuia.contains(rFiltro)) {
+                return false;
+            }
+        }
+        if (tipoCarga != null && !tipoCarga.isBlank()) {
+            String tFiltro = tipoCarga.trim().toLowerCase();
+            boolean match = false;
+            if (g.getTiposCarga() != null) {
+                for (TipoCarga tc : g.getTiposCarga()) {
+                    if (tc != null && tc.getDesc() != null && tc.getDesc().trim().toLowerCase().contains(tFiltro)) {
+                        match = true;
+                        break;
+                    }
+                }
+            }
+            if (!match) {
                 return false;
             }
         }

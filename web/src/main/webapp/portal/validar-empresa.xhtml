@@ -1,9 +1,13 @@
-﻿<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
                 xmlns:h="jakarta.faces.html"
                 xmlns:f="jakarta.faces.core"
                 xmlns:ui="jakarta.faces.facelets"
                 xmlns:p="http://primefaces.org/ui"
                 template="/WEB-INF/templates/template.xhtml">
+
+    <f:metadata>
+        <f:viewAction action="#{authBean.verificarAutenticacion}" />
+    </f:metadata>
 
     <ui:define name="title">Validación Pública de Empresas</ui:define>
 

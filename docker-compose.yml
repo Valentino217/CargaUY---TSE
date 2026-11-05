@@ -32,6 +32,7 @@ services:
       - ldap_p1:/data
 
   gub:
+    profiles: ["mock-gub", "keycloak"]
     image: quay.io/keycloak/keycloak:26.4.7
     restart: unless-stopped
     command: ["start-dev", "--import-realm"]
