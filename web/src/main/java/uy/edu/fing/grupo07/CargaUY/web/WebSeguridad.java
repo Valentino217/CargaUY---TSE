@@ -33,7 +33,9 @@ public final class WebSeguridad {
     }
     public static boolean transporte(HttpServletRequest r) throws IOException {
         if (r.isSecure()) return true;
-        if (!Boolean.parseBoolean(Config.valor("p1.entorno.local","false"))) return false;
+        String proto = r.getHeader("X-Forwarded-Proto");
+        if ("https".equalsIgnoreCase(proto)) return true;
+        if (Boolean.parseBoolean(Config.valor("p1.entorno.local", "false"))) return true;
         InetAddress addr = InetAddress.getByName(r.getRemoteAddr());
         return addr.isLoopbackAddress() || addr.isSiteLocalAddress();
     }
