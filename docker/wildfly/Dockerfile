@@ -51,4 +51,4 @@ COPY --from=build --chown=jboss:jboss /build/gub-callback-root/target/gub-callba
 EXPOSE 8080 9990
 
 # Iniciar WildFly con perfil full (JMS / ActiveMQ Artemis habilitado)
-CMD ["/opt/jboss/wildfly/bin/standalone.sh", "-c", "standalone-full.xml", "-b", "0.0.0.0", "-bmanagement", "0.0.0.0"]
+CMD ["/bin/bash", "-c", "echo 'Esperando conexion a PostgreSQL en '${DB_HOST:-postgres}':'${DB_PORT:-5432}'...'; while ! (echo > /dev/tcp/${DB_HOST:-postgres}/${DB_PORT:-5432}) >/dev/null 2>&1; do sleep 1; done; echo 'PostgreSQL listo!'; rm -f /opt/jboss/wildfly/standalone/deployments/*.failed; touch /opt/jboss/wildfly/standalone/deployments/CargaUY.ear.dodeploy; exec /opt/jboss/wildfly/bin/standalone.sh -c standalone-full.xml -b 0.0.0.0 -bmanagement 0.0.0.0"]
