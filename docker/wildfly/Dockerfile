@@ -1,7 +1,7 @@
 # =====================================================================
 # Etapa 1: compila el EAR con Maven (así alcanza con "docker compose up --build")
 # =====================================================================
-FROM maven:3.9-eclipse-temurin-17 AS build
+FROM maven:3.9-eclipse-temurin-17-alpine AS build
 WORKDIR /build
 
 # Primero solo los POM, para cachear las dependencias entre builds
