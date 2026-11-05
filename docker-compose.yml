@@ -3,6 +3,8 @@ version: '3.8'
 services:
   postgres:
     image: postgres:16-alpine
+    security_opt:
+      - seccomp:unconfined
     restart: unless-stopped
     environment:
       POSTGRES_DB: cargauy
@@ -48,6 +50,8 @@ services:
 
   mongodb:
     image: mongo:7
+    security_opt:
+      - seccomp:unconfined
     restart: unless-stopped
     ports:
       - "27017:27017"
