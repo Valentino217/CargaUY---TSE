@@ -1,38 +1,301 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" xmlns:h="jakarta.faces.html"
-      xmlns:p="http://primefaces.org/ui" lang="es">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:h="jakarta.faces.html"
+      xmlns:f="jakarta.faces.core"
+      xmlns:p="http://primefaces.org/ui"
+      lang="es">
 <h:head>
-    <title>Completá tu perfil - CargaUY</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Completá tu perfil | CargaUY</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <link rel="stylesheet" href="#{request.contextPath}/css/plataforma.css"/>
     <link rel="stylesheet" href="#{request.contextPath}/css/ajustes-ui.css"/>
     <link rel="stylesheet" href="#{request.contextPath}/css/calendarios.css"/>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 1.5rem;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at 50% 20%, #1e3a5f 0%, #0f2942 60%, #081626 100%);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #0f172a;
+        }
+
+        .perfil-card {
+            background: #ffffff;
+            width: 100%;
+            max-width: 460px;
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.12);
+            overflow: hidden;
+            animation: fadeInCard 0.3s ease-out;
+        }
+
+        @keyframes fadeInCard {
+            from {
+                opacity: 0;
+                transform: translateY(14px) scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .perfil-header {
+            padding: 2.25rem 2rem 1.25rem 2rem;
+            text-align: center;
+            border-bottom: 1px solid #f1f5f9;
+            background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+        }
+
+        .perfil-icon-badge {
+            width: 58px;
+            height: 58px;
+            border-radius: 14px;
+            background: #eff6ff;
+            color: #2563eb;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.65rem;
+            margin-bottom: 0.9rem;
+            box-shadow: inset 0 0 0 1px #bfdbfe;
+        }
+
+        .perfil-title {
+            margin: 0 0 0.4rem 0;
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: #0f2942;
+            letter-spacing: -0.01em;
+        }
+
+        .perfil-subtitle {
+            margin: 0;
+            font-size: 0.92rem;
+            color: #64748b;
+            line-height: 1.45;
+        }
+
+        .perfil-body {
+            padding: 1.75rem 2rem 2rem 2rem;
+        }
+
+        .perfil-field {
+            margin-bottom: 1.75rem;
+        }
+
+        .perfil-field label,
+        .perfil-field .ui-outputlabel {
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: center !important;
+            gap: 4px !important;
+            font-size: 0.88rem !important;
+            font-weight: 600 !important;
+            color: #334155 !important;
+            margin-bottom: 0.5rem !important;
+        }
+
+        .perfil-field .ui-outputlabel-rtext,
+        .perfil-field .ui-outputlabel-rfi {
+            display: inline-block !important;
+            color: #ef4444 !important;
+            font-weight: bold !important;
+            margin-left: 2px !important;
+        }
+
+        /* PrimeFaces DatePicker Inline Group */
+        .cuy-datepicker-wrapper {
+            display: flex !important;
+            width: 100% !important;
+            position: relative !important;
+        }
+
+        .cuy-datepicker-wrapper .ui-calendar,
+        .cuy-datepicker-wrapper .ui-datepicker,
+        .cuy-datepicker-wrapper span.ui-calendar,
+        .cuy-datepicker-wrapper span:has(> .ui-datepicker-trigger) {
+            display: flex !important;
+            flex-direction: row !important;
+            align-items: stretch !important;
+            width: 100% !important;
+        }
+
+        .cuy-datepicker-wrapper input.ui-inputfield,
+        .cuy-datepicker-wrapper .ui-calendar > input,
+        .cuy-datepicker-wrapper .ui-datepicker > input {
+            flex: 1 1 auto !important;
+            width: calc(100% - 44px) !important;
+            min-width: 0 !important;
+            height: 44px !important;
+            border-top-right-radius: 0 !important;
+            border-bottom-right-radius: 0 !important;
+            border-right: none !important;
+            padding: 0 14px !important;
+            font-size: 0.95rem !important;
+            border: 1px solid #cbd5e1 !important;
+            background: #ffffff !important;
+            color: #0f172a !important;
+            box-sizing: border-box !important;
+        }
+
+        .cuy-datepicker-wrapper input.ui-inputfield:focus {
+            border-color: #2563eb !important;
+            outline: none !important;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
+            position: relative !important;
+            z-index: 2 !important;
+        }
+
+        .cuy-datepicker-wrapper .ui-datepicker-trigger,
+        .cuy-datepicker-wrapper button.ui-datepicker-trigger {
+            flex: 0 0 44px !important;
+            width: 44px !important;
+            height: 44px !important;
+            min-width: 44px !important;
+            max-width: 44px !important;
+            border-top-left-radius: 0 !important;
+            border-bottom-left-radius: 0 !important;
+            border-top-right-radius: 8px !important;
+            border-bottom-right-radius: 8px !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: #2563eb !important;
+            border: 1px solid #2563eb !important;
+            color: #ffffff !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            cursor: pointer !important;
+            transition: background-color 0.2s !important;
+        }
+
+        .cuy-datepicker-wrapper .ui-datepicker-trigger:hover {
+            background: #1d4ed8 !important;
+            border-color: #1d4ed8 !important;
+        }
+
+        .perfil-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .perfil-actions .ui-button {
+            width: 100% !important;
+            height: 44px !important;
+            font-size: 0.95rem !important;
+            font-weight: 600 !important;
+            border-radius: 8px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 0.5rem !important;
+            cursor: pointer !important;
+            transition: all 0.2s ease !important;
+        }
+
+        .perfil-actions .btn-guardar {
+            background: #2563eb !important;
+            border-color: #2563eb !important;
+            color: #ffffff !important;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25) !important;
+        }
+
+        .perfil-actions .btn-guardar:hover {
+            background: #1d4ed8 !important;
+            border-color: #1d4ed8 !important;
+            transform: translateY(-1px) !important;
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35) !important;
+        }
+
+        .perfil-actions .btn-salir {
+            background: transparent !important;
+            border: 1px solid #cbd5e1 !important;
+            color: #475569 !important;
+        }
+
+        .perfil-actions .btn-salir:hover {
+            background: #f1f5f9 !important;
+            border-color: #94a3b8 !important;
+            color: #0f172a !important;
+        }
+
+        .perfil-footer-help {
+            margin-top: 1.5rem;
+            text-align: center;
+            font-size: 0.78rem;
+            color: #94a3b8;
+        }
+    </style>
 </h:head>
 <h:body>
-    <p:dialog header="Completá tu perfil" visible="true" modal="true"
-              closable="false" closeOnEscape="false" draggable="false"
-              resizable="false" responsive="true" width="420">
-        <p>Para continuar a CargaUY, ingresá tu fecha de nacimiento.</p>
-        <h:form id="nacimiento">
-            <p:messages id="mensajes"/>
-            <div class="form-grid">
-                <div>
-                    <p:outputLabel for="fecha" value="Fecha de nacimiento"/>
-                    <p:datePicker id="fecha" label="Fecha de nacimiento" value="#{completarPerfilBean.fechaNacimiento}"
-                                  pattern="dd/MM/yyyy" showIcon="true" monthNavigator="true"
-                                  yearNavigator="select" yearRange="1900:2026"
-                                  maxdate="#{completarPerfilBean.hoy}" required="true"
-                                  requiredMessage="Ingresá tu fecha de nacimiento"
-                                  converterMessage="Ingresá una fecha válida con formato día/mes/año" panelStyleClass="cuy-calendar"  showButtonBar="true"  showOtherMonths="true"  showLongMonthNames="true" />
-                </div>
+    <div class="perfil-card">
+        <div class="perfil-header">
+            <div class="perfil-icon-badge">
+                <i class="pi pi-id-card" />
             </div>
-            <p:commandButton value="Guardar y continuar" action="#{completarPerfilBean.guardar}"
-                             ajax="false" style="margin-top:16px"/>
-        </h:form>
-        <h:form id="salir">
-            <p:commandButton value="Cerrar sesión" action="#{authBean.cerrarSesion}"
-                             ajax="false" styleClass="ui-button-secondary" style="margin-top:12px"/>
-        </h:form>
-    </p:dialog>
+            <h1 class="perfil-title">Completá tu perfil</h1>
+            <p class="perfil-subtitle">Para continuar a <strong>CargaUY</strong>, ingresá tu fecha de nacimiento.</p>
+        </div>
+
+        <div class="perfil-body">
+            <h:form id="nacimiento">
+                <p:messages id="mensajes" showDetail="true" closable="true" />
+
+                <div class="perfil-field">
+                    <p:outputLabel for="fecha" value="Fecha de nacimiento" />
+                    <div class="cuy-datepicker-wrapper">
+                        <p:datePicker id="fecha"
+                                      label="Fecha de nacimiento"
+                                      value="#{completarPerfilBean.fechaNacimiento}"
+                                      pattern="dd/MM/yyyy"
+                                      showIcon="true"
+                                      monthNavigator="true"
+                                      yearNavigator="select"
+                                      yearRange="1900:2026"
+                                      maxdate="#{completarPerfilBean.hoy}"
+                                      required="true"
+                                      requiredMessage="Ingresá tu fecha de nacimiento"
+                                      converterMessage="Ingresá una fecha válida con formato día/mes/año (ej: 15/08/1990)"
+                                      panelStyleClass="cuy-calendar"
+                                      showButtonBar="true"
+                                      showOtherMonths="true"
+                                      showLongMonthNames="true" />
+                    </div>
+                </div>
+
+                <div class="perfil-actions">
+                    <p:commandButton value="Guardar y continuar"
+                                     id="btnGuardar"
+                                     action="#{completarPerfilBean.guardar}"
+                                     icon="pi pi-check"
+                                     iconPos="right"
+                                     ajax="false"
+                                     styleClass="ui-button-primary btn-guardar" />
+
+                    <p:commandButton value="Cerrar sesión"
+                                     id="btnCerrarSesion"
+                                     action="#{authBean.cerrarSesion}"
+                                     icon="pi pi-sign-out"
+                                     immediate="true"
+                                     ajax="false"
+                                     styleClass="ui-button-outlined ui-button-secondary btn-salir" />
+                </div>
+            </h:form>
+
+            <div class="perfil-footer-help">
+                CargaUY &#8226; Sistema Nacional de Control de Transporte de Carga
+            </div>
+        </div>
+    </div>
 </h:body>
 </html>

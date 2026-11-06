@@ -70,10 +70,14 @@
                     </div>
                     <div class="cuy-field">
                         <p:outputLabel for="filtroUbicacion" value="Ubicación (Origen/Destino)" />
-                        <p:inputText id="filtroUbicacion"
-                                     value="#{dashboardBean.filtroUbicacion}"
-                                     placeholder="Ej: Montevideo, Rivera..."
-                                     style="width: 100%;" />
+                        <p:selectOneMenu id="filtroUbicacion"
+                                         value="#{dashboardBean.filtroUbicacion}"
+                                         filter="true"
+                                         filterMatchMode="contains"
+                                         style="width: 100%;">
+                            <f:selectItem itemLabel="Todas las ubicaciones" itemValue="#{null}" noSelectionOption="true" />
+                            <f:selectItems value="#{dashboardBean.ubicacionesDisponibles}" var="ubi" itemLabel="#{ubi}" itemValue="#{ubi}" />
+                        </p:selectOneMenu>
                     </div>
                     <div class="cuy-field">
                         <p:outputLabel for="filtroFechaDesde" value="Fecha Desde" />

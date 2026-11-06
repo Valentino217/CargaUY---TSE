@@ -19,7 +19,9 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 /**
  * Implementación del servicio de métricas consolidadas del Dashboard (CU-C4 / Autoridad - Sección 3.6.2).
@@ -71,6 +73,31 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
             return em.createQuery("SELECT DISTINCT t.desc FROM TipoCarga t ORDER BY t.desc", String.class).getResultList();
         } catch (Exception e) {
             return List.of();
+        }
+    }
+
+    @Override
+    public List<String> listarUbicacionesDisponibles() {
+        try {
+            TreeSet<String> ubicaciones = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+            agregarUbicaciones(ubicaciones, em.createQuery(
+                    "SELECT DISTINCT g.origen FROM GuiaDeViaje g WHERE g.origen IS NOT NULL", String.class).getResultList());
+            agregarUbicaciones(ubicaciones, em.createQuery(
+                    "SELECT DISTINCT g.destino FROM GuiaDeViaje g WHERE g.destino IS NOT NULL", String.class).getResultList());
+            return new ArrayList<>(ubicaciones);
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
+
+    private void agregarUbicaciones(Set<String> ubicaciones, List<String> valores) {
+        if (valores == null) {
+            return;
+        }
+        for (String valor : valores) {
+            if (valor != null && !valor.isBlank()) {
+                ubicaciones.add(valor.trim());
+            }
         }
     }
 

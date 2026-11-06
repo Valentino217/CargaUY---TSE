@@ -41,6 +41,7 @@ public class DashboardBean implements Serializable {
 
     private List<String> rubrosDisponibles = new ArrayList<>();
     private List<String> tiposCargaDisponibles = new ArrayList<>();
+    private List<String> ubicacionesDisponibles = new ArrayList<>();
 
     public DashboardBean() {
     }
@@ -55,6 +56,7 @@ public class DashboardBean implements Serializable {
             if (dashboardService != null) {
                 this.rubrosDisponibles = dashboardService.listarRubrosDisponibles();
                 this.tiposCargaDisponibles = dashboardService.listarTiposCargaDisponibles();
+                this.ubicacionesDisponibles = dashboardService.listarUbicacionesDisponibles();
             }
             if (tieneFiltrosActivos()) {
                 this.resumen = dashboardService.obtenerResumenFiltrado(
@@ -244,5 +246,13 @@ public class DashboardBean implements Serializable {
 
     public void setTiposCargaDisponibles(List<String> tiposCargaDisponibles) {
         this.tiposCargaDisponibles = tiposCargaDisponibles;
+    }
+
+    public List<String> getUbicacionesDisponibles() {
+        return ubicacionesDisponibles;
+    }
+
+    public void setUbicacionesDisponibles(List<String> ubicacionesDisponibles) {
+        this.ubicacionesDisponibles = ubicacionesDisponibles;
     }
 }

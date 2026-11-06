@@ -22,6 +22,10 @@ public interface DashboardServiceLocal {
         return List.of();
     }
 
+    default List<String> listarUbicacionesDisponibles() {
+        return List.of();
+    }
+
     default DashboardResumenDTO obtenerResumenFiltrado(
             String rubro,
             String ubicacion,
