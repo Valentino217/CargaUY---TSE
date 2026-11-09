@@ -5,23 +5,27 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import uy.edu.fing.grupo07.CargaUY.domain.entity.GuiaDeViaje;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEvento;
 import uy.edu.fing.grupo07.CargaUY.dto.EventoViajeDTO;
 
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("Pruebas Unitarias - FaasTrackingClient (Cloud FaaS & Cálculo Haversine)")
+@DisplayName("Pruebas Unitarias - FaasTrackingClient & RedVialUruguay (Polilíneas Reales MTOP)")
 class FaasTrackingClientTest {
 
     @Mock
@@ -71,7 +75,7 @@ class FaasTrackingClientTest {
     }
 
     @Test
-    @DisplayName("Debe aplicar respaldo Haversine cuando la URL FaaS no está configurada o da error")
+    @DisplayName("Debe calcular desvío sobre polilínea vial real cuando la URL FaaS no está configurada o da error")
     void testFallbackHaversinePuntoEnRutaVsDesviado() {
         FaasTrackingClient client = new FaasTrackingClient(httpClient, "", "");
 
@@ -88,7 +92,7 @@ class FaasTrackingClientTest {
 
         FaasTrackingClient.ResultadoFaas resEnRuta = client.procesarEvento(evEnRuta, "Montevideo", "Rivera");
         assertFalse(resEnRuta.invocacionCloudExitosa());
-        assertTrue(resEnRuta.distanciaDesvioKm() < 1.0, "El punto medio debe tener desvío cercano a 0 km");
+        assertTrue(resEnRuta.distanciaDesvioKm() < 1.0, "El punto sobre la polilínea Ruta 5 debe tener desvío cercano a 0 km");
 
         double[] puntoDesviado = client.obtenerPuntoDesviadoDeRuta("Montevideo", "Rivera");
         EventoViajeDTO evDesviado = new EventoViajeDTO(
@@ -103,5 +107,84 @@ class FaasTrackingClientTest {
 
         FaasTrackingClient.ResultadoFaas resDesviado = client.procesarEvento(evDesviado, "Montevideo", "Rivera");
         assertTrue(resDesviado.distanciaDesvioKm() > 20.0, "El punto desviado debe superar holgadamente el umbral");
+    }
+
+    @Test
+    @DisplayName("Debe evaluar correctamente la polilínea real Fray Bentos -> Montevideo por Ruta 2 y Ruta 1 pasando por Cardona y Rosario")
+    void testPolilineaRealFrayBentosMontevideoPorRuta2YRuta1() {
+        FaasTrackingClient client = new FaasTrackingClient(httpClient, "", "");
+
+        RedVialUruguay.RutaPlanificada ruta = RedVialUruguay.calcularRuta(
+                "Fray Bentos - Planta UPM I (Río Negro)",
+                "Puerto de Montevideo (Montevideo)"
+        );
+        assertEquals("Ruta 2 -> Ruta 1", ruta.corredorVial());
+        assertTrue(ruta.polilinea().size() >= 6, "La polilínea debe incluir los tramos reales de Ruta 2 y Ruta 1");
+
+        // Un camión circulando por Rosario (empalme Ruta 2 y Ruta 1: -34.3167, -57.3500) está exactamente en ruta (0 km de desvío)
+        double desvioEnRosario = client.calcularDesvioPuntoASegmentoKm(
+                -34.3167,
+                -57.3500,
+                "Fray Bentos - Planta UPM I (Río Negro)",
+                "Puerto de Montevideo (Montevideo)"
+        );
+        assertEquals(0.0, desvioEnRosario, 0.5, "Rosario es parte del corredor real Ruta 2 -> Ruta 1");
+
+        // Un camión en Minas (-34.3759, -55.2377) está completamente fuera del corredor Fray Bentos -> Montevideo
+        double desvioEnMinas = client.calcularDesvioPuntoASegmentoKm(
+                -34.3759,
+                -55.2377,
+                "Fray Bentos - Planta UPM I (Río Negro)",
+                "Puerto de Montevideo (Montevideo)"
+        );
+        assertTrue(desvioEnMinas > 70.0, "Minas debe presentar un desvío mayor a 70 km respecto a Ruta 2 -> Ruta 1");
+    }
+
+    @Test
+    @DisplayName("Debe rechazar localidades desconocidas con IllegalArgumentException en lugar de caer en Montevideo")
+    void testRechazarLocalidadDesconocidaSinFallbackSilencioso() {
+        FaasTrackingClient client = new FaasTrackingClient(httpClient, "", "");
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> client.resolverCoordenadasLocalidad("Ciudad Inexistente XYZ"),
+                "No debe caer silenciosamente en Montevideo ante una localidad desconocida"
+        );
+
+        EventoViajeDTO evento = new EventoViajeDTO(
+                "evt-invalido",
+                LocalDateTime.now(),
+                TipoEvento.POSICION,
+                -34.9011,
+                -56.1645,
+                1L,
+                null
+        );
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> client.procesarEvento(evento, "Atlantida Fantasma", "Montevideo")
+        );
+    }
+
+    @Test
+    @DisplayName("GuiaDeViaje debe persistir automáticamente el corredor vial y la polilínea serializada")
+    void testGuiaDeViajePersisteCorredorYPolilinea() {
+        GuiaDeViaje guia = new GuiaDeViaje(
+                LocalDate.now(),
+                "Puerto de Nueva Palmira (Colonia)",
+                "Puerto de Montevideo (Montevideo)",
+                "Granos",
+                30000.0f,
+                null,
+                null,
+                null
+        );
+
+        assertNotNull(guia.getCorredorVial());
+        assertTrue(guia.getCorredorVial().contains("Ruta 1"));
+        assertNotNull(guia.getPolilineaRuta());
+
+        List<double[]> puntos = RedVialUruguay.deserializarPolilinea(guia.getPolilineaRuta());
+        assertTrue(puntos.size() >= 4);
     }
 }

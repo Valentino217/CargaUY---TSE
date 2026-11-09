@@ -1,4 +1,4 @@
-﻿<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
                 xmlns:h="jakarta.faces.html"
                 xmlns:f="jakarta.faces.core"
                 xmlns:ui="jakarta.faces.facelets"
@@ -17,23 +17,23 @@
             </div>
             <div style="display: flex; gap: 0.6rem;">
                 <h:form id="monitoreoTopForm" style="margin: 0; display: flex; gap: 0.6rem;">
-                    <p:commandButton value="Simular Telemetría FaaS"
+                    <p:commandButton value="Simular Telemetría"
                                      icon="pi pi-cloud"
                                      type="button"
                                      onclick="PF('dlgFaasWidget').show()"
-                                     title="Procesar coordenadas GPS mediante Function as a Service (Cloud FaaS) y evaluar desvío de ruta o VIAJE_SIN_GUIA"
+                                     title="Simular telemetría y evaluar desvío de ruta o VIAJE_SIN_GUIA"
                                      styleClass="ui-button-outlined ui-button-help" />
-                    <p:commandButton value="Sincronizar Mock Balanza"
+                    <p:commandButton value="Simular Balanza"
                                      icon="pi pi-cloud-download"
                                      actionListener="#{detalleViajeBean.sincronizarMockBalanza}"
                                      update=":monitoreoForm :growl"
                                      title="Simular pesaje de balanza"
                                      styleClass="ui-button-outlined ui-button-info" />
-                    <p:commandButton value="Registrar Pesaje Manual"
+                    <p:commandButton value="Simular pesaje manual"
                                      icon="pi pi-sliders-h"
                                      type="button"
                                      onclick="PF('dlgPesajeWidget').show()"
-                                     title="Registrar pesaje manual por guía EN_CURSO o por matrícula sin guía activa"
+                                     title="Simular pesaje manual por guía EN_CURSO o por matrícula sin guía activa"
                                      styleClass="ui-button-primary" />
                 </h:form>
             </div>
@@ -60,6 +60,11 @@
                         <div style="font-size: 1.05rem; font-weight: 700; color: #0f2942; margin-top: 0.25rem;">
                             #{detalleViajeBean.guiaActual.origen} &#8594; #{detalleViajeBean.guiaActual.destino}
                         </div>
+                        <h:panelGroup rendered="#{not empty detalleViajeBean.guiaActual.corredorVial}">
+                            <div style="font-size: 0.82rem; color: #1d4ed8; font-weight: 600; margin-top: 0.15rem;">
+                                <i class="pi pi-directions" style="font-size: 0.8rem;" /> Corredor Planificado: #{detalleViajeBean.guiaActual.corredorVial}
+                            </div>
+                        </h:panelGroup>
                         <div style="font-size: 0.85rem; color: #475569; margin-top: 0.2rem;">
                             Matrícula: <span class="cuy-mono">#{detalleViajeBean.vehiculoMatricula}</span> | Chofer: <strong>#{detalleViajeBean.choferNombreCompleto}</strong>
                         </div>
@@ -67,8 +72,8 @@
 
                     <h:panelGroup rendered="#{detalleViajeBean.guiaActual != null}" style="text-align: right;">
                         <p:tag value="#{detalleViajeBean.guiaActual.estado}"
-                               severity="#{detalleViajeBean.guiaActual.estado.name() eq 'EN_CURSO' ? 'info' : (detalleViajeBean.guiaActual.estado.name() eq 'FINALIZADO' ? 'success' : 'warning')}"
-                               rounded="true" />
+                                severity="#{detalleViajeBean.guiaActual.estado.name() eq 'EN_CURSO' ? 'info' : (detalleViajeBean.guiaActual.estado.name() eq 'FINALIZADO' ? 'success' : 'warning')}"
+                                rounded="true" />
                         <div style="font-size: 0.9rem; color: #0f2942; font-weight: 700; margin-top: 0.4rem;">
                             Peso de la carga: <h:outputText value="#{detalleViajeBean.guiaActual.volumenCarga}"><f:convertNumber pattern="#,##0" /></h:outputText> kg
                         </div>
@@ -85,10 +90,6 @@
                             <i class="pi pi-compass" style="color: #2563eb;" />
                             Línea Temporal de Eventos (#{detalleViajeBean.totalEventos})
                         </h3>
-                        <p:tag value="MongoDB NoSQL Time-Series (#{detalleViajeBean.totalEventosNoSqlGuia} pos.)"
-                               severity="#{detalleViajeBean.mongoNoSqlOperativo ? 'success' : 'warning'}"
-                               icon="pi pi-database"
-                               rounded="true" />
                     </div>
                     <p:dataTable id="tablaEventosViaje"
                                  var="ev"
@@ -114,9 +115,10 @@
                             <span class="cuy-mono" style="font-size: 0.78rem;">#{ev.latitud()}, #{ev.longitud()}</span>
                             <h:panelGroup rendered="#{ev.distanciaDesvioKm() != null}">
                                 <div style="margin-top: 0.2rem;">
-                                    <p:tag value="Desvío FaaS: #{ev.distanciaDesvioKm()} km"
+                                    <p:tag value="Desvío"
                                            severity="#{ev.distanciaDesvioKm() > 5.0 ? 'danger' : 'success'}"
                                            icon="#{ev.distanciaDesvioKm() > 5.0 ? 'pi pi-exclamation-triangle' : 'pi pi-check-circle'}"
+                                           title="Desvío: #{ev.distanciaDesvioKm()} km"
                                            rounded="true" />
                                 </div>
                             </h:panelGroup>
@@ -191,7 +193,7 @@
         </h:form>
 
         <!-- Modal Registrar Pesaje de Balanza y Fiscalizar -->
-        <p:dialog header="Registrar Pesaje en Balanza y Evaluar Reglas"
+        <p:dialog header="Simular pesaje manual"
                   widgetVar="dlgPesajeWidget"
                   modal="true"
                   responsive="true"
@@ -242,18 +244,14 @@
             </h:form>
         </p:dialog>
 
-        <!-- Modal Simulador de Telemetría GPS vía FaaS (Cloud) y Fiscalización de Desvío -->
-        <p:dialog header="Simulador de Telemetría GPS vía FaaS (Cloud) y Fiscalización de Desvío"
+        <!-- Modal Simulador de Telemetría GPS -->
+        <p:dialog header="Simular telemetría"
                   widgetVar="dlgFaasWidget"
                   modal="true"
                   responsive="true"
                   width="640"
                   closeOnEscape="true">
             <h:form id="dlgFaasForm" styleClass="ui-fluid">
-                <div style="font-size: 0.84rem; color: #475569; margin-bottom: 0.9rem; background: #f8fafc; padding: 0.75rem; border-radius: 6px; border: 1px solid #e2e8f0;">
-                    Envía un evento de tracking al endpoint HTTPS de la función Cloud (AWS Lambda / Google Cloud Functions) para calcular la distancia perpendicular en kilómetros al corredor asignado y evaluar automáticamente <strong>DESVIO_DE_RUTA</strong> (o <strong>VIAJE_SIN_GUIA</strong> si se informa matrícula sin viaje activo).
-                </div>
-
                 <div class="cuy-field" style="margin-bottom: 0.85rem;">
                     <p:outputLabel for="inputFaasUrl" value="Endpoint Cloud FaaS (HTTPS Function URL - vacío usa cálculo local de respaldo)" />
                     <p:inputText id="inputFaasUrl" label="Endpoint Cloud FaaS (HTTPS Function URL - vacío usa cálculo local de respaldo)"
@@ -329,7 +327,7 @@
                                      onclick="PF('dlgFaasWidget').hide()"
                                      styleClass="ui-button-outlined ui-button-secondary"
                                      style="width: auto;" />
-                    <p:commandButton value="Procesar en FaaS y Evaluar Desvío"
+                    <p:commandButton value="Procesar y evaluar desvío"
                                      icon="pi pi-bolt"
                                      actionListener="#{detalleViajeBean.enviarTelemetriaFaas}"
                                      update=":dlgFaasForm :monitoreoForm :growl"

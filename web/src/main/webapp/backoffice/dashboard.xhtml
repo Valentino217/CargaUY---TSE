@@ -1,4 +1,4 @@
-﻿<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
                 xmlns:h="jakarta.faces.html"
                 xmlns:f="jakarta.faces.core"
                 xmlns:ui="jakarta.faces.facelets"
@@ -39,44 +39,75 @@
             </div>
         </div>
 
-        <!-- Barra de Filtros Analíticos (Sección 3.6.2: Rubro/Tipo de Carga, Ubicación Geográfica, Rango de Fechas) -->
+        <!-- Barra de Filtros Analíticos (Sección 3.6.2: Rubro, Tipo de Carga, Ubicación Geográfica, Rango de Fechas) -->
         <h:form id="dashFiltrosForm">
             <div class="cuy-card" style="margin-bottom: 1.25rem;">
                 <h3 class="cuy-card-title" style="margin-bottom: 0.75rem;">
                     <i class="pi pi-filter" style="color: #1d4ed8;" /> Filtros
                 </h3>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.85rem; align-items: end;">
-                    <div>
-                        <p:outputLabel for="filtroRubro" value="Rubro / Tipo de Carga" style="display: block; font-weight: 600; margin-bottom: 0.3rem;" />
-                        <p:inputText id="filtroRubro"
-                                     value="#{dashboardBean.filtroRubro}"
-                                     placeholder="Ej: Forestal, Granos, Lácteos..."
-                                     style="width: 100%;" />
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)); gap: 0.85rem; align-items: end;">
+                    <div class="cuy-field">
+                        <p:outputLabel for="filtroRubro" value="Rubro" />
+                        <p:selectOneMenu id="filtroRubro"
+                                         value="#{dashboardBean.filtroRubro}"
+                                         filter="true"
+                                         filterMatchMode="contains"
+                                         style="width: 100%;">
+                            <f:selectItem itemLabel="Todos los rubros" itemValue="#{null}" noSelectionOption="true" />
+                            <f:selectItems value="#{dashboardBean.rubrosDisponibles}" var="rub" itemLabel="#{rub}" itemValue="#{rub}" />
+                        </p:selectOneMenu>
                     </div>
-                    <div>
-                        <p:outputLabel for="filtroUbicacion" value="Ubicación Geográfica (Origen/Destino)" style="display: block; font-weight: 600; margin-bottom: 0.3rem;" />
-                        <p:inputText id="filtroUbicacion"
-                                     value="#{dashboardBean.filtroUbicacion}"
-                                     placeholder="Ej: Montevideo, Rivera, Ruta 5..."
-                                     style="width: 100%;" />
+                    <div class="cuy-field">
+                        <p:outputLabel for="filtroTipoCarga" value="Tipo de Carga" />
+                        <p:selectOneMenu id="filtroTipoCarga"
+                                         value="#{dashboardBean.filtroTipoCarga}"
+                                         filter="true"
+                                         filterMatchMode="contains"
+                                         style="width: 100%;">
+                            <f:selectItem itemLabel="Todos los tipos de carga" itemValue="#{null}" noSelectionOption="true" />
+                            <f:selectItems value="#{dashboardBean.tiposCargaDisponibles}" var="tc" itemLabel="#{tc}" itemValue="#{tc}" />
+                        </p:selectOneMenu>
                     </div>
-                    <div>
-                        <p:outputLabel for="filtroFechaDesde" value="Fecha Desde" style="display: block; font-weight: 600; margin-bottom: 0.3rem;" />
+                    <div class="cuy-field">
+                        <p:outputLabel for="filtroUbicacion" value="Ubicación (Origen/Destino)" />
+                        <p:selectOneMenu id="filtroUbicacion"
+                                         value="#{dashboardBean.filtroUbicacion}"
+                                         filter="true"
+                                         filterMatchMode="contains"
+                                         style="width: 100%;">
+                            <f:selectItem itemLabel="Todas las ubicaciones" itemValue="#{null}" noSelectionOption="true" />
+                            <f:selectItems value="#{dashboardBean.ubicacionesDisponibles}" var="ubi" itemLabel="#{ubi}" itemValue="#{ubi}" />
+                        </p:selectOneMenu>
+                    </div>
+                    <div class="cuy-field">
+                        <p:outputLabel for="filtroFechaDesde" value="Fecha Desde" />
                         <p:datePicker id="filtroFechaDesde"
                                       value="#{dashboardBean.filtroFechaDesde}"
                                       pattern="yyyy-MM-dd"
                                       showIcon="true"
+                                      panelStyleClass="cuy-calendar"
+                                      monthNavigator="true"
+                                      yearNavigator="select"
+                                      showButtonBar="true"
+                                      showOtherMonths="true"
+                                      yearRange="2020:2030"
                                       style="width: 100%;" />
                     </div>
-                    <div>
-                        <p:outputLabel for="filtroFechaHasta" value="Fecha Hasta" style="display: block; font-weight: 600; margin-bottom: 0.3rem;" />
+                    <div class="cuy-field">
+                        <p:outputLabel for="filtroFechaHasta" value="Fecha Hasta" />
                         <p:datePicker id="filtroFechaHasta"
                                       value="#{dashboardBean.filtroFechaHasta}"
                                       pattern="yyyy-MM-dd"
                                       showIcon="true"
+                                      panelStyleClass="cuy-calendar"
+                                      monthNavigator="true"
+                                      yearNavigator="select"
+                                      showButtonBar="true"
+                                      showOtherMonths="true"
+                                      yearRange="2020:2030"
                                       style="width: 100%;" />
                     </div>
-                    <div style="display: flex; gap: 0.5rem;">
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
                         <p:commandButton value="Filtrar"
                                          icon="pi pi-search"
                                          actionListener="#{dashboardBean.aplicarFiltros}"

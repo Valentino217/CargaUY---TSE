@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml"
       xmlns:h="jakarta.faces.html"
       xmlns:f="jakarta.faces.core"
@@ -396,7 +396,7 @@
         }
     </style>
     <ui:insert name="head" />
-    <link rel="stylesheet" href="#{request.contextPath}/css/ajustes-ui.css?v=20261104-fix-dialog"/>
+    <link rel="stylesheet" href="#{request.contextPath}/css/ajustes-ui.css?v=20261105-datepicker-fix"/>
     <link rel="stylesheet" href="#{request.contextPath}/css/calendarios.css"/>
 </h:head>
 
@@ -455,8 +455,8 @@
                             rendered="#{not authBean.esAnonimo()}" />
 
                 <!-- 1. PORTAL PÚBLICO -->
-                <p:menuitem value="Validar Empresa" icon="pi pi-verified" outcome="/portal/validar-empresa.xhtml" />
-                <p:menuitem value="Información Pública" icon="pi pi-chart-bar" outcome="/portal/info-publica.xhtml" />
+                <p:menuitem value="Validar Empresa" icon="pi pi-verified" outcome="/portal/validar-empresa.xhtml" rendered="#{not authBean.esAnonimo()}" />
+                <p:menuitem value="Información Pública" icon="pi pi-chart-bar" outcome="/portal/info-publica.xhtml" rendered="#{not authBean.esAnonimo()}" />
 
 
                 <!-- 2. CIUDADANO EMPRESA -->
@@ -466,7 +466,6 @@
                     <p:menuitem value="Guías de Viaje" icon="pi pi-map" outcome="/empresa/viajes.xhtml" />
                     <p:separator />
                     <p:menuitem value="Infracciones" icon="pi pi-exclamation-circle" outcome="/empresa/infracciones.xhtml" />
-                    <p:menuitem value="Validar permisos" icon="pi pi-verified" outcome="/empresa/validar-permisos.xhtml" />
                 </p:submenu>
 
                 <!-- 2.5 CHOFER -->
@@ -493,7 +492,7 @@
                     <p:menuitem value="Nodos" icon="pi pi-server" outcome="/admin/nodos.xhtml" />
                     <p:menuitem value="Catálogos" icon="pi pi-tags" outcome="/admin/catalogos.xhtml" />
                     <p:menuitem value="Reglas de Fiscalización" icon="pi pi-sliders-h" outcome="/admin/reglas-fiscalizacion.xhtml" />
-                    <p:menuitem value="Validar permisos" icon="pi pi-verified" outcome="/empresa/validar-permisos.xhtml" />
+                    <p:menuitem value="Validar Permisos" icon="pi pi-verified" outcome="/empresa/validar-permisos.xhtml" />
                 </p:submenu>
 
             </p:menubar>

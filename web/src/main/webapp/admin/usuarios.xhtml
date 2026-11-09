@@ -1,4 +1,4 @@
-﻿<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
                 xmlns:h="jakarta.faces.html"
                 xmlns:f="jakarta.faces.core"
                 xmlns:ui="jakarta.faces.facelets"
@@ -165,12 +165,6 @@
                   width="580"
                   closeOnEscape="true">
             <h:form id="dlgUsuarioForm" styleClass="ui-fluid">
-                <ui:fragment rendered="#{not adminUsuariosBean.modoEdicion}">
-                    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 0.65rem 0.85rem; margin-bottom: 1rem; font-size: 0.82rem; color: #1e40af;">
-                        <i class="pi pi-info-circle" style="margin-right: 0.35rem;" />
-                        <strong>Nota:</strong> El alta manual está habilitada únicamente para cuentas institucionales que ingresan por LDAP (ADMINISTRADOR y AUTORIDAD). Los ciudadanos y choferes deben auto-registrarse vía gub.uy.
-                    </div>
-                </ui:fragment>
                 <div class="cuy-form-grid-2">
                     <div class="cuy-field">
                         <p:outputLabel for="tipoUsr" value="Rol" />

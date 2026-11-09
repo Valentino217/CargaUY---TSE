@@ -53,9 +53,58 @@ body .ui-selectonemenu.ui-state-focus {
     box-shadow: 0 0 0 3px rgb(2 132 199 / 12%);
 }
 
-/* No alterar los radios de casillas, indicadores de estado ni controles internos. */
-body .ui-datepicker-trigger {
-    border-radius: 0 8px 8px 0 !important;
+/* Agrupación horizontal limpia para PrimeFaces DatePicker / Calendar */
+body .ui-calendar,
+body .p-datepicker:not(.ui-datepicker-inline) {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    vertical-align: middle !important;
+    position: relative !important;
+    box-sizing: border-box !important;
+}
+
+body .ui-calendar > .ui-inputfield,
+body .p-datepicker:not(.ui-datepicker-inline) > .ui-inputfield {
+    flex: 1 1 auto !important;
+    width: 1% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+    border-right: none !important;
+}
+
+body .ui-calendar > .ui-inputfield:focus,
+body .p-datepicker:not(.ui-datepicker-inline) > .ui-inputfield:focus {
+    position: relative !important;
+    z-index: 2 !important;
+    border-right: 1px solid var(--cuy-focus, #0284c7) !important;
+}
+
+body .ui-calendar > .ui-datepicker-trigger,
+body .p-datepicker:not(.ui-datepicker-inline) > .ui-datepicker-trigger {
+    flex: 0 0 2.5rem !important;
+    width: 2.5rem !important;
+    min-width: 2.5rem !important;
+    box-sizing: border-box !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border-top-left-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
+    border-top-right-radius: var(--cuy-control-radius, 8px) !important;
+    border-bottom-right-radius: var(--cuy-control-radius, 8px) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+body .ui-selectonemenu .ui-selectonemenu-label {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    padding-right: 2rem !important;
 }
 
 .cuy-header { gap: 24px; padding-block: 16px; }

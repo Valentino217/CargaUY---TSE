@@ -34,9 +34,14 @@ public class DashboardBean implements Serializable {
     private DashboardResumenDTO resumen;
 
     private String filtroRubro;
+    private String filtroTipoCarga;
     private String filtroUbicacion;
     private LocalDate filtroFechaDesde;
     private LocalDate filtroFechaHasta;
+
+    private List<String> rubrosDisponibles = new ArrayList<>();
+    private List<String> tiposCargaDisponibles = new ArrayList<>();
+    private List<String> ubicacionesDisponibles = new ArrayList<>();
 
     public DashboardBean() {
     }
@@ -48,9 +53,15 @@ public class DashboardBean implements Serializable {
     @PostConstruct
     public void inicializar() {
         try {
+            if (dashboardService != null) {
+                this.rubrosDisponibles = dashboardService.listarRubrosDisponibles();
+                this.tiposCargaDisponibles = dashboardService.listarTiposCargaDisponibles();
+                this.ubicacionesDisponibles = dashboardService.listarUbicacionesDisponibles();
+            }
             if (tieneFiltrosActivos()) {
                 this.resumen = dashboardService.obtenerResumenFiltrado(
                         filtroRubro,
+                        filtroTipoCarga,
                         filtroUbicacion,
                         filtroFechaDesde,
                         filtroFechaHasta
@@ -68,6 +79,7 @@ public class DashboardBean implements Serializable {
             if (tieneFiltrosActivos()) {
                 this.resumen = dashboardService.obtenerResumenFiltrado(
                         filtroRubro,
+                        filtroTipoCarga,
                         filtroUbicacion,
                         filtroFechaDesde,
                         filtroFechaHasta
@@ -82,6 +94,7 @@ public class DashboardBean implements Serializable {
 
     public void limpiarFiltros() {
         this.filtroRubro = null;
+        this.filtroTipoCarga = null;
         this.filtroUbicacion = null;
         this.filtroFechaDesde = null;
         this.filtroFechaHasta = null;
@@ -90,6 +103,7 @@ public class DashboardBean implements Serializable {
 
     private boolean tieneFiltrosActivos() {
         return (filtroRubro != null && !filtroRubro.isBlank())
+                || (filtroTipoCarga != null && !filtroTipoCarga.isBlank())
                 || (filtroUbicacion != null && !filtroUbicacion.isBlank())
                 || filtroFechaDesde != null
                 || filtroFechaHasta != null;
@@ -186,6 +200,14 @@ public class DashboardBean implements Serializable {
         this.filtroRubro = filtroRubro;
     }
 
+    public String getFiltroTipoCarga() {
+        return filtroTipoCarga;
+    }
+
+    public void setFiltroTipoCarga(String filtroTipoCarga) {
+        this.filtroTipoCarga = filtroTipoCarga;
+    }
+
     public String getFiltroUbicacion() {
         return filtroUbicacion;
     }
@@ -208,5 +230,29 @@ public class DashboardBean implements Serializable {
 
     public void setFiltroFechaHasta(LocalDate filtroFechaHasta) {
         this.filtroFechaHasta = filtroFechaHasta;
+    }
+
+    public List<String> getRubrosDisponibles() {
+        return rubrosDisponibles;
+    }
+
+    public void setRubrosDisponibles(List<String> rubrosDisponibles) {
+        this.rubrosDisponibles = rubrosDisponibles;
+    }
+
+    public List<String> getTiposCargaDisponibles() {
+        return tiposCargaDisponibles;
+    }
+
+    public void setTiposCargaDisponibles(List<String> tiposCargaDisponibles) {
+        this.tiposCargaDisponibles = tiposCargaDisponibles;
+    }
+
+    public List<String> getUbicacionesDisponibles() {
+        return ubicacionesDisponibles;
+    }
+
+    public void setUbicacionesDisponibles(List<String> ubicacionesDisponibles) {
+        this.ubicacionesDisponibles = ubicacionesDisponibles;
     }
 }
