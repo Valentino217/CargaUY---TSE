@@ -76,6 +76,7 @@ services:
   wildfly:
     env_file:
       - .env
+      - ./.local-p1/gub-real.env
     build:
       context: .
       dockerfile: docker/wildfly/Dockerfile
