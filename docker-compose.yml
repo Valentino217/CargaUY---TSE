@@ -11,7 +11,7 @@ services:
       POSTGRES_USER: cargauy
       POSTGRES_PASSWORD: cargauy123
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata_p1:/var/lib/postgresql/data
       - ./docker/postgres/init:/docker-entrypoint-initdb.d
@@ -29,7 +29,7 @@ services:
       LDAP_APP_PASSWORD: ${LDAP_APP_PASSWORD:-admin123}
       LDAP_APP_UID: ${LDAP_APP_UID:-martin.admin}
     ports:
-      - "1389:1389"
+      - "127.0.0.1:1389:1389"
     volumes:
       - ldap_p1:/data
 
@@ -44,7 +44,7 @@ services:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME:-gestor-idp}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD:-nr4i7WZyse1sY3oQkYKI6Nm4z5RjOn7tOJxDjT5EUm8}
     ports:
-      - "8083:8080"
+      - "127.0.0.1:8083:8080"
     volumes:
       - ./.local-p1/gub-realm.json:/opt/keycloak/data/import/cargauy-test-realm.json:ro
       - keycloak_p1:/opt/keycloak/data
@@ -55,7 +55,7 @@ services:
       - seccomp:unconfined
     restart: unless-stopped
     ports:
-      - "27017:27017"
+      - "127.0.0.1:27017:27017"
     volumes:
       - mongo_p1:/data/db
 
@@ -119,9 +119,18 @@ services:
       GUB_DOCUMENT_TIPO: DNI
       GUB_DOCUMENT_ASUMIR_LOCAL: "true"
     ports:
-      - "80:8080"
       - "8080:8080"
-      - "9990:9990"
+      - "127.0.0.1:9990:9990"
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - /var/lib/jelastic/keys:/etc/nginx/certs:ro
+    depends_on:
+      - wildfly
 
 volumes:
   pgdata_p1:

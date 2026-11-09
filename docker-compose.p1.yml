@@ -5,7 +5,7 @@ services:
       LDAP_ROOT_PASSWORD: ${LDAP_ROOT_PASSWORD:?Ejecutar preparar-local.ps1}
       LDAP_APP_PASSWORD: ${LDAP_APP_PASSWORD:?Ejecutar preparar-local.ps1}
       LDAP_APP_UID: ${LDAP_APP_UID:?Ejecutar preparar-local.ps1}
-    ports: ["1389:1389"]
+    ports: ["127.0.0.1:1389:1389"]
     volumes: ["ldap_p1:/data"]
   gub:
     image: quay.io/keycloak/keycloak:26.4.7
@@ -13,7 +13,7 @@ services:
     environment:
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD}
-    ports: ["8083:8080"]
+    ports: ["127.0.0.1:8083:8080"]
     volumes:
       - ./.local-p1/gub-realm.json:/opt/keycloak/data/import/cargauy-test-realm.json:ro
       - keycloak_p1:/opt/keycloak/data
@@ -28,7 +28,7 @@ services:
     ports: ["8082:8080"]
   mongodb:
     image: mongo:7
-    ports: ["27017:27017"]
+    ports: ["127.0.0.1:27017:27017"]
     volumes: ["mongo_p1:/data/db"]
 volumes:
   ldap_p1:
