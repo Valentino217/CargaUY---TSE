@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml"
       xmlns:h="jakarta.faces.html"
       xmlns:f="jakarta.faces.core"
@@ -235,7 +235,7 @@
                             <h:outputText value="#{aud.usuario()}"/>
                         </p:column>
                         <p:column headerText="Timestamp" style="width: 190px;">
-                            <code>#{aud.timestampCreacion()}</code>
+                            <code><h:outputText value="#{aud.timestampCreacion()}"><f:convertDateTime type="localDateTime" pattern="dd/MM/yyyy HH:mm" /></h:outputText></code>
                         </p:column>
                         <p:column headerText="Fundamento / Detalle">
                             <h:outputText value="#{aud.fundamento()}"/>

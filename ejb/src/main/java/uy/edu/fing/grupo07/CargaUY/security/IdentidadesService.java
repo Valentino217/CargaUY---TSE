@@ -84,21 +84,36 @@ public class IdentidadesService {
         if ("GUB".equals(u.getOrigenIdentidad()) && interno) {
             throw new ErrorAcceso(409, "Cuentas gub.uy no admiten roles internos que requieren LDAP");
         }
+        if (unicoRol != TipoUsuario.CHOFER) {
+            var qGuias = em.createQuery(
+                    "select count(g) from GuiaDeViaje g where g.chofer.id = :id and g.estado in (:estados)", Long.class);
+            if (qGuias != null) {
+                Long guiasActivas = qGuias
+                        .setParameter("id", id)
+                        .setParameter("estados", List.of(
+                                uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado.EN_CURSO,
+                                uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado.SIN_INICIAR))
+                        .getSingleResult();
+                if (guiasActivas != null && guiasActivas > 0) {
+                    throw new ErrorAcceso(409, "No se puede cambiar el rol del chofer porque tiene guías de viaje en curso o sin iniciar.");
+                }
+            }
+        }
 
         u.getRoles().clear(); 
         u.getRoles().add(unicoRol);
         em.flush();
 
         if (unicoRol == TipoUsuario.CHOFER) {
-            em.createNativeQuery("INSERT INTO choferes (usuario_id) VALUES (:id) ON CONFLICT DO NOTHING")
-                    .setParameter("id", id).executeUpdate();
-            em.createNativeQuery("UPDATE usuarios SET tipo_usuario = 'CHOFER' WHERE id = :id")
-                    .setParameter("id", id).executeUpdate();
+            Query q1 = em.createNativeQuery("INSERT INTO choferes (usuario_id) VALUES (:id) ON CONFLICT DO NOTHING");
+            if (q1 != null) q1.setParameter("id", id).executeUpdate();
+            Query q2 = em.createNativeQuery("UPDATE usuarios SET tipo_usuario = 'CHOFER' WHERE id = :id");
+            if (q2 != null) q2.setParameter("id", id).executeUpdate();
         } else if (unicoRol == TipoUsuario.CIUDADANO || unicoRol == TipoUsuario.CIUDADANO_COMUN) {
-            em.createNativeQuery("INSERT INTO ciudadanos (usuario_id) VALUES (:id) ON CONFLICT DO NOTHING")
-                    .setParameter("id", id).executeUpdate();
-            em.createNativeQuery("UPDATE usuarios SET tipo_usuario = 'CIUDADANO' WHERE id = :id")
-                    .setParameter("id", id).executeUpdate();
+            Query q1 = em.createNativeQuery("INSERT INTO ciudadanos (usuario_id) VALUES (:id) ON CONFLICT DO NOTHING");
+            if (q1 != null) q1.setParameter("id", id).executeUpdate();
+            Query q2 = em.createNativeQuery("UPDATE usuarios SET tipo_usuario = 'CIUDADANO' WHERE id = :id");
+            if (q2 != null) q2.setParameter("id", id).executeUpdate();
         }
 
         // Si el usuario deja de ser CIUDADANO responsable o CHOFER, limpiar vínculos incompatibles
@@ -186,6 +201,22 @@ public class IdentidadesService {
         }
 
         VinculoEmpresa v = em.find(VinculoEmpresa.class, VinculoEmpresa.clave(empresa, usuario));
+        if (Boolean.FALSE.equals(chofer)) {
+            var qGuias = em.createQuery(
+                "select count(g) from GuiaDeViaje g where g.empresa.nroEmpresa = :empresa and g.chofer.id = :usuario and g.estado in (:estados)", Long.class);
+            if (qGuias != null) {
+                Long guiasActivas = qGuias
+                    .setParameter("empresa", empresa)
+                    .setParameter("usuario", usuario)
+                    .setParameter("estados", List.of(
+                        uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado.EN_CURSO,
+                        uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado.SIN_INICIAR))
+                    .getSingleResult();
+                if (guiasActivas != null && guiasActivas > 0) {
+                    throw new ErrorAcceso(409, "No se puede desvincular al chofer porque tiene guías de viaje en curso o sin iniciar.");
+                }
+            }
+        }
         if (responsable != null && !responsable && chofer != null && !chofer) {
             // Desvinculación definitiva
             if (v != null) {

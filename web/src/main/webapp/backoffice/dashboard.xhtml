@@ -377,7 +377,7 @@
                                     <p:column headerText="Acción" style="width: 160px; min-width: 140px;"><span class="cuy-mono" style="font-size: 0.76rem; font-weight: 700;">#{aud.accion()}</span></p:column>
                                     <p:column headerText="Estado" style="width: 110px; min-width: 95px;"><h:outputText value="#{aud.resolucion()}" style="font-size: 0.78rem;" /></p:column>
                                     <p:column headerText="Autor" style="width: 160px; min-width: 130px;"><h:outputText value="#{aud.usuario()}" style="font-size: 0.78rem;" /></p:column>
-                                    <p:column headerText="Timestamp" style="width: 155px; min-width: 135px; word-break: break-all;"><span class="cuy-mono" style="font-size: 0.74rem;">#{aud.timestampCreacion()}</span></p:column>
+                                    <p:column headerText="Timestamp" style="width: 155px; min-width: 135px; word-break: break-all;"><span class="cuy-mono" style="font-size: 0.74rem;"><h:outputText value="#{aud.timestampCreacion()}"><f:convertDateTime type="localDateTime" pattern="dd/MM/yyyy HH:mm" /></h:outputText></span></p:column>
                                     <p:column headerText="Detalle" style="min-width: 250px;"><h:outputText value="#{aud.fundamento()}" style="font-size: 0.78rem;" /></p:column>
                                 </p:dataTable>
                             </div>

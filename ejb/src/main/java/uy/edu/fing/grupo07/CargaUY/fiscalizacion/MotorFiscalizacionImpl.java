@@ -279,8 +279,8 @@ public class MotorFiscalizacionImpl implements MotorFiscalizacionLocal {
         }
 
         String evidencia = "El vehículo matrícula " + vehiculo.getMatricula()
-                + " no cuenta con habilitación vigente para circular a la fecha del viaje (" + fechaViaje + "). Detalle: "
-                + detalleFaltantes.toString().trim();
+                + " no cuenta con habilitación vigente para circular a la fecha del viaje (" + fechaViaje + ")."
+                + (detalleFaltantes.toString().isBlank() ? "" : " Detalle: " + detalleFaltantes.toString().trim());
 
         registrarInfraccionSiNoExiste(
                 guia,

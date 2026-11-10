@@ -154,9 +154,9 @@ class TrackingMockServiceTest {
 
     @Test
     void deberiaIniciarDetenerYReiniciarMockCorrectamente() {
-        when(em.createQuery(anyString(), eq(GuiaDeViaje.class))).thenReturn(queryGuias);
-        when(queryGuias.setParameter("enCurso", TipoEstado.EN_CURSO)).thenReturn(queryGuias);
-        when(queryGuias.getResultList()).thenReturn(List.of());
+        lenient().when(em.createQuery(anyString(), eq(GuiaDeViaje.class))).thenReturn(queryGuias);
+        lenient().when(queryGuias.setParameter("enCurso", TipoEstado.EN_CURSO)).thenReturn(queryGuias);
+        lenient().when(queryGuias.getResultList()).thenReturn(List.of());
 
         assertFalse(trackingMockService.estaActivo());
 

@@ -1,4 +1,4 @@
-﻿<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
                 xmlns:h="jakarta.faces.html"
                 xmlns:f="jakarta.faces.core"
                 xmlns:ui="jakarta.faces.facelets"
@@ -218,7 +218,7 @@
                                         <h:outputText value="#{aud.usuario()}" style="font-size: 0.78rem;" />
                                     </p:column>
                                     <p:column headerText="Timestamp" style="width: 175px; min-width: 150px;" styleClass="cuy-aud-col-fixed">
-                                        <span class="cuy-mono" style="font-size: 0.74rem;">#{aud.timestampCreacion()}</span>
+                                        <span class="cuy-mono" style="font-size: 0.74rem;"><h:outputText value="#{aud.timestampCreacion()}"><f:convertDateTime type="localDateTime" pattern="dd/MM/yyyy HH:mm" /></h:outputText></span>
                                     </p:column>
                                     <p:column headerText="Fundamento / Detalle" style="min-width: 250px;">
                                         <h:outputText value="#{aud.fundamento()}" style="font-size: 0.78rem; white-space: normal;" />

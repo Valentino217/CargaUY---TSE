@@ -278,6 +278,8 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
                     }
                 }
             }
+            // Verificar que el vehículo no se encuentre ya en otra guía en estado EN_CURSO.
+            verificarVehiculoNoEnCurso(guia);
             // Punto E.7: permitir que el viaje inicie y que el motor de fiscalización evalúe SIN_HABILITACION a la fecha de la guía.
             if (aplicarTransicion) {
                 guia.setEstado(TipoEstado.EN_CURSO);
@@ -307,6 +309,33 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
             throw new BusinessException(
                     "Transición inválida: la guía #" + guia.getId()
                             + " ya se encuentra FINALIZADO y no admite nuevos eventos (" + tipo + ")."
+            );
+        }
+    }
+
+    private void verificarVehiculoNoEnCurso(GuiaDeViaje guia) {
+        if (guia == null || guia.getVehiculo() == null || guia.getVehiculo().getMatricula() == null) {
+            return;
+        }
+        String matricula = guia.getVehiculo().getMatricula().trim();
+        TypedQuery<GuiaDeViaje> q = em.createQuery(
+                "SELECT g FROM GuiaDeViaje g JOIN g.vehiculo v "
+                        + "WHERE UPPER(v.matricula) = :matricula AND g.estado = :enCurso AND (:guiaId IS NULL OR g.id <> :guiaId)",
+                GuiaDeViaje.class
+        );
+        if (q == null) {
+            return;
+        }
+        q.setParameter("matricula", matricula.toUpperCase());
+        q.setParameter("enCurso", TipoEstado.EN_CURSO);
+        q.setParameter("guiaId", guia.getId());
+        q.setMaxResults(1);
+        List<GuiaDeViaje> activas = q.getResultList();
+        if (activas != null && !activas.isEmpty()) {
+            GuiaDeViaje otra = activas.get(0);
+            throw new BusinessException(
+                    "No se puede iniciar la guía #" + guia.getId() + ": el vehículo " + matricula
+                            + " ya se encuentra en una guía de viaje en curso (Guía #" + otra.getId() + ")."
             );
         }
     }

@@ -111,6 +111,28 @@ public class GuiaDeViajeEJB implements GuiaDeViajeEJBLocal {
             throw new IllegalArgumentException("Guía de viaje inexistente: #" + guiaId);
         }
         if (guia.getEstado() == TipoEstado.SIN_INICIAR) {
+            if (guia.getVehiculo() != null && guia.getVehiculo().getMatricula() != null) {
+                String matricula = guia.getVehiculo().getMatricula().trim();
+                var qVeh = em.createQuery(
+                        "SELECT g FROM GuiaDeViaje g JOIN g.vehiculo v "
+                                + "WHERE UPPER(v.matricula) = :matricula AND g.estado = :enCurso AND g.id <> :guiaId",
+                        GuiaDeViaje.class
+                );
+                if (qVeh != null) {
+                    List<GuiaDeViaje> activas = qVeh
+                            .setParameter("matricula", matricula.toUpperCase())
+                            .setParameter("enCurso", TipoEstado.EN_CURSO)
+                            .setParameter("guiaId", guia.getId())
+                            .setMaxResults(1)
+                            .getResultList();
+                    if (activas != null && !activas.isEmpty()) {
+                        throw new IllegalStateException(
+                                "No se puede iniciar la guía #" + guia.getId() + ": el vehículo " + matricula
+                                        + " ya se encuentra en una guía de viaje en curso (Guía #" + activas.get(0).getId() + ")."
+                        );
+                    }
+                }
+            }
             guia.setEstado(TipoEstado.EN_CURSO);
             em.flush();
             if (fiscalizacionProducer != null) {
