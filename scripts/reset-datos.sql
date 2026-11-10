@@ -2,7 +2,7 @@
 -- CargaUY - Limpieza completa de tablas (Reset de base de datos)
 -- ============================================================================
 
-ALTER TABLE registro_auditoria DISABLE TRIGGER ALL;
+DROP TRIGGER IF EXISTS trg_audit_immutable ON registro_auditoria;
 
 TRUNCATE TABLE 
   registro_auditoria,
@@ -36,4 +36,15 @@ TRUNCATE TABLE
   reglas_fiscalizacion
 RESTART IDENTITY CASCADE;
 
-ALTER TABLE registro_auditoria ENABLE TRIGGER ALL;
+CREATE OR REPLACE FUNCTION trg_prevent_audit_modification()
+RETURNS TRIGGER AS $$
+BEGIN
+    RAISE EXCEPTION 'Operación denegada: La tabla registro_auditoria es estrictamente inmutable (append-only). No se permiten sentencias UPDATE ni DELETE.';
+    RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_audit_immutable
+BEFORE UPDATE OR DELETE ON registro_auditoria
+FOR EACH ROW
+EXECUTE FUNCTION trg_prevent_audit_modification();

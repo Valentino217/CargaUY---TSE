@@ -55,9 +55,6 @@ public class IntegracionSesionFilter implements Filter {
 
     private boolean evaluarPermisoRuta(String p, String metodo, Acceso actor) {
         if ("/completar-perfil.xhtml".equals(p)) return true;
-        if (actor.tiene(TipoUsuario.ADMINISTRADOR)) {
-            return true;
-        }
         if (p == null || p.equals("/index.xhtml") || p.equals("/error.xhtml") || p.startsWith("/portal/")) {
             return true;
         }
@@ -69,18 +66,22 @@ public class IntegracionSesionFilter implements Filter {
         }
         if (p.startsWith("/funcionario/")) {
             return actor.tiene(TipoUsuario.FUNCIONARIO)
+                || actor.tiene(TipoUsuario.ADMINISTRADOR)
                 || (actor.tiene(TipoUsuario.AUTORIDAD) && ("GET".equals(metodo) || "HEAD".equals(metodo)));
         }
         if (p.startsWith("/empresa/")) {
-            return actor.tiene(TipoUsuario.CIUDADANO) || actor.tiene(TipoUsuario.FUNCIONARIO);
+            if (p.equals("/empresa/fiscalizacion-vehiculos.xhtml") || p.equals("/empresa/monitoreo.xhtml")) {
+                return actor.tiene(TipoUsuario.CIUDADANO) || actor.tiene(TipoUsuario.FUNCIONARIO);
+            }
+            return actor.tiene(TipoUsuario.CIUDADANO) || actor.tiene(TipoUsuario.FUNCIONARIO) || actor.tiene(TipoUsuario.ADMINISTRADOR);
         }
         if (p.startsWith("/chofer/")) {
             return actor.tiene(TipoUsuario.CHOFER);
         }
         boolean gestion = p.equals("/GuiaDeViajeJSF.xhtml") || p.equals("/VehiculoJSF.xhtml")
             || p.equals("/ITV.xhtml") || p.equals("/PNC.xhtml");
-        return (gestion && actor.tiene(TipoUsuario.CIUDADANO))
-            || (!gestion && (actor.tiene(TipoUsuario.FUNCIONARIO)
+        return (gestion && (actor.tiene(TipoUsuario.CIUDADANO) || actor.tiene(TipoUsuario.ADMINISTRADOR)))
+            || (!gestion && (actor.tiene(TipoUsuario.FUNCIONARIO) || actor.tiene(TipoUsuario.ADMINISTRADOR)
                 || (actor.tiene(TipoUsuario.AUTORIDAD) && ("GET".equals(metodo) || "HEAD".equals(metodo)))));
     }
 }

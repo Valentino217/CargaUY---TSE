@@ -143,26 +143,7 @@ public class AdminNodosBean implements Serializable {
                 oidcUp ? "Operativo" : "OFFLINE"
         ));
 
-        // 5. Colas JMS Artemis
-        nodos.add(new NodoPerifericoVista(
-                "JMS-TRACKING",
-                "Cola de Tracking GPS",
-                "JMS",
-                "java:/jms/queue/TrackingQueue",
-                true,
-                "Operativo"
-        ));
-
-        nodos.add(new NodoPerifericoVista(
-                "JMS-FISC",
-                "Cola de Fiscalización",
-                "JMS",
-                "java:/jms/queue/FiscalizacionQueue",
-                true,
-                "Operativo"
-        ));
-
-        // 6. MongoDB NoSQL
+        // 5. MongoDB NoSQL
         boolean mongoUp = (posicionNoSqlRepository != null && posicionNoSqlRepository.estaOperativo())
                 || probarSocket("mongodb", 27017)
                 || probarSocket("localhost", 27017);

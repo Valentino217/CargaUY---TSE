@@ -8,6 +8,7 @@ import jakarta.faces.view.ViewScoped;
 import jakarta.inject.Named;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.Empresa;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.GuiaDeViaje;
+import uy.edu.fing.grupo07.CargaUY.domain.entity.TipoCarga;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.Vehiculo;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado;
 import uy.edu.fing.grupo07.CargaUY.dto.DashboardResumenDTO;
@@ -40,17 +41,21 @@ public class PortalPublicoBean implements Serializable {
     public static final int UMBRAL_MINIMO_AGREGACION_K = 3;
 
     public record EstadisticaCorredorPublico(
-            String corredor,
             String rubro,
+            String tipoCarga,
             long cantidadViajes,
             double volumenTotal
     ) implements Serializable {
         public String getCorredor() {
-            return corredor;
+            return tipoCarga;
         }
 
         public String getRubro() {
             return rubro;
+        }
+
+        public String getTipoCarga() {
+            return tipoCarga;
         }
 
         public long getCantidadViajes() {
@@ -127,16 +132,16 @@ public class PortalPublicoBean implements Serializable {
     }
 
     /**
-     * Devuelve la actividad de transporte agregada aplicando k-anonimato (k >= 3)
+     * Devuelve la actividad de transporte agregada por Rubro y Tipo de Carga del catálogo
      * sin exponer identificadores de guía, empresa, matrícula ni chofer.
      */
     public List<EstadisticaCorredorPublico> getEstadisticasActividadAgregada() {
         List<EstadisticaCorredorPublico> resultado = new ArrayList<>();
-        if (guiasPublicas == null || guiasPublicas.size() < UMBRAL_MINIMO_AGREGACION_K) {
+        if (guiasPublicas == null || guiasPublicas.isEmpty()) {
             return resultado;
         }
 
-        Map<String, List<GuiaDeViaje>> porRubro = new LinkedHashMap<>();
+        Map<String, List<GuiaDeViaje>> porRubroYTipo = new LinkedHashMap<>();
         for (GuiaDeViaje g : guiasPublicas) {
             if (g == null) {
                 continue;
@@ -144,44 +149,42 @@ public class PortalPublicoBean implements Serializable {
             String rubro = (g.getRubroCliente() != null && !g.getRubroCliente().isBlank())
                     ? g.getRubroCliente().trim()
                     : "General";
-            porRubro.computeIfAbsent(rubro, k -> new ArrayList<>()).add(g);
+            String tipoCarga = obtenerDescripcionTiposCarga(g);
+            String clave = rubro + "|||" + tipoCarga;
+            porRubroYTipo.computeIfAbsent(clave, k -> new ArrayList<>()).add(g);
         }
 
-        List<GuiaDeViaje> residuales = new ArrayList<>();
-        for (Map.Entry<String, List<GuiaDeViaje>> entry : porRubro.entrySet()) {
+        for (Map.Entry<String, List<GuiaDeViaje>> entry : porRubroYTipo.entrySet()) {
             List<GuiaDeViaje> grupo = entry.getValue();
-            if (grupo.size() >= UMBRAL_MINIMO_AGREGACION_K) {
-                double volumen = grupo.stream().mapToDouble(GuiaDeViaje::getVolumenCarga).sum();
-                resultado.add(new EstadisticaCorredorPublico(
-                        "Red Nacional Consolidada",
-                        entry.getKey(),
-                        grupo.size(),
-                        Math.round(volumen * 100.0) / 100.0
-                ));
-            } else {
-                residuales.addAll(grupo);
-            }
-        }
-
-        if (residuales.size() >= UMBRAL_MINIMO_AGREGACION_K) {
-            double volumenResidual = residuales.stream().mapToDouble(GuiaDeViaje::getVolumenCarga).sum();
+            String[] partes = entry.getKey().split("\\|\\|\\|", 2);
+            String rubro = partes[0];
+            String tipoCarga = partes.length > 1 ? partes[1] : "Carga General";
+            double volumen = grupo.stream().mapToDouble(GuiaDeViaje::getVolumenCarga).sum();
             resultado.add(new EstadisticaCorredorPublico(
-                    "Red Nacional Consolidada",
-                    "Otros Rubros",
-                    residuales.size(),
-                    Math.round(volumenResidual * 100.0) / 100.0
-            ));
-        } else if (!residuales.isEmpty() && resultado.isEmpty()) {
-            double volumenTotal = guiasPublicas.stream().mapToDouble(GuiaDeViaje::getVolumenCarga).sum();
-            resultado.add(new EstadisticaCorredorPublico(
-                    "Red Nacional Consolidada",
-                    "Consolidado Nacional",
-                    guiasPublicas.size(),
-                    Math.round(volumenTotal * 100.0) / 100.0
+                    rubro,
+                    tipoCarga,
+                    grupo.size(),
+                    Math.round(volumen * 100.0) / 100.0
             ));
         }
 
         return resultado;
+    }
+
+    private String obtenerDescripcionTiposCarga(GuiaDeViaje g) {
+        if (g == null || g.getTiposCarga() == null || g.getTiposCarga().isEmpty()) {
+            return "Carga General";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (TipoCarga tc : g.getTiposCarga()) {
+            if (tc != null && tc.getDesc() != null && !tc.getDesc().isBlank()) {
+                if (sb.length() > 0) {
+                    sb.append(", ");
+                }
+                sb.append(tc.getDesc().trim());
+            }
+        }
+        return sb.length() > 0 ? sb.toString() : "Carga General";
     }
 
     /**

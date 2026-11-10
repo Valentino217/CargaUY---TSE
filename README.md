@@ -50,7 +50,7 @@ Este comando levanta automáticamente toda la plataforma con sus puertos mapeado
 
 ### Paso 2: Cargar datos de prueba (Seed Data)
 
-Una vez que la aplicación arrancó y creó las tablas en PostgreSQL, cargá los datos iniciales de prueba (empresas transportistas, vehículos con habilitaciones ITV/PNC, tipos de carga, guías de viaje e incidentes de fiscalización). Podés hacerlo con el script helper o con el comando directo:
+Una vez que la aplicación arrancó y creó las tablas en PostgreSQL, cargá los datos iniciales de prueba (catálogo de rubros y tipos de carga, empresas transportistas, vehículos con habilitaciones ITV/PNC, guías de viaje con pesos reales e incidentes de fiscalización). Podés hacerlo con el script helper o con el comando directo:
 
 * **Opción fácil (Script en PowerShell):**
   ```powershell
@@ -64,6 +64,13 @@ Una vez que la aplicación arrancó y creó las tablas en PostgreSQL, cargá los
   ```bash
   docker exec -i cargauy-p1-postgres-1 psql -U cargauy -d cargauy < scripts/seed-datos-prueba.sql
   ```
+
+> 💡 **Nota sobre el script mejorado:**
+> El script `seed-datos-prueba.sql` es totalmente **idempotente y seguro**:
+> - Resuelve automáticamente los IDs reales de los usuarios (evitando cualquier conflicto con `martin.admin` o bootstrap previo).
+> - Se ejecuta con codificación **UTF-8** para acentos y tildes.
+> - Actualiza de forma automática las secuencias de PostgreSQL (`rubros`, `tipos_carga`, `itvs`, `pncs`, etc.) para que cuando des de alta nuevos registros desde la web no colisionen los IDs.
+> - Detecta el nombre del contenedor de PostgreSQL automáticamente en los `.ps1`.
 
 ---
 

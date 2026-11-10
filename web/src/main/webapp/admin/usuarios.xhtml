@@ -217,7 +217,7 @@
                     <div style="background: #f8fafc; padding: 0.8rem 1rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 1rem;">
                         <strong>#{adminUsuariosBean.usuarioIdentidadSel.nombre()}</strong> (ID ##{adminUsuariosBean.usuarioIdentidadSel.id()})
                         <div style="font-size: 0.78rem; color: #64748b;">
-                            Origen de cuenta: <strong>#{adminUsuariosBean.origenIdentidadForm}</strong> | UID: #{empty adminUsuariosBean.uidExternoActual ? 'No asignado' : adminUsuariosBean.uidExternoActual}
+                            Origen de cuenta: <strong>#{adminUsuariosBean.origenIdentidadForm eq 'GUB' ? 'Gub.uy' : (adminUsuariosBean.origenIdentidadForm eq 'LDAP' ? 'LDAP' : adminUsuariosBean.origenIdentidadForm)}</strong>
                         </div>
                     </div>
 
