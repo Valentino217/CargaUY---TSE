@@ -396,11 +396,11 @@
         }
     </style>
     <ui:insert name="head" />
-    <link rel="stylesheet" href="#{request.contextPath}/css/ajustes-ui.css?v=20261105-datepicker-fix"/>
+    <link rel="stylesheet" href="#{request.contextPath}/css/ajustes-ui.css?v=filtros"/>
     <link rel="stylesheet" href="#{request.contextPath}/css/calendarios.css"/>
 </h:head>
 
-<h:body>
+<h:body styleClass="#{view.viewId eq '/index.xhtml' and authBean.esAdministrador() ? 'cuy-portal-admin' : ''}">
     <p:ajaxStatus onstart="document.getElementById('cuy-ajax-progress-bar').style.display='block'"
                   oncomplete="document.getElementById('cuy-ajax-progress-bar').style.display='none'" />
     <div id="cuy-ajax-progress-bar" style="display: none;" />
@@ -421,6 +421,7 @@
             </div>
         </h:link>
 
+        <ui:insert name="headerSearch" />
         <h:form id="headerAuthForm" styleClass="cuy-user-box">
             <ui:fragment rendered="#{authBean.esAnonimo()}">
                 <a href="#{request.contextPath}/login" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-icon-left ui-button-info" style="text-decoration: none; padding: 0.45rem 0.9rem; color: #fff; font-weight: 600; border-radius: 6px; background: #0284c7;">
@@ -430,23 +431,27 @@
             </ui:fragment>
 
             <ui:fragment rendered="#{not authBean.esAnonimo()}">
-                <div class="cuy-user-info">
+                <h:panelGroup layout="block" styleClass="cuy-user-info"
+                              rendered="#{view.viewId ne '/index.xhtml' or not authBean.esAdministrador()}">
                     <span class="cuy-user-name">#{authBean.usuarioActivo.nombre}</span>
                     <span class="cuy-user-role">CI: #{authBean.usuarioActivo.ci} &#8226; #{authBean.rolPrincipalLabel}</span>
-                </div>
+                </h:panelGroup>
+                <ui:fragment rendered="#{view.viewId eq '/index.xhtml' and authBean.esAdministrador()}">
+                    <span class="cuy-portal-user"><i class="pi pi-user" aria-hidden="true" /> #{authBean.rolPrincipalLabel}</span>
+                </ui:fragment>
                 <p:commandButton value="Salir"
                                  icon="pi pi-power-off"
                                  action="#{authBean.cerrarSesion}"
                                  ajax="false"
-                                 styleClass="ui-button-danger ui-button-sm" />
+                                 styleClass="cuy-sign-out ui-button-sm" />
             </ui:fragment>
         </h:form>
     </header>
 
     <!-- Barra de Navegación Condicionada por Roles (RBAC) -->
-    <nav class="cuy-nav-wrapper">
+    <nav class="cuy-nav-wrapper" aria-label="Navegación general">
         <h:form id="menuForm">
-            <p:menubar>
+            <p:menubar autoDisplay="false">
 
                 <!-- Panel General (si está autenticado) -->
                 <p:menuitem value="Panel Principal"
@@ -454,10 +459,19 @@
                             outcome="/index.xhtml"
                             rendered="#{not authBean.esAnonimo()}" />
 
-                <!-- 1. PORTAL PÚBLICO -->
-                <p:menuitem value="Validar Empresa" icon="pi pi-verified" outcome="/portal/validar-empresa.xhtml" rendered="#{not authBean.esAnonimo()}" />
-                <p:menuitem value="Información Pública" icon="pi pi-chart-bar" outcome="/portal/info-publica.xhtml" rendered="#{not authBean.esAnonimo()}" />
-
+                <p:submenu label="Gestión del sistema" icon="pi pi-cog" rendered="#{authBean.esAdministrador()}">
+                    <p:menuitem value="Usuarios y roles" outcome="/admin/usuarios.xhtml" />
+                    <p:menuitem value="Catálogos" outcome="/admin/catalogos.xhtml" />
+                    <p:menuitem value="Nodos" outcome="/admin/nodos.xhtml" />
+                </p:submenu>
+                <p:submenu label="Fiscalización" icon="pi pi-sliders-h" rendered="#{authBean.esAdministrador()}">
+                    <p:menuitem value="Reglas de fiscalización" outcome="/admin/reglas-fiscalizacion.xhtml" />
+                    <p:menuitem value="Validar permisos" outcome="/empresa/validar-permisos.xhtml" />
+                </p:submenu>
+                <p:submenu label="Consultas" icon="pi pi-search" rendered="#{not authBean.esAnonimo()}">
+                    <p:menuitem value="Validar empresa" outcome="/portal/validar-empresa.xhtml" />
+                    <p:menuitem value="Información pública" outcome="/portal/info-publica.xhtml" />
+                </p:submenu>
 
                 <!-- 2. CIUDADANO EMPRESA -->
                 <p:submenu label="Mi Empresa" icon="pi pi-building" rendered="#{authBean.esCiudadanoEmpresa()}">
@@ -485,15 +499,6 @@
                             icon="pi pi-chart-line"
                             outcome="/backoffice/dashboard.xhtml"
                             rendered="#{authBean.esAutoridad()}" />
-
-                <!-- 5. ADMINISTRADORES -->
-                <p:submenu label="Administración" icon="pi pi-cog" rendered="#{authBean.esAdministrador()}">
-                    <p:menuitem value="Usuarios y Roles" icon="pi pi-users" outcome="/admin/usuarios.xhtml" />
-                    <p:menuitem value="Nodos" icon="pi pi-server" outcome="/admin/nodos.xhtml" />
-                    <p:menuitem value="Catálogos" icon="pi pi-tags" outcome="/admin/catalogos.xhtml" />
-                    <p:menuitem value="Reglas de Fiscalización" icon="pi pi-sliders-h" outcome="/admin/reglas-fiscalizacion.xhtml" />
-                    <p:menuitem value="Validar Permisos" icon="pi pi-verified" outcome="/empresa/validar-permisos.xhtml" />
-                </p:submenu>
 
             </p:menubar>
         </h:form>

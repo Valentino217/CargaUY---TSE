@@ -1,4 +1,4 @@
-﻿<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
                 xmlns:h="jakarta.faces.html"
                 xmlns:f="jakarta.faces.core"
                 xmlns:ui="jakarta.faces.facelets"
@@ -78,7 +78,7 @@
                     <p:column headerText="Habilitación" filterBy="#{veh.estadoHabilitacion ? 'HABILITADO' : 'SUSPENDIDO'}" filterMatchMode="exact" style="width: 150px; text-align: center;">
                         <f:facet name="filter">
                             <p:selectOneMenu onchange="PF('dtFlotaFisc').filter()" styleClass="ui-custom-filter" style="width: 100%;">
-                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItem itemLabel="Habilitación" itemValue="#{null}" noSelectionOption="true" />
                                 <f:selectItem itemLabel="HABILITADO" itemValue="HABILITADO" />
                                 <f:selectItem itemLabel="SUSPENDIDO" itemValue="SUSPENDIDO" />
                             </p:selectOneMenu>
@@ -91,7 +91,7 @@
                     <p:column headerText="Vigencia ITV" filterBy="#{fiscalizacionFlotaBean.obtenerEstadoVigencia(fiscalizacionFlotaBean.obtenerVencimientoItv(veh.matricula))}" filterMatchMode="exact" style="width: 185px; text-align: center;">
                         <f:facet name="filter">
                             <p:selectOneMenu onchange="PF('dtFlotaFisc').filter()" styleClass="ui-custom-filter" style="width: 100%;">
-                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItem itemLabel="Vigencia ITV" itemValue="#{null}" noSelectionOption="true" />
                                 <f:selectItem itemLabel="VIGENTE" itemValue="VIGENTE" />
                                 <f:selectItem itemLabel="POR VENCER" itemValue="POR VENCER" />
                                 <f:selectItem itemLabel="VENCIDO" itemValue="VENCIDO" />
@@ -111,7 +111,7 @@
                     <p:column headerText="Vigencia Permiso" filterBy="#{fiscalizacionFlotaBean.obtenerEstadoVigencia(fiscalizacionFlotaBean.obtenerVencimientoPnc(veh.matricula))}" filterMatchMode="exact" style="width: 185px; text-align: center;">
                         <f:facet name="filter">
                             <p:selectOneMenu onchange="PF('dtFlotaFisc').filter()" styleClass="ui-custom-filter" style="width: 100%;">
-                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItem itemLabel="Vigencia Permiso" itemValue="#{null}" noSelectionOption="true" />
                                 <f:selectItem itemLabel="VIGENTE" itemValue="VIGENTE" />
                                 <f:selectItem itemLabel="POR VENCER" itemValue="POR VENCER" />
                                 <f:selectItem itemLabel="VENCIDO" itemValue="VENCIDO" />
@@ -131,7 +131,7 @@
                     <p:column headerText="Apto para circular" filterBy="#{fiscalizacionFlotaBean.tieneDocumentacionEnRegla(veh) ? 'APTO RUTA' : 'BLOQUEADO'}" filterMatchMode="exact" style="width: 160px; text-align: center;">
                         <f:facet name="filter">
                             <p:selectOneMenu onchange="PF('dtFlotaFisc').filter()" styleClass="ui-custom-filter" style="width: 100%;">
-                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItem itemLabel="Apto para circular" itemValue="#{null}" noSelectionOption="true" />
                                 <f:selectItem itemLabel="APTO RUTA" itemValue="APTO RUTA" />
                                 <f:selectItem itemLabel="BLOQUEADO" itemValue="BLOQUEADO" />
                             </p:selectOneMenu>

@@ -7,6 +7,30 @@
 
     <ui:define name="title">Validar Permisos de Empresa</ui:define>
 
+    <ui:define name="head">
+        <style>
+            .cuy-consulta-permisos {
+                --cuy-control-height: 2.75rem;
+                display: flex;
+                flex-wrap: wrap;
+                align-items: flex-end;
+                gap: 1rem;
+            }
+            .cuy-consulta-permisos .cuy-field {
+                flex: 1 1 16rem;
+                min-width: 0;
+                max-width: 25rem;
+            }
+            .cuy-consulta-permisos .ui-inputfield,
+            .cuy-consulta-permisos .ui-button {
+                height: var(--cuy-control-height);
+            }
+            .cuy-consulta-permisos .ui-button .ui-button-text {
+                padding-block: 0;
+            }
+        </style>
+    </ui:define>
+
     <ui:define name="content">
         <div class="cuy-page-header">
             <div>
@@ -22,9 +46,9 @@
             <h:form id="consultaPermisos">
                 <p:messages id="mensajes" closable="true" />
 
-                <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
-                    <div style="flex: 1; min-width: 260px; max-width: 400px;">
-                        <label for="consultaPermisos:numero_input" style="display: block; font-weight: 600; color: #1e293b; margin-bottom: 0.45rem; font-size: 0.9rem;">
+                <div class="cuy-consulta-permisos">
+                    <div class="cuy-field">
+                        <label for="consultaPermisos:numero_input">
                             Número de empresa
                         </label>
                         <p:inputNumber id="numero"
@@ -38,15 +62,12 @@
                                        required="true"
                                        requiredMessage="Por favor, ingresá el número de empresa." />
                     </div>
-                    <div>
                         <p:commandButton value="Consultar permisos"
                                          icon="pi pi-search"
                                          action="#{validacionPermisosBean.consultar}"
                                          process="@form"
                                          update="@form :resultadoPanel"
-                                         styleClass="ui-button-primary"
-                                         style="padding: 0.55rem 1.25rem;" />
-                    </div>
+                                         styleClass="ui-button-primary" />
                 </div>
             </h:form>
         </div>
@@ -115,7 +136,7 @@
                         <p:column headerText="Habilitación Admin." filterBy="#{u.habilitacionAdministrativa() ? 'HABILITADA' : 'INHABILITADA'}" filterMatchMode="exact" style="width: 175px; text-align: center;">
                             <f:facet name="filter">
                                 <p:selectOneMenu onchange="PF('dtValidarPermisos').filter()" styleClass="ui-custom-filter" style="width: 100%;">
-                                    <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                    <f:selectItem itemLabel="Habilitación Admin." itemValue="#{null}" noSelectionOption="true" />
                                     <f:selectItem itemLabel="HABILITADA" itemValue="HABILITADA" />
                                     <f:selectItem itemLabel="INHABILITADA" itemValue="INHABILITADA" />
                                 </p:selectOneMenu>
@@ -128,7 +149,7 @@
                         <p:column headerText="PNC" filterBy="#{u.estadoPnc()}" filterMatchMode="exact" style="width: 140px; text-align: center;">
                             <f:facet name="filter">
                                 <p:selectOneMenu onchange="PF('dtValidarPermisos').filter()" styleClass="ui-custom-filter" style="width: 100%;">
-                                    <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                    <f:selectItem itemLabel="PNC" itemValue="#{null}" noSelectionOption="true" />
                                     <f:selectItem itemLabel="VIGENTE" itemValue="VIGENTE" />
                                     <f:selectItem itemLabel="POR VENCER" itemValue="POR VENCER" />
                                     <f:selectItem itemLabel="VENCIDO" itemValue="VENCIDO" />
@@ -140,14 +161,14 @@
                                    rounded="true" />
                         </p:column>
 
-                        <p:column headerText="Vencimiento PNC" filterBy="#{u.vencimientoPnc()}" filterMatchMode="contains" filterPlaceholder="Vence PNC" style="width: 140px; text-align: center;">
+                        <p:column headerText="Vencimiento PNC" filterBy="#{u.vencimientoPnc()}" filterMatchMode="contains" filterPlaceholder="Vencimiento PNC" style="width: 140px; text-align: center;">
                             <h:outputText value="#{u.vencimientoPnc() != null ? u.vencimientoPnc() : 'S/D'}"/>
                         </p:column>
 
                         <p:column headerText="ITV" filterBy="#{u.estadoItv()}" filterMatchMode="exact" style="width: 140px; text-align: center;">
                             <f:facet name="filter">
                                 <p:selectOneMenu onchange="PF('dtValidarPermisos').filter()" styleClass="ui-custom-filter" style="width: 100%;">
-                                    <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                    <f:selectItem itemLabel="ITV" itemValue="#{null}" noSelectionOption="true" />
                                     <f:selectItem itemLabel="VIGENTE" itemValue="VIGENTE" />
                                     <f:selectItem itemLabel="POR VENCER" itemValue="POR VENCER" />
                                     <f:selectItem itemLabel="VENCIDO" itemValue="VENCIDO" />
@@ -159,14 +180,14 @@
                                    rounded="true" />
                         </p:column>
 
-                        <p:column headerText="Vencimiento ITV" filterBy="#{u.vencimientoItv()}" filterMatchMode="contains" filterPlaceholder="Vence ITV" style="width: 140px; text-align: center;">
+                        <p:column headerText="Vencimiento ITV" filterBy="#{u.vencimientoItv()}" filterMatchMode="contains" filterPlaceholder="Vencimiento ITV" style="width: 140px; text-align: center;">
                             <h:outputText value="#{u.vencimientoItv() != null ? u.vencimientoItv() : 'S/D'}"/>
                         </p:column>
 
                         <p:column headerText="Resultado Unidad" filterBy="#{u.resultado()}" filterMatchMode="exact" style="width: 165px; text-align: center;">
                             <f:facet name="filter">
                                 <p:selectOneMenu onchange="PF('dtValidarPermisos').filter()" styleClass="ui-custom-filter" style="width: 100%;">
-                                    <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                    <f:selectItem itemLabel="Resultado Unidad" itemValue="#{null}" noSelectionOption="true" />
                                     <f:selectItem itemLabel="HABILITADA" itemValue="HABILITADA" />
                                     <f:selectItem itemLabel="INHABILITADA" itemValue="INHABILITADA" />
                                 </p:selectOneMenu>

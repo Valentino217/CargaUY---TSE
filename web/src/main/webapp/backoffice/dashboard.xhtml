@@ -269,30 +269,30 @@
                         </div>
                     </f:facet>
 
-                    <p:column headerText="Expediente" sortBy="#{inf.idCaso()}" filterBy="#{inf.idCaso()}" filterMatchMode="contains" style="width: 105px;">
+                    <p:column headerText="Expediente" sortBy="#{inf.idCaso()}" filterBy="#{inf.idCaso()}" filterMatchMode="contains" style="width: 105px;" filterPlaceholder="Expediente">
                         <h:outputText value="#{inf.idCaso()}" />
                     </p:column>
 
-                    <p:column headerText="Fecha" sortBy="#{inf.fecha()}" filterBy="#{inf.fecha()}" filterMatchMode="contains" style="width: 125px;">
+                    <p:column headerText="Fecha" sortBy="#{inf.fecha()}" filterBy="#{inf.fecha()}" filterMatchMode="contains" style="width: 125px;" filterPlaceholder="Fecha">
                         <h:outputText value="#{inf.fecha()}" />
                     </p:column>
 
-                    <p:column headerText="Empresa" sortBy="#{inf.nombreEmpresa()}" filterBy="#{inf.nombreEmpresa()}" filterMatchMode="contains">
+                    <p:column headerText="Empresa" sortBy="#{inf.nombreEmpresa()}" filterBy="#{inf.nombreEmpresa()}" filterMatchMode="contains" filterPlaceholder="Empresa">
                         <h:outputText value="#{inf.nombreEmpresa()}" />
                     </p:column>
 
-                    <p:column headerText="Matrícula" sortBy="#{inf.matricula()}" filterBy="#{inf.matricula()}" filterMatchMode="contains" style="width: 120px;">
+                    <p:column headerText="Matrícula" sortBy="#{inf.matricula()}" filterBy="#{inf.matricula()}" filterMatchMode="contains" style="width: 120px;" filterPlaceholder="Matrícula">
                         <h:outputText value="#{inf.matricula()}" />
                     </p:column>
 
-                    <p:column headerText="Guía #" sortBy="#{inf.guiaId()}" filterBy="#{inf.guiaId()}" filterMatchMode="contains" style="width: 95px;">
+                    <p:column headerText="Guía #" sortBy="#{inf.guiaId()}" filterBy="#{inf.guiaId()}" filterMatchMode="contains" style="width: 95px;" filterPlaceholder="Guía #">
                         <h:outputText value="#{inf.guiaId()}" />
                     </p:column>
 
                     <p:column headerText="Tipo" sortBy="#{inf.tipo()}" filterBy="#{inf.tipo()}" filterMatchMode="exact" style="width: 175px;">
                         <f:facet name="filter">
                             <p:selectOneMenu onchange="PF('dtConsolidada').filter()" styleClass="ui-custom-filter" style="width: 100%;">
-                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItem itemLabel="Tipo" itemValue="#{null}" noSelectionOption="true" />
                                 <f:selectItems value="#{bandejaFiscalizacionBean.tiposInfraccion}" />
                             </p:selectOneMenu>
                         </f:facet>
@@ -305,7 +305,7 @@
                     <p:column headerText="Estado" sortBy="#{inf.estado()}" filterBy="#{inf.estado()}" filterMatchMode="exact" style="width: 155px;">
                         <f:facet name="filter">
                             <p:selectOneMenu onchange="PF('dtConsolidada').filter()" styleClass="ui-custom-filter" style="width: 100%;">
-                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItem itemLabel="Estado" itemValue="#{null}" noSelectionOption="true" />
                                 <f:selectItems value="#{bandejaFiscalizacionBean.estadosInfraccion}" />
                             </p:selectOneMenu>
                         </f:facet>

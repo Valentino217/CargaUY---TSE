@@ -68,7 +68,7 @@
                         </div>
                     </f:facet>
 
-                    <p:column headerText="Caso #" filterBy="#{caso.idCaso()}" filterMatchMode="contains" filterPlaceholder="Nro. Caso" style="width: 100px; text-align: center;">
+                    <p:column headerText="Caso #" filterBy="#{caso.idCaso()}" filterMatchMode="contains" filterPlaceholder="Caso #" style="width: 100px; text-align: center;">
                         <span class="cuy-mono">#<h:outputText value="#{caso.idCaso()}" /></span>
                     </p:column>
 
@@ -76,7 +76,7 @@
                         <h:outputText value="#{caso.fecha()}" />
                     </p:column>
 
-                    <p:column headerText="Empresa / Unidad" filterBy="#{caso.nombreEmpresa()} #{caso.matricula()}" filterMatchMode="contains" filterPlaceholder="Empresa o matrícula">
+                    <p:column headerText="Empresa / Unidad" filterBy="#{caso.nombreEmpresa()} #{caso.matricula()}" filterMatchMode="contains" filterPlaceholder="Empresa / Unidad">
                         <strong style="color: #0f2942;">#{caso.nombreEmpresa() != null ? caso.nombreEmpresa() : 'Empresa N/D'}</strong>
                         <div style="font-size: 0.78rem; color: #64748b; margin-top: 0.15rem;">
                             Matrícula: <span class="cuy-mono">#{caso.matricula() != null ? caso.matricula() : 'S/D'}</span> | #{caso.guiaId() != null ? 'Guía #'.concat(caso.guiaId().toString()) : 'Sin guía activa'}
@@ -86,7 +86,7 @@
                     <p:column headerText="Tipo Infracción" filterBy="#{caso.tipo()}" filterMatchMode="exact" style="width: 185px;">
                         <f:facet name="filter">
                             <p:selectOneMenu onchange="PF('dtBandeja').filter()" styleClass="ui-custom-filter" style="width: 100%;">
-                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItem itemLabel="Tipo Infracción" itemValue="#{null}" noSelectionOption="true" />
                                 <f:selectItems value="#{bandejaFiscalizacionBean.tiposInfraccion}" />
                             </p:selectOneMenu>
                         </f:facet>
@@ -99,7 +99,7 @@
                     <p:column headerText="Descargo" filterBy="#{not empty caso.textoDescargo() ? 'CON_DESCARGO' : 'SIN_DESCARGO'}" filterMatchMode="exact" style="width: 150px; text-align: center;">
                         <f:facet name="filter">
                             <p:selectOneMenu onchange="PF('dtBandeja').filter()" styleClass="ui-custom-filter" style="width: 100%;">
-                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItem itemLabel="Descargo" itemValue="#{null}" noSelectionOption="true" />
                                 <f:selectItem itemLabel="Con descargo" itemValue="CON_DESCARGO" />
                                 <f:selectItem itemLabel="Sin descargo" itemValue="SIN_DESCARGO" />
                             </p:selectOneMenu>
@@ -113,7 +113,7 @@
                     <p:column headerText="Estado" filterBy="#{caso.estado()}" filterMatchMode="exact" style="width: 150px; text-align: center;">
                         <f:facet name="filter">
                             <p:selectOneMenu onchange="PF('dtBandeja').filter()" styleClass="ui-custom-filter" style="width: 100%;">
-                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItem itemLabel="Estado" itemValue="#{null}" noSelectionOption="true" />
                                 <f:selectItems value="#{bandejaFiscalizacionBean.estadosInfraccion}" />
                             </p:selectOneMenu>
                         </f:facet>
@@ -125,7 +125,7 @@
                     <p:column headerText="Gestión" filterBy="#{(caso.estado().name() eq 'CONFIRMADA' or caso.estado().name() eq 'DESESTIMADA') ? 'AUDITORIA' : 'RESOLVER'}" filterMatchMode="exact" style="width: 175px; text-align: center;" exportable="false">
                         <f:facet name="filter">
                             <p:selectOneMenu onchange="PF('dtBandeja').filter()" styleClass="ui-custom-filter" style="width: 100%;">
-                                <f:selectItem itemLabel="Todas" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItem itemLabel="Gestión" itemValue="#{null}" noSelectionOption="true" />
                                 <f:selectItem itemLabel="Evaluar / Resolver" itemValue="RESOLVER" />
                                 <f:selectItem itemLabel="Ver Auditoría" itemValue="AUDITORIA" />
                             </p:selectOneMenu>

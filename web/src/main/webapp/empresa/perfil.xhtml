@@ -1,4 +1,4 @@
-﻿<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
                 xmlns:h="jakarta.faces.html"
                 xmlns:f="jakarta.faces.core"
                 xmlns:ui="jakarta.faces.facelets"
@@ -87,7 +87,7 @@
                                      stripedRows="true"
                                      size="small">
 
-                            <p:column headerText="Nro. Empresa / RUT" filterBy="#{emp.numero()}" filterMatchMode="contains" filterPlaceholder="Nro. Empresa" style="width: 160px; text-align: center;">
+                            <p:column headerText="Nro. Empresa / RUT" filterBy="#{emp.numero()}" filterMatchMode="contains" filterPlaceholder="Nro. Empresa / RUT" style="width: 160px; text-align: center;">
                                 <span class="cuy-mono">##{emp.numero()}</span>
                             </p:column>
 
@@ -106,7 +106,7 @@
                             <p:column headerText="Estado" filterBy="#{emp.activa() ? 'HABILITADA' : 'INACTIVA'}" filterMatchMode="exact" style="width: 155px; text-align: center;">
                                 <f:facet name="filter">
                                     <p:selectOneMenu onchange="PF('dtMisEmp').filter()" styleClass="ui-custom-filter" style="width: 100%;">
-                                        <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                        <f:selectItem itemLabel="Estado" itemValue="#{null}" noSelectionOption="true" />
                                         <f:selectItem itemLabel="HABILITADA" itemValue="HABILITADA" />
                                         <f:selectItem itemLabel="INACTIVA" itemValue="INACTIVA" />
                                     </p:selectOneMenu>

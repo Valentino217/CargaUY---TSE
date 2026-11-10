@@ -76,7 +76,7 @@
                         </div>
                     </f:facet>
 
-                    <p:column headerText="Caso #" filterBy="#{inf.idCaso()}" filterMatchMode="contains" filterPlaceholder="Nro. Caso" style="width: 100px; text-align: center;">
+                    <p:column headerText="Caso #" filterBy="#{inf.idCaso()}" filterMatchMode="contains" filterPlaceholder="Caso #" style="width: 100px; text-align: center;">
                         <span class="cuy-mono">#<h:outputText value="#{inf.idCaso()}" /></span>
                     </p:column>
 
@@ -87,7 +87,7 @@
                     <p:column headerText="Tipo Infracción" filterBy="#{inf.tipo()}" filterMatchMode="exact" style="width: 190px;">
                         <f:facet name="filter">
                             <p:selectOneMenu onchange="PF('dtInfEmp').filter()" styleClass="ui-custom-filter" style="width: 100%;">
-                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItem itemLabel="Tipo Infracción" itemValue="#{null}" noSelectionOption="true" />
                                 <f:selectItems value="#{bandejaFiscalizacionBean.tiposInfraccion}" />
                             </p:selectOneMenu>
                         </f:facet>
@@ -97,7 +97,7 @@
                                rounded="true" />
                     </p:column>
 
-                    <p:column headerText="Guía / Matrícula" filterBy="#{inf.matricula()} #{inf.guiaId()}" filterMatchMode="contains" filterPlaceholder="Matrícula o guía" style="width: 165px;">
+                    <p:column headerText="Guía / Matrícula" filterBy="#{inf.matricula()} #{inf.guiaId()}" filterMatchMode="contains" filterPlaceholder="Guía / Matrícula" style="width: 165px;">
                         <span class="cuy-mono"><i class="pi pi-car" /> #{inf.matricula() != null ? inf.matricula() : 'S/D'}</span>
                         <div style="font-size: 0.78rem; color: #64748b;">
                             #{inf.guiaId() != null ? 'Guía #'.concat(inf.guiaId().toString()) : 'Sin guía activa'}
@@ -113,7 +113,7 @@
                     <p:column headerText="Estado" filterBy="#{inf.estado()}" filterMatchMode="exact" style="width: 150px; text-align: center;">
                         <f:facet name="filter">
                             <p:selectOneMenu onchange="PF('dtInfEmp').filter()" styleClass="ui-custom-filter" style="width: 100%;">
-                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItem itemLabel="Estado" itemValue="#{null}" noSelectionOption="true" />
                                 <f:selectItems value="#{bandejaFiscalizacionBean.estadosInfraccion}" />
                             </p:selectOneMenu>
                         </f:facet>

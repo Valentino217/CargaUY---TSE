@@ -72,7 +72,7 @@
 
                     <p:column headerText="Nombre Completo" filterBy="#{u.nombre()}" filterMatchMode="contains" style="width: 240px;">
                         <f:facet name="filter">
-                            <p:inputText id="nombreFiltro" placeholder="Nombre completo" title="Filtrar por nombre completo"
+                            <p:inputText id="nombreFiltro" placeholder="Nombre Completo" title="Filtrar por nombre completo"
                                          onkeyup="PF('dtUsuarios').filter()" styleClass="cuy-filtro-usuarios" />
                         </f:facet>
                         <strong style="color: #0f2942;">#{u.nombre()}</strong>
@@ -90,7 +90,7 @@
                     <p:column headerText="Tipo de Usuario" filterBy="#{u.tipo()}" filterMatchMode="exact" style="width: 175px;">
                         <f:facet name="filter">
                             <p:selectOneMenu onchange="PF('dtUsuarios').filter()" styleClass="ui-custom-filter" style="width: 100%;">
-                                <f:selectItem itemLabel="Todos los roles" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItem itemLabel="Tipo de Usuario" itemValue="#{null}" noSelectionOption="true" />
                                 <f:selectItem itemLabel="ADMINISTRADOR" itemValue="ADMINISTRADOR" />
                                 <f:selectItem itemLabel="AUTORIDAD" itemValue="AUTORIDAD" />
                                 <f:selectItem itemLabel="FUNCIONARIO" itemValue="FUNCIONARIO" />
@@ -107,7 +107,7 @@
                     <p:column headerText="Estado" filterBy="#{u.activo() ? 'ACTIVO' : 'INACTIVO'}" filterMatchMode="exact" style="width: 135px; text-align: center;">
                         <f:facet name="filter">
                             <p:selectOneMenu onchange="PF('dtUsuarios').filter()" styleClass="ui-custom-filter" style="width: 100%;">
-                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItem itemLabel="Estado" itemValue="#{null}" noSelectionOption="true" />
                                 <f:selectItem itemLabel="ACTIVO" itemValue="ACTIVO" />
                                 <f:selectItem itemLabel="INACTIVO" itemValue="INACTIVO" />
                             </p:selectOneMenu>

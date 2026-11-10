@@ -35,13 +35,6 @@ ON CONFLICT (ci) DO UPDATE SET nombre = EXCLUDED.nombre, mail = EXCLUDED.mail, p
 
 INSERT INTO administradores (usuario_id) VALUES (10) ON CONFLICT (usuario_id) DO NOTHING;
 
--- 4.1.2 Administrador de pruebas (LDAP: martin.admin / admin123)
-INSERT INTO usuarios (id, tipo_usuario, ci, nombre, mail, fecha_nac, password, activo, origen_identidad, uid_externo, version)
-VALUES (11, 'ADMINISTRADOR', 90000001, 'Martin Admin', 'admin@example.invalid', '1990-01-01', 'admin123', true, 'LDAP', 'martin.admin', 1)
-ON CONFLICT (ci) DO UPDATE SET nombre = EXCLUDED.nombre, mail = EXCLUDED.mail, password = EXCLUDED.password, origen_identidad = EXCLUDED.origen_identidad, uid_externo = EXCLUDED.uid_externo;
-
-INSERT INTO administradores (usuario_id) VALUES (11) ON CONFLICT (usuario_id) DO NOTHING;
-
 -- 4.2 Autoridad MTOP (LDAP: alberto.autoridad / autoridad123)
 INSERT INTO usuarios (id, tipo_usuario, ci, nombre, mail, fecha_nac, password, activo, origen_identidad, uid_externo, version)
 VALUES (20, 'AUTORIDAD', 20000002, 'Dr. Alberto Director', 'autoridad@cargauy.gub.uy', '1975-06-20', 'autoridad123', true, 'LDAP', 'alberto.autoridad', 1)
@@ -93,10 +86,9 @@ ON CONFLICT (usuario_id) DO NOTHING;
 ALTER TABLE usuario_roles DROP CONSTRAINT IF EXISTS usuario_roles_rol_check;
 ALTER TABLE usuario_roles ADD CONSTRAINT usuario_roles_rol_check CHECK (rol::text = ANY (ARRAY['CIUDADANO'::character varying, 'CIUDADANO_COMUN'::character varying, 'CHOFER'::character varying, 'FUNCIONARIO'::character varying, 'AUTORIDAD'::character varying, 'ADMINISTRADOR'::character varying]::text[]));
 
-DELETE FROM usuario_roles WHERE usuario_id IN (10, 11, 20, 30, 31, 40, 41, 42, 43, 44, 50, 51, 52, 53);
+DELETE FROM usuario_roles WHERE usuario_id IN (10, 20, 30, 31, 40, 41, 42, 43, 44, 50, 51, 52, 53);
 INSERT INTO usuario_roles (usuario_id, rol) VALUES
 (10, 'ADMINISTRADOR'),
-(11, 'ADMINISTRADOR'),
 (20, 'AUTORIDAD'),
 (30, 'FUNCIONARIO'),
 (31, 'FUNCIONARIO'),
@@ -114,8 +106,9 @@ INSERT INTO usuario_roles (usuario_id, rol) VALUES
 INSERT INTO empresas (nro_empresa, razon_social, nombre_publico, direccion, activa, version) VALUES
 (101, 'Transportes del Plata S.A.', 'TransPlata', 'Ruta 1 km 28, San José', true, 1),
 (102, 'Logística Oriental S.R.L.', 'LogiOriental', 'Av. Giannattasio km 22, Canelones', true, 1),
-(103, 'Expreso del Norte S.A.', 'ExpresoNorte', 'Ruta 5 km 390, Tacuarembó', true, 1)
-ON CONFLICT (nro_empresa) DO UPDATE SET razon_social = EXCLUDED.razon_social, nombre_publico = EXCLUDED.nombre_publico, direccion = EXCLUDED.direccion, activa = true;
+(103, 'Expreso del Norte S.A.', 'ExpresoNorte', 'Ruta 5 km 390, Tacuarembó', true, 1),
+(104, 'Transportes de Prueba Inactiva S.A.', 'TransInactiva', 'Durazno', false, 1)
+ON CONFLICT (nro_empresa) DO UPDATE SET razon_social = EXCLUDED.razon_social, nombre_publico = EXCLUDED.nombre_publico, direccion = EXCLUDED.direccion, activa = EXCLUDED.activa;
 
 -- Relaciones Empresa <-> Rubros
 DELETE FROM empresa_rubros WHERE nro_empresa IN (101, 102, 103);
@@ -158,7 +151,9 @@ INSERT INTO vehiculos (matricula, marca, modelo, peso, capacidad_carga, estado_h
 ('STP 5678', 'Mercedes-Benz', 'Actros 2645', 8500, 33000, false, 101),
 ('LOR 2024', 'Iveco', 'Stralis 460', 8000, 32000, true, 102),
 ('LOR 9999', 'Volkswagen', 'Constellation 19.320', 7500, 24000, true, 102),
-('EXP 1111', 'Scania', 'G410', 9500, 35000, true, 103)
+('EXP 1111', 'Scania', 'G410', 9500, 35000, true, 103),
+('STP 9010', 'Iveco', 'Tector', 8000, 24000, true, 101),
+('STP 9011', 'Volvo', 'FM', 8500, 28000, true, 101)
 ON CONFLICT (matricula) DO UPDATE SET marca = EXCLUDED.marca, modelo = EXCLUDED.modelo, peso = EXCLUDED.peso, capacidad_carga = EXCLUDED.capacidad_carga, estado_habilitacion = EXCLUDED.estado_habilitacion, nro_empresa = EXCLUDED.nro_empresa;
 
 -- 6.2 ITVs (Inspección Técnica Vehicular)
@@ -168,7 +163,8 @@ INSERT INTO itvs (nrocertificado, fecha_vencimiento, vehiculo_matricula) VALUES
 (1003, CURRENT_DATE + INTERVAL '120 days', 'STP 5678'),
 (1004, CURRENT_DATE + INTERVAL '240 days', 'LOR 2024'),
 (1005, CURRENT_DATE + INTERVAL '150 days', 'LOR 9999'),
-(1006, CURRENT_DATE + INTERVAL '300 days', 'EXP 1111')
+(1006, CURRENT_DATE + INTERVAL '300 days', 'EXP 1111'),
+(1007, CURRENT_DATE + INTERVAL '180 days', 'STP 9010')
 ON CONFLICT (nrocertificado) DO UPDATE SET fecha_vencimiento = EXCLUDED.fecha_vencimiento, vehiculo_matricula = EXCLUDED.vehiculo_matricula;
 
 -- 6.3 PNCs (Permiso Nacional de Circulación)
@@ -178,7 +174,8 @@ INSERT INTO pncs (nro, fecha_vencimiento, vehiculo_matricula) VALUES
 (2003, CURRENT_DATE - INTERVAL '30 days',  'STP 5678'),
 (2004, CURRENT_DATE + INTERVAL '240 days', 'LOR 2024'),
 (2005, CURRENT_DATE + INTERVAL '180 days', 'LOR 9999'),
-(2006, CURRENT_DATE + INTERVAL '300 days', 'EXP 1111')
+(2006, CURRENT_DATE + INTERVAL '300 days', 'EXP 1111'),
+(2007, CURRENT_DATE - INTERVAL '15 days', 'STP 9010')
 ON CONFLICT (nro) DO UPDATE SET fecha_vencimiento = EXCLUDED.fecha_vencimiento, vehiculo_matricula = EXCLUDED.vehiculo_matricula;
 
 -- 7. Guías de Viaje con todos los estados

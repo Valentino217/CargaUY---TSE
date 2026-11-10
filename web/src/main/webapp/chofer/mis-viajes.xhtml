@@ -1,4 +1,4 @@
-﻿<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
                 xmlns:h="jakarta.faces.html"
                 xmlns:f="jakarta.faces.core"
                 xmlns:ui="jakarta.faces.facelets"
@@ -42,7 +42,7 @@
                              stripedRows="true"
                              emptyMessage="No se encuentra vinculado como chofer a ninguna empresa de transporte actualmente.">
 
-                    <p:column headerText="Nro. Empresa / RUT" filterBy="#{emp.nroEmpresa}" filterMatchMode="contains" filterPlaceholder="Nro. Empresa" style="width: 160px; text-align: center;">
+                    <p:column headerText="Nro. Empresa / RUT" filterBy="#{emp.nroEmpresa}" filterMatchMode="contains" filterPlaceholder="Nro. Empresa / RUT" style="width: 160px; text-align: center;">
                         <span class="cuy-mono">##{emp.nroEmpresa}</span>
                     </p:column>
 
@@ -61,7 +61,7 @@
                     <p:column headerText="Estado" filterBy="#{emp.activa ? 'HABILITADA' : 'INACTIVA'}" filterMatchMode="exact" style="width: 155px; text-align: center;">
                         <f:facet name="filter">
                             <p:selectOneMenu onchange="PF('dtEmpChofer').filter()" styleClass="ui-custom-filter" style="width: 100%;">
-                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItem itemLabel="Estado" itemValue="#{null}" noSelectionOption="true" />
                                 <f:selectItem itemLabel="HABILITADA" itemValue="HABILITADA" />
                                 <f:selectItem itemLabel="INACTIVA" itemValue="INACTIVA" />
                             </p:selectOneMenu>
@@ -102,15 +102,15 @@
                         <strong>#{g.empresa.razonSocial}</strong>
                     </p:column>
 
-                    <p:column headerText="Vehículo / Matrícula" filterBy="#{g.vehiculo.matricula}" filterMatchMode="contains" filterPlaceholder="Matrícula" style="width: 145px;">
+                    <p:column headerText="Vehículo / Matrícula" filterBy="#{g.vehiculo.matricula}" filterMatchMode="contains" filterPlaceholder="Vehículo / Matrícula" style="width: 145px;">
                         <span class="cuy-mono"><i class="pi pi-car" /> #{g.vehiculo.matricula}</span>
                     </p:column>
 
-                    <p:column headerText="Origen &#8594; Destino" filterBy="#{g.origen} #{g.destino}" filterMatchMode="contains" filterPlaceholder="Ruta">
+                    <p:column headerText="Origen &#8594; Destino" filterBy="#{g.origen} #{g.destino}" filterMatchMode="contains" filterPlaceholder="Origen &#8594; Destino">
                         #{g.origen} &#8594; #{g.destino}
                     </p:column>
 
-                    <p:column headerText="Rubro / Carga" filterBy="#{g.rubroCliente}" filterMatchMode="contains" filterPlaceholder="Rubro" style="width: 150px;">
+                    <p:column headerText="Rubro / Carga" filterBy="#{g.rubroCliente}" filterMatchMode="contains" filterPlaceholder="Rubro / Carga" style="width: 150px;">
                         #{g.rubroCliente}
                     </p:column>
 
@@ -123,7 +123,7 @@
                     <p:column headerText="Estado" filterBy="#{g.estado.name()}" filterMatchMode="exact" style="width: 155px; text-align: center;">
                         <f:facet name="filter">
                             <p:selectOneMenu onchange="PF('dtGuiasChofer').filter()" styleClass="ui-custom-filter" style="width: 100%;">
-                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItem itemLabel="Estado" itemValue="#{null}" noSelectionOption="true" />
                                 <f:selectItem itemLabel="SIN_INICIAR" itemValue="SIN_INICIAR" />
                                 <f:selectItem itemLabel="EN_CURSO" itemValue="EN_CURSO" />
                                 <f:selectItem itemLabel="FINALIZADO" itemValue="FINALIZADO" />

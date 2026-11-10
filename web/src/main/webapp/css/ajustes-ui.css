@@ -1,8 +1,86 @@
 /* Capa visual compartida por el portal, PrimeFaces y las vistas independientes. */
 :root {
+    --cuy-portal-blue: #003c70;
+    --cuy-portal-border: #9bb6cf;
+    --cuy-portal-tint: #d5e9fb;
     --cuy-control-radius: 8px;
     --cuy-focus: #0284c7;
     --cuy-shadow-soft: 0 4px 20px rgb(15 41 66 / 5%);
+}
+
+body .cuy-header {
+    background: #fff;
+    color: var(--cuy-portal-blue);
+    border-bottom: 1px solid var(--cuy-portal-border);
+    box-shadow: none;
+    gap: 1rem;
+}
+
+body .cuy-brand,
+body .cuy-user-role {
+    color: var(--cuy-portal-blue);
+}
+
+body .cuy-brand-icon {
+    background: transparent;
+    border: 0;
+    border-right: 1px solid var(--cuy-portal-border);
+    border-radius: 0;
+    width: 3.25rem;
+    padding-right: 0.75rem;
+    font-size: 1.75rem;
+}
+
+body .cuy-brand-title { font-size: 1.65rem; }
+
+.cuy-portal-user {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-inline: 1px solid var(--cuy-portal-border);
+    padding-inline: 0.85rem;
+    font-weight: 600;
+}
+
+body .cuy-user-box .cuy-sign-out.ui-button {
+    color: var(--cuy-portal-blue);
+    background: transparent;
+    border-color: transparent;
+}
+
+body .cuy-nav-wrapper .ui-menubar { background: #fff; }
+body .cuy-nav-wrapper .ui-menuitem-link .ui-menuitem-text { color: var(--cuy-portal-blue); }
+
+body .cuy-page-header,
+body .header-bar,
+body .perfil-header,
+body .cuy-public-intro {
+    background: var(--cuy-portal-tint);
+    border: 1px solid var(--cuy-portal-border);
+    border-radius: var(--cuy-control-radius);
+    padding: 1rem 1.25rem;
+}
+
+body .cuy-page-title,
+body .header-bar h1,
+body .perfil-header h1,
+body .cuy-public-intro h1 {
+    color: var(--cuy-portal-blue);
+}
+
+body .header-bar { flex-wrap: wrap; gap: 1rem; }
+body .cuy-card, body .card { border-color: #c9d9e8; }
+body .ui-button.ui-button-primary:not(.ui-button-outlined),
+body .ui-button.ui-button-info:not(.ui-button-outlined) {
+    background: var(--cuy-portal-blue);
+    border-color: var(--cuy-portal-blue);
+    color: #fff;
+}
+
+body .ui-button.ui-button-primary:not(.ui-button-outlined):not(.ui-state-disabled):hover,
+body .ui-button.ui-button-info:not(.ui-button-outlined):not(.ui-state-disabled):hover {
+    background: #002e56;
+    border-color: #002e56;
 }
 
 body {
@@ -105,6 +183,26 @@ body .ui-selectonemenu .ui-selectonemenu-label {
     text-overflow: ellipsis !important;
     white-space: nowrap !important;
     padding-right: 2rem !important;
+}
+
+body .ui-datatable th.ui-filter-column .ui-column-title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+body .ui-datatable th.ui-filter-column .ui-column-filter {
+    box-sizing: border-box;
+    width: 100%;
+    margin: 0;
+}
+
+body .ui-datatable th.ui-filter-column.ui-sortable-column .ui-column-filter {
+    display: inline-block;
+    width: calc(100% - 1.5rem);
 }
 
 .cuy-header { gap: 24px; padding-block: 16px; }

@@ -1,4 +1,4 @@
-﻿<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
                 xmlns:h="jakarta.faces.html"
                 xmlns:f="jakarta.faces.core"
                 xmlns:ui="jakarta.faces.facelets"
@@ -39,7 +39,7 @@
                         <span class="cuy-mono">#{nodo.codigo()}</span>
                     </p:column>
 
-                    <p:column headerText="Nodo / Subsistema" filterBy="#{nodo.nombre()}" filterMatchMode="contains" filterPlaceholder="Nombre" style="width: 250px;">
+                    <p:column headerText="Nodo / Subsistema" filterBy="#{nodo.nombre()}" filterMatchMode="contains" filterPlaceholder="Nodo / Subsistema" style="width: 250px;">
                         <strong style="color: #0f2942;">#{nodo.nombre()}</strong>
                     </p:column>
 
@@ -47,14 +47,14 @@
                         <p:tag value="#{nodo.tipo()}" severity="info" rounded="true" />
                     </p:column>
 
-                    <p:column headerText="Endpoint / Destino" filterBy="#{nodo.endpoint()}" filterMatchMode="contains" filterPlaceholder="Endpoint">
+                    <p:column headerText="Endpoint / Destino" filterBy="#{nodo.endpoint()}" filterMatchMode="contains" filterPlaceholder="Endpoint / Destino">
                         <span class="cuy-mono" style="font-size: 0.78rem;">#{nodo.endpoint()}</span>
                     </p:column>
 
                     <p:column headerText="Estado" filterBy="#{nodo.online() ? 'ONLINE' : 'OFFLINE'}" filterMatchMode="exact" style="width: 155px; text-align: center;">
                         <f:facet name="filter">
                             <p:selectOneMenu onchange="PF('dtNodos').filter()" styleClass="ui-custom-filter" style="width: 100%;">
-                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItem itemLabel="Estado" itemValue="#{null}" noSelectionOption="true" />
                                 <f:selectItem itemLabel="ONLINE" itemValue="ONLINE" />
                                 <f:selectItem itemLabel="OFFLINE" itemValue="OFFLINE" />
                             </p:selectOneMenu>

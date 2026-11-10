@@ -11,117 +11,226 @@
 
     <ui:define name="title">Panel Principal</ui:define>
 
-    <ui:define name="content">
-        <div class="cuy-page-header">
-            <div>
-                <h1 class="cuy-page-title">
-                    <i class="pi pi-th-large" style="color: #1d4ed8;" />
-                    Bienvenido a CargaUY, #{authBean.usuarioActivo.nombre}
-                </h1>
+    <ui:define name="head">
+        <link rel="stylesheet" href="#{request.contextPath}/css/panel-admin.css" />
+        <script src="#{request.contextPath}/js/panel-admin.js" defer="defer"></script>
+    </ui:define>
+
+    <ui:define name="headerSearch">
+        <ui:fragment rendered="#{authBean.esAdministrador()}">
+            <div class="cuy-portal-search" role="search" aria-label="Secciones de CargaUY">
+                <i class="pi pi-search" aria-hidden="true" />
+                <input id="cuy-panel-search" type="search" aria-label="Buscar en CargaUY"
+                       aria-controls="cuy-panel-secciones" placeholder="Buscar en CargaUY" />
             </div>
-        </div>
+        </ui:fragment>
+    </ui:define>
 
-        <div class="cuy-grid-cards">
-            <!-- Accesos Ciudadano Común -->
-            <ui:fragment rendered="#{authBean.esCiudadanoComun()}">
-                <div class="cuy-card" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: space-between;">
-                    <div>
-                        <h3 class="cuy-card-title"><i class="pi pi-info-circle" style="color: #2563eb;" /> Portal de Transparencia</h3>
-                        <p style="font-size: 0.92rem; color: #475569; line-height: 1.5; margin-top: 0;">
-                            Su cuenta ciudadana cuenta con acceso directo al portal de datos abiertos y validación oficial de empresas de transporte. Si requiere operar como empresa o chofer, contacte al administrador.
-                        </p>
-                    </div>
-                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;">
-                        <p:button value="Información Pública" outcome="/portal/info-publica" icon="pi pi-chart-bar" styleClass="ui-button-primary" />
-                        <p:button value="Validar Empresa" outcome="/portal/validar-empresa" icon="pi pi-verified" styleClass="ui-button-outlined" />
-                    </div>
+    <ui:define name="content">
+        <ui:fragment rendered="#{authBean.esAdministrador()}">
+            <header class="cuy-portal-intro">
+                <div class="cuy-portal-width">
+                    <h1>Panel Principal</h1>
+                    <p>Accedé a las herramientas de CargaUY</p>
                 </div>
-            </ui:fragment>
+            </header>
+            <div class="cuy-portal-width cuy-portal-content">
+                <section aria-labelledby="cuy-panel-destacados">
+                    <h2 id="cuy-panel-destacados">Accesos destacados</h2>
+                    <div class="cuy-panel-grid">
+                        <h:link outcome="/admin/usuarios" styleClass="cuy-panel-featured">
+                            <i class="pi pi-users" aria-hidden="true" />
+                            <span>Usuarios y roles</span>
+                            <i class="pi pi-angle-right" aria-hidden="true" />
+                        </h:link>
+                        <h:link outcome="/empresa/validar-permisos" styleClass="cuy-panel-featured">
+                            <i class="pi pi-verified" aria-hidden="true" />
+                            <span>Validar permisos</span>
+                            <i class="pi pi-angle-right" aria-hidden="true" />
+                        </h:link>
+                        <h:link outcome="/admin/catalogos" styleClass="cuy-panel-featured">
+                            <i class="pi pi-tags" aria-hidden="true" />
+                            <span>Catálogos</span>
+                            <i class="pi pi-angle-right" aria-hidden="true" />
+                        </h:link>
+                    </div>
+                </section>
+                <h2 id="cuy-panel-secciones-titulo">Secciones</h2>
+                <p id="cuy-panel-search-status" role="status" class="cuy-panel-status"></p>
+                <div id="cuy-panel-secciones" class="cuy-panel-grid" role="region"
+                     aria-labelledby="cuy-panel-secciones-titulo">
+                    <section class="cuy-card cuy-panel-module">
+                        <h3 class="cuy-card-title">
+                            <i class="pi pi-cog" aria-hidden="true" />
+                            <span>Gestión del sistema</span>
+                        </h3>
+                        <ul>
+                            <li><h:link value="Usuarios y roles" outcome="/admin/usuarios" /></li>
+                            <li><h:link value="Catálogos" outcome="/admin/catalogos" /></li>
+                            <li><h:link value="Nodos" outcome="/admin/nodos" /></li>
+                        </ul>
+                    </section>
+                    <ui:fragment rendered="#{authBean.esFuncionario()}">
+                        <section class="cuy-card cuy-panel-module">
+                            <h3 class="cuy-card-title">
+                                <i class="pi pi-shield" aria-hidden="true" />
+                                <span>Fiscalización y Ruta</span>
+                            </h3>
+                            <ul>
+                                <li><h:link value="Bandeja de fiscalización" outcome="/funcionario/bandeja-fiscalizacion" /></li>
+                                <li><h:link value="Monitoreo y balanzas" outcome="/funcionario/monitoreo" /></li>
+                                <li><h:link value="Documentación de vehículos" outcome="/funcionario/fiscalizacion-vehiculos" /></li>
+                                <li><h:link value="Empresas y PDI" outcome="/funcionario/empresas" /></li>
+                            </ul>
+                        </section>
+                    </ui:fragment>
+                    <ui:fragment rendered="#{authBean.esCiudadanoEmpresa()}">
+                        <section class="cuy-card cuy-panel-module">
+                            <h3 class="cuy-card-title">
+                                <i class="pi pi-building" aria-hidden="true" />
+                                <span>Mi Empresa</span>
+                            </h3>
+                            <ul>
+                                <li><h:link value="Perfil y empresas" outcome="/empresa/perfil" /></li>
+                                <li><h:link value="Vehículos" outcome="/empresa/vehiculos" /></li>
+                                <li><h:link value="Guías de viaje" outcome="/empresa/viajes" /></li>
+                                <li><h:link value="Infracciones" outcome="/empresa/infracciones" /></li>
+                            </ul>
+                        </section>
+                    </ui:fragment>
+                    <ui:fragment rendered="#{authBean.esAutoridad()}">
+                        <section class="cuy-card cuy-panel-module">
+                            <h3 class="cuy-card-title"><i class="pi pi-chart-line" aria-hidden="true" /> Dashboard</h3>
+                            <ul>
+                                <li><h:link value="Ver indicadores" outcome="/backoffice/dashboard" /></li>
+                            </ul>
+                        </section>
+                    </ui:fragment>
+                    <section class="cuy-card cuy-panel-module">
+                        <h3 class="cuy-card-title">
+                            <i class="pi pi-sliders-h" aria-hidden="true" />
+                            <span>Fiscalización</span>
+                        </h3>
+                        <ul>
+                            <li><h:link value="Reglas de fiscalización" outcome="/admin/reglas-fiscalizacion" /></li>
+                            <li><h:link value="Validar permisos" outcome="/empresa/validar-permisos" /></li>
+                        </ul>
+                    </section>
+                    <section class="cuy-card cuy-panel-module">
+                        <h3 class="cuy-card-title">
+                            <i class="pi pi-search" aria-hidden="true" />
+                            <span>Consultas</span>
+                        </h3>
+                        <ul>
+                            <li><h:link value="Validar empresa" outcome="/portal/validar-empresa" /></li>
+                            <li><h:link value="Información pública" outcome="/portal/info-publica" /></li>
+                        </ul>
+                    </section>
+                    <ui:fragment rendered="#{authBean.esChofer()}">
+                        <section class="cuy-card cuy-panel-module">
+                            <h3 class="cuy-card-title"><i class="pi pi-compass" aria-hidden="true" /> Mis Viajes</h3>
+                            <ul>
+                                <li><h:link value="Mis Viajes" outcome="/chofer/mis-viajes" /></li>
+                            </ul>
+                        </section>
+                    </ui:fragment>
+                </div>
+            </div>
+        </ui:fragment>
 
-            <!-- Accesos Chofer -->
-            <ui:fragment rendered="#{authBean.esChofer()}">
-                <div class="cuy-card" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: space-between;">
-                    <div>
-                        <h3 class="cuy-card-title"><i class="pi pi-compass" style="color: #059669;" /> Mis Viajes y Empresas</h3>
-                        <p style="font-size: 0.92rem; color: #475569; line-height: 1.5; margin-top: 0;">
-                            Consulte las guías de viaje asignadas a su nombre y las empresas transportistas en las cuales presta servicios.
-                        </p>
-                    </div>
-                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;">
-                        <p:button value="Mis Viajes" outcome="/chofer/mis-viajes" icon="pi pi-compass" styleClass="ui-button-primary" />
-                    </div>
+        <ui:fragment rendered="#{not authBean.esAdministrador()}">
+            <div class="cuy-page-header">
+                <div>
+                    <h1 class="cuy-page-title">
+                        <i class="pi pi-th-large" style="color: #1d4ed8;" />
+                        Bienvenido a CargaUY, #{authBean.usuarioActivo.nombre}
+                    </h1>
                 </div>
-            </ui:fragment>
+            </div>
 
-            <!-- Accesos Ciudadano Empresa -->
-            <ui:fragment rendered="#{authBean.esCiudadanoEmpresa()}">
-                <div class="cuy-card" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: space-between;">
-                    <div>
-                        <h3 class="cuy-card-title"><i class="pi pi-car" style="color: #2563eb;" /> Flota y Guías de Viaje</h3>
-                        <p style="font-size: 0.92rem; color: #475569; line-height: 1.5; margin-top: 0;">
-                            Administre los vehículos de su empresa, asigne choferes y emita nuevas Guías de Viaje.
-                        </p>
+            <div class="cuy-grid-cards">
+                <!-- Accesos Ciudadano Común -->
+                <ui:fragment rendered="#{authBean.esCiudadanoComun()}">
+                    <div class="cuy-card" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: space-between;">
+                        <div>
+                            <h3 class="cuy-card-title"><i class="pi pi-info-circle" style="color: #2563eb;" /> Portal de Transparencia</h3>
+                            <p style="font-size: 0.92rem; color: #475569; line-height: 1.5; margin-top: 0;">
+                                Su cuenta ciudadana cuenta con acceso directo al portal de datos abiertos y validación oficial de empresas de transporte. Si requiere operar como empresa o chofer, contacte al administrador.
+                            </p>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;">
+                            <p:button value="Información Pública" outcome="/portal/info-publica" icon="pi pi-chart-bar" styleClass="ui-button-primary" />
+                            <p:button value="Validar Empresa" outcome="/portal/validar-empresa" icon="pi pi-verified" styleClass="ui-button-outlined" />
+                        </div>
                     </div>
-                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;">
-                        <p:button value="Mis Vehículos" outcome="/empresa/vehiculos" icon="pi pi-car" styleClass="ui-button-primary" />
-                        <p:button value="Guías de Viaje" outcome="/empresa/viajes" icon="pi pi-compass" styleClass="ui-button-outlined" />
-                        <p:button value="Infracciones" outcome="/empresa/infracciones" icon="pi pi-exclamation-triangle" styleClass="ui-button-outlined ui-button-warning" />
-                        <p:button value="Mi Perfil" outcome="/empresa/perfil" icon="pi pi-id-card" styleClass="ui-button-outlined" />
-                    </div>
-                </div>
-            </ui:fragment>
+                </ui:fragment>
 
-            <!-- Accesos Funcionario -->
-            <ui:fragment rendered="#{authBean.esFuncionario()}">
-                <div class="cuy-card" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: space-between;">
-                    <div>
-                        <h3 class="cuy-card-title"><i class="pi pi-shield" style="color: #059669;" /> Fiscalización</h3>
-                        <p style="font-size: 0.92rem; color: #475569; line-height: 1.5; margin-top: 0;">
-                            Bandeja de resolución de infracciones, control de ITV y PNC, empresas y monitoreo de balanzas.
-                        </p>
+                <!-- Accesos Chofer -->
+                <ui:fragment rendered="#{authBean.esChofer()}">
+                    <div class="cuy-card" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: space-between;">
+                        <div>
+                            <h3 class="cuy-card-title"><i class="pi pi-compass" style="color: #059669;" /> Mis Viajes y Empresas</h3>
+                            <p style="font-size: 0.92rem; color: #475569; line-height: 1.5; margin-top: 0;">
+                                Consulte las guías de viaje asignadas a su nombre y las empresas transportistas en las cuales presta servicios.
+                            </p>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;">
+                            <p:button value="Mis Viajes" outcome="/chofer/mis-viajes" icon="pi pi-compass" styleClass="ui-button-primary" />
+                        </div>
                     </div>
-                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;">
-                        <p:button value="Bandeja Fiscalización" outcome="/funcionario/bandeja-fiscalizacion" icon="pi pi-inbox" styleClass="ui-button-primary" />
-                        <p:button value="Monitoreo y Balanzas" outcome="/funcionario/monitoreo" icon="pi pi-map-marker" styleClass="ui-button-outlined" />
-                        <p:button value="Documentación" outcome="/funcionario/fiscalizacion-vehiculos" icon="pi pi-car" styleClass="ui-button-outlined" />
-                        <p:button value="Empresas y PDI" outcome="/funcionario/empresas" icon="pi pi-building" styleClass="ui-button-outlined" />
-                    </div>
-                </div>
-            </ui:fragment>
+                </ui:fragment>
 
-            <!-- Accesos Autoridad -->
-            <ui:fragment rendered="#{authBean.esAutoridad()}">
-                <div class="cuy-card" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: space-between;">
-                    <div>
-                        <h3 class="cuy-card-title"><i class="pi pi-chart-bar" style="color: #d97706;" /> Dashboard</h3>
-                        <p style="font-size: 0.92rem; color: #475569; line-height: 1.5; margin-top: 0;">
-                            Indicadores ejecutivos de pesajes, guías e infracciones con trazabilidad completa.
-                        </p>
+                <!-- Accesos Ciudadano Empresa -->
+                <ui:fragment rendered="#{authBean.esCiudadanoEmpresa()}">
+                    <div class="cuy-card" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: space-between;">
+                        <div>
+                            <h3 class="cuy-card-title"><i class="pi pi-car" style="color: #2563eb;" /> Flota y Guías de Viaje</h3>
+                            <p style="font-size: 0.92rem; color: #475569; line-height: 1.5; margin-top: 0;">
+                                Administre los vehículos de su empresa, asigne choferes y emita nuevas Guías de Viaje.
+                            </p>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;">
+                            <p:button value="Mis Vehículos" outcome="/empresa/vehiculos" icon="pi pi-car" styleClass="ui-button-primary" />
+                            <p:button value="Guías de Viaje" outcome="/empresa/viajes" icon="pi pi-compass" styleClass="ui-button-outlined" />
+                            <p:button value="Infracciones" outcome="/empresa/infracciones" icon="pi pi-exclamation-triangle" styleClass="ui-button-outlined ui-button-warning" />
+                            <p:button value="Mi Perfil" outcome="/empresa/perfil" icon="pi pi-id-card" styleClass="ui-button-outlined" />
+                        </div>
                     </div>
-                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;">
-                        <p:button value="Dashboard" outcome="/backoffice/dashboard" icon="pi pi-chart-line" styleClass="ui-button-warning" />
-                    </div>
-                </div>
-            </ui:fragment>
+                </ui:fragment>
 
-            <!-- Accesos Administrador -->
-            <ui:fragment rendered="#{authBean.esAdministrador()}">
-                <div class="cuy-card" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: space-between;">
-                    <div>
-                        <h3 class="cuy-card-title"><i class="pi pi-cog" style="color: #dc2626;" /> Administración de Plataforma</h3>
-                        <p style="font-size: 0.92rem; color: #475569; line-height: 1.5; margin-top: 0;">
-                            Gestión de usuarios y roles, monitoreo de nodos, catálogos y reglas de fiscalización.
-                        </p>
+                <!-- Accesos Funcionario -->
+                <ui:fragment rendered="#{authBean.esFuncionario()}">
+                    <div class="cuy-card" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: space-between;">
+                        <div>
+                            <h3 class="cuy-card-title"><i class="pi pi-shield" style="color: #059669;" /> Fiscalización</h3>
+                            <p style="font-size: 0.92rem; color: #475569; line-height: 1.5; margin-top: 0;">
+                                Bandeja de resolución de infracciones, control de ITV y PNC, empresas y monitoreo de balanzas.
+                            </p>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;">
+                            <p:button value="Bandeja Fiscalización" outcome="/funcionario/bandeja-fiscalizacion" icon="pi pi-inbox" styleClass="ui-button-primary" />
+                            <p:button value="Monitoreo y Balanzas" outcome="/funcionario/monitoreo" icon="pi pi-map-marker" styleClass="ui-button-outlined" />
+                            <p:button value="Documentación" outcome="/funcionario/fiscalizacion-vehiculos" icon="pi pi-car" styleClass="ui-button-outlined" />
+                            <p:button value="Empresas y PDI" outcome="/funcionario/empresas" icon="pi pi-building" styleClass="ui-button-outlined" />
+                        </div>
                     </div>
-                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;">
-                        <p:button value="Usuarios y Roles" outcome="/admin/usuarios" icon="pi pi-users" styleClass="ui-button-primary" />
-                        <p:button value="Nodos" outcome="/admin/nodos" icon="pi pi-server" styleClass="ui-button-outlined" />
-                        <p:button value="Catálogos" outcome="/admin/catalogos" icon="pi pi-tags" styleClass="ui-button-outlined" />
-                        <p:button value="Parámetros de Fiscalización" outcome="/admin/reglas-fiscalizacion" icon="pi pi-sliders-h" styleClass="ui-button-outlined ui-button-danger" />
-                        <p:button value="Validar Permisos" outcome="/empresa/validar-permisos" icon="pi pi-verified" styleClass="ui-button-outlined" />
+                </ui:fragment>
+
+                <!-- Accesos Autoridad -->
+                <ui:fragment rendered="#{authBean.esAutoridad()}">
+                    <div class="cuy-card" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: space-between;">
+                        <div>
+                            <h3 class="cuy-card-title"><i class="pi pi-chart-bar" style="color: #d97706;" /> Dashboard</h3>
+                            <p style="font-size: 0.92rem; color: #475569; line-height: 1.5; margin-top: 0;">
+                                Indicadores ejecutivos de pesajes, guías e infracciones con trazabilidad completa.
+                            </p>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;">
+                            <p:button value="Dashboard" outcome="/backoffice/dashboard" icon="pi pi-chart-line" styleClass="ui-button-warning" />
+                        </div>
                     </div>
-                </div>
-            </ui:fragment>
-        </div>
+                </ui:fragment>
+            </div>
+        </ui:fragment>
     </ui:define>
 </ui:composition>

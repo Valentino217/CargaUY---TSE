@@ -8,13 +8,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
     <title>CargaUY - Ocurri&#243; un problema</title>
     <link rel="stylesheet" href="#{request.contextPath}/css/plataforma.css"/>
+    <link rel="stylesheet" href="#{request.contextPath}/css/ajustes-ui.css?v=portal"/>
 </h:head>
 <h:body>
     <!-- Pagina de error unica: depende solo del codigo/excepcion que informa el contenedor. -->
     <c:set var="codigo" value="#{requestScope['jakarta.servlet.error.status_code']}"/>
     <c:set var="tipoExcepcion" value="#{requestScope['jakarta.servlet.error.exception_type'].simpleName}"/>
     <main class="login-container">
-        <section class="card" role="alert">
+        <section class="card cuy-public-intro" role="alert">
             <c:choose>
                 <c:when test="#{tipoExcepcion eq 'ViewExpiredException'}">
                     <h1>Tu sesi&#243;n venci&#243; por inactividad</h1>

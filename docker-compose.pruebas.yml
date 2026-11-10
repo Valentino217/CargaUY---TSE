@@ -1,0 +1,17 @@
+# Usar junto con docker-compose.yml en la instancia de pruebas local.
+services:
+  wildfly:
+    environment:
+      P1_LOGIN_LOCAL: "true"
+    ports: !override
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:9990:9990"
+  postgres:
+    ports: !override
+      - "127.0.0.1:5432:5432"
+  ldap:
+    ports: !override
+      - "127.0.0.1:1389:1389"
+  mongodb:
+    ports: !override
+      - "127.0.0.1:27017:27017"
