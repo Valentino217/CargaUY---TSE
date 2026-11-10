@@ -2,7 +2,9 @@ const panelSearch = document.getElementById('cuy-panel-search');
 
 if (panelSearch) {
     const sections = document.querySelectorAll('#cuy-panel-secciones .cuy-panel-module');
-    const status = document.getElementById('cuy-panel-search-status');
+    const legacyCards = document.querySelectorAll('#cuy-panel-legacy .cuy-card');
+    const status = document.getElementById('cuy-panel-search-status')
+        || document.getElementById('cuy-panel-legacy-status');
     const normalize = (text) => text.toLocaleLowerCase('es')
         .normalize('NFD').replace(/\p{M}/gu, '').trim();
 
@@ -24,9 +26,17 @@ if (panelSearch) {
             if (sectionMatches) matches++;
         }
 
+        for (const card of legacyCards) {
+            const visible = normalize(card.textContent).includes(query);
+            card.hidden = !visible;
+            if (visible) matches++;
+        }
+
         status.textContent = query && matches === 0 ? 'No se encontraron secciones ni enlaces.' : '';
     };
 
+    panelSearch.value = new URLSearchParams(window.location.search).get('q') || '';
     panelSearch.addEventListener('input', filterSections);
+    panelSearch.form.addEventListener('submit', (event) => event.preventDefault());
     filterSections();
 }

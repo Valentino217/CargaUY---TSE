@@ -1,29 +1,5 @@
 .cuy-portal-admin { background: #fff; }
 
-.cuy-portal-search {
-    margin-inline-start: auto;
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-    width: min(23rem, 100%);
-    min-height: 44px;
-    padding-inline: 0.75rem;
-    border: 1px solid #64748b;
-    border-radius: 6px;
-}
-
-.cuy-portal-search:focus-within { outline: 2px solid var(--cuy-accent); }
-.cuy-portal-search input {
-    min-width: 0;
-    width: 100%;
-    min-height: 42px;
-    border: 0;
-    outline: 0;
-    background: transparent;
-    color: var(--cuy-text);
-    font: inherit;
-}
-
 .cuy-portal-admin .cuy-nav-wrapper { display: none; }
 .cuy-portal-admin .cuy-main { max-width: none; padding: 0; }
 .cuy-portal-width { max-width: 1440px; margin-inline: auto; padding-inline: 2rem; }
@@ -96,10 +72,10 @@
 
 @media (max-width: 768px) {
     .cuy-portal-width { padding-inline: 1rem; }
-    .cuy-portal-search { order: 1; width: 100%; }
-    .cuy-portal-user { display: none; }
 }
 
 @media (max-width: 560px) {
     .cuy-panel-grid { grid-template-columns: 1fr; }
 }
+
+#cuy-panel-legacy .cuy-card[hidden] { display: none !important; }

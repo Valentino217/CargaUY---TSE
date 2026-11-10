@@ -396,7 +396,7 @@
         }
     </style>
     <ui:insert name="head" />
-    <link rel="stylesheet" href="#{request.contextPath}/css/ajustes-ui.css?v=filtros"/>
+    <link rel="stylesheet" href="#{request.contextPath}/css/ajustes-ui.css?v=iconos-titulo"/>
     <link rel="stylesheet" href="#{request.contextPath}/css/calendarios.css"/>
 </h:head>
 
@@ -421,7 +421,14 @@
             </div>
         </h:link>
 
-        <ui:insert name="headerSearch" />
+        <ui:fragment rendered="#{not authBean.esAnonimo()}">
+            <form class="cuy-portal-search" action="#{request.contextPath}/index.xhtml"
+                  method="get" role="search" aria-label="Secciones de CargaUY">
+                <i class="pi pi-search" aria-hidden="true" />
+                <input id="cuy-panel-search" name="q" type="search" aria-label="Buscar en CargaUY"
+                       placeholder="Buscar en CargaUY" />
+            </form>
+        </ui:fragment>
         <h:form id="headerAuthForm" styleClass="cuy-user-box">
             <ui:fragment rendered="#{authBean.esAnonimo()}">
                 <a href="#{request.contextPath}/login" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-icon-left ui-button-info" style="text-decoration: none; padding: 0.45rem 0.9rem; color: #fff; font-weight: 600; border-radius: 6px; background: #0284c7;">
@@ -431,14 +438,7 @@
             </ui:fragment>
 
             <ui:fragment rendered="#{not authBean.esAnonimo()}">
-                <h:panelGroup layout="block" styleClass="cuy-user-info"
-                              rendered="#{view.viewId ne '/index.xhtml' or not authBean.esAdministrador()}">
-                    <span class="cuy-user-name">#{authBean.usuarioActivo.nombre}</span>
-                    <span class="cuy-user-role">CI: #{authBean.usuarioActivo.ci} &#8226; #{authBean.rolPrincipalLabel}</span>
-                </h:panelGroup>
-                <ui:fragment rendered="#{view.viewId eq '/index.xhtml' and authBean.esAdministrador()}">
-                    <span class="cuy-portal-user"><i class="pi pi-user" aria-hidden="true" /> #{authBean.rolPrincipalLabel}</span>
-                </ui:fragment>
+                <span class="cuy-portal-user"><i class="pi pi-user" aria-hidden="true" /> <h:outputText value="#{authBean.usuarioActivo.nombre}" /></span>
                 <p:commandButton value="Salir"
                                  icon="pi pi-power-off"
                                  action="#{authBean.cerrarSesion}"

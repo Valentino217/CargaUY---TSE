@@ -33,6 +33,32 @@ body .cuy-brand-icon {
 
 body .cuy-brand-title { font-size: 1.65rem; }
 
+.cuy-portal-search {
+    margin-inline-start: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    width: min(23rem, 100%);
+    min-height: 44px;
+    padding-inline: 0.75rem;
+    border: 1px solid #64748b;
+    border-radius: 6px;
+}
+
+.cuy-portal-search:focus-within { outline: 2px solid var(--cuy-accent); }
+body .cuy-portal-search input[type="search"],
+body .cuy-portal-search input[type="search"]:focus-visible {
+    min-width: 0;
+    width: 100%;
+    min-height: 42px;
+    border: 0;
+    outline: 0;
+    box-shadow: none;
+    background: transparent;
+    color: var(--cuy-text);
+    font: inherit;
+}
+
 .cuy-portal-user {
     display: flex;
     align-items: center;
@@ -40,6 +66,7 @@ body .cuy-brand-title { font-size: 1.65rem; }
     border-inline: 1px solid var(--cuy-portal-border);
     padding-inline: 0.85rem;
     font-weight: 600;
+    overflow-wrap: anywhere;
 }
 
 body .cuy-user-box .cuy-sign-out.ui-button {
@@ -51,7 +78,31 @@ body .cuy-user-box .cuy-sign-out.ui-button {
 body .cuy-nav-wrapper .ui-menubar { background: #fff; }
 body .cuy-nav-wrapper .ui-menuitem-link .ui-menuitem-text { color: var(--cuy-portal-blue); }
 
-body .cuy-page-header,
+body .cuy-main > .cuy-page-header {
+    margin-top: -1.5rem;
+    padding-block: 1.5rem 2rem;
+    background: var(--cuy-portal-tint);
+    box-shadow: 0 0 0 100vmax var(--cuy-portal-tint);
+    clip-path: inset(0 -100vmax);
+}
+
+body .cuy-main > .cuy-page-header .cuy-page-title {
+    color: var(--cuy-primary);
+    font-size: clamp(1.9rem, 4vw, 2.75rem);
+    line-height: 1.2;
+}
+
+.cuy-page-title > .pi {
+    flex: 0 0 auto;
+    font-size: 0.85em;
+}
+
+body .cuy-main > .cuy-page-header .cuy-page-subtitle {
+    margin-top: 0.4rem;
+    color: #475569;
+    font-size: 1.15rem;
+}
+
 body .header-bar,
 body .perfil-header,
 body .cuy-public-intro {
@@ -286,6 +337,9 @@ body .login-form label { line-height: 1.5; }
 
 @media (max-width: 768px) {
     .cuy-header { flex-wrap: wrap; gap: 16px; }
+    .cuy-portal-search { order: 1; width: 100%; }
+    .cuy-portal-user { padding-inline: 0.5rem; }
+    body .cuy-main > .cuy-page-header { margin-top: -1rem; }
     .cuy-user-box { gap: 10px; }
     .cuy-page-title { font-size: 1.3rem; }
     .cuy-grid-cards { grid-template-columns: minmax(0, 1fr); }
