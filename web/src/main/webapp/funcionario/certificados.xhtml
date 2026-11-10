@@ -1,0 +1,208 @@
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/templates/template.xhtml">
+
+    <ui:define name="title">
+        Gestión de certificados digitales
+    </ui:define>
+
+   <ui:define name="content">
+
+    <div class="encabezado">
+        <p>
+            Administración de certificados digitales
+            asociados a los funcionarios.
+        </p>
+    </div>
+
+    <h:form id="formCertificado" enctype="multipart/form-data">
+
+        <p:growl id="mensajes" showDetail="true"/>
+
+        <!-- BUSCAR USUARIO -->
+
+        <div class="seccion">
+
+            <p:panel header="1. Buscar usuario">
+
+                <div class="campo">
+
+                    <p:outputLabel
+                        for="ci"
+                        value="Cédula del funcionario:"/>
+
+                    <p:inputNumber
+                        id="ci"
+                        value="#{certificadoDigitalBean.ci}"
+                        decimalPlaces="0"
+                        thousandSeparator=""
+                        required="true"
+                        requiredMessage="Debe ingresar una cédula."
+                        style="max-width:300px;"/>
+
+                </div>
+
+                <div class="acciones">
+
+                    <p:commandButton
+                        value="Buscar usuario"
+                        icon="pi pi-search"
+                        action="#{certificadoDigitalBean.buscarUsuario}"
+                        update="resultado mensajes"/>
+
+                </div>
+
+                <p:outputPanel id="resultado">
+
+                    <h:panelGroup
+                        layout="block"
+                        rendered="#{certificadoDigitalBean.usuarioEncontrado ne null}"
+                        styleClass="resultado-usuario">
+
+                        <h3>Usuario encontrado</h3>
+
+                        <p>
+                            <strong>Nombre:</strong>
+                            #{certificadoDigitalBean.usuarioEncontrado.nombre}
+                        </p>
+
+                        <p>
+                            <strong>Cédula:</strong>
+                            #{certificadoDigitalBean.usuarioEncontrado.ci}
+                        </p>
+
+                        <p>
+                            <strong>ID:</strong>
+                            #{certificadoDigitalBean.usuarioEncontrado.id}
+                        </p>
+
+                    </h:panelGroup>
+
+                </p:outputPanel>
+
+            </p:panel>
+
+        </div>
+
+
+        <!-- REGISTRAR CERTIFICADO -->
+
+        <div class="seccion">
+
+            <p:panel header="2. Registrar certificado digital">
+
+                <p>
+                    Seleccione el certificado del funcionario
+                    e ingrese su contraseña para validarlo.
+                </p>
+
+                <div class="campo">
+
+                    <p:outputLabel
+                        value="Archivo del certificado:"/>
+
+                    <br/>
+
+                    <p:fileUpload
+                        mode="simple"
+                        skinSimple="true"
+                        value="#{certificadoDigitalBean.certificado}"
+                        accept=".p12,.pfx"
+                        label="Seleccionar archivo .p12 / .pfx"/>
+
+
+                </div>
+
+                <div class="campo">
+
+                    <p:outputLabel
+                        for="password"
+                        value="Contraseña del certificado:"/>
+
+                    <p:password
+                        id="password"
+                        value="#{certificadoDigitalBean.passwordCertificado}"
+                        feedback="false"
+                        toggleMask="true"
+                        style="max-width:350px;"/>
+
+                </div>
+
+                <div class="acciones">
+
+                    <p:commandButton
+                        value="Registrar certificado"
+                        icon="pi pi-shield"
+                        ajax="false"
+                        action="#{certificadoDigitalBean.probarCargaCertificado}"
+                        styleClass="ui-button-success"/>
+
+                </div>
+
+                <div class="ayuda">
+                    El certificado será validado y asociado
+                    al usuario seleccionado.
+                </div>
+
+            </p:panel>
+
+        </div>
+        <div>
+        <p:panel header="Certificados digitales registrados">
+        <p:dataTable id="tablaCertificados"
+             value="#{certificadoDigitalBean.certificados}"
+             var="certificado"
+             emptyMessage="No hay certificados registrados."
+             paginator="true"
+             paginatorPosition="bottom"
+             rows="10"
+             style="width: 100%;">
+
+            <p:column headerText="Funcionario">
+                <h:outputText value="#{certificado.usuario.nombre}" style="width: 180px;"/>
+            </p:column>
+
+            <p:column headerText="Cédula">
+                <h:outputText value="#{certificado.usuario.ci}" style="width: 110px;"/>
+            </p:column>
+
+            <p:column headerText="Archivo">
+                <h:outputText value="#{certificado.nombreArchivo}" style="width: 190px;"/>
+            </p:column>
+
+            <p:column headerText="Vencimiento">
+                <h:outputText value="#{certificado.fechaVencimiento}" style="width: 170px;"/>
+            </p:column>
+
+            <p:column headerText="Estado">
+                <h:outputText value="#{certificado.estado}" style="width: 100px;"/>
+            </p:column>
+
+            <p:column headerText="Motivo de revocación" style="width: 220px;">
+                <p:inputText value="#{certificadoDigitalBean.motivoRevocacion}"
+                             maxlength="255"
+                             placeholder="Ingrese el motivo"
+                             rendered="#{certificado.estado eq 'ACTIVO'}"/>
+            </p:column>
+
+            <p:column headerText="Acción" style="width: 130px;">
+                <p:commandButton value="Revocar"
+                                 icon="pi pi-ban"
+                                 styleClass="ui-button-danger"
+                                 action="#{certificadoDigitalBean.revocarCertificado(certificado.id, certificadoDigitalBean.motivoRevocacion)}"
+                                 update="tablaCertificados mensajes"
+                                 rendered="#{certificado.estado eq 'ACTIVO'}"
+                                 onclick="return confirm('¿Está seguro de revocar este certificado?');"/>
+            </p:column>
+
+           </p:dataTable>
+
+        </p:panel>
+        </div>
+   </h:form>
+
+    </ui:define>
+</ui:composition>

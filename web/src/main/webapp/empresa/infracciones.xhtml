@@ -329,15 +329,8 @@
                         <!-- Bloque Certificado Digital -->
                         <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.1rem; margin-bottom: 1rem;">
                             <div style="font-weight: 700; color: #0f2942; margin-bottom: 0.75rem; font-size: 0.88rem;">
-                                <i class="pi pi-key" style="margin-right: 0.35rem; color: #dc2626;" /> Certificado Digital (PKCS#12 / .p12 / .pfx)
-                            </div>
-                            <div style="margin-bottom: 0.85rem;">
-                                <p:fileUpload mode="simple"
-                                              skinSimple="true"
-                                              value="#{empresaInfraccionesBean.certificado}"
-                                              accept=".p12,.pfx"
-                                              label="Seleccionar archivo .p12 / .pfx" />
-                            </div>
+                                <i class="pi pi-key" style="margin-right: 0.35rem; color: #dc2626;" /> Contraseña del Certificado Digital (PKCS#12 / .p12 / .pfx)
+                            </div>                           
                             <div style="display: flex; gap: 0.75rem; align-items: center;">
                                 <div style="flex: 1;">
                                     <p:password value="#{empresaInfraccionesBean.passwordCertificado}"
@@ -346,14 +339,7 @@
                                                 toggleMask="true"
                                                 redisplay="false"
                                                 style="width: 100%;" />
-                                </div>
-                                <p:commandButton value="Verificar carga"
-                                                 icon="pi pi-check"
-                                                 ajax="true"
-                                                 action="#{empresaInfraccionesBean.probarCargaCertificado}"
-                                                 update=":growl"
-                                                 styleClass="ui-button-outlined ui-button-info"
-                                                 style="width: auto; white-space: nowrap;" />
+                                </div>                                
                             </div>
                         </div>
                     </div>

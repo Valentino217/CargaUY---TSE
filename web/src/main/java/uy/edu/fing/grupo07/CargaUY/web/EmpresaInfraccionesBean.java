@@ -9,12 +9,17 @@ import jakarta.inject.Named;
 import org.primefaces.model.DefaultStreamedContent;
 import org.primefaces.model.StreamedContent;
 import org.primefaces.model.file.UploadedFile;
+
+import uy.edu.fing.grupo07.CargaUY.domain.entity.CertificadoDigital;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.CredencialesFirma;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.EstadoInfraccion;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoInfraccion;
 import uy.edu.fing.grupo07.CargaUY.dto.DescargoRequestDTO;
 import uy.edu.fing.grupo07.CargaUY.dto.InfraccionDTO;
+import uy.edu.fing.grupo07.CargaUY.security.Acceso;
+import uy.edu.fing.grupo07.CargaUY.security.AutenticacionService;
 import uy.edu.fing.grupo07.CargaUY.service.ActaServiceEJB;
+import uy.edu.fing.grupo07.CargaUY.service.CertificadoDigitalEJB;
 import uy.edu.fing.grupo07.CargaUY.service.GestionInfraccionesServiceLocal;
 
 import java.io.ByteArrayInputStream;
@@ -40,14 +45,19 @@ public class EmpresaInfraccionesBean implements Serializable {
 
     @EJB
     private ActaServiceEJB actaEJB;
+    
+    @EJB
+    private CertificadoDigitalEJB certificadoEJB;
+    
+    @EJB
+    private AutenticacionService auth;
 
     private List<InfraccionDTO> infracciones;
     private List<InfraccionDTO> infraccionesFiltradas;
     private InfraccionDTO seleccionada;
     private String textoDescargo;
 
-    // Campos para carga de certificado digital .p12 / .pfx y emisión de acta PDF
-    private UploadedFile certificado;
+
     private String passwordCertificado;
     private StreamedContent pdfFirmadoDescarga;
 
@@ -120,7 +130,57 @@ public class EmpresaInfraccionesBean implements Serializable {
             return null;
         }
         try {
-            DateTimeFormatter formato = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            
+        	// 1. Obtener token de sesión
+        	String token = (String) FacesContext
+        	        .getCurrentInstance()
+        	        .getExternalContext()
+        	        .getSessionMap()
+        	        .get("token");
+
+        	// 2. Validar token y obtener usuario
+        	Acceso acceso = auth.validarToken(token);
+
+        	if (acceso == null) {
+        	    mostrarMensaje(
+        	        FacesMessage.SEVERITY_ERROR,
+        	        "Sesión inválida",
+        	        "Debe iniciar sesión nuevamente."
+        	    );
+        	    return null;
+        	}
+
+        	// 3. Obtener CI del inspector
+        	int ciInspector = acceso.ci();
+        	       	     	
+        	// 1. Recuperar certificado válido desde PostgreSQL
+        	CertificadoDigital certificadoDB = certificadoEJB.buscarCertificadoActivoPorCi(ciInspector);
+
+        	if (certificadoDB == null) {
+        	    mostrarMensaje(
+        	        FacesMessage.SEVERITY_WARN,
+        	        "Atención",
+        	        "No dispone de un certificado activo y vigente."
+        	    );
+        	    return null;
+        	}
+
+        	// 2. Obtener archivo P12 almacenado
+        	byte[] archivoCertificado = certificadoDB.getArchivoCertificado();
+
+        	if (archivoCertificado == null || archivoCertificado.length == 0) {
+        	    mostrarMensaje(
+        	        FacesMessage.SEVERITY_ERROR,
+        	        "Error",
+        	        "El certificado registrado no contiene información."
+        	    );
+        	    return null;
+        	}
+        	
+        	
+        	
+        	
+        	DateTimeFormatter formato = DateTimeFormatter.ofPattern("dd/MM/yyyy");
             String fechaString = this.seleccionada.fecha() != null ? this.seleccionada.fecha().format(formato) : "";
 
             byte[] pdfOriginal = actaEJB.emitirYFirmarActa(
@@ -136,13 +196,9 @@ public class EmpresaInfraccionesBean implements Serializable {
                 mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error", "No se pudo generar el documento PDF base.");
                 return null;
             }
+            
 
-            if (certificado == null || certificado.getContent() == null) {
-                mostrarMensaje(FacesMessage.SEVERITY_WARN, "Atención", "Debe seleccionar un archivo de certificado digital (.p12 o .pfx).");
-                return null;
-            }
-
-            CredencialesFirma credenciales = actaEJB.abrirCredenciales(certificado.getContent(), passwordCertificado);
+            CredencialesFirma credenciales = actaEJB.abrirCredenciales(archivoCertificado, passwordCertificado);
             if (credenciales == null) {
                 mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error de Firma", "No se pudo abrir el certificado con la clave provista.");
                 return null;
@@ -165,32 +221,12 @@ public class EmpresaInfraccionesBean implements Serializable {
             mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error", e.getMessage());
             return null;
         } finally {
-            certificado = null;
+           
             passwordCertificado = null;
         }
     }
 
-    public void probarCargaCertificado() {
-        if (certificado == null || certificado.getSize() == 0) {
-            mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error", "No se recibió ningún certificado.");
-            return;
-        } else {
-            mostrarMensaje(FacesMessage.SEVERITY_INFO, "Carga correcta",
-                    "Archivo: " + certificado.getFileName() + " - Tamaño: " + certificado.getSize() + " bytes");
-        }
-
-        try {
-            byte[] archivo = certificado.getInputStream().readAllBytes();
-            CredencialesFirma creds = actaEJB != null ? actaEJB.abrirCredenciales(archivo, passwordCertificado) : null;
-            if (creds != null) {
-                mostrarMensaje(FacesMessage.SEVERITY_INFO, "Éxito", "Certificado abierto correctamente");
-            } else {
-                mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error", "No se pudo abrir el certificado.");
-            }
-        } catch (Exception e) {
-            mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error", "No se pudo abrir el certificado: " + e.getMessage());
-        }
-    }
+  
 
     private void marcarValidacionFallida() {
         try {
@@ -275,13 +311,6 @@ public class EmpresaInfraccionesBean implements Serializable {
         this.passwordCertificado = passwordCertificado;
     }
 
-    public UploadedFile getCertificado() {
-        return certificado;
-    }
-
-    public void setCertificado(UploadedFile certificado) {
-        this.certificado = certificado;
-    }
 
     public StreamedContent getPdfFirmadoDescarga() {
         return pdfFirmadoDescarga;
