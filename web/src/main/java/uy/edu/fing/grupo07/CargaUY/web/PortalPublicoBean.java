@@ -167,7 +167,7 @@ public class PortalPublicoBean implements Serializable {
             double volumenResidual = residuales.stream().mapToDouble(GuiaDeViaje::getVolumenCarga).sum();
             resultado.add(new EstadisticaCorredorPublico(
                     "Red Nacional Consolidada",
-                    "Otros Rubros (Agrupado por umbral k < " + UMBRAL_MINIMO_AGREGACION_K + ")",
+                    "Otros Rubros",
                     residuales.size(),
                     Math.round(volumenResidual * 100.0) / 100.0
             ));
@@ -175,7 +175,7 @@ public class PortalPublicoBean implements Serializable {
             double volumenTotal = guiasPublicas.stream().mapToDouble(GuiaDeViaje::getVolumenCarga).sum();
             resultado.add(new EstadisticaCorredorPublico(
                     "Red Nacional Consolidada",
-                    "Consolidado Nacional (k ≥ " + UMBRAL_MINIMO_AGREGACION_K + ")",
+                    "Consolidado Nacional",
                     guiasPublicas.size(),
                     Math.round(volumenTotal * 100.0) / 100.0
             ));
@@ -235,7 +235,7 @@ public class PortalPublicoBean implements Serializable {
             long habilitados = residuales.stream().filter(Vehiculo::isEstadoHabilitacion).count();
             double promedio = residuales.stream().mapToInt(Vehiculo::getCapacidadCarga).average().orElse(0.0);
             resultado.add(new EstadisticaFlotaPublica(
-                    "Otras Categorías (Agrupado por umbral k < " + UMBRAL_MINIMO_AGREGACION_K + ")",
+                    "Otras Categorías",
                     residuales.size(),
                     habilitados,
                     Math.round(promedio * 100.0) / 100.0
@@ -244,7 +244,7 @@ public class PortalPublicoBean implements Serializable {
             long habilitados = vehiculosPublicos.stream().filter(Vehiculo::isEstadoHabilitacion).count();
             double promedio = vehiculosPublicos.stream().mapToInt(Vehiculo::getCapacidadCarga).average().orElse(0.0);
             resultado.add(new EstadisticaFlotaPublica(
-                    "Flota Nacional Consolidada (k ≥ " + UMBRAL_MINIMO_AGREGACION_K + ")",
+                    "Flota Nacional Consolidada",
                     vehiculosPublicos.size(),
                     habilitados,
                     Math.round(promedio * 100.0) / 100.0

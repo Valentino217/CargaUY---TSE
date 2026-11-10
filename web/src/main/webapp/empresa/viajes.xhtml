@@ -1,4 +1,4 @@
-﻿<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
                 xmlns:h="jakarta.faces.html"
                 xmlns:f="jakarta.faces.core"
                 xmlns:ui="jakarta.faces.facelets"
@@ -84,7 +84,15 @@
                                rounded="true" />
                     </p:column>
 
-                    <p:column headerText="Acciones" style="width: 180px; text-align: center;">
+                    <p:column headerText="Acciones" style="width: 210px; text-align: center;">
+                        <p:button icon="pi pi-compass"
+                                  title="Monitorear Viaje / Ver Eventos"
+                                  outcome="/empresa/monitoreo.xhtml"
+                                  styleClass="ui-button-outlined ui-button-secondary ui-button-sm"
+                                  style="margin-right: 0.35rem;">
+                            <f:param name="guiaId" value="#{g.id}" />
+                        </p:button>
+
                         <h:panelGroup rendered="#{g.estado.name() eq 'SIN_INICIAR'}">
                             <p:commandButton icon="pi pi-pencil"
                                              title="Editar Guía"

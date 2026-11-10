@@ -156,12 +156,44 @@ public class DetalleViajeBean implements Serializable {
         }
     }
 
+    private boolean esVistaEmpresa() {
+        try {
+            FacesContext context = FacesContext.getCurrentInstance();
+            if (context != null && context.getExternalContext() != null) {
+                Object reqObj = context.getExternalContext().getRequest();
+                if (reqObj instanceof jakarta.servlet.http.HttpServletRequest req) {
+                    String uri = req.getRequestURI();
+                    if (uri != null && uri.contains("/empresa/")) {
+                        return true;
+                    }
+                    Object actorObj = req.getAttribute("actor");
+                    if (actorObj instanceof uy.edu.fing.grupo07.CargaUY.security.Acceso actor) {
+                        return actor.tiene(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.CIUDADANO)
+                                && !actor.tiene(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.FUNCIONARIO)
+                                && !actor.tiene(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.AUTORIDAD)
+                                && !actor.tiene(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.ADMINISTRADOR);
+                    }
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        return false;
+    }
+
     /**
-     * Carga el listado de todas las guías existentes en el sistema para permitir su selección.
+     * Carga el listado de todas las guías existentes en el sistema (o las de las empresas del actor en vista empresa) para permitir su selección.
      */
     public void cargarGuiasDisponibles() {
         try {
-            List<GuiaDeViaje> lista = guiaDeViajeEJB.listarGuias();
+            List<GuiaDeViaje> lista;
+            if (esVistaEmpresa()) {
+                String token = SesionActual.token();
+                lista = (token != null && !token.isBlank())
+                        ? guiaDeViajeEJB.listarParaActor(token)
+                        : new ArrayList<>();
+            } else {
+                lista = guiaDeViajeEJB.listarGuias();
+            }
             if (lista != null) {
                 this.guiasDisponibles = lista;
             } else {
@@ -204,6 +236,21 @@ public class DetalleViajeBean implements Serializable {
             this.eventos = new ArrayList<>();
             this.pesadas = new ArrayList<>();
             return;
+        }
+
+        if (esVistaEmpresa()) {
+            if (this.guiasDisponibles == null || this.guiasDisponibles.isEmpty()) {
+                cargarGuiasDisponibles();
+            }
+            boolean permitida = this.guiasDisponibles != null && this.guiasDisponibles.stream()
+                    .anyMatch(g -> g != null && g.getId() != null && g.getId().equals(guiaIdSeleccionada));
+            if (!permitida) {
+                this.guiaActual = null;
+                this.eventos = new ArrayList<>();
+                this.pesadas = new ArrayList<>();
+                mostrarMensaje(FacesMessage.SEVERITY_WARN, "Acceso Restringido", "La guía seleccionada no pertenece a su empresa.");
+                return;
+            }
         }
 
         try {

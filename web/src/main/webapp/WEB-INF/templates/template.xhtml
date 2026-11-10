@@ -468,6 +468,11 @@
                     <p:menuitem value="Infracciones" icon="pi pi-exclamation-circle" outcome="/empresa/infracciones.xhtml" />
                 </p:submenu>
 
+                <p:submenu label="Permisos y Monitoreo" icon="pi pi-compass" rendered="#{authBean.esCiudadanoEmpresa()}">
+                    <p:menuitem value="Documentación de Vehículos" icon="pi pi-check-square" outcome="/empresa/fiscalizacion-vehiculos.xhtml" />
+                    <p:menuitem value="Monitoreo de Viajes" icon="pi pi-compass" outcome="/empresa/monitoreo.xhtml" />
+                </p:submenu>
+
                 <!-- 2.5 CHOFER -->
                 <p:menuitem value="Mis Viajes" icon="pi pi-compass" outcome="/chofer/mis-viajes.xhtml" rendered="#{authBean.esChofer()}" />
 
