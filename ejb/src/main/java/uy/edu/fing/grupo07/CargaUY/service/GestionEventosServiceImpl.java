@@ -123,9 +123,11 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
             evento.setEmpresaCarga(dto.empresaCarga().trim());
         }
 
+        boolean tienePosicion = Math.abs(dto.latitud()) > 1e-6 || Math.abs(dto.longitud()) > 1e-6;
+
         if (dto.distanciaDesvioKm() != null) {
             evento.setDistanciaDesvioKm(dto.distanciaDesvioKm());
-        } else if (faasTrackingClient != null) {
+        } else if (faasTrackingClient != null && tienePosicion) {
             FaasTrackingClient.ResultadoFaas resultadoFaas = faasTrackingClient.procesarEvento(
                     dto,
                     guia.getOrigen(),
@@ -153,7 +155,7 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
         if (false) {
         }
 
-        if (posicionNoSqlRepository != null) {
+        if (posicionNoSqlRepository != null && tienePosicion) {
             String matriculaGuia = (guia.getVehiculo() != null && guia.getVehiculo().getMatricula() != null)
                     ? guia.getVehiculo().getMatricula()
                     : dto.matricula();
@@ -255,6 +257,26 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
                         "Transición inválida: la guía #" + guia.getId()
                                 + " se encuentra SIN_INICIAR y solo admite el evento INICIO (se recibió " + tipo + ")."
                 );
+            }
+            if (guia.getChofer() != null) {
+                TypedQuery<Long> qOtra = em.createQuery(
+                        "SELECT g.id FROM GuiaDeViaje g WHERE g.chofer.id = :choferId AND g.estado = :enCurso AND g.id <> :guiaId",
+                        Long.class
+                );
+                if (qOtra != null) {
+                    List<Long> enCurso = qOtra
+                            .setParameter("choferId", guia.getChofer().getId())
+                            .setParameter("enCurso", TipoEstado.EN_CURSO)
+                            .setParameter("guiaId", guia.getId())
+                            .setMaxResults(1)
+                            .getResultList();
+                    if (enCurso != null && !enCurso.isEmpty()) {
+                        throw new BusinessException(
+                                "No se puede iniciar la guía #" + guia.getId()
+                                        + " porque el chofer ya tiene la guía #" + enCurso.get(0) + " EN_CURSO."
+                        );
+                    }
+                }
             }
             // Punto E.7: permitir que el viaje inicie y que el motor de fiscalización evalúe SIN_HABILITACION a la fecha de la guía.
             if (aplicarTransicion) {

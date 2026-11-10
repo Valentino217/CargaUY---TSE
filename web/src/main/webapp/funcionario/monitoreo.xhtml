@@ -202,7 +202,9 @@
                         </p:column>
 
                         <p:column headerText="Coordenadas / Detalle">
-                            <span class="cuy-mono" style="font-size: 0.78rem;">#{ev.latitud()}, #{ev.longitud()}</span>
+                            <h:panelGroup rendered="#{ev.latitud() != 0 or ev.longitud() != 0}">
+                                <span class="cuy-mono" style="font-size: 0.78rem;">#{ev.latitud()}, #{ev.longitud()}</span>
+                            </h:panelGroup>
                             <h:panelGroup rendered="#{ev.distanciaDesvioKm() != null}">
                                 <div style="margin-top: 0.2rem;">
                                     <p:tag value="Desvío"

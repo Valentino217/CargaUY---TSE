@@ -193,6 +193,13 @@ class OfflineDatabaseHelper(context: Context) :
         return null
     }
 
+    fun obtenerGuiaEnCurso(cedula: Int, excluirGuiaId: Long? = null): Viaje? {
+        return obtenerGuiasCache(cedula).firstOrNull { g ->
+            g.estado.equals("EN_CURSO", ignoreCase = true) &&
+                (excluirGuiaId == null || g.id != excluirGuiaId)
+        }
+    }
+
     fun actualizarEstadoGuiaLocal(guiaId: Long, nuevoEstado: String) {
         val db = writableDatabase
         val values = ContentValues().apply {

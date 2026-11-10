@@ -19,11 +19,37 @@ public class FlujosService {
 		 
 		 String state=Cripto.aleatorio(),nonce=Cripto.aleatorio();
 		 em.persist(new FlujoIdentidad(Cripto.hash(state),challenge,nonce,Instant.now().plusSeconds(180)));
-		 String url=GubOidcClient.autorizacion()+"?response_type=code&scope="+GubOidcClient.url(GubOidcClient.scopes())
-			 +"&client_id="+GubOidcClient.url(GubOidcClient.clientId())+"&redirect_uri="+GubOidcClient.url(redirect())
-			 +"&state="+state+"&nonce="+nonce+"&code_challenge="+challenge+"&code_challenge_method=S256";
+		 String url;
+		 if (GubOidcClient.real()) {
+			 url = "http://localhost:8080/CargaUY-web/gub/iniciar?movil_state=" + GubOidcClient.url(state);
+		 } else {
+			 url = GubOidcClient.autorizacion()+"?response_type=code&scope="+GubOidcClient.url(GubOidcClient.scopes())
+				 +"&client_id="+GubOidcClient.url(GubOidcClient.clientId())+"&redirect_uri="+GubOidcClient.url(redirect())
+				 +"&state="+state+"&nonce="+nonce+"&code_challenge="+challenge+"&code_challenge_method=S256";
+		 }
 		  
-		  return new Inicio(state,nonce,url);
+		 return new Inicio(state,nonce,url);
+	 }
+
+	 public String urlAutorizacionMovil(String state) {
+		 if (state == null || !state.matches("[A-Za-z0-9_-]{43}"))
+			 throw new ErrorAcceso(401, "Flujo inválido");
+		 FlujoIdentidad f = em.find(FlujoIdentidad.class, Cripto.hash(state));
+		 if (f == null || !f.getVence().isAfter(Instant.now()))
+			 throw new ErrorAcceso(401, "Flujo vencido o inválido");
+		 return GubOidcClient.autorizacion()+"?response_type=code"
+			 +"&scope="+GubOidcClient.url(GubOidcClient.scopes())
+			 +"&client_id="+GubOidcClient.url(GubOidcClient.clientId())
+			 +"&redirect_uri="+GubOidcClient.url(redirect())
+			 +"&prompt=login"
+			 +"&state="+state+"&nonce="+f.getNonce()
+			 +(GubOidcClient.pkce()?"&code_challenge="+f.getChallenge()+"&code_challenge_method=S256":"");
+	 }
+
+	 public boolean esFlujoMovil(String state) {
+		 if (state == null || !state.matches("[A-Za-z0-9_-]{43}")) return false;
+		 FlujoIdentidad f = em.find(FlujoIdentidad.class, Cripto.hash(state));
+		 return f != null && f.getVence().isAfter(Instant.now());
 	 }
 	
 	 @TransactionAttribute(TransactionAttributeType.REQUIRES_NEW)
@@ -41,11 +67,14 @@ public class FlujosService {
 	 }
 	 
 	 private static void habilitado(){
-		 if(GubOidcClient.real() && (!Boolean.parseBoolean(Config.valor("gub.mobile.enabled","false")) || !GubOidcClient.pkce()))
+		 if(GubOidcClient.real() && !Boolean.parseBoolean(Config.valor("gub.mobile.enabled","false")))
 			 throw new ErrorAcceso(409,"Móvil requiere callback registrado y soporte PKCE confirmado");
 	 }
 	 
 	 public static String redirect(){
+		 if (GubOidcClient.real()) {
+			 return Config.valor("gub.mobile.redirect", GubOidcClient.redirect());
+		 }
 		 return Config.valor("gub.mobile.redirect","uy.cargauy://oauth/callback");
 	 }
 	 

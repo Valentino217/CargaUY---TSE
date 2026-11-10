@@ -87,6 +87,19 @@ public class IdentidadesService {
 
         u.getRoles().clear(); 
         u.getRoles().add(unicoRol);
+        em.flush();
+
+        if (unicoRol == TipoUsuario.CHOFER) {
+            em.createNativeQuery("INSERT INTO choferes (usuario_id) VALUES (:id) ON CONFLICT DO NOTHING")
+                    .setParameter("id", id).executeUpdate();
+            em.createNativeQuery("UPDATE usuarios SET tipo_usuario = 'CHOFER' WHERE id = :id")
+                    .setParameter("id", id).executeUpdate();
+        } else if (unicoRol == TipoUsuario.CIUDADANO || unicoRol == TipoUsuario.CIUDADANO_COMUN) {
+            em.createNativeQuery("INSERT INTO ciudadanos (usuario_id) VALUES (:id) ON CONFLICT DO NOTHING")
+                    .setParameter("id", id).executeUpdate();
+            em.createNativeQuery("UPDATE usuarios SET tipo_usuario = 'CIUDADANO' WHERE id = :id")
+                    .setParameter("id", id).executeUpdate();
+        }
 
         // Si el usuario deja de ser CIUDADANO responsable o CHOFER, limpiar vínculos incompatibles
         var qVinculos = em.createQuery(

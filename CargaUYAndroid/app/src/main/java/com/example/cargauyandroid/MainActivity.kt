@@ -140,19 +140,22 @@ fun NavegationComponent(
     // Procesar retorno del login OIDC PKCE desde Keycloak / gub.uy
     LaunchedEffect(deepLinkUri) {
         val uri = deepLinkUri ?: return@LaunchedEffect
-        onDeepLinkConsumido()
         autenticandoOidc = true
         mensajeGlobalSync = "Verificando identidad con gub.uy..."
-        val resultado = OidcAuthManager.procesarCallback(uri)
-        autenticandoOidc = false
-        resultado.onSuccess { res ->
-            mensajeGlobalSync = "¡Bienvenido, ${res.nombre ?: "Chofer"}! Sesión iniciada vía gub.uy."
-            res.ci?.let { ci ->
-                cedulaTexto = ci.toString()
+        try {
+            val resultado = OidcAuthManager.procesarCallback(uri)
+            resultado.onSuccess { res ->
+                mensajeGlobalSync = "¡Bienvenido, ${res.nombre ?: "Chofer"}! Sesión iniciada vía gub.uy."
+                res.ci?.let { ci ->
+                    cedulaTexto = ci.toString()
+                }
+                sesionTick++
+            }.onFailure { err ->
+                mensajeGlobalSync = "Error al completar autenticación: ${err.message}"
             }
-            sesionTick++
-        }.onFailure { err ->
-            mensajeGlobalSync = "Error al completar autenticación: ${err.message}"
+        } finally {
+            autenticandoOidc = false
+            onDeepLinkConsumido()
         }
     }
 
@@ -182,18 +185,7 @@ fun NavegationComponent(
         }
     }
 
-    // Solicitar permiso de ubicacion al iniciar para tener coordenadas GPS listas
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) { _ -> }
-
     LaunchedEffect(Unit) {
-        permissionLauncher.launch(
-            arrayOf(
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            )
-        )
         refrescarEstadoLocal()
         if (syncRepository.baseDatosReiniciadaPorNuevaCompilacion) {
         } else if (enLinea && pendientesCount > 0) {
@@ -882,13 +874,20 @@ fun PantallaViajes(
                 )
             }
         } else {
+            val guiaEnCurso = guias.firstOrNull { it.estado.equals("EN_CURSO", ignoreCase = true) }
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(guias) { viaje ->
+                    val otraGuiaEnCursoId = if (guiaEnCurso != null && guiaEnCurso.id != viaje.id) {
+                        guiaEnCurso.id
+                    } else {
+                        null
+                    }
                     TarjetaGuiaViaje(
                         viaje = viaje,
+                        otraGuiaEnCursoId = otraGuiaEnCursoId,
                         onRegistrarEvento = {
                             navController.navigate("registrarEvento/${viaje.id}")
                         },
@@ -914,6 +913,7 @@ fun PantallaViajes(
 @Composable
 fun TarjetaGuiaViaje(
     viaje: Viaje,
+    otraGuiaEnCursoId: Long? = null,
     onRegistrarEvento: () -> Unit,
     onVerEventos: () -> Unit
 ) {
@@ -984,16 +984,32 @@ fun TarjetaGuiaViaje(
 
             Spacer(modifier = Modifier.height(12.dp))
             val viajeFinalizado = viaje.estado.equals("FINALIZADO", ignoreCase = true)
+            val bloqueadoPorOtraEnCurso = viaje.estado.equals("SIN_INICIAR", ignoreCase = true) && otraGuiaEnCursoId != null
+            if (bloqueadoPorOtraEnCurso) {
+                Text(
+                    text = "No se puede iniciar: la Guía #$otraGuiaEnCursoId ya se encuentra en curso.",
+                    fontSize = 12.sp,
+                    color = Color(0xFFB45309),
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(bottom = 6.dp)
+                )
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Button(
                     onClick = onRegistrarEvento,
-                    enabled = !viajeFinalizado,
+                    enabled = !viajeFinalizado && !bloqueadoPorOtraEnCurso,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text(if (viajeFinalizado) "Viaje Finalizado" else "Registrar Evento")
+                    Text(
+                        when {
+                            viajeFinalizado -> "Viaje Finalizado"
+                            bloqueadoPorOtraEnCurso -> "Guía #$otraGuiaEnCursoId en curso"
+                            else -> "Registrar Evento"
+                        }
+                    )
                 }
                 OutlinedButton(
                     onClick = onVerEventos,
@@ -1019,11 +1035,15 @@ fun PantallaRegistrarEvento(
     val scope = rememberCoroutineScope()
     var guiaLocal by remember(guiaId) { mutableStateOf(syncRepository.dbHelper.obtenerGuiaPorId(guiaId)) }
     var estadoGuiaActual by remember(guiaId) { mutableStateOf(guiaLocal?.estado) }
+    val otraGuiaEnCurso = remember(guiaId, estadoGuiaActual, cedulaChofer) {
+        syncRepository.dbHelper.obtenerGuiaEnCurso(cedulaChofer, excluirGuiaId = guiaId)
+    }
 
     val opcionesPermitidas = remember(estadoGuiaActual) {
         TipoEventoOption.opcionesPermitidasParaEstado(estadoGuiaActual)
     }
     val viajeFinalizado = estadoGuiaActual.equals("FINALIZADO", ignoreCase = true)
+    val bloqueadoPorOtraEnCurso = estadoGuiaActual.equals("SIN_INICIAR", ignoreCase = true) && otraGuiaEnCurso != null
 
     var tipoSeleccionado by rememberSaveable {
         mutableStateOf(opcionesPermitidas.firstOrNull() ?: TipoEventoOption.INICIO)
@@ -1034,9 +1054,6 @@ fun PantallaRegistrarEvento(
             tipoSeleccionado = opcionesPermitidas.first()
         }
     }
-
-    // Coordenadas GPS automaticas con fallback
-    var coordenadas by remember { mutableStateOf(syncRepository.obtenerUbicacionActual()) }
 
     // Campos 2.C y 2.D (Carga parcial y Descarga parcial)
     var cantidadKg by rememberSaveable { mutableStateOf("") }
@@ -1098,40 +1115,6 @@ fun PantallaRegistrarEvento(
             color = Color(0xFF475569)
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Tarjeta de Ubicacion y Hora automatica
-        Card(
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Ubicacion GPS y Hora Automatica",
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 13.sp
-                    )
-                    Text(
-                        text = "Lat: ${coordenadas.first}, Lon: ${coordenadas.second}",
-                        fontSize = 12.sp,
-                        color = Color(0xFF475569)
-                    )
-                }
-                OutlinedButton(
-                    onClick = { coordenadas = syncRepository.obtenerUbicacionActual() }
-                ) {
-                    Text("Actualizar GPS", fontSize = 12.sp)
-                }
-            }
-        }
-
         Spacer(modifier = Modifier.height(16.dp))
 
         if (viajeFinalizado) {
@@ -1142,6 +1125,19 @@ fun PantallaRegistrarEvento(
                 Text(
                     text = "Este viaje ya se encuentra FINALIZADO. No se pueden registrar nuevos eventos sobre esta guía.",
                     color = Color(0xFF166534),
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(14.dp)
+                )
+            }
+        } else if (bloqueadoPorOtraEnCurso) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF3C7)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "No podés iniciar esta guía porque ya tenés la Guía #${otraGuiaEnCurso?.id} EN_CURSO. Finalizá el viaje actual antes de iniciar otro.",
+                    color = Color(0xFF92400E),
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 13.sp,
                     modifier = Modifier.padding(14.dp)
@@ -1198,7 +1194,7 @@ fun PantallaRegistrarEvento(
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "Se guardara automaticamente la fecha/hora actual, las coordenadas de ubicacion (${coordenadas.first}, ${coordenadas.second}) y un identificador unico UUID.",
+                                text = "Se guardará automáticamente la fecha y hora actual y un identificador único UUID.",
                                 fontSize = 13.sp,
                                 color = Color(0xFF1E3A8A)
                             )
@@ -1388,7 +1384,7 @@ fun PantallaRegistrarEvento(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        if (!viajeFinalizado) {
+        if (!viajeFinalizado && !bloqueadoPorOtraEnCurso) {
             Button(
                 onClick = {
                     errorValidacion = null
@@ -1434,13 +1430,9 @@ fun PantallaRegistrarEvento(
 
                     guardando = true
                     scope.launch {
-                        val coords = syncRepository.obtenerUbicacionActual()
-                        coordenadas = coords
                         val res = syncRepository.registrarEvento(
                             guiaId = guiaId,
                             tipo = tipoSeleccionado,
-                            latitud = coords.first,
-                            longitud = coords.second,
                             descripcion = detalleFinal,
                             foto = fotoFinal,
                             cedulaChofer = cedulaChofer,
@@ -1611,11 +1603,16 @@ fun PantallaEventosGuia(
                                 fontSize = 13.sp,
                                 color = Color(0xFF334155)
                             )
-                            Text(
-                                text = "Ubicacion: ${ev.latitud}, ${ev.longitud}",
-                                fontSize = 12.sp,
-                                color = Color(0xFF64748B)
-                            )
+
+                            if (ev.distanciaDesvioKm != null && ev.distanciaDesvioKm > 5.0) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "⚠️ Desvío de ruta: ${String.format(java.util.Locale.US, "%.2f", ev.distanciaDesvioKm)} km (Lat: ${ev.latitud}, Lon: ${ev.longitud})",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color(0xFFB91C1C)
+                                )
+                            }
 
                             if (ev.cantidadKg != null || !ev.mercaderia.isNullOrBlank() || !ev.empresaCarga.isNullOrBlank()) {
                                 Spacer(modifier = Modifier.height(6.dp))

@@ -115,6 +115,9 @@ object RetrofitClient {
         return try {
             val uri = URI(urlOriginal)
             val hostOriginal = uri.host ?: return urlOriginal
+            if (hostOriginal != "localhost" && hostOriginal != "127.0.0.1") {
+                return urlOriginal
+            }
             val puertoOriginal = if (uri.port != -1) ":${uri.port}" else ""
 
             val hostActivo = try { URI(activeBaseUrl).host } catch (_: Exception) { null }

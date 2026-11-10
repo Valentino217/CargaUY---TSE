@@ -9,10 +9,20 @@ import uy.edu.fing.grupo07.CargaUY.security.*;
 @WebServlet(urlPatterns={"/gub/iniciar","/gub/callback"})
 public class GubServlet extends HttpServlet {
     @EJB private AutenticacionService auth;
+    @EJB private FlujosService flujos;
     @Override protected void doGet(HttpServletRequest r,HttpServletResponse s) throws IOException {
         if(!WebSeguridad.transporte(r)) { s.sendError(403); return; }
         WebSeguridad.preparar(r,s);
         if(r.getServletPath().equals("/gub/iniciar")) {
+            String movilState = r.getParameter("movil_state");
+            if (movilState != null && !movilState.isBlank()) {
+                try {
+                    s.sendRedirect(flujos.urlAutorizacionMovil(movilState));
+                } catch (ErrorAcceso e) {
+                    WebSeguridad.error(r, s, e.getEstado(), e.getMessage());
+                }
+                return;
+            }
             String state=Cripto.aleatorio(), nonce=Cripto.aleatorio(), verifier=Cripto.aleatorio();
             HttpSession ses=r.getSession(); ses.setAttribute("oidcState",state);
             ses.setAttribute("oidcNonce",nonce); ses.setAttribute("oidcVerifier",verifier);
@@ -23,6 +33,17 @@ public class GubServlet extends HttpServlet {
                 +"&prompt=login"
                 +"&state="+state+"&nonce="+nonce+(GubOidcClient.pkce()?"&code_challenge="+Cripto.pkce(verifier)
                 +"&code_challenge_method=S256":""));
+            return;
+        }
+        String paramState = r.getParameter("state");
+        if (paramState != null && flujos.esFlujoMovil(paramState)) {
+            String code = r.getParameter("code");
+            String error = r.getParameter("error");
+            String deepLink = "uy.cargauy://oauth/callback?state=" + GubOidcClient.url(paramState)
+                + (code != null ? "&code=" + GubOidcClient.url(code) : "")
+                + (error != null ? "&error=" + GubOidcClient.url(error) : "");
+            s.setStatus(302);
+            s.setHeader("Location", deepLink);
             return;
         }
         HttpSession ses=r.getSession();

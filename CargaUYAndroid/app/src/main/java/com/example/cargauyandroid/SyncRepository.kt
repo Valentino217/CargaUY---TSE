@@ -222,8 +222,8 @@ class SyncRepository(context: Context) {
     suspend fun registrarEvento(
         guiaId: Long,
         tipo: TipoEventoOption,
-        latitud: Double,
-        longitud: Double,
+        latitud: Double = 0.0,
+        longitud: Double = 0.0,
         descripcion: String?,
         foto: String?,
         cedulaChofer: Int,
@@ -249,6 +249,19 @@ class SyncRepository(context: Context) {
             empresaCarga = empresaCarga?.takeIf { it.isNotBlank() },
             estadoSync = EstadoSyncLocal.PENDIENTE.name
         )
+
+        if (tipo == TipoEventoOption.INICIO) {
+            val otraEnCurso = dbHelper.obtenerGuiaEnCurso(cedulaChofer, excluirGuiaId = guiaId)
+            if (otraEnCurso != null) {
+                val msg = "No se puede iniciar la Guía #$guiaId porque ya tenés la Guía #${otraEnCurso.id} en curso. Finalizá el viaje actual primero."
+                return@withContext ResultadoOperacionEvento(
+                    evento = eventoLocal.copy(estadoSync = EstadoSyncLocal.ERROR.name, mensajeSync = msg),
+                    guardadoOffline = false,
+                    rechazadoPorServidor = true,
+                    mensajeUsuario = msg
+                )
+            }
+        }
 
         val insertado = dbHelper.insertarEventoLocal(eventoLocal)
         if (!insertado) {
@@ -529,15 +542,19 @@ class SyncRepository(context: Context) {
             }
             servidorAlcanzable = true
             for (rem in remotos) {
+                if (rem.tipo.equals("POSICION", ignoreCase = true) && (rem.distanciaDesvioKm ?: 0.0) <= 5.0) {
+                    continue
+                }
                 mapaPorUuid[rem.uuid] = EventoLocal(
                     uuid = rem.uuid,
                     guiaId = rem.guiaId,
                     tipo = rem.tipo,
                     tiempo = rem.tiempo,
-                    latitud = rem.latitud,
-                    longitud = rem.longitud,
+                    latitud = rem.latitud ?: 0.0,
+                    longitud = rem.longitud ?: 0.0,
                     descripcion = rem.incidente?.descripcion,
                     foto = rem.incidente?.foto,
+                    distanciaDesvioKm = rem.distanciaDesvioKm,
                     cantidadKg = rem.cantidadKg,
                     mercaderia = rem.mercaderia,
                     empresaCarga = rem.empresaCarga,

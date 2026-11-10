@@ -65,7 +65,10 @@ public class EsquemaMigracionStartupBean {
                     + "WHERE table_name = 'infracciones' AND column_name = 'registro_auditoria_id') THEN "
                     + "EXECUTE 'UPDATE registro_auditoria r SET infraccion_id = i.id_caso "
                     + "FROM infracciones i WHERE i.registro_auditoria_id = r.id AND r.infraccion_id IS NULL'; "
-                    + "END IF; END $$"
+                    + "END IF; END $$",
+            "ALTER TABLE IF EXISTS usuario_roles DROP CONSTRAINT IF EXISTS usuario_roles_rol_check",
+            "ALTER TABLE IF EXISTS usuario_roles ADD CONSTRAINT usuario_roles_rol_check "
+                    + "CHECK ((rol)::text = ANY (ARRAY['CIUDADANO_COMUN', 'CIUDADANO', 'CHOFER', 'FUNCIONARIO', 'AUTORIDAD', 'ADMINISTRADOR']::text[]))"
     );
 
     @PersistenceContext(unitName = "CargaUYPersistenceUnit")

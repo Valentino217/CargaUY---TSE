@@ -8,12 +8,12 @@ enum class TipoEventoOption(
     INICIO(
         codigo = "INICIO",
         etiqueta = "Inicio de viaje",
-        descripcionAyuda = "Registra la hora y ubicacion del inicio del viaje."
+        descripcionAyuda = "Registra la fecha y hora del inicio del viaje."
     ),
     FIN(
         codigo = "FIN",
         etiqueta = "Fin de viaje",
-        descripcionAyuda = "Registra la hora y ubicacion de finalizacion del viaje."
+        descripcionAyuda = "Registra la fecha y hora de finalizacion del viaje."
     ),
     CARGA_PARCIAL(
         codigo = "CARGA_PARCIAL",
@@ -45,6 +45,7 @@ enum class TipoEventoOption(
                 "DESCARGA" -> "Descarga"
                 "DESCARGA_PARCIAL" -> "Descarga parcial"
                 "INCIDENTE" -> "Incidente"
+                "POSICION" -> "Desvío de ruta (Posición)"
                 else -> codigo
             }
         }
@@ -69,10 +70,11 @@ data class EventoViajeDto(
     val uuid: String,
     val tiempo: String,
     val tipo: String,
-    val latitud: Double,
-    val longitud: Double,
+    val latitud: Double? = null,
+    val longitud: Double? = null,
     val guiaId: Long,
     val incidente: IncidenteDto? = null,
+    val distanciaDesvioKm: Double? = null,
     val cantidadKg: Double? = null,
     val mercaderia: String? = null,
     val empresaCarga: String? = null,
@@ -112,6 +114,7 @@ data class EventoLocal(
     val longitud: Double,
     val descripcion: String? = null,
     val foto: String? = null,
+    val distanciaDesvioKm: Double? = null,
     val cantidadKg: Double? = null,
     val mercaderia: String? = null,
     val empresaCarga: String? = null,
@@ -131,8 +134,8 @@ data class EventoLocal(
             uuid = uuid,
             tiempo = tiempo,
             tipo = tipo,
-            latitud = latitud,
-            longitud = longitud,
+            latitud = null,
+            longitud = null,
             guiaId = guiaId,
             incidente = inc,
             cantidadKg = cantidadKg,
