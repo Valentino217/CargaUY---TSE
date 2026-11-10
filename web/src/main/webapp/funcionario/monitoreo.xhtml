@@ -81,6 +81,96 @@
                 </div>
             </div>
 
+            <!-- Panel de Configuración del Mock de Sistema de Tracking Automático -->
+            <div class="cuy-card" style="background: #f0f9ff; border: 1px solid #bae6fd;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 0.75rem;">
+                    <div>
+                        <h3 class="cuy-card-title" style="margin-bottom: 0.15rem; color: #0369a1;">
+                            <i class="pi pi-send" style="color: #0284c7;" />
+                            Mock del Sistema de Tracking (Guías de Viaje Activas EN_CURSO)
+                        </h3>
+                        <div style="font-size: 0.82rem; color: #475569;">
+                            Emite puntos GPS siguiendo la ruta planificada para todas las guías activas y permanece en destino hasta que el chofer finalice el viaje.
+                        </div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.6rem;">
+                        <p:tag value="#{detalleViajeBean.mockTrackingActivo ? 'MOCK ACTIVO' : 'MOCK DETENIDO'}"
+                               severity="#{detalleViajeBean.mockTrackingActivo ? 'success' : 'secondary'}"
+                               icon="#{detalleViajeBean.mockTrackingActivo ? 'pi pi-spin pi-spinner' : 'pi pi-pause'}"
+                               rounded="true" />
+                        <span style="font-size: 0.82rem; color: #0f2942; font-weight: 600;">
+                            Puntos emitidos: #{detalleViajeBean.mockTotalEventosEmitidos} | Episodios desvío: #{detalleViajeBean.mockTotalDesviosEmitidos}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="cuy-grid-3" style="align-items: end; gap: 1rem;">
+                    <div class="cuy-field ui-fluid">
+                        <p:outputLabel for="inputMockEvMin" value="Cantidad de eventos por minuto (1 - 120)" />
+                        <p:inputNumber id="inputMockEvMin"
+                                       label="Cantidad de eventos por minuto"
+                                       value="#{detalleViajeBean.mockEventosPorMinuto}"
+                                       decimalPlaces="0"
+                                       minValue="1"
+                                       maxValue="120"
+                                       suffix=" ev/min" />
+                    </div>
+
+                    <div class="cuy-field ui-fluid">
+                        <p:outputLabel for="inputMockDesvios" value="Cantidad de desvíos en la ruta (0 = sin desvío)" />
+                        <p:inputNumber id="inputMockDesvios"
+                                       label="Cantidad de desvíos en la ruta"
+                                       value="#{detalleViajeBean.mockCantidadDesvios}"
+                                       decimalPlaces="0"
+                                       minValue="0"
+                                       maxValue="50"
+                                       suffix=" desvíos" />
+                    </div>
+
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <p:commandButton value="#{detalleViajeBean.mockTrackingActivo ? 'Actualizar Config.' : 'Iniciar Mock'}"
+                                         icon="pi pi-play"
+                                         actionListener="#{detalleViajeBean.iniciarMockTracking}"
+                                         process="@this inputMockEvMin inputMockDesvios"
+                                         update=":monitoreoForm :growl"
+                                         styleClass="ui-button-success" />
+                        <p:commandButton value="Detener"
+                                         icon="pi pi-stop"
+                                         actionListener="#{detalleViajeBean.detenerMockTracking}"
+                                         process="@this"
+                                         update=":monitoreoForm :growl"
+                                         disabled="#{not detalleViajeBean.mockTrackingActivo}"
+                                         styleClass="ui-button-danger ui-button-outlined" />
+                        <p:commandButton value="Emitir Paso Ahora"
+                                         icon="pi pi-step-forward"
+                                         actionListener="#{detalleViajeBean.emitirPasoMockAhora}"
+                                         process="@this inputMockEvMin inputMockDesvios"
+                                         update=":monitoreoForm :growl"
+                                         title="Avanza inmediatamente un punto en la ruta de cada guía activa"
+                                         styleClass="ui-button-info ui-button-outlined" />
+                        <p:commandButton value="Reiniciar Ruta"
+                                         icon="pi pi-refresh"
+                                         actionListener="#{detalleViajeBean.reiniciarRecorridoMock}"
+                                         process="@this"
+                                         update=":monitoreoForm :growl"
+                                         title="Reinicia el recorrido simulado desde el origen"
+                                         styleClass="ui-button-secondary ui-button-outlined" />
+                    </div>
+                </div>
+
+                <h:panelGroup rendered="#{not empty detalleViajeBean.mockUltimoResultado}">
+                    <div style="margin-top: 0.65rem; padding: 0.45rem 0.75rem; background: #e0f2fe; border-left: 3px solid #0284c7; border-radius: 4px; font-size: 0.8rem; color: #0c4a6e;">
+                        <i class="pi pi-info-circle" style="margin-right: 0.35rem;" />
+                        <h:outputText value="#{detalleViajeBean.mockUltimoResultado}" />
+                    </div>
+                </h:panelGroup>
+            </div>
+
+            <p:poll interval="3"
+                    listener="#{detalleViajeBean.refrescarPorPollMock}"
+                    update=":monitoreoForm"
+                    stop="#{not detalleViajeBean.mockTrackingActivo}" />
+
             <!-- Tablas de Eventos de Ruta y Pesajes de Balanza en CSS Grid de 2 columnas -->
             <div class="cuy-grid-2">
                 <!-- Columna 1: Eventos de Tracking -->

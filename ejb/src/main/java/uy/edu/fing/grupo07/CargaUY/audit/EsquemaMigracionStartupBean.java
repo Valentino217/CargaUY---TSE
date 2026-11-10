@@ -39,6 +39,7 @@ public class EsquemaMigracionStartupBean {
             "ALTER TABLE IF EXISTS pesadas_balanza ADD COLUMN IF NOT EXISTS vehiculo_matricula VARCHAR(255)",
             "ALTER TABLE IF EXISTS infracciones ALTER COLUMN guia_id DROP NOT NULL",
             "ALTER TABLE IF EXISTS infracciones ADD COLUMN IF NOT EXISTS vehiculo_matricula VARCHAR(255)",
+            "ALTER TABLE IF EXISTS infracciones DROP CONSTRAINT IF EXISTS uk_infraccion_guia_tipo",
             "DO $$ BEGIN IF to_regclass('infracciones') IS NOT NULL THEN "
                     + "CREATE UNIQUE INDEX IF NOT EXISTS uk_infraccion_vehiculo_sin_guia_fecha "
                     + "ON infracciones (vehiculo_matricula, fecha, tipo) "

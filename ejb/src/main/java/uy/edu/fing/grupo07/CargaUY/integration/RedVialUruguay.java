@@ -495,11 +495,19 @@ public final class RedVialUruguay implements Serializable {
      */
     public static double[] obtenerPuntoDesviadoDePolilinea(List<double[]> polilinea) {
         double[] base = obtenerPuntoEnPolilinea(polilinea);
+        return obtenerPuntoDesviadoDesdeCoordenada(base, polilinea);
+    }
+
+    /**
+     * Obtiene un punto claramente desviado de la polilínea tomando como referencia una coordenada base.
+     */
+    public static double[] obtenerPuntoDesviadoDesdeCoordenada(double[] base, List<double[]> polilinea) {
+        double[] ref = (base != null && base.length >= 2) ? base : obtenerPuntoEnPolilinea(polilinea);
         double[][] candidatos = new double[][]{
-                {base[0] - 0.38, base[1] + 0.48},
-                {base[0] + 0.38, base[1] - 0.48},
-                {base[0] - 0.42, base[1] - 0.42},
-                {base[0] + 0.42, base[1] + 0.42}
+                {ref[0] - 0.38, ref[1] + 0.48},
+                {ref[0] + 0.38, ref[1] - 0.48},
+                {ref[0] - 0.42, ref[1] - 0.42},
+                {ref[0] + 0.42, ref[1] + 0.42}
         };
         double[] mejor = candidatos[0];
         double maxDesvio = -1.0;
@@ -514,6 +522,79 @@ public final class RedVialUruguay implements Serializable {
                 Math.round(mejor[0] * 10000.0) / 10000.0,
                 Math.round(mejor[1] * 10000.0) / 10000.0
         };
+    }
+
+    /**
+     * Genera una secuencia de coordenadas (lat, lon) interpoladas linealmente a lo largo de los tramos
+     * de la polilínea desde el origen hasta el destino. El último punto coincide exactamente con el destino.
+     */
+    public static List<double[]> generarPuntosRecorridoPolilinea(List<double[]> polilinea, int cantidadPasos) {
+        if (polilinea == null || polilinea.isEmpty()) {
+            throw new IllegalArgumentException("La polilínea no puede ser nula ni vacía.");
+        }
+        int pasos = Math.max(2, cantidadPasos);
+        if (polilinea.size() == 1) {
+            double[] unico = polilinea.get(0);
+            return List.of(new double[]{unico[0], unico[1]});
+        }
+
+        int numSegmentos = polilinea.size() - 1;
+        double[] longitudes = new double[numSegmentos];
+        double longitudTotal = 0.0;
+        for (int i = 0; i < numSegmentos; i++) {
+            double[] a = polilinea.get(i);
+            double[] b = polilinea.get(i + 1);
+            double dist = distanciaHaversineKm(a[0], a[1], b[0], b[1]);
+            longitudes[i] = dist;
+            longitudTotal += dist;
+        }
+
+        if (longitudTotal < 1e-6) {
+            double[] fin = polilinea.get(polilinea.size() - 1);
+            return List.of(new double[]{fin[0], fin[1]});
+        }
+
+        List<double[]> recorrido = new ArrayList<>(pasos);
+        for (int p = 0; p < pasos; p++) {
+            if (p == 0) {
+                double[] orig = polilinea.get(0);
+                recorrido.add(new double[]{
+                        Math.round(orig[0] * 10000.0) / 10000.0,
+                        Math.round(orig[1] * 10000.0) / 10000.0
+                });
+                continue;
+            }
+            if (p == pasos - 1) {
+                double[] dest = polilinea.get(polilinea.size() - 1);
+                recorrido.add(new double[]{
+                        Math.round(dest[0] * 10000.0) / 10000.0,
+                        Math.round(dest[1] * 10000.0) / 10000.0
+                });
+                continue;
+            }
+
+            double objetivoKm = (longitudTotal * p) / (pasos - 1);
+            double acumulado = 0.0;
+            int segIdx = numSegmentos - 1;
+            double fraccion = 1.0;
+
+            for (int i = 0; i < numSegmentos; i++) {
+                double segLen = longitudes[i];
+                if (acumulado + segLen >= objetivoKm || i == numSegmentos - 1) {
+                    segIdx = i;
+                    fraccion = segLen > 1e-9 ? Math.max(0.0, Math.min(1.0, (objetivoKm - acumulado) / segLen)) : 0.0;
+                    break;
+                }
+                acumulado += segLen;
+            }
+
+            double[] a = polilinea.get(segIdx);
+            double[] b = polilinea.get(segIdx + 1);
+            double lat = Math.round((a[0] + fraccion * (b[0] - a[0])) * 10000.0) / 10000.0;
+            double lon = Math.round((a[1] + fraccion * (b[1] - a[1])) * 10000.0) / 10000.0;
+            recorrido.add(new double[]{lat, lon});
+        }
+        return recorrido;
     }
 
     public static String serializarPolilinea(List<double[]> polilinea) {

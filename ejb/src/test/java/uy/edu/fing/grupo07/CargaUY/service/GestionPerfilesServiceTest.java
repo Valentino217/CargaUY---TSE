@@ -186,4 +186,31 @@ class GestionPerfilesServiceTest {
         assertThrows(ErrorNegocio.class, () -> servicio(em).crearUsuario("token", datos));
         verify(em, never()).persist(any());
     }
+    @Test
+    void altaRechazaCedulaDeMasDe8Caracteres() throws Exception {
+        EntityManager em = mock(EntityManager.class);
+        DatosUsuario datos = new DatosUsuario(TipoUsuario.ADMINISTRADOR, "Ana",
+            "ana@example.com", LocalDate.of(1990,1,1), 123456789,
+            null, null, null, null);
+        assertThrows(ErrorNegocio.class, () -> servicio(em).crearUsuario("token", datos));
+        verify(em, never()).persist(any());
+    }
+    @Test @SuppressWarnings("unchecked")
+    void altaSinContrasenaInicialDejaLdapPendiente() throws Exception {
+        EntityManager em = mock(EntityManager.class);
+        jakarta.persistence.TypedQuery<Long> q = mock(jakarta.persistence.TypedQuery.class);
+        when(em.createQuery("select count(u) from Usuario u where u.ci = :ci", Long.class)).thenReturn(q);
+        when(q.setParameter("ci", 12345678)).thenReturn(q);
+        when(q.getSingleResult()).thenReturn(0L);
+        java.util.concurrent.atomic.AtomicReference<Usuario> guardado =
+            new java.util.concurrent.atomic.AtomicReference<>();
+        doAnswer(invocacion -> {
+            Usuario u = invocacion.getArgument(0); u.setId(8); guardado.set(u); return null;
+        }).when(em).persist(any(Usuario.class));
+        DatosUsuario datos = new DatosUsuario(TipoUsuario.ADMINISTRADOR, "Ana",
+            "ana@example.com", LocalDate.of(1990,1,1), 12345678,
+            null, null, null, null);
+        assertEquals(8, servicio(em).crearUsuario("token", datos));
+        assertEquals("{LDAP-PENDIENTE}", guardado.get().getPassword());
+    }
 }

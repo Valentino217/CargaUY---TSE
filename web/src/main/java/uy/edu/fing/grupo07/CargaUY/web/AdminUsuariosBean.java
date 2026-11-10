@@ -46,7 +46,7 @@ public class AdminUsuariosBean implements Serializable {
     private String nombreForm;
     private String mailForm;
     private LocalDate fechaNacForm = LocalDate.of(1990, 1, 1);
-    private int ciForm;
+    private Long ciForm;
     private String passwordForm;
     private Integer nroFuncionarioForm;
     private String departamentoForm;
@@ -82,8 +82,8 @@ public class AdminUsuariosBean implements Serializable {
         this.nombreForm = "";
         this.mailForm = "";
         this.fechaNacForm = LocalDate.of(1990, 1, 1);
-        this.ciForm = 0;
-        this.passwordForm = "Temporal123!";
+        this.ciForm = null;
+        this.passwordForm = null;
         this.nroFuncionarioForm = null;
         this.departamentoForm = "";
         this.cargoForm = "";
@@ -98,7 +98,7 @@ public class AdminUsuariosBean implements Serializable {
         this.nombreForm = u.nombre();
         this.mailForm = u.mail();
         this.fechaNacForm = u.fechaNac();
-        this.ciForm = u.ci();
+        this.ciForm = (long) u.ci();
         this.passwordForm = null;
         this.nroFuncionarioForm = u.nroFuncionario();
         this.departamentoForm = (u.departamento() != null && !u.departamento().isBlank()) ? u.departamento() : (u.cargo() != null ? u.cargo() : "");
@@ -107,14 +107,20 @@ public class AdminUsuariosBean implements Serializable {
 
     public void guardarUsuario() {
         try {
+            if (ciForm == null || ciForm <= 0) {
+                throw new IllegalArgumentException("CI debe ser positivo");
+            }
+            if (ciForm > 99_999_999L) {
+                throw new IllegalArgumentException("La cédula de identidad no puede superar los 8 caracteres");
+            }
             String token = SesionActual.token();
             DatosUsuario datos = new DatosUsuario(
                     tipoForm,
                     nombreForm,
                     mailForm,
                     fechaNacForm,
-                    ciForm,
-                    modoEdicion ? null : (passwordForm == null || passwordForm.isBlank() ? "Temporal123!" : passwordForm),
+                    ciForm.intValue(),
+                    null,
                     nroFuncionarioForm,
                     departamentoForm,
                     (cargoForm == null || cargoForm.isBlank()) ? departamentoForm : cargoForm
@@ -204,9 +210,14 @@ public class AdminUsuariosBean implements Serializable {
             mostrarMensaje(FacesMessage.SEVERITY_WARN, "Validación", "Ingrese el UID / Subject externo a vincular.");
             return;
         }
+        if ("LDAP".equals(origenIdentidadForm) && (passwordLdapForm == null || passwordLdapForm.isBlank())) {
+            mostrarMensaje(FacesMessage.SEVERITY_WARN, "Validación", "Ingrese la contraseña LDAP.");
+            return;
+        }
         try {
             identidadesService.vincular(SesionActual.token(), usuarioIdentidadSel.id(), origenIdentidadForm, uidExternoForm.trim(), passwordLdapForm);
             this.uidExternoActual = uidExternoForm.trim();
+            this.passwordLdapForm = "";
             cargarUsuarios();
             mostrarMensaje(FacesMessage.SEVERITY_INFO, "Identidad Vinculada",
                     "Se vinculó la identidad " + origenIdentidadForm + " (" + uidExternoForm + ") al usuario #" + usuarioIdentidadSel.id());
@@ -282,11 +293,11 @@ public class AdminUsuariosBean implements Serializable {
         this.fechaNacForm = fechaNacForm;
     }
 
-    public int getCiForm() {
+    public Long getCiForm() {
         return ciForm;
     }
 
-    public void setCiForm(int ciForm) {
+    public void setCiForm(Long ciForm) {
         this.ciForm = ciForm;
     }
 
