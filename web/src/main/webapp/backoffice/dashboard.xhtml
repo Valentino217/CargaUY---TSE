@@ -314,9 +314,6 @@
                                rounded="true" />
                     </p:column>
 
-                    <p:column headerText="Evidencia" filterBy="#{inf.evidencia()}" filterMatchMode="contains">
-                        <h:outputText value="#{inf.evidencia()}" />
-                    </p:column>
                     <p:column headerText="Gestión" style="width: 155px; text-align: center;" exportable="false">
                         <p:commandButton value="Ver Expediente"
                                          icon="pi pi-eye"
@@ -357,7 +354,7 @@
 
                         <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid #2563eb; border-radius: 8px; padding: 0.9rem 1rem; margin-bottom: 1rem;">
                             <div style="font-weight: 700; color: #1e3a8a; font-size: 0.85rem; margin-bottom: 0.3rem;">
-                                <i class="pi pi-microchip" /> Evidencia (#{bandejaFiscalizacionBean.casoSeleccionado.fecha()})
+                                <i class="pi pi-microchip" /> Evidencia
                             </div>
                             <div style="font-family: monospace; font-size: 0.88rem; color: #1e40af; white-space: pre-wrap;">#{bandejaFiscalizacionBean.casoSeleccionado.evidencia()}</div>
                         </div>

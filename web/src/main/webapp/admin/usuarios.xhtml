@@ -171,11 +171,12 @@
                         <p:selectOneMenu id="tipoUsr" label="Rol Base" value="#{adminUsuariosBean.tipoForm}" disabled="#{adminUsuariosBean.modoEdicion}">
                             <f:selectItem itemLabel="ADMINISTRADOR" itemValue="ADMINISTRADOR" />
                             <f:selectItem itemLabel="AUTORIDAD" itemValue="AUTORIDAD" />
+                        <p:ajax update="cargoGrupo" />
                         </p:selectOneMenu>
                     </div>
                     <div class="cuy-field">
                         <p:outputLabel for="ciUsr" value="Cédula de Identidad" />
-                        <p:inputNumber id="ciUsr" label="Cédula de Identidad" value="#{adminUsuariosBean.ciForm}" decimalPlaces="0" thousandSeparator="" minValue="0" required="true" disabled="#{adminUsuariosBean.modoEdicion}" />
+                        <p:inputText id="ciUsr" label="Cédula de Identidad" value="#{adminUsuariosBean.ciForm}" maxlength="8" keyFilter="num" required="true" disabled="#{adminUsuariosBean.modoEdicion}" converterMessage="La cédula debe tener exactamente 8 dígitos numéricos" validatorMessage="La cédula debe tener exactamente 8 dígitos"><f:validateLongRange minimum="10000000" maximum="99999999" /></p:inputText>
                     </div>
                     <div class="cuy-field">
                         <p:outputLabel for="nomUsr" value="Nombre Completo" />
@@ -189,14 +190,7 @@
                         <p:outputLabel for="fnacUsr" value="Fecha de Nacimiento *" />
                         <p:datePicker id="fnacUsr" label="Fecha de Nacimiento" value="#{adminUsuariosBean.fechaNacForm}" pattern="yyyy-MM-dd" showIcon="true" required="true" panelStyleClass="cuy-calendar" monthNavigator="true" yearNavigator="select" showButtonBar="true" showOtherMonths="true" yearRange="1900:2026" showLongMonthNames="true" />
                     </div>
-                    <div class="cuy-field">
-                        <p:outputLabel for="nroFuncUsr" value="N° Funcionario (Si aplica)" />
-                        <p:inputNumber id="nroFuncUsr" label="N° Funcionario (Si aplica)" value="#{adminUsuariosBean.nroFuncionarioForm}" decimalPlaces="0" thousandSeparator="" />
-                    </div>
-                    <div class="cuy-field">
-                        <p:outputLabel for="depUsr" value="Departamento / Cargo (Si aplica)" />
-                        <p:inputText id="depUsr" label="Departamento / Cargo (Si aplica)" value="#{adminUsuariosBean.departamentoForm}" placeholder="Ej. Dirección Nacional de Transporte" />
-                    </div>
+                    <h:panelGroup id="cargoGrupo" layout="block" styleClass="cuy-field"><h:panelGroup rendered="#{adminUsuariosBean.tipoForm eq 'AUTORIDAD'}"><p:outputLabel for="cargoUsr" value="Cargo" /><p:inputText id="cargoUsr" label="Cargo" value="#{adminUsuariosBean.cargoForm}" placeholder="Ej. Director Nacional de Transporte" /></h:panelGroup></h:panelGroup>
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.25rem;">
                     <p:commandButton value="Cancelar" type="button" onclick="PF('dlgUsuarioWidget').hide()" styleClass="ui-button-outlined ui-button-secondary" style="width: auto;" />

@@ -102,7 +102,7 @@ public class AdminUsuariosBean implements Serializable {
         this.passwordForm = null;
         this.nroFuncionarioForm = u.nroFuncionario();
         this.departamentoForm = (u.departamento() != null && !u.departamento().isBlank()) ? u.departamento() : (u.cargo() != null ? u.cargo() : "");
-        this.cargoForm = u.cargo();
+        this.cargoForm = (u.cargo() != null && !u.cargo().isBlank()) ? u.cargo() : (u.departamento() != null ? u.departamento() : "");
     }
 
     public void guardarUsuario() {
@@ -110,8 +110,8 @@ public class AdminUsuariosBean implements Serializable {
             if (ciForm == null || ciForm <= 0) {
                 throw new IllegalArgumentException("CI debe ser positivo");
             }
-            if (ciForm > 99_999_999L) {
-                throw new IllegalArgumentException("La cédula de identidad no puede superar los 8 caracteres");
+            if (ciForm < 10_000_000L || ciForm > 99_999_999L) {
+                throw new IllegalArgumentException("La cédula de identidad debe tener exactamente 8 dígitos");
             }
             String token = SesionActual.token();
             DatosUsuario datos = new DatosUsuario(
@@ -121,9 +121,9 @@ public class AdminUsuariosBean implements Serializable {
                     fechaNacForm,
                     ciForm.intValue(),
                     null,
-                    nroFuncionarioForm,
-                    departamentoForm,
-                    (cargoForm == null || cargoForm.isBlank()) ? departamentoForm : cargoForm
+                    null,
+                    null,
+                    tipoForm == TipoUsuario.AUTORIDAD ? cargoForm : null
             );
             if (modoEdicion) {
                 perfilesService.modificarUsuario(token, idEdit, versionEdit, datos);

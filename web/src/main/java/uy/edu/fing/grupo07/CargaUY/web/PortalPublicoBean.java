@@ -197,7 +197,7 @@ public class PortalPublicoBean implements Serializable {
         Map<String, List<Vehiculo>> porRango = new LinkedHashMap<>();
         porRango.put("Transporte Liviano (hasta 10 t)", new ArrayList<>());
         porRango.put("Transporte Mediano (10 a 20 t)", new ArrayList<>());
-        porRango.put("Transporte Pesado (más de 20 t)", new ArrayList<>());
+        porRango.put("Transporte Pesado", new ArrayList<>());
 
         for (Vehiculo v : vehiculosPublicos) {
             if (v == null) {
@@ -209,7 +209,7 @@ public class PortalPublicoBean implements Serializable {
             } else if (v.getCapacidadCarga() <= 20000) {
                 categoria = "Transporte Mediano (10 a 20 t)";
             } else {
-                categoria = "Transporte Pesado (más de 20 t)";
+                categoria = "Transporte Pesado";
             }
             porRango.get(categoria).add(v);
         }
