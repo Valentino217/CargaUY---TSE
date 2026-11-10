@@ -220,7 +220,7 @@ public class PosicionNoSqlRepository implements PosicionNoSqlRepositoryLocal {
                                     Filters.eq("metadata.guiaId", guiaId),
                                     Filters.eq("guiaId", guiaId)
                             ))
-                            .sort(Sorts.ascending("tiempo"));
+                            .sort(Sorts.ascending("tiempo", "_id"));
 
                     for (Document doc : cursor) {
                         EventoViajeDTO dto = mapearDesdeDocumentoBson(doc);

@@ -63,6 +63,7 @@
             <legend>Identidad y permisos</legend>
             <label>Origen<select name="origen"><option>LDAP</option><option>GUB</option></select></label>
             <label>UID LDAP o referencia GUB<input name="uid"/></label>
+            <label>Contraseña LDAP<input name="password" type="password" autocomplete="new-password"/></label>
             <label>Roles separados por coma<input name="roles" placeholder="CIUDADANO,CHOFER"/></label>
         </fieldset>
         </c:if>
@@ -79,8 +80,7 @@
             <label>Nombre<input name="nombre" autocomplete="name"/></label>
             <label>Correo<input name="mail" type="email" autocomplete="email"/></label>
             <label>Fecha de nacimiento<input name="fechaNac" type="date"/></label>
-            <label>CI sin puntos ni guiones<input name="ci" type="number"/></label>
-            <label>Contraseña, solo para el alta<input name="password" type="password" autocomplete="new-password"/></label>
+            <label>CI sin puntos ni guiones<input name="ci" type="number" min="1" max="99999999"/></label>
             <label>Número de funcionario<input name="nroFuncionario" type="number"/></label>
             <label>Departamento<input name="departamento"/></label>
             <label>Cargo de autoridad<input name="cargo"/></label>

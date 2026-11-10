@@ -1,6 +1,8 @@
 package uy.edu.fing.grupo07.CargaUY.security;
 
+import java.nio.charset.StandardCharsets;
 import java.util.*;
+import at.favre.lib.crypto.bcrypt.BCrypt;
 import jakarta.ejb.*;
 import jakarta.persistence.*;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.*;
@@ -40,18 +42,28 @@ public class IdentidadesService {
         u.setUidExterno(uid);
 
         if ("LDAP".equals(origen)) {
-            String pwdAUsar = (password != null && !password.isBlank()) ? password : u.getPassword();
-            if (pwdAUsar == null || pwdAUsar.startsWith("{")) {
-                pwdAUsar = "admin123";
+            String pwdAUsar = (password != null && !password.isBlank()) ? password : null;
+            if (pwdAUsar != null) {
+                if (pwdAUsar.getBytes(StandardCharsets.UTF_8).length > 72) {
+                    throw new ErrorAcceso(400, "Contraseña LDAP supera 72 bytes UTF-8");
+                }
+                try {
+                    ldapClient.crearOActualizarUsuario(uid, u.getNombre(), u.getMail(), pwdAUsar);
+                } catch (Exception e) {
+                    // Log and continue if running in testing without active LDAP write permissions
+                }
+                char[] caracteres = pwdAUsar.toCharArray();
+                try {
+                    u.setPassword(BCrypt.withDefaults().hashToString(12, caracteres));
+                } finally {
+                    Arrays.fill(caracteres, '\0');
+                }
+            } else {
+                u.setPassword("{" + origen + "}");
             }
-            try {
-                ldapClient.crearOActualizarUsuario(uid, u.getNombre(), u.getMail(), pwdAUsar);
-            } catch (Exception e) {
-                // Log and continue if running in testing without active LDAP write permissions
-            }
+        } else {
+            u.setPassword("{" + origen + "}");
         }
-        
-        u.setPassword("{" + origen + "}");
         sesiones.revocarUsuario(id);
     }
     

@@ -82,7 +82,7 @@ public class PanelServlet extends HttpServlet {
                     Long.parseLong(r.getParameter("version"))); break;
             case "consultarPdi": return pdi.consultar(token, entero(r, "ci"), (String)r.getAttribute("correlacion"));
             case "listarVinculos": return identidades.listar(token,entero(r,"numero"));
-            case "vincularIdentidad": identidades.vincular(token, entero(r,"id"),r.getParameter("origen"),r.getParameter("uid"));break;
+            case "vincularIdentidad": identidades.vincular(token, entero(r,"id"),r.getParameter("origen"),r.getParameter("uid"),r.getParameter("password"));break;
             case "roles": identidades.roles(token,entero(r,"id"),java.util.Arrays.stream(
                 r.getParameter("roles").split(",")).map(String::trim).map(TipoUsuario::valueOf)
                 .collect(java.util.stream.Collectors.toSet()));break;

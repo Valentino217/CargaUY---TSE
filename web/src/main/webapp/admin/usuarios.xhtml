@@ -175,7 +175,7 @@
                     </div>
                     <div class="cuy-field">
                         <p:outputLabel for="ciUsr" value="Cédula de Identidad" />
-                        <p:inputNumber id="ciUsr" label="Cédula de Identidad" value="#{adminUsuariosBean.ciForm}" decimalPlaces="0" thousandSeparator="" required="true" disabled="#{adminUsuariosBean.modoEdicion}" />
+                        <p:inputNumber id="ciUsr" label="Cédula de Identidad" value="#{adminUsuariosBean.ciForm}" decimalPlaces="0" thousandSeparator="" minValue="0" required="true" disabled="#{adminUsuariosBean.modoEdicion}" />
                     </div>
                     <div class="cuy-field">
                         <p:outputLabel for="nomUsr" value="Nombre Completo" />
@@ -189,12 +189,6 @@
                         <p:outputLabel for="fnacUsr" value="Fecha de Nacimiento *" />
                         <p:datePicker id="fnacUsr" label="Fecha de Nacimiento" value="#{adminUsuariosBean.fechaNacForm}" pattern="yyyy-MM-dd" showIcon="true" required="true" panelStyleClass="cuy-calendar" monthNavigator="true" yearNavigator="select" showButtonBar="true" showOtherMonths="true" yearRange="1900:2026" showLongMonthNames="true" />
                     </div>
-                    <ui:fragment rendered="#{not adminUsuariosBean.modoEdicion}">
-                        <div class="cuy-field">
-                            <p:outputLabel for="pwdUsr" value="Contraseña Inicial LDAP" />
-                            <p:password id="pwdUsr" label="Contraseña Inicial" value="#{adminUsuariosBean.passwordForm}" redisplay="true" />
-                        </div>
-                    </ui:fragment>
                     <div class="cuy-field">
                         <p:outputLabel for="nroFuncUsr" value="N° Funcionario (Si aplica)" />
                         <p:inputNumber id="nroFuncUsr" label="N° Funcionario (Si aplica)" value="#{adminUsuariosBean.nroFuncionarioForm}" decimalPlaces="0" thousandSeparator="" />
@@ -270,14 +264,14 @@
                             </div>
                             <div class="cuy-field">
                                 <p:outputLabel for="pwdLdapInput" value="Contraseña LDAP" />
-                                <p:password id="pwdLdapInput" label="Contraseña LDAP" value="#{adminUsuariosBean.passwordLdapForm}" redisplay="true" placeholder="Dejar en blanco para conservar" />
+                                <p:password id="pwdLdapInput" label="Contraseña LDAP" value="#{adminUsuariosBean.passwordLdapForm}" redisplay="true" placeholder="Ingrese contraseña LDAP" />
                             </div>
                         </div>
                         <div style="margin-top: 0.85rem; text-align: right;">
                             <p:commandButton value="Vincular y Sincronizar LDAP"
                                              icon="pi pi-link"
                                              actionListener="#{adminUsuariosBean.vincularIdentidadExterna}"
-                                             update=":usuariosForm:tablaUsuarios :growl"
+                                             update=":usuariosForm:tablaUsuarios :dlgIdentidadForm :growl"
                                              styleClass="ui-button-warning"
                                              style="width: auto;" />
                         </div>

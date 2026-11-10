@@ -26,6 +26,10 @@ import uy.edu.fing.grupo07.CargaUY.nosql.PosicionNoSqlRepositoryLocal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -286,47 +290,66 @@ public class MotorFiscalizacionImpl implements MotorFiscalizacionLocal {
         );
     }
 
+    /**
+     * Evalúa la serie cronológica de posiciones por episodios de desvío: se genera una infracción al
+     * entrar en desvío; las posiciones siguientes que continúan en desvío no generan otra; al volver a
+     * la ruta esperada se cierra el episodio y un nuevo desvío posterior genera una nueva infracción.
+     */
     private void evaluarDesvioDeRuta(
             GuiaDeViaje guia,
             ReglaFiscalizacion reglas,
             List<TipoInfraccion> infraccionesGeneradas
     ) {
-        EventoViaje eventoDesviado = buscarEventoConMayorDesvio(guia);
-        if (eventoDesviado == null || eventoDesviado.getDistanciaDesvioKm() == null) {
+        List<EventoViaje> serie = obtenerEventosConDesvioOrdenados(guia);
+        if (serie.isEmpty()) {
             return;
         }
 
-        double distanciaKm = eventoDesviado.getDistanciaDesvioKm();
         double umbralKm = reglas.getUmbralTracking();
-        boolean superaTolerancia = distanciaKm > umbralKm;
+        List<String> evidenciasRegistradas = null;
+        boolean enDesvio = false;
 
-        if (!superaTolerancia) {
-            return;
+        for (EventoViaje evento : serie) {
+            double distanciaKm = evento.getDistanciaDesvioKm();
+            if (distanciaKm <= umbralKm) {
+                enDesvio = false;
+                continue;
+            }
+            if (enDesvio) {
+                continue;
+            }
+            enDesvio = true;
+
+            if (evidenciasRegistradas == null) {
+                evidenciasRegistradas = obtenerEvidenciasDesvioRegistradas(guia);
+            }
+            String uuid = evento.getUuid();
+            boolean yaRegistrado = false;
+            for (String evidencia : evidenciasRegistradas) {
+                if (evidencia != null && evidencia.contains(uuid)) {
+                    yaRegistrado = true;
+                    break;
+                }
+            }
+            if (yaRegistrado) {
+                continue;
+            }
+
+            String origenTexto = (guia.getOrigen() != null && !guia.getOrigen().isBlank())
+                    ? guia.getOrigen() : "No especificado";
+            String destinoTexto = (guia.getDestino() != null && !guia.getDestino().isBlank())
+                    ? guia.getDestino() : "No especificado";
+
+            String evidencia = "El evento de tracking UUID " + uuid
+                    + " en las coordenadas (lat: " + evento.getLatitud()
+                    + ", lon: " + evento.getLongitud() + ") procesado vía FaaS "
+                    + "registró un desvío de " + distanciaKm + " km respecto a la ruta asignada ("
+                    + origenTexto + " -> " + destinoTexto + "), superando la tolerancia máxima permitida de "
+                    + umbralKm + " km. Inicio de un nuevo episodio de desvío.";
+
+            persistirInfraccion(guia, TipoInfraccion.DESVIO_DE_RUTA, evidencia, infraccionesGeneradas);
+            evidenciasRegistradas.add(evidencia);
         }
-
-        String origenTexto = "No especificado";
-        if (guia.getOrigen() != null && !guia.getOrigen().isBlank()) {
-            origenTexto = guia.getOrigen();
-        }
-
-        String destinoTexto = "No especificado";
-        if (guia.getDestino() != null && !guia.getDestino().isBlank()) {
-            destinoTexto = guia.getDestino();
-        }
-
-        String evidencia = "El evento de tracking UUID " + eventoDesviado.getUuid()
-                + " en las coordenadas (lat: " + eventoDesviado.getLatitud()
-                + ", lon: " + eventoDesviado.getLongitud() + ") procesado vía FaaS "
-                + "registró un desvío de " + distanciaKm + " km respecto a la ruta asignada ("
-                + origenTexto + " -> " + destinoTexto + "), superando la tolerancia máxima permitida de "
-                + umbralKm + " km.";
-
-        registrarInfraccionSiNoExiste(
-                guia,
-                TipoInfraccion.DESVIO_DE_RUTA,
-                evidencia,
-                infraccionesGeneradas
-        );
     }
 
     private void registrarInfraccionSiNoExiste(
@@ -347,6 +370,15 @@ public class MotorFiscalizacionImpl implements MotorFiscalizacionLocal {
             return;
         }
 
+        persistirInfraccion(guia, tipo, evidencia, infraccionesGeneradas);
+    }
+
+    private void persistirInfraccion(
+            GuiaDeViaje guia,
+            TipoInfraccion tipo,
+            String evidencia,
+            List<TipoInfraccion> infraccionesGeneradas
+    ) {
         LocalDate hoy = LocalDate.now();
         Infraccion nuevaInfraccion = new Infraccion(
                 hoy,
@@ -403,56 +435,75 @@ public class MotorFiscalizacionImpl implements MotorFiscalizacionLocal {
         return resultados.get(0);
     }
 
-    private EventoViaje buscarEventoConMayorDesvio(GuiaDeViaje guia) {
-        EventoViaje mayor = null;
-
-        if (posicionNoSqlRepository != null && guia.getId() != null) {
-            EventoViajeDTO dtoNoSql = posicionNoSqlRepository.buscarEventoConMayorDesvio(guia.getId());
-            if (dtoNoSql != null && dtoNoSql.distanciaDesvioKm() != null) {
-                EventoViaje evNoSql = new EventoViaje(
-                        dtoNoSql.uuid(),
-                        dtoNoSql.tiempo(),
-                        dtoNoSql.tipo(),
-                        dtoNoSql.latitud(),
-                        dtoNoSql.longitud(),
-                        guia
-                );
-                evNoSql.setDistanciaDesvioKm(dtoNoSql.distanciaDesvioKm());
-                mayor = evNoSql;
-            }
-        }
+    /**
+     * Reconstruye la serie cronológica de eventos/posiciones de la guía que poseen distancia de desvío,
+     * unificando JPA, la colección NoSQL y los eventos en memoria (deduplicados por UUID).
+     */
+    private List<EventoViaje> obtenerEventosConDesvioOrdenados(GuiaDeViaje guia) {
+        Map<String, EventoViaje> porUuid = new LinkedHashMap<>();
 
         TypedQuery<EventoViaje> query = em.createQuery(
-                "SELECT e FROM EventoViaje e WHERE e.guia.id = :guiaId AND e.distanciaDesvioKm IS NOT NULL ORDER BY e.distanciaDesvioKm DESC",
+                "SELECT e FROM EventoViaje e WHERE e.guia.id = :guiaId AND e.distanciaDesvioKm IS NOT NULL "
+                        + "ORDER BY e.tiempo ASC, e.id ASC",
                 EventoViaje.class
         );
         if (query != null) {
             query.setParameter("guiaId", guia.getId());
-            query.setMaxResults(1);
-
             List<EventoViaje> resultados = query.getResultList();
-            if (resultados != null && !resultados.isEmpty()) {
-                EventoViaje candidato = resultados.get(0);
-                if (candidato != null && candidato.getDistanciaDesvioKm() != null) {
-                    if (mayor == null || candidato.getDistanciaDesvioKm() > mayor.getDistanciaDesvioKm()) {
-                        mayor = candidato;
-                    }
+            if (resultados != null) {
+                for (EventoViaje ev : resultados) {
+                    agregarSiTieneDesvio(porUuid, ev);
                 }
             }
         }
 
-        List<EventoViaje> eventosEnMemoria = guia.getEventos();
-        if (eventosEnMemoria != null) {
-            for (EventoViaje ev : eventosEnMemoria) {
-                if (ev != null && ev.getDistanciaDesvioKm() != null) {
-                    if (mayor == null || ev.getDistanciaDesvioKm() > mayor.getDistanciaDesvioKm()) {
-                        mayor = ev;
+        if (posicionNoSqlRepository != null && guia.getId() != null) {
+            List<EventoViajeDTO> dtos = posicionNoSqlRepository.listarEventosPorGuia(guia.getId());
+            if (dtos != null) {
+                for (EventoViajeDTO dto : dtos) {
+                    if (dto == null || dto.distanciaDesvioKm() == null) {
+                        continue;
                     }
+                    EventoViaje ev = new EventoViaje(
+                            dto.uuid(), dto.tiempo(), dto.tipo(), dto.latitud(), dto.longitud(), guia
+                    );
+                    ev.setDistanciaDesvioKm(dto.distanciaDesvioKm());
+                    agregarSiTieneDesvio(porUuid, ev);
                 }
             }
         }
 
-        return mayor;
+        List<EventoViaje> enMemoria = guia.getEventos();
+        if (enMemoria != null) {
+            for (EventoViaje ev : enMemoria) {
+                agregarSiTieneDesvio(porUuid, ev);
+            }
+        }
+
+        List<EventoViaje> serie = new ArrayList<>(porUuid.values());
+        // Orden estable: ante igual marca de tiempo se conserva el orden de origen (JPA, NoSQL, memoria).
+        serie.sort(Comparator.comparing(ev -> ev.getTiempo() != null ? ev.getTiempo() : LocalDateTime.MIN));
+        return serie;
+    }
+
+    private void agregarSiTieneDesvio(Map<String, EventoViaje> porUuid, EventoViaje ev) {
+        if (ev != null && ev.getDistanciaDesvioKm() != null && ev.getUuid() != null) {
+            porUuid.putIfAbsent(ev.getUuid(), ev);
+        }
+    }
+
+    private List<String> obtenerEvidenciasDesvioRegistradas(GuiaDeViaje guia) {
+        TypedQuery<String> query = em.createQuery(
+                "SELECT i.evidencia FROM Infraccion i WHERE i.guia.id = :guiaId AND i.tipo = :tipo",
+                String.class
+        );
+        if (query == null) {
+            return new ArrayList<>();
+        }
+        query.setParameter("guiaId", guia.getId());
+        query.setParameter("tipo", TipoInfraccion.DESVIO_DE_RUTA);
+        List<String> evidencias = query.getResultList();
+        return evidencias != null ? new ArrayList<>(evidencias) : new ArrayList<>();
     }
 
     private ReglaFiscalizacion obtenerReglasVigentes() {

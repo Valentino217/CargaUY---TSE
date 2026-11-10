@@ -293,14 +293,8 @@ class MotorFiscalizacionTest {
 
         when(em.createQuery(anyString(), eq(EventoViaje.class))).thenReturn(queryEventoDesvio);
         when(queryEventoDesvio.setParameter("guiaId", guiaId)).thenReturn(queryEventoDesvio);
-        when(queryEventoDesvio.setMaxResults(1)).thenReturn(queryEventoDesvio);
         when(queryEventoDesvio.getResultList()).thenReturn(List.of(eventoDesviado));
 
-        when(em.createQuery(anyString(), eq(Long.class))).thenReturn(queryInfraccionesExistentes);
-        when(queryInfraccionesExistentes.setParameter("guiaId", guiaId)).thenReturn(queryInfraccionesExistentes);
-        when(queryInfraccionesExistentes.setParameter("tipo", TipoInfraccion.DESVIO_DE_RUTA))
-                .thenReturn(queryInfraccionesExistentes);
-        when(queryInfraccionesExistentes.getSingleResult()).thenReturn(0L);
 
         List<TipoInfraccion> infracciones = motor.evaluarGuia(guiaId);
 
@@ -335,7 +329,6 @@ class MotorFiscalizacionTest {
 
         when(em.createQuery(anyString(), eq(EventoViaje.class))).thenReturn(queryEventoDesvio);
         when(queryEventoDesvio.setParameter("guiaId", guiaId)).thenReturn(queryEventoDesvio);
-        when(queryEventoDesvio.setMaxResults(1)).thenReturn(queryEventoDesvio);
         when(queryEventoDesvio.getResultList()).thenReturn(List.of(eventoEnRuta));
 
         List<TipoInfraccion> infracciones = motor.evaluarGuia(guiaId);
@@ -373,7 +366,6 @@ class MotorFiscalizacionTest {
 
         when(em.createQuery(anyString(), eq(EventoViaje.class))).thenReturn(queryEventoDesvio);
         when(queryEventoDesvio.setParameter("guiaId", guiaId)).thenReturn(queryEventoDesvio);
-        when(queryEventoDesvio.setMaxResults(1)).thenReturn(queryEventoDesvio);
         when(queryEventoDesvio.getResultList()).thenReturn(Collections.emptyList());
 
         when(em.createQuery(anyString(), eq(Long.class))).thenReturn(queryInfraccionesExistentes);
@@ -425,7 +417,6 @@ class MotorFiscalizacionTest {
 
         when(em.createQuery(anyString(), eq(EventoViaje.class))).thenReturn(queryEventoDesvio);
         when(queryEventoDesvio.setParameter("guiaId", guiaId)).thenReturn(queryEventoDesvio);
-        when(queryEventoDesvio.setMaxResults(1)).thenReturn(queryEventoDesvio);
         when(queryEventoDesvio.getResultList()).thenReturn(Collections.emptyList());
 
         List<TipoInfraccion> resultado = motor.evaluarGuia(guiaId);
@@ -538,5 +529,62 @@ class MotorFiscalizacionTest {
                 i.getTipo() == TipoInfraccion.VIAJE_SIN_GUIA
                         && i.getVehiculo() == camionMixto
         ));
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<TipoInfraccion> evaluarSerieDeDesvios(Long guiaId, List<String> evidenciasPrevias, double... desvios) {
+        GuiaDeViaje guia = new GuiaDeViaje();
+        guia.setId(guiaId);
+        guia.setOrigen("Montevideo");
+        guia.setDestino("Rivera");
+        LocalDateTime base = LocalDateTime.now().minusHours(1);
+        List<EventoViaje> eventos = new java.util.ArrayList<>();
+        for (int i = 0; i < desvios.length; i++) {
+            EventoViaje ev = new EventoViaje("uuid-" + (char) ('a' + i), base.plusMinutes(i),
+                    TipoEvento.POSICION, -33.0, -55.0, guia);
+            ev.setDistanciaDesvioKm(desvios[i]);
+            eventos.add(ev);
+        }
+        guia.setEventos(eventos);
+
+        TypedQuery<String> qEvidencias = org.mockito.Mockito.mock(TypedQuery.class);
+        when(em.find(GuiaDeViaje.class, guiaId)).thenReturn(guia);
+        when(em.find(ReglaFiscalizacion.class, 1)).thenReturn(new ReglaFiscalizacion(500, 5.0));
+        when(em.createQuery(anyString(), eq(String.class))).thenReturn(qEvidencias);
+        when(qEvidencias.setParameter(anyString(), any())).thenReturn(qEvidencias);
+        when(qEvidencias.getResultList()).thenReturn(evidenciasPrevias);
+        when(em.createQuery(anyString(), eq(EventoViaje.class))).thenReturn(queryEventoDesvio);
+        when(queryEventoDesvio.setParameter("guiaId", guiaId)).thenReturn(queryEventoDesvio);
+        when(queryEventoDesvio.getResultList()).thenReturn(Collections.emptyList());
+
+        return motor.evaluarGuia(guiaId);
+    }
+
+    @Test
+    @DisplayName("Desvío por episodios - posiciones consecutivas en desvío generan una sola infracción")
+    void testPosicionesConsecutivasEnDesvioGeneranUnaSolaInfraccion() {
+        List<TipoInfraccion> res = evaluarSerieDeDesvios(200L, new java.util.ArrayList<>(), 1.0, 8.0, 12.0, 7.5);
+
+        assertEquals(List.of(TipoInfraccion.DESVIO_DE_RUTA), res);
+        verify(em, org.mockito.Mockito.times(1)).persist(any(Infraccion.class));
+    }
+
+    @Test
+    @DisplayName("Desvío por episodios - al volver a la ruta y desviarse nuevamente se crea una nueva infracción")
+    void testReingresoARutaYNuevoDesvioGeneraNuevaInfraccion() {
+        List<TipoInfraccion> res = evaluarSerieDeDesvios(201L, new java.util.ArrayList<>(), 8.0, 12.0, 1.5, 9.0, 10.0);
+
+        assertEquals(List.of(TipoInfraccion.DESVIO_DE_RUTA, TipoInfraccion.DESVIO_DE_RUTA), res);
+        verify(em, org.mockito.Mockito.times(2)).persist(any(Infraccion.class));
+    }
+
+    @Test
+    @DisplayName("Desvío por episodios - re-evaluar no duplica episodios ya registrados")
+    void testReevaluacionNoDuplicaEpisodiosRegistrados() {
+        List<String> previas = new java.util.ArrayList<>(List.of("El evento de tracking UUID uuid-a registró un desvío"));
+        List<TipoInfraccion> res = evaluarSerieDeDesvios(202L, previas, 8.0, 1.0, 9.0);
+
+        assertEquals(List.of(TipoInfraccion.DESVIO_DE_RUTA), res);
+        verify(em, org.mockito.Mockito.times(1)).persist(any(Infraccion.class));
     }
 }

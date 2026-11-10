@@ -36,13 +36,17 @@ public class GestionPerfilesService {
             .setParameter("ci", d.ci()).getSingleResult();
         if (existentes > 0) throw new ErrorNegocio("Ya existe un usuario con esa CI");
         String password = d.password();
-        if (password == null || password.length() < 8
-                || password.getBytes(StandardCharsets.UTF_8).length > 72)
-            throw new ErrorNegocio("Contraseña: mínimo 8 caracteres y máximo 72 bytes UTF-8");
-        char[] caracteres = password.toCharArray();
-        String hash;
-        try { hash = BCrypt.withDefaults().hashToString(12, caracteres); }
-        finally { Arrays.fill(caracteres, '\0'); }
+        String credencial;
+        if (password == null || password.isBlank()) {
+            credencial = "{LDAP-PENDIENTE}";
+        } else {
+            if (password.length() < 8
+                    || password.getBytes(StandardCharsets.UTF_8).length > 72)
+                throw new ErrorNegocio("Contraseña: mínimo 8 caracteres y máximo 72 bytes UTF-8");
+            char[] caracteres = password.toCharArray();
+            try { credencial = BCrypt.withDefaults().hashToString(12, caracteres); }
+            finally { Arrays.fill(caracteres, '\0'); }
+        }
         Usuario u = switch (d.tipo()) {
             case CIUDADANO, CIUDADANO_COMUN -> new Ciudadano();
             case CHOFER -> new Chofer();
@@ -52,7 +56,7 @@ public class GestionPerfilesService {
         };
         copiarDatos(u, d);
         u.setOrigenIdentidad("LDAP");
-        u.setPassword(hash);
+        u.setPassword(credencial);
         u.getRoles().add(d.tipo());
         em.persist(u);
         em.flush();
@@ -221,6 +225,8 @@ public class GestionPerfilesService {
         if (!mail.matches("[^\\s@]+@[^\\s@]+\\.[^\\s@]+"))
             throw new ErrorNegocio("Correo inválido");
         Validaciones.positivo(d.ci(), "CI");
+        if (d.ci() > 99_999_999)
+            throw new ErrorNegocio("La cédula de identidad no puede superar los 8 caracteres");
         if (d.fechaNac() == null && !nacimientoPendiente
                 || d.fechaNac() != null && d.fechaNac().isAfter(LocalDate.now()))
             throw new ErrorNegocio("Fecha de nacimiento inválida");

@@ -203,6 +203,91 @@
                 </div>
             </p:panel>
 
+            <!-- Panel de Configuración del Mock de Sistema de Tracking Automático -->
+            <p:panel header="Mock del Sistema de Tracking Automático (Guías Activas EN_CURSO)"
+                     toggleable="true"
+                     styleClass="mb-4">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 12px;">
+                    <span style="font-size: 0.9rem; color: #334155;">
+                        Simula el envío periódico de posiciones GPS siguiendo la ruta de las guías activas y permanece en el destino hasta finalizar el viaje.
+                    </span>
+                    <div>
+                        <span class="badge #{detalleViajeBean.mockTrackingActivo ? 'badge-FINALIZADO' : 'badge-SIN_INICIAR'}">
+                            #{detalleViajeBean.mockTrackingActivo ? 'MOCK ACTIVO' : 'MOCK DETENIDO'}
+                        </span>
+                        <span style="margin-left: 10px; font-weight: 600; font-size: 0.85rem; color: #1e3a8a;">
+                            Eventos emitidos: #{detalleViajeBean.mockTotalEventosEmitidos} | Desvíos: #{detalleViajeBean.mockTotalDesviosEmitidos}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="faas-grid">
+                    <div>
+                        <h:outputLabel for="mockEvMin" value="Eventos por minuto (1 - 120):" style="font-weight: 600; display: block; margin-bottom: 4px;"/>
+                        <p:inputNumber id="mockEvMin"
+                                       label="Eventos por minuto"
+                                       value="#{detalleViajeBean.mockEventosPorMinuto}"
+                                       decimalPlaces="0"
+                                       minValue="1"
+                                       maxValue="120"
+                                       style="width: 100%;"/>
+                    </div>
+                    <div>
+                        <h:outputLabel for="mockCantDesvios" value="Cantidad de desvíos en la ruta (0 = sin desvío):" style="font-weight: 600; display: block; margin-bottom: 4px;"/>
+                        <p:inputNumber id="mockCantDesvios"
+                                       label="Cantidad de desvíos en la ruta"
+                                       value="#{detalleViajeBean.mockCantidadDesvios}"
+                                       decimalPlaces="0"
+                                       minValue="0"
+                                       maxValue="50"
+                                       style="width: 100%;"/>
+                    </div>
+                </div>
+
+                <div class="select-bar">
+                    <p:commandButton value="#{detalleViajeBean.mockTrackingActivo ? 'Actualizar Configuración' : 'Iniciar Mock de Tracking'}"
+                                     actionListener="#{detalleViajeBean.iniciarMockTracking}"
+                                     process="@this mockEvMin mockCantDesvios"
+                                     update=":formTracking"
+                                     icon="pi pi-play"
+                                     styleClass="ui-button-success"/>
+
+                    <p:commandButton value="Detener Mock"
+                                     actionListener="#{detalleViajeBean.detenerMockTracking}"
+                                     process="@this"
+                                     update=":formTracking"
+                                     disabled="#{not detalleViajeBean.mockTrackingActivo}"
+                                     icon="pi pi-stop"
+                                     styleClass="ui-button-danger ui-button-outlined"/>
+
+                    <p:commandButton value="Emitir Punto Ahora"
+                                     actionListener="#{detalleViajeBean.emitirPasoMockAhora}"
+                                     process="@this mockEvMin mockCantDesvios"
+                                     update=":formTracking"
+                                     icon="pi pi-step-forward"
+                                     styleClass="ui-button-info ui-button-outlined"/>
+
+                    <p:commandButton value="Reiniciar Recorrido"
+                                     actionListener="#{detalleViajeBean.reiniciarRecorridoMock}"
+                                     process="@this"
+                                     update=":formTracking"
+                                     icon="pi pi-refresh"
+                                     styleClass="ui-button-secondary ui-button-outlined"/>
+                </div>
+
+                <h:panelGroup layout="block"
+                              rendered="#{not empty detalleViajeBean.mockUltimoResultado}"
+                              style="margin-top: 12px; padding: 8px 12px; background: #e0f2fe; border-left: 4px solid #0284c7; border-radius: 4px; font-size: 0.85rem;">
+                    <strong>Último evento del Mock: </strong>
+                    <h:outputText value="#{detalleViajeBean.mockUltimoResultado}"/>
+                </h:panelGroup>
+            </p:panel>
+
+            <p:poll interval="3"
+                    listener="#{detalleViajeBean.refrescarPorPollMock}"
+                    update=":formTracking"
+                    stop="#{not detalleViajeBean.mockTrackingActivo}"/>
+
             <!-- Resumen de la Guía Seleccionada -->
             <h:panelGroup layout="block" rendered="#{detalleViajeBean.guiaActual != null}">
                 <div class="stats-grid">

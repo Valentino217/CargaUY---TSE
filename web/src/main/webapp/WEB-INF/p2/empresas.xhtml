@@ -38,7 +38,7 @@
             <label>Nombre completo<input name="nombre" maxlength="100" required="required" autocomplete="name" value="#{plataformaVista.valor(&quot;nombre&quot;,&quot;&quot;)}"/></label>
             <label>Correo electrónico<input name="mail" type="email" maxlength="150" required="required" autocomplete="email" value="#{plataformaVista.valor(&quot;mail&quot;,&quot;&quot;)}"/></label>
             <label>Fecha de nacimiento<input name="fechaNac" type="date" max="#{plataformaVista.hoy}" required="required" value="#{plataformaVista.valor(&quot;fechaNac&quot;,&quot;&quot;)}"/></label>
-            <label>CI sin puntos ni guiones<input name="ci" type="number" min="1" required="required" value="#{plataformaVista.valor(&quot;ci&quot;,&quot;&quot;)}"/></label>
+            <label>CI sin puntos ni guiones<input name="ci" type="number" min="1" max="99999999" required="required" value="#{plataformaVista.valor(&quot;ci&quot;,&quot;&quot;)}"/></label>
         </div>
         <fieldset>
             <legend>Roles del usuario: seleccioná uno o varios</legend>
