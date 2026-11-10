@@ -58,7 +58,7 @@ public class IntegracionSesionFilter implements Filter {
         if (actor.tiene(TipoUsuario.ADMINISTRADOR)) {
             return true;
         }
-        if (p == null || p.equals("/index.xhtml") || p.startsWith("/portal/")) {
+        if (p == null || p.equals("/index.xhtml") || p.equals("/error.xhtml") || p.startsWith("/portal/")) {
             return true;
         }
         if (p.startsWith("/admin/")) {

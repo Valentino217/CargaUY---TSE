@@ -13,6 +13,8 @@ import jakarta.faces.view.ViewScoped;
 import jakarta.inject.Named;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.Empresa;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.GuiaDeViaje;
+import uy.edu.fing.grupo07.CargaUY.domain.entity.Rubro;
+import uy.edu.fing.grupo07.CargaUY.domain.entity.TipoCarga;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.Usuario;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.Vehiculo;
 import uy.edu.fing.grupo07.CargaUY.integration.RedVialUruguay;
@@ -27,17 +29,6 @@ public class GuiaDeViajeBean implements Serializable {
     private static final List<String> LOCALIDADES_CARGA_URUGUAY =
             RedVialUruguay.listarNombresLocalidadesOficiales();
 
-    private static final List<String> RUBROS_CARGA = List.of(
-            "Forestal / Madera para Celulosa",
-            "Granos y Oleaginosas (Soja / Trigo / Arroz)",
-            "Contenedores de Exportación / Importación",
-            "Ganado en Pie / Frigorífico",
-            "Cemento y Materiales de Construcción",
-            "Combustibles y Sustancias Peligrosas",
-            "Lácteos y Alimentos Refrigerados",
-            "Carga General y Distribución"
-    );
-
     @EJB
     private VehiculoEJB vehiculoEJB;
 
@@ -48,10 +39,13 @@ public class GuiaDeViajeBean implements Serializable {
     private List<Empresa> empresas;
     private List<GuiaDeViaje> guias;
     private List<Usuario> choferes;
+    private List<Rubro> rubrosCatalogo = new ArrayList<>();
+    private List<TipoCarga> tiposCargaCatalogo = new ArrayList<>();
 
     private GuiaDeViaje guia;
     private String matriculaVehiculo;
     private int choferId;
+    private Integer tipoCargaCodigo;
     private boolean editando;
     private int empresaId;
 
@@ -61,6 +55,7 @@ public class GuiaDeViajeBean implements Serializable {
     @PostConstruct
     public void init() {
         String token = SesionActual.token();
+        cargarCatalogos();
         try {
             empresas = vehiculoEJB.listarEmpresasParaActor(token);
         } catch (Exception excepcion) {
@@ -85,12 +80,53 @@ public class GuiaDeViajeBean implements Serializable {
         nuevo();
     }
 
+    private void cargarCatalogos() {
+        try {
+            List<Rubro> r = GuiaDeViajeEJB.listarRubrosCatalogo();
+            rubrosCatalogo = r != null ? r : new ArrayList<>();
+        } catch (Exception e) {
+            rubrosCatalogo = new ArrayList<>();
+        }
+        try {
+            List<TipoCarga> tc = GuiaDeViajeEJB.listarTiposCargaCatalogo();
+            tiposCargaCatalogo = tc != null ? tc : new ArrayList<>();
+        } catch (Exception e) {
+            tiposCargaCatalogo = new ArrayList<>();
+        }
+    }
+
     public List<String> getLocalidadesUruguay() {
         return LOCALIDADES_CARGA_URUGUAY;
     }
 
     public List<String> getRubrosDisponibles() {
-        return RUBROS_CARGA;
+        cargarCatalogos();
+        List<String> nombres = new ArrayList<>();
+        for (Rubro r : rubrosCatalogo) {
+            if (r.getNombre() != null && !r.getNombre().isBlank()) {
+                nombres.add(r.getNombre());
+            }
+        }
+        return nombres;
+    }
+
+    public List<TipoCarga> getTiposCargaDisponibles() {
+        cargarCatalogos();
+        return tiposCargaCatalogo;
+    }
+
+    public String obtenerDescripcionTiposCarga(GuiaDeViaje g) {
+        if (g == null || g.getTiposCarga() == null || g.getTiposCarga().isEmpty()) {
+            return "Sin especificar";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (TipoCarga tc : g.getTiposCarga()) {
+            if (tc != null && tc.getDesc() != null && !tc.getDesc().isBlank()) {
+                if (sb.length() > 0) sb.append(", ");
+                sb.append(tc.getDesc());
+            }
+        }
+        return sb.length() > 0 ? sb.toString() : "Sin especificar";
     }
 
     private List<Vehiculo> obtenerVehiculosHabilitados(int empId) {
@@ -106,12 +142,22 @@ public class GuiaDeViajeBean implements Serializable {
     }
 
     public void nuevo() {
+        cargarCatalogos();
         guia = new GuiaDeViaje();
         guia.setFecha(java.time.LocalDate.now());
         guia.setOrigen(LOCALIDADES_CARGA_URUGUAY.get(2)); // Nueva Palmira por defecto
         guia.setDestino(LOCALIDADES_CARGA_URUGUAY.get(0)); // Puerto de Montevideo por defecto
         guia.actualizarRutaPlanificada();
-        guia.setRubroCliente(RUBROS_CARGA.get(1));
+        if (!rubrosCatalogo.isEmpty()) {
+            guia.setRubroCliente(rubrosCatalogo.get(0).getNombre());
+        } else {
+            guia.setRubroCliente(null);
+        }
+        if (!tiposCargaCatalogo.isEmpty()) {
+            this.tipoCargaCodigo = tiposCargaCatalogo.get(0).getCodigo();
+        } else {
+            this.tipoCargaCodigo = null;
+        }
         guia.setVolumenCarga(28000.0f);
         editando = false;
 
@@ -190,6 +236,16 @@ public class GuiaDeViajeBean implements Serializable {
             }
 
             guia.setChofer(choferSeleccionado);
+            List<TipoCarga> tiposSeleccionados = new ArrayList<>();
+            if (tipoCargaCodigo != null) {
+                for (TipoCarga tc : tiposCargaCatalogo) {
+                    if (tc.getCodigo() == tipoCargaCodigo) {
+                        tiposSeleccionados.add(tc);
+                        break;
+                    }
+                }
+            }
+            guia.setTiposCarga(tiposSeleccionados);
             guia.actualizarRutaPlanificada();
 
             if (editando) {
@@ -238,6 +294,7 @@ public class GuiaDeViajeBean implements Serializable {
     }
 
     public void editar(GuiaDeViaje guiaSeleccionada) {
+        cargarCatalogos();
         this.guia = guiaSeleccionada;
         this.editando = true;
 
@@ -251,6 +308,14 @@ public class GuiaDeViajeBean implements Serializable {
 
         if (guiaSeleccionada.getChofer() != null) {
             this.choferId = guiaSeleccionada.getChofer().getId();
+        }
+
+        if (guiaSeleccionada.getTiposCarga() != null && !guiaSeleccionada.getTiposCarga().isEmpty()) {
+            this.tipoCargaCodigo = guiaSeleccionada.getTiposCarga().get(0).getCodigo();
+        } else if (!tiposCargaCatalogo.isEmpty()) {
+            this.tipoCargaCodigo = tiposCargaCatalogo.get(0).getCodigo();
+        } else {
+            this.tipoCargaCodigo = null;
         }
 
         this.vehiculos = obtenerVehiculosHabilitados(empresaId);
@@ -387,5 +452,13 @@ public class GuiaDeViajeBean implements Serializable {
 
     public boolean isEditando() {
         return editando;
+    }
+
+    public Integer getTipoCargaCodigo() {
+        return tipoCargaCodigo;
+    }
+
+    public void setTipoCargaCodigo(Integer tipoCargaCodigo) {
+        this.tipoCargaCodigo = tipoCargaCodigo;
     }
 }

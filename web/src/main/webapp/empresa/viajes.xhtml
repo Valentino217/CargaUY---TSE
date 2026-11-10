@@ -52,7 +52,7 @@
 
                     <p:column headerText="Corredor (Origen &#8594; Destino)" filterBy="#{g.origen}" filterMatchMode="contains" filterPlaceholder="Origen o destino">
                         <strong>#{g.origen}</strong> &#8594; <strong>#{g.destino}</strong>
-                        <small style="display: block; color: var(--cuy-muted);">Rubro: #{g.rubroCliente} &#8226; Carga: <h:outputText value="#{g.volumenCarga}"><f:convertNumber pattern="#,##0" /></h:outputText> kg</small>
+                        <small style="display: block; color: var(--cuy-muted);">Rubro: #{g.rubroCliente} &#8226; Tipo Carga: #{GuiaDeViajeBean.obtenerDescripcionTiposCarga(g)} &#8226; Peso: <h:outputText value="#{g.volumenCarga}"><f:convertNumber pattern="#,##0" /></h:outputText> kg</small>
                     </p:column>
 
                     <p:column headerText="Vehículo Asignado" filterBy="#{g.vehiculo.matricula}" filterMatchMode="contains" style="width: 165px;" filterPlaceholder="Matrícula">
@@ -218,8 +218,17 @@
 
                         <div class="cuy-field">
                             <p:outputLabel for="rubroSelect" value="Rubro del Cliente" />
-                            <p:selectOneMenu id="rubroSelect" label="Rubro del Cliente" value="#{GuiaDeViajeBean.guia.rubroCliente}" editable="true" required="true">
+                            <p:selectOneMenu id="rubroSelect" label="Rubro del Cliente" value="#{GuiaDeViajeBean.guia.rubroCliente}" required="true">
+                                <f:selectItem itemLabel="#{empty GuiaDeViajeBean.rubrosDisponibles ? 'Sin rubros en catálogo' : '-- Seleccionar Rubro --'}" itemValue="" noSelectionOption="true" />
                                 <f:selectItems value="#{GuiaDeViajeBean.rubrosDisponibles}" var="rub" itemLabel="#{rub}" itemValue="#{rub}" />
+                            </p:selectOneMenu>
+                        </div>
+
+                        <div class="cuy-field">
+                            <p:outputLabel for="tipoCargaSelect" value="Tipo de Carga" />
+                            <p:selectOneMenu id="tipoCargaSelect" label="Tipo de Carga" value="#{GuiaDeViajeBean.tipoCargaCodigo}" required="true">
+                                <f:selectItem itemLabel="#{empty GuiaDeViajeBean.tiposCargaDisponibles ? 'Sin tipos de carga en catálogo' : '-- Seleccionar Tipo de Carga --'}" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItems value="#{GuiaDeViajeBean.tiposCargaDisponibles}" var="tc" itemLabel="#{tc.desc}" itemValue="#{tc.codigo}" />
                             </p:selectOneMenu>
                         </div>
 
@@ -231,7 +240,7 @@
 
                         <div class="cuy-field">
                             <p:outputLabel for="fechaInput" value="Fecha Programada *" />
-                            <p:datePicker id="fechaInput" label="Fecha Programada" value="#{GuiaDeViajeBean.guia.fecha}" pattern="yyyy-MM-dd" showIcon="true" required="true"  panelStyleClass="cuy-calendar"  monthNavigator="true"  yearNavigator="select"  showButtonBar="true"  showOtherMonths="true"  yearRange="1900:2026"  showLongMonthNames="true" />
+                            <p:datePicker id="fechaInput" label="Fecha Programada" value="#{GuiaDeViajeBean.guia.fecha}" pattern="yyyy-MM-dd" showIcon="true" required="true"  panelStyleClass="cuy-calendar"  monthNavigator="true"  yearNavigator="select"  showButtonBar="true"  showOtherMonths="true"  yearRange="1900:2040"  showLongMonthNames="true" />
                         </div>
                     </div>
                 </p:fieldset>

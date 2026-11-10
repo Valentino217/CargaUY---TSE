@@ -90,6 +90,10 @@ public class EmpresaInfraccionesBean implements Serializable {
                 || inf.estado() == EstadoInfraccion.EN_DESCARGO;
     }
 
+    public void presentarDescargo() {
+        enviarDescargo();
+    }
+
     public void enviarDescargo() {
         if (seleccionada == null) {
             return;

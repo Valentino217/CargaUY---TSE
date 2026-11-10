@@ -128,7 +128,9 @@
                                 <div style="margin-top: 0.35rem;">
                                     <img src="#{ev.incidente().foto()}"
                                          alt="Foto del incidente"
-                                         style="max-width: 150px; max-height: 110px; border-radius: 6px; border: 1px solid #cbd5e1; object-fit: cover;" />
+                                         title="Haga clic para ver en tamaño completo"
+                                         onclick="abrirFotoIncidente(this.src)"
+                                         style="max-width: 150px; max-height: 110px; border-radius: 6px; border: 1px solid #cbd5e1; object-fit: cover; cursor: zoom-in; transition: transform 0.15s ease;" />
                                 </div>
                             </h:panelGroup>
                             <h:panelGroup rendered="#{not empty ev.incidente().foto() and not ev.incidente().foto().startsWith('data:image/')}">
@@ -141,5 +143,31 @@
                 </p:dataTable>
             </div>
         </h:form>
+
+        <!-- Modal Vista Previa de Foto de Incidente -->
+        <p:dialog header="Evidencia Fotográfica del Incidente"
+                  widgetVar="dlgFotoIncidenteWidget"
+                  modal="true"
+                  responsive="true"
+                  fitViewport="true"
+                  width="760"
+                  closeOnEscape="true">
+            <div style="text-align: center; padding: 0.5rem;">
+                <img id="imgFotoIncidenteAmpliada"
+                     src=""
+                     alt="Foto ampliada del incidente"
+                     style="max-width: 100%; max-height: 72vh; border-radius: 8px; border: 1px solid #cbd5e1; object-fit: contain;" />
+            </div>
+        </p:dialog>
+
+        <script type="text/javascript">
+            function abrirFotoIncidente(src) {
+                var img = document.getElementById('imgFotoIncidenteAmpliada');
+                if (img) {
+                    img.src = src;
+                    PF('dlgFotoIncidenteWidget').show();
+                }
+            }
+        </script>
     </ui:define>
 </ui:composition>

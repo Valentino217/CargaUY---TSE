@@ -276,7 +276,7 @@ public class VehiculoEJB implements VehiculoEJBLocal {
         if (matricula == null || matricula.isBlank()) {
             return false;
         }
-        Vehiculo v = em.find(Vehiculo.class, matricula);
+        Vehiculo v = buscar(matricula);
         return v != null && v.verificarHabilitacionVigenteEn(fechaReferencia);
     }
 

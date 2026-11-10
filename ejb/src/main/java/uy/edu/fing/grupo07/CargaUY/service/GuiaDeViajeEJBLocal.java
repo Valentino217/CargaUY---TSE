@@ -6,6 +6,8 @@ import jakarta.ejb.Local;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.Usuario;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.Empresa;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.GuiaDeViaje;
+import uy.edu.fing.grupo07.CargaUY.domain.entity.Rubro;
+import uy.edu.fing.grupo07.CargaUY.domain.entity.TipoCarga;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.Vehiculo;
 
 @Local
@@ -19,4 +21,6 @@ public interface GuiaDeViajeEJBLocal {
 	List<Usuario> listarChoferesPorEmpresa(int nroEmpresa);
 	List<GuiaDeViaje> listarGuiasPorCiudadano(int ciudadanoId);
 	void avanzarEstadoAdmin(String token, Long guiaId);
+	List<Rubro> listarRubrosCatalogo();
+	List<TipoCarga> listarTiposCargaCatalogo();
 }
