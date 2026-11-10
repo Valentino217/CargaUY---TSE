@@ -112,7 +112,7 @@
                             <h:outputText value="#{ev.tiempo()}" style="font-size: 0.82rem;" />
                         </p:column>
 
-                        <p:column headerText="Tipo" sortBy="#{ev.tipo()}" style="width: 135px;">
+                        <p:column headerText="Tipo" style="width: 135px;">
                             <p:tag value="#{ev.tipo()}"
                                    severity="#{ev.tipo().name() eq 'INCIDENTE' ? 'danger' : (ev.tipo().name() eq 'INICIO' ? 'success' : (ev.tipo().name() eq 'FIN' ? 'info' : 'secondary'))}"
                                    rounded="true" />

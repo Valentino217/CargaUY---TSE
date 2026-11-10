@@ -68,11 +68,11 @@
                         </div>
                     </f:facet>
 
-                    <p:column headerText="Caso #" filterBy="#{caso.idCaso()}" filterMatchMode="contains" filterPlaceholder="Caso #" style="width: 100px; text-align: center;">
+                    <p:column headerText="Caso #" sortBy="#{caso.idCaso()}" filterBy="#{caso.idCaso()}" filterMatchMode="contains" filterPlaceholder="Caso #" style="width: 100px; text-align: center;">
                         <span class="cuy-mono">#<h:outputText value="#{caso.idCaso()}" /></span>
                     </p:column>
 
-                    <p:column headerText="Fecha" filterBy="#{caso.fecha()}" filterMatchMode="contains" filterPlaceholder="Fecha" style="width: 125px;">
+                    <p:column headerText="Fecha" sortBy="#{caso.fecha()}" filterBy="#{caso.fecha()}" filterMatchMode="contains" filterPlaceholder="Fecha" style="width: 125px;">
                         <h:outputText value="#{caso.fecha()}" />
                     </p:column>
 

@@ -11,6 +11,15 @@
     line-height: 1.2;
 }
 .cuy-portal-intro p { margin: 0.4rem 0 0; color: #475569; font-size: 1.15rem; }
+.cuy-panel-intro-mobile { display: none; }
+@media (max-width: 768px) {
+    body .cuy-main > .cuy-panel-intro-desktop { display: none; }
+    .cuy-panel-intro-mobile {
+        display: block;
+        flex: 0 0 100%;
+    }
+    .cuy-header:has(.cuy-panel-intro-mobile) .cuy-brand { flex-basis: 100%; }
+}
 .cuy-portal-content { padding-block: 1.4rem 2rem; }
 .cuy-portal-content h2 { color: var(--cuy-primary); margin: 0 0 0.65rem; }
 .cuy-portal-content > section { margin-bottom: 1.2rem; }
@@ -47,6 +56,8 @@
 .cuy-panel-module li:not([hidden]) ~ li:not([hidden]) { border-top: 1px solid var(--cuy-border); }
 .cuy-panel-module li a {
     display: flex;
+    margin-inline: -1rem;
+    padding-inline: 1rem;
     justify-content: space-between;
     align-items: center;
     gap: 0.5rem;
@@ -63,6 +74,7 @@
     outline: 2px solid var(--cuy-accent);
     outline-offset: 2px;
 }
+.cuy-panel-module li a:focus-visible { outline-offset: -2px; }
 .cuy-panel-status { margin: 0 0 0.65rem; }
 .cuy-panel-status:empty { margin: 0; }
 

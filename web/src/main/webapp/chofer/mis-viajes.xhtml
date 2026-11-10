@@ -42,11 +42,11 @@
                              stripedRows="true"
                              emptyMessage="No se encuentra vinculado como chofer a ninguna empresa de transporte actualmente.">
 
-                    <p:column headerText="Nro. Empresa / RUT" filterBy="#{emp.nroEmpresa}" filterMatchMode="contains" filterPlaceholder="Nro. Empresa / RUT" style="width: 160px; text-align: center;">
+                    <p:column headerText="Nro. Empresa / RUT" sortBy="#{emp.nroEmpresa}" filterBy="#{emp.nroEmpresa}" filterMatchMode="contains" filterPlaceholder="Nro. Empresa / RUT" style="width: 160px; text-align: center;">
                         <span class="cuy-mono">##{emp.nroEmpresa}</span>
                     </p:column>
 
-                    <p:column headerText="Razón Social" filterBy="#{emp.razonSocial}" filterMatchMode="contains" filterPlaceholder="Razón Social">
+                    <p:column headerText="Razón Social" sortBy="#{emp.razonSocial}" filterBy="#{emp.razonSocial}" filterMatchMode="contains" filterPlaceholder="Razón Social">
                         <strong>#{emp.razonSocial}</strong>
                     </p:column>
 
@@ -90,19 +90,19 @@
                              size="small"
                              emptyMessage="No registra guías de viaje asignadas a su nombre.">
 
-                    <p:column headerText="Guía #" filterBy="#{g.id}" filterMatchMode="contains" filterPlaceholder="Guía #" style="width: 95px; text-align: center;">
+                    <p:column headerText="Guía #" sortBy="#{g.id}" filterBy="#{g.id}" filterMatchMode="contains" filterPlaceholder="Guía #" style="width: 95px; text-align: center;">
                         <span class="cuy-mono">##{g.id}</span>
                     </p:column>
 
-                    <p:column headerText="Fecha" filterBy="#{g.fecha}" filterMatchMode="contains" filterPlaceholder="Fecha" style="width: 120px;">
+                    <p:column headerText="Fecha" sortBy="#{g.fecha}" filterBy="#{g.fecha}" filterMatchMode="contains" filterPlaceholder="Fecha" style="width: 120px;">
                         <h:outputText value="#{g.fecha}" />
                     </p:column>
 
-                    <p:column headerText="Empresa" filterBy="#{g.empresa.razonSocial}" filterMatchMode="contains" filterPlaceholder="Empresa">
+                    <p:column headerText="Empresa" sortBy="#{g.empresa.razonSocial}" filterBy="#{g.empresa.razonSocial}" filterMatchMode="contains" filterPlaceholder="Empresa">
                         <strong>#{g.empresa.razonSocial}</strong>
                     </p:column>
 
-                    <p:column headerText="Vehículo / Matrícula" filterBy="#{g.vehiculo.matricula}" filterMatchMode="contains" filterPlaceholder="Vehículo / Matrícula" style="width: 145px;">
+                    <p:column headerText="Vehículo / Matrícula" sortBy="#{g.vehiculo.matricula}" filterBy="#{g.vehiculo.matricula}" filterMatchMode="contains" filterPlaceholder="Vehículo / Matrícula" style="width: 145px;">
                         <span class="cuy-mono"><i class="pi pi-car" /> #{g.vehiculo.matricula}</span>
                     </p:column>
 
@@ -114,7 +114,7 @@
                         #{g.rubroCliente}
                     </p:column>
 
-                    <p:column headerText="Volumen" filterBy="#{g.volumenCarga}" filterMatchMode="contains" filterPlaceholder="Volumen" style="width: 125px; text-align: right;">
+                    <p:column headerText="Volumen" sortBy="#{g.volumenCarga}" filterBy="#{g.volumenCarga}" filterMatchMode="contains" filterPlaceholder="Volumen" style="width: 125px; text-align: right;">
                         <h:outputText value="#{g.volumenCarga}">
                             <f:convertNumber pattern="#,##0" />
                         </h:outputText> kg

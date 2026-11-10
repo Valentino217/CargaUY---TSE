@@ -396,7 +396,7 @@
         }
     </style>
     <ui:insert name="head" />
-    <link rel="stylesheet" href="#{request.contextPath}/css/ajustes-ui.css?v=iconos-titulo"/>
+    <link rel="stylesheet" href="#{request.contextPath}/css/ajustes-ui.css?v=orden-izquierda-espacio"/>
     <link rel="stylesheet" href="#{request.contextPath}/css/calendarios.css"/>
 </h:head>
 
@@ -420,6 +420,8 @@
                 <p class="cuy-brand-title">CargaUY</p>
             </div>
         </h:link>
+
+        <ui:insert name="mobilePanelIntro" />
 
         <ui:fragment rendered="#{not authBean.esAnonimo()}">
             <form class="cuy-portal-search" action="#{request.contextPath}/index.xhtml"
@@ -452,12 +454,6 @@
     <nav class="cuy-nav-wrapper" aria-label="Navegación general">
         <h:form id="menuForm">
             <p:menubar autoDisplay="false">
-
-                <!-- Panel General (si está autenticado) -->
-                <p:menuitem value="Panel Principal"
-                            icon="pi pi-th-large"
-                            outcome="/index.xhtml"
-                            rendered="#{not authBean.esAnonimo()}" />
 
                 <p:submenu label="Gestión del sistema" icon="pi pi-cog" rendered="#{authBean.esAdministrador()}">
                     <p:menuitem value="Usuarios y roles" outcome="/admin/usuarios.xhtml" />

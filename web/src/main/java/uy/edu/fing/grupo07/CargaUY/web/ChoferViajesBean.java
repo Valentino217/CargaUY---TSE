@@ -38,8 +38,8 @@ public class ChoferViajesBean implements Serializable {
     public void recargar() {
         try {
             String token = SesionActual.token();
-            this.empresasAsignadas = vehiculoEJB.listarEmpresasParaActor(token);
-            this.guiasAsignadas = guiaDeViajeEJB.listarParaActor(token);
+            this.empresasAsignadas = new ArrayList<>(vehiculoEJB.listarEmpresasParaActor(token));
+            this.guiasAsignadas = new ArrayList<>(guiaDeViajeEJB.listarParaActor(token));
         } catch (Exception e) {
             FacesContext.getCurrentInstance().addMessage(null,
                     new FacesMessage(FacesMessage.SEVERITY_ERROR, "Error", "No se pudieron cargar sus viajes: " + e.getMessage()));

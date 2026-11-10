@@ -141,11 +141,11 @@
                         <h:outputText value="#{inf.fecha()}"/>
                     </p:column>
 
-                    <p:column headerText="Tipo" sortBy="#{inf.tipo().name()}" style="width: 160px;">
+                    <p:column headerText="Tipo" style="width: 160px;">
                         <span class="badge">#{inf.tipo().name()}</span>
                     </p:column>
 
-                    <p:column headerText="Estado" sortBy="#{inf.estado().name()}" style="width: 130px; text-align: center;">
+                    <p:column headerText="Estado" style="width: 130px; text-align: center;">
                         <span class="badge badge-#{inf.estado().name()}">#{inf.estado().name()}</span>
                     </p:column>
 

@@ -63,7 +63,7 @@ public class FuncionarioEmpresasBean implements Serializable {
 
     public void cargarEmpresas() {
         try {
-            empresas = perfilesService.listarEmpresas(SesionActual.token(), 0, 100);
+            empresas = new ArrayList<>(perfilesService.listarEmpresas(SesionActual.token(), 0, 100));
         } catch (Exception e) {
             empresas = new ArrayList<>();
             mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error", "No se pudieron listar las empresas: " + e.getMessage());

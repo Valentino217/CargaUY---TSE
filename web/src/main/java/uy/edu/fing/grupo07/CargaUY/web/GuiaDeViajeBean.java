@@ -72,7 +72,7 @@ public class GuiaDeViajeBean implements Serializable {
             );
         }
         try {
-            guias = GuiaDeViajeEJB.listarParaActor(token);
+            guias = new ArrayList<>(GuiaDeViajeEJB.listarParaActor(token));
         } catch (Exception excepcion) {
             guias = new ArrayList<>();
             mostrarMensaje(
@@ -209,7 +209,7 @@ public class GuiaDeViajeBean implements Serializable {
                 );
             }
 
-            guias = GuiaDeViajeEJB.listarParaActor(SesionActual.token());
+            guias = new ArrayList<>(GuiaDeViajeEJB.listarParaActor(SesionActual.token()));
             nuevo();
 
         } catch (Exception excepcion) {
@@ -260,7 +260,7 @@ public class GuiaDeViajeBean implements Serializable {
     public void eliminar(GuiaDeViaje guiaAEliminar) {
         try {
             GuiaDeViajeEJB.eliminar(SesionActual.token(), guiaAEliminar);
-            guias = GuiaDeViajeEJB.listarParaActor(SesionActual.token());
+            guias = new ArrayList<>(GuiaDeViajeEJB.listarParaActor(SesionActual.token()));
 
             mostrarMensaje(
                     FacesMessage.SEVERITY_INFO,
@@ -283,7 +283,7 @@ public class GuiaDeViajeBean implements Serializable {
         if (g == null) return;
         try {
             GuiaDeViajeEJB.avanzarEstadoAdmin(SesionActual.token(), g.getId());
-            guias = GuiaDeViajeEJB.listarParaActor(SesionActual.token());
+            guias = new ArrayList<>(GuiaDeViajeEJB.listarParaActor(SesionActual.token()));
             mostrarMensaje(
                     FacesMessage.SEVERITY_INFO,
                     "Estado Actualizado",

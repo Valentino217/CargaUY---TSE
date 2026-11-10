@@ -42,11 +42,11 @@
                              size="small"
                              reflow="true">
 
-                    <p:column headerText="Guía #" filterBy="#{g.id}" filterMatchMode="exact" style="width: 100px; text-align: center;" filterPlaceholder="Guía #">
+                    <p:column headerText="Guía #" sortBy="#{g.id}" filterBy="#{g.id}" filterMatchMode="exact" style="width: 100px; text-align: center;" filterPlaceholder="Guía #">
                         <span class="cuy-mono">##{g.id}</span>
                     </p:column>
 
-                    <p:column headerText="Fecha" filterBy="#{g.fecha}" filterMatchMode="contains" filterPlaceholder="Fecha" style="width: 125px;">
+                    <p:column headerText="Fecha" sortBy="#{g.fecha}" filterBy="#{g.fecha}" filterMatchMode="contains" filterPlaceholder="Fecha" style="width: 125px;">
                         <h:outputText value="#{g.fecha}" />
                     </p:column>
 
@@ -55,7 +55,7 @@
                         <small style="display: block; color: var(--cuy-muted);">Rubro: #{g.rubroCliente} &#8226; Carga: <h:outputText value="#{g.volumenCarga}"><f:convertNumber pattern="#,##0" /></h:outputText> kg</small>
                     </p:column>
 
-                    <p:column headerText="Vehículo Asignado" filterBy="#{g.vehiculo.matricula}" filterMatchMode="contains" style="width: 165px;" filterPlaceholder="Vehículo Asignado">
+                    <p:column headerText="Vehículo Asignado" sortBy="#{g.vehiculo.matricula}" filterBy="#{g.vehiculo.matricula}" filterMatchMode="contains" style="width: 165px;" filterPlaceholder="Vehículo Asignado">
                         <ui:fragment rendered="#{not empty g.vehiculo}">
                             <span class="cuy-mono"><i class="pi pi-car" /> #{g.vehiculo.matricula}</span>
                             <small style="display: block; color: var(--cuy-muted); margin-top: 2px;">#{g.vehiculo.marca} #{g.vehiculo.modelo}</small>

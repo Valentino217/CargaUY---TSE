@@ -80,9 +80,9 @@ public class BandejaInfraccionesBean implements Serializable {
     public void cargarInfracciones() {
         try {
             if (tieneContextoWeb()) {
-                this.infracciones = infraccionesService.listarInfracciones(SesionActual.token(), filtroEstado, filtroTipo);
+                this.infracciones = new ArrayList<>(infraccionesService.listarInfracciones(SesionActual.token(), filtroEstado, filtroTipo));
             } else {
-                this.infracciones = infraccionesService.listarInfracciones(filtroEstado, filtroTipo);
+                this.infracciones = new ArrayList<>(infraccionesService.listarInfracciones(filtroEstado, filtroTipo));
             }
         } catch (Exception excepcion) {
             LOGGER.log(Level.SEVERE, "Error al listar infracciones", excepcion);
@@ -191,7 +191,7 @@ public class BandejaInfraccionesBean implements Serializable {
     }
 
     public void setInfracciones(List<InfraccionDTO> infracciones) {
-        this.infracciones = infracciones;
+        this.infracciones = infracciones == null ? new ArrayList<>() : new ArrayList<>(infracciones);
     }
 
     public EstadoInfraccion getFiltroEstado() {

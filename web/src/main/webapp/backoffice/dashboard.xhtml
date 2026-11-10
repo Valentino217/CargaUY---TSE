@@ -289,7 +289,7 @@
                         <h:outputText value="#{inf.guiaId()}" />
                     </p:column>
 
-                    <p:column headerText="Tipo" sortBy="#{inf.tipo()}" filterBy="#{inf.tipo()}" filterMatchMode="exact" style="width: 175px;">
+                    <p:column headerText="Tipo" filterBy="#{inf.tipo()}" filterMatchMode="exact" style="width: 175px;">
                         <f:facet name="filter">
                             <p:selectOneMenu onchange="PF('dtConsolidada').filter()" styleClass="ui-custom-filter" style="width: 100%;">
                                 <f:selectItem itemLabel="Tipo" itemValue="#{null}" noSelectionOption="true" />
@@ -302,7 +302,7 @@
                                rounded="true" />
                     </p:column>
 
-                    <p:column headerText="Estado" sortBy="#{inf.estado()}" filterBy="#{inf.estado()}" filterMatchMode="exact" style="width: 155px;">
+                    <p:column headerText="Estado" filterBy="#{inf.estado()}" filterMatchMode="exact" style="width: 155px;">
                         <f:facet name="filter">
                             <p:selectOneMenu onchange="PF('dtConsolidada').filter()" styleClass="ui-custom-filter" style="width: 100%;">
                                 <f:selectItem itemLabel="Estado" itemValue="#{null}" noSelectionOption="true" />

@@ -67,7 +67,7 @@ public class AdminUsuariosBean implements Serializable {
 
     public void cargarUsuarios() {
         try {
-            usuarios = perfilesService.listarUsuarios(SesionActual.token(), null, 0, 100);
+            usuarios = new ArrayList<>(perfilesService.listarUsuarios(SesionActual.token(), null, 0, 100));
         } catch (Exception e) {
             usuarios = new ArrayList<>();
             mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error", "No se pudieron listar los usuarios: " + e.getMessage());

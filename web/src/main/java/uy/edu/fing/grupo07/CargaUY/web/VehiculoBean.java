@@ -84,7 +84,7 @@ public class VehiculoBean implements Serializable {
             mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error", "No se pudieron cargar las empresas: " + extraerMensaje(e));
         }
         try {
-            vehiculos = vehiculoEJB.listarParaActor(token);
+            vehiculos = new ArrayList<>(vehiculoEJB.listarParaActor(token));
         } catch (Exception e) {
             vehiculos = new ArrayList<>();
             mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error", "No se pudo inicializar la flota: " + extraerMensaje(e));
@@ -189,7 +189,7 @@ public class VehiculoBean implements Serializable {
                 mostrarMensaje(FacesMessage.SEVERITY_INFO, "Unidad Registrada", "El vehículo " + vehiculo.getMatricula() + " fue dado de alta correctamente.");
             }
 
-            vehiculos = vehiculoEJB.listarParaActor(SesionActual.token());
+            vehiculos = new ArrayList<>(vehiculoEJB.listarParaActor(SesionActual.token()));
             nuevo();
 
         } catch (Exception e) {
@@ -248,7 +248,7 @@ public class VehiculoBean implements Serializable {
     public void eliminar(Vehiculo v) {
         try {
             vehiculoEJB.eliminar(SesionActual.token(), v);
-            vehiculos = vehiculoEJB.listarParaActor(SesionActual.token());
+            vehiculos = new ArrayList<>(vehiculoEJB.listarParaActor(SesionActual.token()));
 
             mostrarMensaje(
                     FacesMessage.SEVERITY_INFO,

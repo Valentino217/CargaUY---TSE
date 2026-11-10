@@ -219,7 +219,7 @@ public class DetalleViajeBean implements Serializable {
         try {
             List<EventoViajeDTO> evList = eventosService.listarEventosPorGuia(guiaIdSeleccionada);
             if (evList != null) {
-                this.eventos = evList;
+                this.eventos = new ArrayList<>(evList);
             } else {
                 this.eventos = new ArrayList<>();
             }
@@ -231,7 +231,7 @@ public class DetalleViajeBean implements Serializable {
         try {
             List<PesadaBalanzaDTO> pesList = balanzaService.listarPesadasPorGuia(guiaIdSeleccionada);
             if (pesList != null) {
-                this.pesadas = pesList;
+                this.pesadas = new ArrayList<>(pesList);
             } else {
                 this.pesadas = new ArrayList<>();
             }
@@ -588,7 +588,7 @@ public class DetalleViajeBean implements Serializable {
             this.nuevoIncidenteLatitud = null;
             this.nuevoIncidenteLongitud = null;
 
-            this.eventos = eventosService.listarEventosPorGuia(guiaIdSeleccionada);
+            this.eventos = new ArrayList<>(eventosService.listarEventosPorGuia(guiaIdSeleccionada));
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error al reportar incidente", e);
             mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error", e.getMessage());
@@ -769,7 +769,7 @@ public class DetalleViajeBean implements Serializable {
     }
 
     public void setEventos(List<EventoViajeDTO> eventos) {
-        this.eventos = eventos;
+        this.eventos = eventos == null ? new ArrayList<>() : new ArrayList<>(eventos);
     }
 
     public List<PesadaBalanzaDTO> getPesadas() {
@@ -777,7 +777,7 @@ public class DetalleViajeBean implements Serializable {
     }
 
     public void setPesadas(List<PesadaBalanzaDTO> pesadas) {
-        this.pesadas = pesadas;
+        this.pesadas = pesadas == null ? new ArrayList<>() : new ArrayList<>(pesadas);
     }
 
     public String getNuevoIncidenteDescripcion() {

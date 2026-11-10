@@ -101,6 +101,9 @@ public class PortalPublicoBean implements Serializable {
     private List<GuiaDeViaje> guiasPublicas;
     private Empresa empresaInspeccionada;
     private DashboardResumenDTO resumen;
+    private transient List<EstadisticaCorredorPublico> actividadOrdenable;
+    private transient List<EstadisticaFlotaPublica> flotaOrdenable;
+    private transient List<Map.Entry<TipoEstado, Long>> estadosOrdenables;
 
     @PostConstruct
     public void init() {
@@ -108,6 +111,9 @@ public class PortalPublicoBean implements Serializable {
     }
 
     public void cargarDatosPublicos() {
+        actividadOrdenable = null;
+        flotaOrdenable = null;
+        estadosOrdenables = null;
         try {
             empresasPublicas = vehiculoEJB != null ? vehiculoEJB.listarEmpresas() : new ArrayList<>();
             vehiculosPublicos = vehiculoEJB != null ? vehiculoEJB.listarVehiculos() : new ArrayList<>();
@@ -131,6 +137,13 @@ public class PortalPublicoBean implements Serializable {
      * sin exponer identificadores de guía, empresa, matrícula ni chofer.
      */
     public List<EstadisticaCorredorPublico> getEstadisticasActividadAgregada() {
+        if (actividadOrdenable == null) {
+            actividadOrdenable = calcularEstadisticasActividadAgregada();
+        }
+        return actividadOrdenable;
+    }
+
+    private List<EstadisticaCorredorPublico> calcularEstadisticasActividadAgregada() {
         List<EstadisticaCorredorPublico> resultado = new ArrayList<>();
         if (guiasPublicas == null || guiasPublicas.size() < UMBRAL_MINIMO_AGREGACION_K) {
             return resultado;
@@ -189,6 +202,13 @@ public class PortalPublicoBean implements Serializable {
      * sin exponer matrículas individuales ni razón social titular.
      */
     public List<EstadisticaFlotaPublica> getEstadisticasFlotaAgregada() {
+        if (flotaOrdenable == null) {
+            flotaOrdenable = calcularEstadisticasFlotaAgregada();
+        }
+        return flotaOrdenable;
+    }
+
+    private List<EstadisticaFlotaPublica> calcularEstadisticasFlotaAgregada() {
         List<EstadisticaFlotaPublica> resultado = new ArrayList<>();
         if (vehiculosPublicos == null || vehiculosPublicos.size() < UMBRAL_MINIMO_AGREGACION_K) {
             return resultado;
@@ -342,7 +362,10 @@ public class PortalPublicoBean implements Serializable {
         if (resumen == null || resumen.guiasPorEstado() == null) {
             return new ArrayList<>();
         }
-        return new ArrayList<>(resumen.guiasPorEstado().entrySet());
+        if (estadosOrdenables == null) {
+            estadosOrdenables = new ArrayList<>(resumen.guiasPorEstado().entrySet());
+        }
+        return estadosOrdenables;
     }
 
     public String getCriterioBusquedaEmpresa() {
@@ -375,6 +398,7 @@ public class PortalPublicoBean implements Serializable {
 
     public void setVehiculosPublicos(List<Vehiculo> vehiculosPublicos) {
         this.vehiculosPublicos = vehiculosPublicos;
+        flotaOrdenable = null;
     }
 
     public List<GuiaDeViaje> getGuiasPublicas() {
@@ -383,6 +407,7 @@ public class PortalPublicoBean implements Serializable {
 
     public void setGuiasPublicas(List<GuiaDeViaje> guiasPublicas) {
         this.guiasPublicas = guiasPublicas;
+        actividadOrdenable = null;
     }
 
     public Empresa getEmpresaInspeccionada() {
@@ -399,5 +424,6 @@ public class PortalPublicoBean implements Serializable {
 
     public void setResumen(DashboardResumenDTO resumen) {
         this.resumen = resumen;
+        estadosOrdenables = null;
     }
 }

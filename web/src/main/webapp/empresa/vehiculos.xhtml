@@ -42,11 +42,11 @@
                              size="small"
                              reflow="true">
 
-                    <p:column headerText="Matrícula" filterBy="#{v.matricula}" filterMatchMode="contains" style="width: 150px;" filterPlaceholder="Matrícula">
+                    <p:column headerText="Matrícula" sortBy="#{v.matricula}" filterBy="#{v.matricula}" filterMatchMode="contains" style="width: 150px;" filterPlaceholder="Matrícula">
                         <span class="cuy-mono">#{v.matricula}</span>
                     </p:column>
 
-                    <p:column headerText="Empresa Propietaria" filterBy="#{v.empresa.razonSocial}" filterMatchMode="contains" filterPlaceholder="Empresa Propietaria">
+                    <p:column headerText="Empresa Propietaria" sortBy="#{v.empresa.razonSocial}" filterBy="#{v.empresa.razonSocial}" filterMatchMode="contains" filterPlaceholder="Empresa Propietaria">
                         <strong>#{v.empresa.razonSocial}</strong>
                         <small style="display: block; color: var(--cuy-muted);">Nro. #{v.empresa.nroEmpresa}</small>
                     </p:column>
@@ -55,14 +55,14 @@
                         #{v.marca} &#8226; #{v.modelo}
                     </p:column>
 
-                    <p:column headerText="Tara / Peso Propio" filterBy="#{v.peso}" filterMatchMode="contains" filterPlaceholder="Tara / Peso Propio" style="width: 150px; text-align: right;">
+                    <p:column headerText="Tara / Peso Propio" sortBy="#{v.peso}" filterBy="#{v.peso}" filterMatchMode="contains" filterPlaceholder="Tara / Peso Propio" style="width: 150px; text-align: right;">
                         <h:outputText value="#{v.peso}">
                             <f:convertNumber pattern="#,##0" />
                         </h:outputText>
                         <span> kg</span>
                     </p:column>
 
-                    <p:column headerText="Capacidad de Carga" filterBy="#{v.capacidadCarga}" filterMatchMode="contains" filterPlaceholder="Capacidad de Carga" style="width: 165px; text-align: right;">
+                    <p:column headerText="Capacidad de Carga" sortBy="#{v.capacidadCarga}" filterBy="#{v.capacidadCarga}" filterMatchMode="contains" filterPlaceholder="Capacidad de Carga" style="width: 165px; text-align: right;">
                         <strong>
                             <h:outputText value="#{v.capacidadCarga}">
                                 <f:convertNumber pattern="#,##0" />

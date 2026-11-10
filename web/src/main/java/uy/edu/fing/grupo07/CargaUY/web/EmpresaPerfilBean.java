@@ -57,7 +57,7 @@ public class EmpresaPerfilBean implements Serializable {
                 mailEdit = perfilUsuario.mail();
                 fechaNacEdit = perfilUsuario.fechaNac();
             }
-            misEmpresas = perfilesService.listarEmpresas(token, 0, 50);
+            misEmpresas = new ArrayList<>(perfilesService.listarEmpresas(token, 0, 50));
         } catch (Exception e) {
             misEmpresas = new ArrayList<>();
             mostrarMensaje(FacesMessage.SEVERITY_WARN, "Aviso", "No se pudieron cargar todos los datos del perfil: " + e.getMessage());

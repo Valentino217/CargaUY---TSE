@@ -6,6 +6,8 @@ import jakarta.faces.context.FacesContext;
 import jakarta.faces.view.ViewScoped;
 import jakarta.inject.Named;
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import uy.edu.fing.grupo07.CargaUY.dto.ValidacionEmpresaDTO;
@@ -21,15 +23,18 @@ public class ValidacionPermisosBean implements Serializable {
     @EJB private ValidacionPermisosService servicio;
     private Integer numeroEmpresa;
     private ValidacionEmpresaDTO resultado;
+    private List<ValidacionEmpresaDTO.Unidad> unidades = new ArrayList<>();
 
     public void consultar() {
         resultado = null;
+        unidades.clear();
         try {
             if (numeroEmpresa == null || numeroEmpresa <= 0) {
                 mensaje("Ingresá un número de empresa válido");
                 return;
             }
             resultado = servicio.consultar(SesionActual.token(), numeroEmpresa);
+            unidades.addAll(resultado.unidades());
         } catch (ErrorAcceso e) {
             mensaje(e.getMessage());
         } catch (RuntimeException e) {
@@ -46,4 +51,5 @@ public class ValidacionPermisosBean implements Serializable {
     public Integer getNumeroEmpresa() { return numeroEmpresa; }
     public void setNumeroEmpresa(Integer numeroEmpresa) { this.numeroEmpresa = numeroEmpresa; }
     public ValidacionEmpresaDTO getResultado() { return resultado; }
+    public List<ValidacionEmpresaDTO.Unidad> getUnidades() { return unidades; }
 }

@@ -70,7 +70,7 @@ public class EmpresaInfraccionesBean implements Serializable {
 
     public void cargarInfracciones() {
         try {
-            this.infracciones = infraccionesService.listarInfraccionesParaEmpresa(SesionActual.token());
+            this.infracciones = new ArrayList<>(infraccionesService.listarInfraccionesParaEmpresa(SesionActual.token()));
         } catch (Exception e) {
             this.infracciones = new ArrayList<>();
             mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error", "No se pudieron cargar las infracciones: " + e.getMessage());

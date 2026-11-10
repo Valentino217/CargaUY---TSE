@@ -49,7 +49,7 @@ public class BandejaFiscalizacionBean implements Serializable {
 
     public void cargarCasos() {
         try {
-            this.casos = infraccionesService.listarInfracciones(SesionActual.token(), null, null);
+            this.casos = new ArrayList<>(infraccionesService.listarInfracciones(SesionActual.token(), null, null));
         } catch (Exception e) {
             this.casos = new ArrayList<>();
             mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error", "No se pudieron cargar los casos: " + e.getMessage());

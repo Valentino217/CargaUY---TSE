@@ -76,11 +76,11 @@
                         </div>
                     </f:facet>
 
-                    <p:column headerText="Caso #" filterBy="#{inf.idCaso()}" filterMatchMode="contains" filterPlaceholder="Caso #" style="width: 100px; text-align: center;">
+                    <p:column headerText="Caso #" sortBy="#{inf.idCaso()}" filterBy="#{inf.idCaso()}" filterMatchMode="contains" filterPlaceholder="Caso #" style="width: 100px; text-align: center;">
                         <span class="cuy-mono">#<h:outputText value="#{inf.idCaso()}" /></span>
                     </p:column>
 
-                    <p:column headerText="Fecha" filterBy="#{inf.fecha()}" filterMatchMode="contains" filterPlaceholder="Fecha" style="width: 125px;">
+                    <p:column headerText="Fecha" sortBy="#{inf.fecha()}" filterBy="#{inf.fecha()}" filterMatchMode="contains" filterPlaceholder="Fecha" style="width: 125px;">
                         <h:outputText value="#{inf.fecha()}" />
                     </p:column>
 
@@ -97,7 +97,7 @@
                                rounded="true" />
                     </p:column>
 
-                    <p:column headerText="Guía / Matrícula" filterBy="#{inf.matricula()} #{inf.guiaId()}" filterMatchMode="contains" filterPlaceholder="Guía / Matrícula" style="width: 165px;">
+                    <p:column headerText="Guía / Matrícula" sortBy="#{inf.matricula()}" filterBy="#{inf.matricula()} #{inf.guiaId()}" filterMatchMode="contains" filterPlaceholder="Guía / Matrícula" style="width: 165px;">
                         <span class="cuy-mono"><i class="pi pi-car" /> #{inf.matricula() != null ? inf.matricula() : 'S/D'}</span>
                         <div style="font-size: 0.78rem; color: #64748b;">
                             #{inf.guiaId() != null ? 'Guía #'.concat(inf.guiaId().toString()) : 'Sin guía activa'}

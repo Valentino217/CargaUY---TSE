@@ -43,8 +43,8 @@ public class AdminCatalogosBean implements Serializable {
     public void cargarCatalogos() {
         try {
             String token = SesionActual.token();
-            rubros = plataformaService.listarRubros(token);
-            tiposCarga = plataformaService.listarTiposCarga(token);
+            rubros = new ArrayList<>(plataformaService.listarRubros(token));
+            tiposCarga = new ArrayList<>(plataformaService.listarTiposCarga(token));
         } catch (Exception e) {
             rubros = new ArrayList<>();
             tiposCarga = new ArrayList<>();

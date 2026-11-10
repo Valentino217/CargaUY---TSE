@@ -70,11 +70,11 @@
                         </div>
                     </f:facet>
 
-                    <p:column headerText="N° Empresa" filterBy="#{emp.numero()}" filterMatchMode="contains" style="width: 120px;" filterPlaceholder="N° Empresa">
+                    <p:column headerText="N° Empresa" sortBy="#{emp.numero()}" filterBy="#{emp.numero()}" filterMatchMode="contains" style="width: 120px;" filterPlaceholder="N° Empresa">
                         <span class="cuy-mono">#<h:outputText value="#{emp.numero()}" /></span>
                     </p:column>
 
-                    <p:column headerText="Razón Social" filterBy="#{emp.razonSocial()}" filterMatchMode="contains" filterPlaceholder="Razón Social">
+                    <p:column headerText="Razón Social" sortBy="#{emp.razonSocial()}" filterBy="#{emp.razonSocial()}" filterMatchMode="contains" filterPlaceholder="Razón Social">
                         <strong style="color: #0f2942;">#{emp.razonSocial()}</strong>
                     </p:column>
 

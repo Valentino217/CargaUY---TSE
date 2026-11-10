@@ -12,13 +12,22 @@
     <ui:define name="title">Panel Principal</ui:define>
 
     <ui:define name="head">
-        <link rel="stylesheet" href="#{request.contextPath}/css/panel-admin.css?v=encabezado" />
+        <link rel="stylesheet" href="#{request.contextPath}/css/panel-admin.css?v=secciones-ancho" />
         <script src="#{request.contextPath}/js/panel-admin.js?v=encabezado" defer="defer"></script>
+    </ui:define>
+
+    <ui:define name="mobilePanelIntro">
+        <div class="cuy-portal-intro cuy-panel-intro-mobile">
+            <div class="cuy-portal-width">
+                <h1>Panel Principal</h1>
+                <p>Accedé a las herramientas de CargaUY</p>
+            </div>
+        </div>
     </ui:define>
 
     <ui:define name="content">
         <ui:fragment rendered="#{authBean.esAdministrador()}">
-            <header class="cuy-portal-intro">
+            <header class="cuy-portal-intro cuy-panel-intro-desktop">
                 <div class="cuy-portal-width">
                     <h1>Panel Principal</h1>
                     <p>Accedé a las herramientas de CargaUY</p>
@@ -129,13 +138,12 @@
         </ui:fragment>
 
         <ui:fragment rendered="#{not authBean.esAdministrador()}">
-            <div class="cuy-page-header">
+            <div class="cuy-page-header cuy-panel-intro-desktop">
                 <div>
                     <h1 class="cuy-page-title">Panel Principal</h1>
                     <p class="cuy-page-subtitle">Accedé a las herramientas de CargaUY</p>
                 </div>
             </div>
-
             <p id="cuy-panel-legacy-status" role="status" class="cuy-panel-status"></p>
             <div id="cuy-panel-legacy" class="cuy-grid-cards">
                 <!-- Accesos Ciudadano Común -->

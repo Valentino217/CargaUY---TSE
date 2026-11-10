@@ -251,9 +251,45 @@ body .ui-datatable th.ui-filter-column .ui-column-filter {
     margin: 0;
 }
 
-body .ui-datatable th.ui-filter-column.ui-sortable-column .ui-column-filter {
-    display: inline-block;
-    width: calc(100% - 1.5rem);
+body .ui-datatable th.ui-sortable-column > .ui-sortable-column-icon {
+    display: none;
+}
+
+body .ui-datatable th.ui-sortable-column {
+    cursor: pointer;
+}
+
+body .ui-datatable th.ui-filter-column.ui-sortable-column {
+    position: relative;
+    vertical-align: middle;
+    /* El tema del encabezado usa padding !important. Reservar este espacio evita el solapamiento. */
+    padding-inline-start: 2.5rem !important;
+}
+
+body .ui-datatable th.ui-filter-column.ui-sortable-column > .ui-sortable-column-icon {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0.65rem;
+    display: grid;
+    place-items: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    margin: auto 0;
+    line-height: 1;
+}
+
+/* El clic debe llegar al span que PrimeFaces usa para ordenar. */
+body .ui-datatable th.ui-filter-column.ui-sortable-column > .ui-sortable-column-icon * {
+    pointer-events: none;
+}
+
+body .ui-datatable th.ui-filter-column.ui-sortable-column .ui-column-customfilter {
+    margin: 0;
+    padding: 0;
+}
+
+body .ui-datatable th.ui-filter-column.ui-sortable-column input {
+    display: block;
 }
 
 .cuy-header { gap: 24px; padding-block: 16px; }
@@ -337,7 +373,7 @@ body .login-form label { line-height: 1.5; }
 
 @media (max-width: 768px) {
     .cuy-header { flex-wrap: wrap; gap: 16px; }
-    .cuy-portal-search { order: 1; width: 100%; }
+    .cuy-portal-search { display: none; }
     .cuy-portal-user { padding-inline: 0.5rem; }
     body .cuy-main > .cuy-page-header { margin-top: -1rem; }
     .cuy-user-box { gap: 10px; }

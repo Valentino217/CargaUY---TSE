@@ -120,14 +120,14 @@
                     <!-- Tabla de Flota -->
                     <p:dataTable id="tablaValidarPermisos"
                                  widgetVar="dtValidarPermisos"
-                                 value="#{validacionPermisosBean.resultado.unidades()}"
+                                 value="#{validacionPermisosBean.unidades}"
                                  var="u"
                                  emptyMessage="Sin vehículos registrados: información insuficiente para evaluar la flota."
                                  stripedRows="true"
                                  size="small"
                                  reflow="true">
 
-                        <p:column headerText="Matrícula" filterBy="#{u.matricula()}" filterMatchMode="contains" filterPlaceholder="Matrícula" style="width: 130px; text-align: center;">
+                        <p:column headerText="Matrícula" sortBy="#{u.matricula()}" filterBy="#{u.matricula()}" filterMatchMode="contains" filterPlaceholder="Matrícula" style="width: 130px; text-align: center;">
                             <span class="cuy-mono" style="font-weight: 700; font-size: 0.95rem;">
                                 <h:outputText value="#{u.matricula()}"/>
                             </span>
@@ -161,7 +161,7 @@
                                    rounded="true" />
                         </p:column>
 
-                        <p:column headerText="Vencimiento PNC" filterBy="#{u.vencimientoPnc()}" filterMatchMode="contains" filterPlaceholder="Vencimiento PNC" style="width: 140px; text-align: center;">
+                        <p:column headerText="Vencimiento PNC" sortBy="#{u.vencimientoPnc()}" filterBy="#{u.vencimientoPnc()}" filterMatchMode="contains" filterPlaceholder="Vencimiento PNC" style="width: 140px; text-align: center;">
                             <h:outputText value="#{u.vencimientoPnc() != null ? u.vencimientoPnc() : 'S/D'}"/>
                         </p:column>
 
@@ -180,7 +180,7 @@
                                    rounded="true" />
                         </p:column>
 
-                        <p:column headerText="Vencimiento ITV" filterBy="#{u.vencimientoItv()}" filterMatchMode="contains" filterPlaceholder="Vencimiento ITV" style="width: 140px; text-align: center;">
+                        <p:column headerText="Vencimiento ITV" sortBy="#{u.vencimientoItv()}" filterBy="#{u.vencimientoItv()}" filterMatchMode="contains" filterPlaceholder="Vencimiento ITV" style="width: 140px; text-align: center;">
                             <h:outputText value="#{u.vencimientoItv() != null ? u.vencimientoItv() : 'S/D'}"/>
                         </p:column>
 

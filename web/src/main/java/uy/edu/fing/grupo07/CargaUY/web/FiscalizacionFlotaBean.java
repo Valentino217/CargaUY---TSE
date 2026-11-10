@@ -55,7 +55,7 @@ public class FiscalizacionFlotaBean implements Serializable {
 
     public void cargarFlota() {
         try {
-            vehiculos = vehiculoEJB.listarVehiculos();
+            vehiculos = new ArrayList<>(vehiculoEJB.listarVehiculos());
             itvs = itvEJB.listarITVs();
             pncs = pncEJB.listarPNCs();
         } catch (Exception e) {

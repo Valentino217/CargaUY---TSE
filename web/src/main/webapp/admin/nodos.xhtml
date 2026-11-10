@@ -35,11 +35,11 @@
                              stripedRows="true"
                              size="small">
 
-                    <p:column headerText="Código" filterBy="#{nodo.codigo()}" filterMatchMode="contains" filterPlaceholder="Código" style="width: 135px;">
+                    <p:column headerText="Código" sortBy="#{nodo.codigo()}" filterBy="#{nodo.codigo()}" filterMatchMode="contains" filterPlaceholder="Código" style="width: 135px;">
                         <span class="cuy-mono">#{nodo.codigo()}</span>
                     </p:column>
 
-                    <p:column headerText="Nodo / Subsistema" filterBy="#{nodo.nombre()}" filterMatchMode="contains" filterPlaceholder="Nodo / Subsistema" style="width: 250px;">
+                    <p:column headerText="Nodo / Subsistema" sortBy="#{nodo.nombre()}" filterBy="#{nodo.nombre()}" filterMatchMode="contains" filterPlaceholder="Nodo / Subsistema" style="width: 250px;">
                         <strong style="color: #0f2942;">#{nodo.nombre()}</strong>
                     </p:column>
 

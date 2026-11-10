@@ -43,8 +43,8 @@
                                          update="tablaRubrosAdmin :growl"
                                          styleClass="ui-button-primary" />
                     </div>
-                    <p:dataTable id="tablaRubrosAdmin" widgetVar="dtRubrosAdmin" var="rub" value="#{adminCatalogosBean.rubros}" size="small" stripedRows="true" paginator="true" rows="8">
-                        <p:column headerText="Cód." filterBy="#{rub.codigo()}" filterMatchMode="contains" filterPlaceholder="Cód." style="width: 100px;">
+                    <p:dataTable id="tablaRubrosAdmin" widgetVar="dtRubrosAdmin" var="rub" value="#{adminCatalogosBean.rubros}" size="small" stripedRows="true" paginator="true" paginatorPosition="bottom" rows="8">
+                        <p:column headerText="Cód." sortBy="#{rub.codigo()}" filterBy="#{rub.codigo()}" filterMatchMode="contains" filterPlaceholder="Cód." style="width: 100px;">
                             <span class="cuy-mono">##{rub.codigo()}</span>
                         </p:column>
                         <p:column headerText="Rubro" filterBy="#{rub.nombre()}" filterMatchMode="contains" filterPlaceholder="Rubro">
@@ -75,8 +75,8 @@
                                          update="tablaTiposCargaAdmin :growl"
                                          styleClass="ui-button-primary" />
                     </div>
-                    <p:dataTable id="tablaTiposCargaAdmin" widgetVar="dtTiposCargaAdmin" var="tc" value="#{adminCatalogosBean.tiposCarga}" size="small" stripedRows="true" paginator="true" rows="8">
-                        <p:column headerText="Cód." filterBy="#{tc.codigo()}" filterMatchMode="contains" filterPlaceholder="Cód." style="width: 100px;">
+                    <p:dataTable id="tablaTiposCargaAdmin" widgetVar="dtTiposCargaAdmin" var="tc" value="#{adminCatalogosBean.tiposCarga}" size="small" stripedRows="true" paginator="true" paginatorPosition="bottom" rows="8">
+                        <p:column headerText="Cód." sortBy="#{tc.codigo()}" filterBy="#{tc.codigo()}" filterMatchMode="contains" filterPlaceholder="Cód." style="width: 100px;">
                             <span class="cuy-mono">##{tc.codigo()}</span>
                         </p:column>
                         <p:column headerText="Descripción" filterBy="#{tc.descripcion()}" filterMatchMode="contains" filterPlaceholder="Descripción">
