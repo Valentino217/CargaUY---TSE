@@ -409,6 +409,8 @@ fun MainScreen(
     var cargandoLoginGub by remember { mutableStateOf(false) }
     var cargandoDevToken by remember { mutableStateOf(false) }
     var mostrarAvanzadoDev by rememberSaveable { mutableStateOf(false) }
+    var modoDevHabilitado by rememberSaveable { mutableStateOf(Constants.HABILITAR_OPCIONES_DEV) }
+    var contadorClicksDev by remember { mutableStateOf(0) }
 
     Column(
         modifier = Modifier
@@ -420,7 +422,15 @@ fun MainScreen(
             text = "CargaUY - App Chofer",
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFF1E3A8A)
+            color = Color(0xFF1E3A8A),
+            modifier = Modifier.clickable {
+                contadorClicksDev++
+                if (contadorClicksDev >= 5) {
+                    modoDevHabilitado = !modoDevHabilitado
+                    contadorClicksDev = 0
+                    onMensajeGlobal(if (modoDevHabilitado) "Opciones de desarrollo habilitadas" else "Opciones de desarrollo ocultas")
+                }
+            }
         )
         Text(
             text = "Gestion de guias de viaje y registro de eventos en ruta",
@@ -540,129 +550,131 @@ fun MainScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        if (modoDevHabilitado) {
+            Spacer(modifier = Modifier.height(12.dp))
 
-        // Opciones de pruebas de desarrollo
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { mostrarAvanzadoDev = !mostrarAvanzadoDev }
-                .padding(vertical = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = if (mostrarAvanzadoDev) "▲ Ocultar opciones de pruebas (Dev)" else "▼ Opciones de pruebas y manual (Dev)",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color(0xFF64748B)
-            )
-        }
-
-        if (mostrarAvanzadoDev) {
-            Spacer(modifier = Modifier.height(6.dp))
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F5F9)),
-                shape = RoundedCornerShape(8.dp)
+            // Opciones de pruebas de desarrollo
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { mostrarAvanzadoDev = !mostrarAvanzadoDev }
+                    .padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text(
-                        text = "Conexión con el Servidor:",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF475569)
-                    )
-                    Text(
-                        text = "Activo: ${RetrofitClient.activeBaseUrl}",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF0284C7)
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = {
-                                RetrofitClient.actualizarBaseUrl("http://10.0.2.2:8080/")
-                                onMensajeGlobal("Cambiado a host de emulador 10.0.2.2:8080")
-                            },
-                            modifier = Modifier.weight(1f)
+                Text(
+                    text = if (mostrarAvanzadoDev) "▲ Ocultar opciones de pruebas (Dev)" else "▼ Opciones de pruebas y manual (Dev)",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFF64748B)
+                )
+            }
+
+            if (mostrarAvanzadoDev) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F5F9)),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            text = "Conexión con el Servidor:",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF475569)
+                        )
+                        Text(
+                            text = "Activo: ${RetrofitClient.activeBaseUrl}",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF0284C7)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text("10.0.2.2 (Emulador)", fontSize = 10.sp)
-                        }
-                        OutlinedButton(
-                            onClick = {
-                                RetrofitClient.actualizarBaseUrl("http://10.0.0.16:8080/")
-                                onMensajeGlobal("Cambiado a host LAN 10.0.0.16:8080")
-                            },
-                            modifier = Modifier.weight(1f)
-                        ) {
-                            Text("10.0.0.16 (LAN)", fontSize = 10.sp)
-                        }
-                    }
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(
-                        text = "Configuración manual de chofer (sin OIDC)",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF475569)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = cedulaTexto,
-                        onValueChange = { nuevo ->
-                            onCedulaChange(nuevo.filter { it.isDigit() })
-                        },
-                        label = { Text("Cédula de Identidad manual (CI)") },
-                        placeholder = { Text("Ej: 11223344") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    var tokenTexto by remember(SesionMovil.token) { mutableStateOf(SesionMovil.token) }
-                    OutlinedTextField(
-                        value = tokenTexto,
-                        onValueChange = {
-                            tokenTexto = it.trim()
-                            SesionMovil.token = tokenTexto
-                        },
-                        label = { Text("Token Bearer manual") },
-                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(
-                        onClick = {
-                            val ci = cedulaTexto.toIntOrNull() ?: Constants.DEFAULT_CEDULA
-                            cargandoDevToken = true
-                            scope.launch {
-                                try {
-                                    val res = RetrofitClient.executeWithFallback { api ->
-                                        api.obtenerDevToken(mapOf("ci" to ci))
-                                    }
-                                    val tok = (res["token"] as? String) ?: ""
-                                    SesionMovil.token = tok
-                                    SesionMovil.cedulaAsociada = ci
-                                    SesionMovil.nombreChofer = (res["nombre"] as? String) ?: "Chofer Dev #$ci"
-                                    tokenTexto = tok
-                                    cargandoDevToken = false
-                                    onMensajeGlobal("Token Dev obtenido para CI $ci")
-                                } catch (e: Exception) {
-                                    cargandoDevToken = false
-                                    onMensajeGlobal("Fallo al obtener token Dev: ${e.message}")
-                                }
+                            OutlinedButton(
+                                onClick = {
+                                    RetrofitClient.actualizarBaseUrl("http://10.0.2.2:8080/")
+                                    onMensajeGlobal("Cambiado a host de emulador 10.0.2.2:8080")
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("10.0.2.2 (Emulador)", fontSize = 10.sp)
                             }
-                        },
-                        enabled = !cargandoDevToken,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF475569)),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(if (cargandoDevToken) "Obteniendo token..." else "Obtener Token de Prueba Dev")
+                            OutlinedButton(
+                                onClick = {
+                                    RetrofitClient.actualizarBaseUrl("http://10.0.0.16:8080/")
+                                    onMensajeGlobal("Cambiado a host LAN 10.0.0.16:8080")
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("10.0.0.16 (LAN)", fontSize = 10.sp)
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = "Configuración manual de chofer (sin OIDC)",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF475569)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = cedulaTexto,
+                            onValueChange = { nuevo ->
+                                onCedulaChange(nuevo.filter { it.isDigit() })
+                            },
+                            label = { Text("Cédula de Identidad manual (CI)") },
+                            placeholder = { Text("Ej: 11223344") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        var tokenTexto by remember(SesionMovil.token) { mutableStateOf(SesionMovil.token) }
+                        OutlinedTextField(
+                            value = tokenTexto,
+                            onValueChange = {
+                                tokenTexto = it.trim()
+                                SesionMovil.token = tokenTexto
+                            },
+                            label = { Text("Token Bearer manual") },
+                            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = {
+                                val ci = cedulaTexto.toIntOrNull() ?: Constants.DEFAULT_CEDULA
+                                cargandoDevToken = true
+                                scope.launch {
+                                    try {
+                                        val res = RetrofitClient.executeWithFallback { api ->
+                                            api.obtenerDevToken(mapOf("ci" to ci))
+                                        }
+                                        val tok = (res["token"] as? String) ?: ""
+                                        SesionMovil.token = tok
+                                        SesionMovil.cedulaAsociada = ci
+                                        SesionMovil.nombreChofer = (res["nombre"] as? String) ?: "Chofer Dev #$ci"
+                                        tokenTexto = tok
+                                        cargandoDevToken = false
+                                        onMensajeGlobal("Token Dev obtenido para CI $ci")
+                                    } catch (e: Exception) {
+                                        cargandoDevToken = false
+                                        onMensajeGlobal("Fallo al obtener token Dev: ${e.message}")
+                                    }
+                                }
+                            },
+                            enabled = !cargandoDevToken,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF475569)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(if (cargandoDevToken) "Obteniendo token..." else "Obtener Token de Prueba Dev")
+                        }
                     }
                 }
             }
