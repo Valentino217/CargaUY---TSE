@@ -61,7 +61,11 @@ public class GubServlet extends HttpServlet {
             WebSeguridad.error(r,s,401,"El proveedor no autorizó el ingreso"); return;
         }
         try {
-            WebSeguridad.iniciar(r,auth.loginGub(r.getParameter("code"),verifier,nonce));
+            var ingreso = auth.loginGubWeb(r.getParameter("code"), verifier, nonce);
+            WebSeguridad.iniciar(r, ingreso.login());
+            if (GubOidcClient.real()) {
+                r.getSession().setAttribute(WebSeguridad.GUB_ID_TOKEN, ingreso.idToken());
+            }
             s.sendRedirect(r.getContextPath()+"/index.xhtml");
         } catch(ErrorAcceso e) { WebSeguridad.error(r,s,e.getEstado(),e.getMessage()); }
     }

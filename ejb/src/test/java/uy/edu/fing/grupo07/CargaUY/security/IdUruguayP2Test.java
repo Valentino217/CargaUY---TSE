@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class IdUruguayP2Test {
  @Test void canjeBasicYDocumentoSinInventarNacimiento() throws Exception {
   String[] claves={"gub.proveedor","gub.issuer","gub.client.id","gub.client.secret","gub.redirect",
-   "gub.document.pais","gub.document.tipo","gub.jwks","gub.pkce","p1.entorno.local"};
+   "gub.document.pais","gub.document.tipo","gub.jwks","gub.pkce","gub.logout.redirect","p1.entorno.local"};
   Map<String,String> previos=new HashMap<>();for(String k:claves)previos.put(k,System.getProperty(k));
   var servidor=com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress("127.0.0.1",0),0);
   List<String> errores=Collections.synchronizedList(new ArrayList<>());
@@ -48,12 +48,18 @@ class IdUruguayP2Test {
    System.setProperty("gub.jwks",issuer+"/jwks");System.setProperty("gub.document.pais","UY");
    System.setProperty("gub.document.tipo","CI");System.setProperty("gub.pkce","false");
    servidor.start();
-   var identidad=new GubOidcClient().validar("codigo-ficticio",Cripto.aleatorio(),"nonce-prueba");
+   var verificada=new GubOidcClient().validarConToken("codigo-ficticio",Cripto.aleatorio(),"nonce-prueba",false);
+   var identidad=verificada.identidad();
    assertEquals(12345678,identidad.ci());assertNull(identidad.nacimiento());
    assertEquals(Cripto.hash(issuer+"\npersona-verificada"),identidad.subject());
    assertTrue(errores.isEmpty(),errores.toString());
    assertEquals(issuer+"/authorize",GubOidcClient.autorizacion());
    assertTrue(GubOidcClient.scopes().contains("document"));
+   String retorno="https://carga-uy.web.elasticloud.uy/CargaUY-web/portal/inicio.xhtml";
+   System.setProperty("gub.logout.redirect",retorno);
+   assertEquals(issuer+"/logout?id_token_hint="+jwt+"&post_logout_redirect_uri="+GubOidcClient.url(retorno),
+       GubOidcClient.logoutUrl(verificada.idToken()));
+   assertNull(GubOidcClient.logoutUrl(null));
    System.setProperty("gub.document.tipo","PASAPORTE");
    assertThrows(ErrorAcceso.class,()->new GubOidcClient().validar("otro-codigo",Cripto.aleatorio(),"nonce-prueba"));
   } finally {

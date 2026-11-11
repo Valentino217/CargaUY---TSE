@@ -192,10 +192,12 @@ public class AuthBean implements Serializable {
             } catch (Exception ignored) {
             }
         }
+        String destino = WebSeguridad.destinoLogout(req);
         HttpSession session = req.getSession(false);
         if (session != null) {
             session.invalidate();
         }
-        ext.redirect(req.getContextPath() + "/login");
+        ext.setResponseHeader("Cache-Control", "no-store");
+        ext.redirect(destino);
     }
 }

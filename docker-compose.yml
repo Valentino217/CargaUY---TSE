@@ -108,9 +108,10 @@ services:
       GUB_JWKS: https://auth-testing.iduruguay.gub.uy/oidc/v2/jwks
       GUB_CLIENT_ID: "890192"
       GUB_REDIRECT: ${GUB_REDIRECT:-https://carga-uy.web.elasticloud.uy/CargaUY-web/gub/callback}
+      GUB_LOGOUT_REDIRECT: ${GUB_LOGOUT_REDIRECT:-https://carga-uy.web.elasticloud.uy/CargaUY-web/portal/inicio.xhtml}
       GUB_PKCE: "false"
       GUB_MOBILE_ENABLED: "true"
-      GUB_MOBILE_REDIRECT: http://localhost:8080/CargaUY-web/gub/callback
+      GUB_MOBILE_REDIRECT: ${GUB_MOBILE_REDIRECT:-}
       GUB_DOCUMENT_PAIS: Uruguay
       GUB_DOCUMENT_TIPO: DNI
       GUB_DOCUMENT_ASUMIR_LOCAL: "true"

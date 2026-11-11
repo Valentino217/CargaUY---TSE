@@ -31,6 +31,15 @@ public class AutenticacionService {
     public SesionesService.Login loginGub(String code, String verifier, String nonce) {
         return sesiones.emitirGub(gub.validar(code, verifier, nonce));
     }
+
+    public record LoginGubWeb(SesionesService.Login login, String idToken) {
+        @Override public String toString() { return "LoginGubWeb"; }
+    }
+
+    public LoginGubWeb loginGubWeb(String code, String verifier, String nonce) {
+        var identidad = gub.validarConToken(code, verifier, nonce, false);
+        return new LoginGubWeb(sesiones.emitirGub(identidad.identidad()), identidad.idToken());
+    }
     
     public FlujosService.Inicio prepararMovil(String challenge){
     	return flujos.preparar(challenge);
