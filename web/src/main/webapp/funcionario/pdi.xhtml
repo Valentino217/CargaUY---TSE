@@ -55,7 +55,7 @@
                         <span><i class="pi pi-user" style="color: #0284c7; margin-right: 0.4rem;" /> Ficha Registral DNIC</span>
                         <h:panelGroup rendered="#{funcionarioEmpresasBean.resultadoPdi != null}">
                             <p:tag value="#{funcionarioEmpresasBean.resultadoPdi.estado()}"
-                                   severity="#{funcionarioEmpresasBean.resultadoPdi.estado().name() eq 'DISPONIBLE' ? 'success' : (funcionarioEmpresasBean.resultadoPdi.estado().name() eq 'NO_ENCONTRADO' ? 'warning' : 'danger')}"
+                                   severity="#{funcionarioEmpresasBean.resultadoPdi.estado().name() eq 'DISPONIBLE' ? 'success' : ((funcionarioEmpresasBean.resultadoPdi.estado().name() eq 'NO_ENCONTRADO' or funcionarioEmpresasBean.resultadoPdi.estado().name() eq 'PENDIENTE') ? 'warning' : 'danger')}"
                                    rounded="true" />
                         </h:panelGroup>
                     </h3>
@@ -143,7 +143,7 @@
 
                     <p:column headerText="Estado PDI" style="width: 150px; text-align: center;">
                         <p:tag value="#{item.estado()}"
-                               severity="#{item.estado().name() eq 'DISPONIBLE' ? 'success' : (item.estado().name() eq 'NO_ENCONTRADO' ? 'warning' : 'danger')}"
+                               severity="#{item.estado().name() eq 'DISPONIBLE' ? 'success' : ((item.estado().name() eq 'NO_ENCONTRADO' or item.estado().name() eq 'PENDIENTE') ? 'warning' : 'danger')}"
                                rounded="true" />
                     </p:column>
                 </p:dataTable>

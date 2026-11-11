@@ -65,7 +65,9 @@ public class ClientePdi {
                         HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
                     if(r.statusCode()!=200&&r.statusCode()!=500) throw new IOException("HTTP");
                     ResultadoPdi resultado=interpretar(r.body(),ci,id);
-                    if(r.statusCode()==500&&resultado.estado()!=ResultadoPdi.Estado.NO_ENCONTRADO)
+                    boolean fault = resultado.estado()==ResultadoPdi.Estado.NO_ENCONTRADO
+                        || resultado.estado()==ResultadoPdi.Estado.PENDIENTE;
+                    if((r.statusCode()==500)!=fault)
                         throw new IOException("Estado HTTP inconsistente");
                     exito=true;return resultado;
                 }catch(InterruptedException e){Thread.currentThread().interrupt();break;}
@@ -112,6 +114,12 @@ public class ClientePdi {
         if(fault.getLength()>0){
             if(!(A+"/fault").equals(action))throw new IOException("Action de Fault inválida");
             Element detalle=unico((Element)fault.item(0),null,"detail");
+            if(detalle.getElementsByTagNameNS(P,"CiudadanoPendiente").getLength()>0){
+                Element pendiente=unico(detalle,P,"CiudadanoPendiente");
+                if(Integer.parseInt(texto(pendiente,"ci"))!=ci)throw new IOException("CI inválida");
+                return new ResultadoPdi(ResultadoPdi.Estado.PENDIENTE,ci,null,null,null,null,
+                    "Ficha simulada: falta completar la fecha de nacimiento en CargaUY");
+            }
             Element ausente=unico(detalle,P,"CiudadanoNoEncontrado");
             if(Integer.parseInt(texto(ausente,"ci"))!=ci)throw new IOException("CI inválida");
             return new ResultadoPdi(ResultadoPdi.Estado.NO_ENCONTRADO,ci,null,null,null,null,
@@ -122,8 +130,12 @@ public class ClientePdi {
         if(Integer.parseInt(texto(r,"ci"))!=ci)throw new IOException("CI inválida");
         String vigente=texto(r,"vigente");
         if(!Set.of("true","false","1","0").contains(vigente))throw new IOException("Booleano inválido");
-        return new ResultadoPdi(ResultadoPdi.Estado.DISPONIBLE,ci,texto(r,"nombre"),texto(r,"apellido"),
-            LocalDate.parse(texto(r,"fechaNacimiento")),vigente.equals("true")||vigente.equals("1"),"PDI consultada");
+        boolean simulado=r.getElementsByTagNameNS(null,"simulado").getLength()>0
+            && "true".equals(texto(r,"simulado"));
+        String apellido=simulado?unico(r,null,"apellido").getTextContent().trim():texto(r,"apellido");
+        return new ResultadoPdi(ResultadoPdi.Estado.DISPONIBLE,ci,texto(r,"nombre"),apellido,
+            LocalDate.parse(texto(r,"fechaNacimiento")),vigente.equals("true")||vigente.equals("1"),
+            simulado?"Dato de prueba del simulador PDI":"PDI consultada");
     }
     private Element unico(Element padre,String ns,String nombre)throws IOException{
         Element resultado=null;

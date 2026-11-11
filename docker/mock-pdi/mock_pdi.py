@@ -15,6 +15,34 @@ CATALOGO = {
     80000001: ("Ana", "Prueba", "1990-01-01"),
     80000002: ("Diego", "Chofer", "1988-01-01"),
 }
+
+def perfil_gub(ci):
+    if os.getenv("PDI_PERFILES_POSTGRES") != "true":
+        return None
+
+    import psycopg
+
+    with psycopg.connect(connect_timeout=1, options="-c default_transaction_read_only=on -c statement_timeout=500") as db:
+        return db.execute(
+            """SELECT nombre, fecha_nac FROM usuarios
+               WHERE ci = %s AND activo AND origen_identidad = 'GUB'
+                 AND uid_externo ~ '^[0-9a-f]{64}$'""", (ci,)
+        ).fetchone()
+
+
+def consultar(ci):
+    perfil = perfil_gub(ci)
+    if perfil is not None:
+        nombre_completo, nacimiento = perfil
+        if nacimiento is None:
+            return None, "CiudadanoPendiente"
+        partes = nombre_completo.strip().split(maxsplit=1)
+        nombre = partes[0]
+        apellido = partes[1] if len(partes) > 1 else ""
+        return (nombre, apellido, nacimiento.isoformat()), None
+
+    datos = CATALOGO.get(ci)
+    return datos, None if datos else "CiudadanoNoEncontrado"
 def child(parent, tag, text=None):
     e = ET.SubElement(parent, tag)
     if text is not None: e.text = str(text)
@@ -31,13 +59,16 @@ def respuesta(mid, ci=None, datos=None, error=None):
         child(fault, "faultstring", error)
         detail = child(fault, "detail")
         d = child(detail, "{" + P + "}" + error)
-        child(d, "ci" if error == "CiudadanoNoEncontrado" else "mensaje",
-              ci if error == "CiudadanoNoEncontrado" else "Cabeceras o cuerpo inválidos")
+        if error in ("CiudadanoNoEncontrado", "CiudadanoPendiente"):
+            child(d, "ci", ci)
+        else:
+            child(d, "mensaje", "Cabeceras o cuerpo inválidos")
     else:
         r = child(b, "{" + P + "}consultarCiudadanoResponse")
         for tag, value in [("ci", ci), ("nombre", datos[0]), ("apellido", datos[1]),
                            ("fechaNacimiento", datos[2]), ("vigente", "true")]:
             child(r, tag, value)
+        child(r, "simulado", "true")
     return ET.tostring(e, encoding="utf-8", xml_declaration=True)
 
 class Handler(BaseHTTPRequestHandler):
@@ -82,11 +113,17 @@ class Handler(BaseHTTPRequestHandler):
             if ci <= 0: raise ValueError()
             delay = float(os.getenv("PDI_DELAY_SECONDS", "0"))
             if delay > 0: time.sleep(min(delay, 10))
-            datos = CATALOGO.get(ci)
-            data = respuesta(mid, ci, datos, None if datos else "CiudadanoNoEncontrado")
-            status = 200 if datos else 500
         except Exception:
             data = respuesta(mid, error="ContratoInvalido")
+        else:
+            try:
+                datos, error = consultar(ci)
+                data = respuesta(mid, ci, datos, error)
+                status = 500 if error else 200
+            except Exception as error:
+                status = 503
+                data = b""
+                print(json.dumps({"evento": "pdi.catalogo.no_disponible", "tipo": type(error).__name__}), flush=True)
         self.send_response(status); self.send_header("Content-Type", "text/xml;charset=utf-8")
         self.send_header("X-Correlation-ID", corr); self.end_headers()
         try: self.wfile.write(data)

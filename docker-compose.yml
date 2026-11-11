@@ -59,6 +59,11 @@ services:
     environment:
       PDI_PUBLIC_ENDPOINT: http://mock-pdi:8080/pdi/ws
       PDI_DELAY_SECONDS: "0"
+      PDI_PERFILES_POSTGRES: "true"
+      PGHOST: postgres
+      PGDATABASE: cargauy
+      PGUSER: cargauy
+      PGPASSWORD: cargauy123
     ports:
       - "8081:8080"
 
