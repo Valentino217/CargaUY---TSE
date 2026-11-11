@@ -121,7 +121,7 @@
                                rounded="true" />
                     </p:column>
 
-                    <p:column headerText="Gestión" filterBy="#{(caso.estado().name() eq 'CONFIRMADA' or caso.estado().name() eq 'DESESTIMADA') ? 'AUDITORIA' : 'RESOLVER'}" filterMatchMode="exact" style="width: 175px; text-align: center;" exportable="false">
+                    <p:column headerText="Gestión" filterBy="#{(caso.estado().name() eq 'CONFIRMADA' or caso.estado().name() eq 'DESESTIMADA') ? 'AUDITORIA' : 'RESOLVER'}" filterMatchMode="exact" style="width: 245px; text-align: center;" exportable="false">
                         <f:facet name="filter">
                             <p:selectOneMenu onchange="PF('dtBandeja').filter()" styleClass="ui-custom-filter" style="width: 100%;">
                                 <f:selectItem itemLabel="Todas" itemValue="#{null}" noSelectionOption="true" />
@@ -129,13 +129,24 @@
                                 <f:selectItem itemLabel="Ver Auditoría" itemValue="AUDITORIA" />
                             </p:selectOneMenu>
                         </f:facet>
-                        <p:commandButton value="#{(caso.estado().name() eq 'CONFIRMADA' or caso.estado().name() eq 'DESESTIMADA') ? 'Ver Auditoría' : 'Resolver'}"
-                                         icon="#{(caso.estado().name() eq 'CONFIRMADA' or caso.estado().name() eq 'DESESTIMADA') ? 'pi pi-eye' : 'pi pi-check-square'}"
-                                         actionListener="#{bandejaFiscalizacionBean.seleccionarCaso(caso)}"
-                                         update=":dlgResolverForm"
-                                         oncomplete="PF('dlgResolverWidget').show()"
-                                         styleClass="#{(caso.estado().name() eq 'CONFIRMADA' or caso.estado().name() eq 'DESESTIMADA') ? 'ui-button-outlined ui-button-secondary' : 'ui-button-primary'}"
-                                         style="font-size: 0.82rem;" />
+                        <div style="display: flex; gap: 0.35rem; justify-content: center;">
+                            <p:commandButton value="#{(caso.estado().name() eq 'CONFIRMADA' or caso.estado().name() eq 'DESESTIMADA') ? 'Ver Auditoría' : 'Resolver'}"
+                                             icon="#{(caso.estado().name() eq 'CONFIRMADA' or caso.estado().name() eq 'DESESTIMADA') ? 'pi pi-eye' : 'pi pi-check-square'}"
+                                             actionListener="#{bandejaFiscalizacionBean.seleccionarCaso(caso)}"
+                                             update=":dlgResolverForm"
+                                             oncomplete="PF('dlgResolverWidget').show()"
+                                             styleClass="#{(caso.estado().name() eq 'CONFIRMADA' or caso.estado().name() eq 'DESESTIMADA') ? 'ui-button-outlined ui-button-secondary' : 'ui-button-primary'}"
+                                             style="font-size: 0.82rem;" />
+
+                            <p:commandButton value="Generar Acta"
+                                             icon="pi pi-file-pdf"
+                                             actionListener="#{bandejaFiscalizacionBean.seleccionarCaso(caso)}"
+                                             update=":dlgActaForm"
+                                             oncomplete="PF('dlgActaWidget').show()"
+                                             rendered="#{caso.estado().name() eq 'CONFIRMADA'}"
+                                             styleClass="ui-button-outlined ui-button-danger"
+                                             style="font-size: 0.82rem;" />
+                        </div>
                     </p:column>
                 </p:dataTable>
             </div>
@@ -280,6 +291,92 @@
                                            icon="pi pi-exclamation-triangle" />
                             </p:commandButton>
                         </div>
+                    </div>
+                </h:panelGroup>
+            </h:form>
+        </p:dialog>
+
+        <!-- Modal de Emisión y Firma de Acta Oficial -->
+        <p:dialog header="Emitir Acta de Infracción"
+                  widgetVar="dlgActaWidget"
+                  modal="true"
+                  responsive="true"
+                  fitViewport="true"
+                  width="700"
+                  contentStyle="max-height: 75vh; overflow-y: auto;"
+                  closeOnEscape="true">
+
+            <h:form id="dlgActaForm" enctype="multipart/form-data">
+                <h:panelGroup rendered="#{bandejaFiscalizacionBean.casoSeleccionado != null}">
+                    <div class="ui-fluid">
+                        <!-- Encabezado del Acta -->
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #dc2626; border-radius: 8px; padding: 0.85rem 1rem; margin-bottom: 1rem;">
+                            <div style="font-size: 0.78rem; color: #64748b; text-transform: uppercase; font-weight: 700;">
+                                Documento Oficial a Emitir
+                            </div>
+                            <div style="font-size: 1.1rem; font-weight: 800; color: #0f2942;">
+                                Acta de Infracción #<h:outputText value="#{bandejaFiscalizacionBean.casoSeleccionado.idCaso()}" />
+                            </div>
+                        </div>
+
+                        <!-- Resumen de los datos -->
+                        <p:panelGrid columns="2" layout="grid" styleClass="ui-panelgrid-blank" style="margin-bottom: 1rem;">
+                            <h:outputText value="Empresa Infractora:" style="font-weight: 600; color: #475569;" />
+                            <h:outputText value="#{bandejaFiscalizacionBean.casoSeleccionado.nombreEmpresa()}" />
+                            <h:outputText value="Vehículo / Matrícula:" style="font-weight: 600; color: #475569;" />
+                            <h:outputText value="#{bandejaFiscalizacionBean.casoSeleccionado.matricula()}" />
+                            <h:outputText value="Fecha de Detección:" style="font-weight: 600; color: #475569;" />
+                            <h:outputText value="#{bandejaFiscalizacionBean.casoSeleccionado.fecha()}" />
+                            <h:outputText value="Tipo de Infracción:" style="font-weight: 600; color: #475569;" />
+                            <h:outputText value="#{bandejaFiscalizacionBean.casoSeleccionado.tipo()}" />
+                        </p:panelGrid>
+
+                        <!-- Evidencia -->
+                        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 0.75rem 1rem; margin-bottom: 1rem;">
+                            <strong style="color: #92400e; font-size: 0.82rem;">Evidencia Registrada:</strong>
+                            <div style="font-family: monospace; font-size: 0.82rem; color: #78350f; margin-top: 0.25rem;">
+                                #{bandejaFiscalizacionBean.casoSeleccionado.evidencia()}
+                            </div>
+                        </div>
+
+                        <!-- Firmante Digital -->
+                        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 0.75rem 1rem; margin-bottom: 1rem; font-size: 0.8rem; color: #166534;">
+                            <i class="pi pi-shield" style="margin-right: 0.3rem;" />
+                            <strong>Firmante Digital:</strong> Autoridad Administrativa de Fiscalización Vial (Certificado Registrado)
+                        </div>
+
+                        <!-- Bloque Contraseña del Certificado Digital -->
+                        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.1rem; margin-bottom: 1rem;">
+                            <div style="font-weight: 700; color: #0f2942; margin-bottom: 0.75rem; font-size: 0.88rem;">
+                                <i class="pi pi-key" style="margin-right: 0.35rem; color: #dc2626;" /> Contraseña del Certificado Digital (PKCS#12 / .p12 / .pfx)
+                            </div>
+                            <div style="display: flex; gap: 0.75rem; align-items: center;">
+                                <div style="flex: 1;">
+                                    <p:password value="#{bandejaFiscalizacionBean.passwordCertificado}"
+                                                placeholder="Contraseña del certificado"
+                                                feedback="false"
+                                                toggleMask="true"
+                                                redisplay="false"
+                                                style="width: 100%;" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botones del Modal -->
+                    <div style="display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.25rem;">
+                        <p:commandButton value="Cancelar"
+                                         type="button"
+                                         icon="pi pi-times"
+                                         onclick="PF('dlgActaWidget').hide()"
+                                         styleClass="ui-button-outlined ui-button-secondary" />
+
+                        <p:commandButton value="Emitir Acta (PDF)"
+                                         ajax="false"
+                                         icon="pi pi-file-pdf"
+                                         styleClass="ui-button-danger">
+                            <p:fileDownload value="#{bandejaFiscalizacionBean.emitirYFirmarActa()}" />
+                        </p:commandButton>
                     </div>
                 </h:panelGroup>
             </h:form>

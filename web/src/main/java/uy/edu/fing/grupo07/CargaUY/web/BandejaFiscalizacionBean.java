@@ -6,19 +6,29 @@ import jakarta.faces.application.FacesMessage;
 import jakarta.faces.context.FacesContext;
 import jakarta.faces.view.ViewScoped;
 import jakarta.inject.Named;
+import org.primefaces.model.DefaultStreamedContent;
+import org.primefaces.model.StreamedContent;
+import uy.edu.fing.grupo07.CargaUY.domain.entity.CertificadoDigital;
+import uy.edu.fing.grupo07.CargaUY.domain.entity.CredencialesFirma;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.EstadoInfraccion;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoInfraccion;
 import uy.edu.fing.grupo07.CargaUY.dto.InfraccionDTO;
+import uy.edu.fing.grupo07.CargaUY.security.Acceso;
+import uy.edu.fing.grupo07.CargaUY.security.AutenticacionService;
+import uy.edu.fing.grupo07.CargaUY.service.ActaServiceEJB;
+import uy.edu.fing.grupo07.CargaUY.service.CertificadoDigitalEJB;
 import uy.edu.fing.grupo07.CargaUY.service.GestionInfraccionesServiceLocal;
 
+import java.io.ByteArrayInputStream;
 import java.io.Serializable;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Managed Bean para /funcionario/bandeja-fiscalizacion.xhtml.
- * Bandeja interactiva de evaluación de evidencia, revisión de descargos y resolución administrativa
- * con control de acceso por sesión autenticada (Punto D.5).
+ * Bandeja interactiva de evaluación de evidencia, revisión de descargos, resolución administrativa
+ * y emisión de actas firmadas digitalmente con control de acceso por sesión autenticada (Punto D.5).
  */
 @Named("bandejaFiscalizacionBean")
 @ViewScoped
@@ -29,11 +39,22 @@ public class BandejaFiscalizacionBean implements Serializable {
     @EJB
     private GestionInfraccionesServiceLocal infraccionesService;
 
+    @EJB
+    private ActaServiceEJB actaEJB;
+
+    @EJB
+    private CertificadoDigitalEJB certificadoEJB;
+
+    @EJB
+    private AutenticacionService auth;
+
     private List<InfraccionDTO> casos;
     private List<InfraccionDTO> casosFiltrados;
     private InfraccionDTO casoSeleccionado;
 
     private String fundamentosResolucion;
+    private String passwordCertificado;
+    private StreamedContent pdfFirmadoDescarga;
 
     public BandejaFiscalizacionBean() {
     }
@@ -59,6 +80,7 @@ public class BandejaFiscalizacionBean implements Serializable {
     public void seleccionarCaso(InfraccionDTO caso) {
         this.casoSeleccionado = caso;
         this.fundamentosResolucion = caso != null && caso.fundamento() != null ? caso.fundamento() : "";
+        this.passwordCertificado = null;
     }
 
     public boolean isCasoResuelto() {
@@ -134,6 +156,98 @@ public class BandejaFiscalizacionBean implements Serializable {
         }
     }
 
+    public StreamedContent emitirYFirmarActa() {
+        if (casoSeleccionado == null || actaEJB == null) {
+            mostrarMensaje(FacesMessage.SEVERITY_WARN, "Atención", "Debe seleccionar una infracción.");
+            return null;
+        }
+        try {
+            String token = SesionActual.token();
+            if (token == null && FacesContext.getCurrentInstance() != null) {
+                token = (String) FacesContext.getCurrentInstance()
+                        .getExternalContext()
+                        .getSessionMap()
+                        .get("token");
+            }
+
+            Acceso acceso = auth != null ? auth.validarToken(token) : null;
+            if (acceso == null) {
+                mostrarMensaje(
+                        FacesMessage.SEVERITY_ERROR,
+                        "Sesión inválida",
+                        "Debe iniciar sesión nuevamente."
+                );
+                return null;
+            }
+
+            int ciInspector = acceso.ci();
+            CertificadoDigital certificadoDB = certificadoEJB.buscarCertificadoActivoPorCi(ciInspector);
+
+            if (certificadoDB == null) {
+                mostrarMensaje(
+                        FacesMessage.SEVERITY_WARN,
+                        "Atención",
+                        "No dispone de un certificado activo y vigente."
+                );
+                return null;
+            }
+
+            byte[] archivoCertificado = certificadoDB.getArchivoCertificado();
+            if (archivoCertificado == null || archivoCertificado.length == 0) {
+                mostrarMensaje(
+                        FacesMessage.SEVERITY_ERROR,
+                        "Error",
+                        "El certificado registrado no contiene información."
+                );
+                return null;
+            }
+
+            DateTimeFormatter formato = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            String fechaString = this.casoSeleccionado.fecha() != null
+                    ? this.casoSeleccionado.fecha().format(formato)
+                    : "";
+
+            byte[] pdfOriginal = actaEJB.emitirYFirmarActa(
+                    this.casoSeleccionado.idCaso(),
+                    this.casoSeleccionado.nombreEmpresa(),
+                    this.casoSeleccionado.matricula(),
+                    fechaString,
+                    this.casoSeleccionado.tipo() != null ? this.casoSeleccionado.tipo().toString() : "",
+                    this.casoSeleccionado.evidencia()
+            );
+
+            if (pdfOriginal == null) {
+                mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error", "No se pudo generar el documento PDF base.");
+                return null;
+            }
+
+            CredencialesFirma credenciales = actaEJB.abrirCredenciales(archivoCertificado, passwordCertificado);
+            if (credenciales == null) {
+                mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error de Firma", "No se pudo abrir el certificado con la clave provista.");
+                return null;
+            }
+
+            byte[] pdfFirmado = actaEJB.firmarPdf(
+                    pdfOriginal,
+                    credenciales.getClavePrivada(),
+                    credenciales.getCertificado()
+            );
+
+            this.pdfFirmadoDescarga = DefaultStreamedContent.builder()
+                    .name("Acta_Oficial_" + this.casoSeleccionado.idCaso() + ".pdf")
+                    .contentType("application/pdf")
+                    .stream(() -> new ByteArrayInputStream(pdfFirmado))
+                    .build();
+
+            return this.pdfFirmadoDescarga;
+        } catch (Exception e) {
+            mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error", e.getMessage());
+            return null;
+        } finally {
+            passwordCertificado = null;
+        }
+    }
+
     private void marcarValidacionFallida() {
         try {
             FacesContext fc = FacesContext.getCurrentInstance();
@@ -205,6 +319,18 @@ public class BandejaFiscalizacionBean implements Serializable {
 
     public void setFundamentosResolucion(String fundamentosResolucion) {
         this.fundamentosResolucion = fundamentosResolucion;
+    }
+
+    public String getPasswordCertificado() {
+        return passwordCertificado;
+    }
+
+    public void setPasswordCertificado(String passwordCertificado) {
+        this.passwordCertificado = passwordCertificado;
+    }
+
+    public StreamedContent getPdfFirmadoDescarga() {
+        return pdfFirmadoDescarga;
     }
 
     public EstadoInfraccion[] getEstadosInfraccion() {
