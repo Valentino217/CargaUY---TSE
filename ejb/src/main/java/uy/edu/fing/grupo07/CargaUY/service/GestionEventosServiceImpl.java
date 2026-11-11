@@ -14,10 +14,12 @@ import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEvento;
 import uy.edu.fing.grupo07.CargaUY.dto.*;
 import uy.edu.fing.grupo07.CargaUY.exception.BusinessException;
+import uy.edu.fing.grupo07.CargaUY.integration.BalanzaClient;
 import uy.edu.fing.grupo07.CargaUY.integration.FaasTrackingClient;
 import uy.edu.fing.grupo07.CargaUY.jms.FiscalizacionProducerLocal;
 import uy.edu.fing.grupo07.CargaUY.nosql.PosicionNoSqlRepositoryLocal;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -25,15 +27,22 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @Stateless
 public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
+
+    private static final Logger LOGGER = Logger.getLogger(GestionEventosServiceImpl.class.getName());
 
     @PersistenceContext(unitName = "CargaUYPersistenceUnit")
     private EntityManager em;
 
     @Inject
     private FaasTrackingClient faasTrackingClient;
+
+    @Inject
+    private BalanzaClient balanzaClient;
 
     @EJB
     private FiscalizacionProducerLocal fiscalizacionProducer;
@@ -183,10 +192,50 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
             em.persist(evento);
         }
 
+        if (esHitoBalanza(dto.tipo())) {
+            sincronizarBalanzasPorHito(guia, dto.uuid());
+        }
+
         if (fiscalizacionProducer != null && guia.getId() != null) {
             fiscalizacionProducer.solicitarEvaluacion(guia.getId());
         }
         return evento;
+    }
+
+    private static boolean esHitoBalanza(TipoEvento tipo) {
+        return tipo == TipoEvento.INICIO
+                || tipo == TipoEvento.FIN
+                || tipo == TipoEvento.CARGA
+                || tipo == TipoEvento.DESCARGA;
+    }
+
+    private void sincronizarBalanzasPorHito(GuiaDeViaje guia, String correlacion) {
+        if (balanzaClient == null || guia == null || guia.getVehiculo() == null) {
+            return;
+        }
+        String matricula = guia.getVehiculo().getMatricula();
+        if (matricula == null || matricula.isBlank()) {
+            return;
+        }
+        LocalDate fechaDesde = guia.getFecha() != null ? guia.getFecha() : LocalDate.now();
+        LocalDate hoy = LocalDate.now();
+        LocalDate fechaHasta = fechaDesde.isAfter(hoy) ? fechaDesde : hoy;
+        Integer nroEmpresa = guia.getEmpresa() != null ? guia.getEmpresa().getNroEmpresa() : null;
+        try {
+            List<PesadaBalanzaDTO> remotas = balanzaClient.consultarPesadasVehiculo(
+                    matricula, fechaDesde, fechaHasta, nroEmpresa, correlacion
+            );
+            List<PesadaBalanzaDTO> nuevas = GestionBalanzaServiceImpl.persistirPesadasRemotasIdempotentes(
+                    em, guia, remotas, hoy
+            );
+            if (!nuevas.isEmpty()) {
+                LOGGER.log(Level.INFO, "Se importaron {0} pesada(s) desde balanzas para guía #{1} (correlación={2}).",
+                        new Object[]{nuevas.size(), guia.getId(), correlacion});
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "No se pudieron consultar pesadas de balanza para guía #"
+                    + guia.getId() + " (correlación=" + correlacion + "): " + e.getMessage());
+        }
     }
 
     private GuiaDeViaje validarPrecondicionesYResolverGuia(EventoViajeDTO dto) {

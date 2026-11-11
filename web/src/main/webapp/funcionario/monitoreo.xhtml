@@ -11,7 +11,6 @@
         <div class="cuy-page-header">
             <div>
                 <h1 class="cuy-page-title">
-                    <i class="pi pi-map-marker" style="color: #1d4ed8;" />
                     Monitoreo de Viajes en Curso y Pesajes en Balanzas
                 </h1>
             </div>
@@ -28,12 +27,12 @@
                                      type="button"
                                      onclick="PF('dlgTrackingWidget').show()"
                                      styleClass="ui-button-outlined ui-button-success" />
-                    <p:commandButton value="Simular Balanza"
-                                     icon="pi pi-cloud-download"
-                                     actionListener="#{detalleViajeBean.sincronizarMockBalanza}"
+                    <p:commandButton value="Consultar Balanzas"
+                                     icon="pi pi-refresh"
+                                     actionListener="#{detalleViajeBean.consultarBalanzasGuia}"
                                      update=":monitoreoForm :growl"
                                      styleClass="ui-button-outlined ui-button-info" />
-                    <p:commandButton value="Simular pesaje manual"
+                    <p:commandButton value="Registrar en Balanza"
                                      icon="pi pi-sliders-h"
                                      type="button"
                                      onclick="PF('dlgPesajeWidget').show()"
@@ -203,7 +202,7 @@
         </h:form>
 
         <!-- Modal Registrar Pesaje de Balanza y Fiscalizar -->
-        <p:dialog header="Simular pesaje manual"
+        <p:dialog header="Registrar pesaje en balanza"
                   widgetVar="dlgPesajeWidget"
                   modal="true"
                   responsive="true"
@@ -227,6 +226,18 @@
                                  placeholder="Ej: STP 1234" />
                 </div>
                 <div class="cuy-field" style="margin-bottom: 1rem;">
+                    <p:outputLabel for="peajeSel" value="Estación de Pesaje / Peaje" />
+                    <p:selectOneMenu id="peajeSel" label="Estación de Pesaje"
+                                     value="#{registrarPesajeBean.peaje}"
+                                     editable="true">
+                        <f:selectItem itemLabel="Peaje Pando" itemValue="Peaje Pando" />
+                        <f:selectItem itemLabel="Peaje Queguay" itemValue="Peaje Queguay" />
+                        <f:selectItem itemLabel="Peaje Mercedes" itemValue="Peaje Mercedes" />
+                        <f:selectItem itemLabel="Peaje Capilla de Cella" itemValue="Peaje Capilla de Cella" />
+                        <f:selectItem itemLabel="Peaje Solís" itemValue="Peaje Solís" />
+                    </p:selectOneMenu>
+                </div>
+                <div class="cuy-field" style="margin-bottom: 1rem;">
                     <p:outputLabel for="pesoMedidoInput" value="Peso Bruto Medido en Balanza (kg)" />
                     <p:inputNumber id="pesoMedidoInput" label="Peso Bruto Medido en Balanza (kg)"
                                    value="#{registrarPesajeBean.pesoRegistrado}"
@@ -242,9 +253,9 @@
                                      onclick="PF('dlgPesajeWidget').hide()"
                                      styleClass="ui-button-outlined ui-button-secondary"
                                      style="width: auto;" />
-                    <p:commandButton value="Registrar Pesada"
+                    <p:commandButton value="Registrar en Balanza"
                                      icon="pi pi-check"
-                                     actionListener="#{registrarPesajeBean.registrarPesaje}"
+                                     actionListener="#{registrarPesajeBean.registrarPesajeEnBalanza}"
                                      action="#{detalleViajeBean.consultarViaje}"
                                      update=":monitoreoForm :growl"
                                      oncomplete="if (!args.validationFailed) PF('dlgPesajeWidget').hide()"

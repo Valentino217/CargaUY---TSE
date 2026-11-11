@@ -114,7 +114,7 @@ public class BalanzaClient {
      * y trazabilidad distribuida con X-Correlation-ID.
      */
     public PesadaBalanzaDTO consultarPesadaConResiliencia(String correlacion) {
-        List<PesadaBalanzaDTO> lista = ejecutarConsultaResiliente(endpointUrl, correlacion);
+        List<PesadaBalanzaDTO> lista = ejecutarConsultaResiliente(resolverPesadasUrl(), correlacion);
         if (lista.isEmpty()) {
             throw new BusinessException("El periférico de balanza no retornó registros de pesada.");
         }
@@ -126,15 +126,164 @@ public class BalanzaClient {
      * enviando parámetros de consulta (?matricula=...&fecha=...) y encabezado X-Correlation-ID.
      */
     public List<PesadaBalanzaDTO> consultarPesadasVehiculo(String matricula, LocalDate fecha, String correlacion) {
+        return consultarPesadasVehiculo(matricula, fecha, null, correlacion);
+    }
+
+    /**
+     * Consulta las pesadas registradas en el nodo periférico de balanzas filtrando por matrícula,
+     * fecha opcional y número de empresa opcional (?matricula=...&fecha=...&nroEmpresa=...).
+     */
+    public List<PesadaBalanzaDTO> consultarPesadasVehiculo(String matricula, LocalDate fecha, Integer nroEmpresa, String correlacion) {
         if (matricula == null || matricula.isBlank()) {
             throw new BusinessException("La matrícula es obligatoria para consultar pesadas de vehículo.");
         }
-        LocalDate fechaConsulta = (fecha != null) ? fecha : LocalDate.now();
-        String sep = endpointUrl.contains("?") ? "&" : "?";
-        String targetUrl = endpointUrl + sep
-                + "matricula=" + URLEncoder.encode(matricula.trim(), StandardCharsets.UTF_8)
-                + "&fecha=" + URLEncoder.encode(fechaConsulta.toString(), StandardCharsets.UTF_8);
-        return ejecutarConsultaResiliente(targetUrl, correlacion);
+        String pesadasBase = resolverPesadasUrl();
+        String sep = pesadasBase.contains("?") ? "&" : "?";
+        StringBuilder sb = new StringBuilder(pesadasBase)
+                .append(sep)
+                .append("matricula=").append(URLEncoder.encode(matricula.trim(), StandardCharsets.UTF_8));
+        if (fecha != null) {
+            sb.append("&fecha=").append(URLEncoder.encode(fecha.toString(), StandardCharsets.UTF_8));
+        }
+        if (nroEmpresa != null) {
+            sb.append("&nroEmpresa=").append(nroEmpresa);
+        }
+        return ejecutarConsultaResiliente(sb.toString(), correlacion);
+    }
+
+    /**
+     * Consulta las pesadas registradas en el nodo periférico de balanzas para un rango de fechas
+     * (?matricula=...&fechaDesde=...&fechaHasta=...&nroEmpresa=...), útil para viajes multi-día.
+     */
+    public List<PesadaBalanzaDTO> consultarPesadasVehiculo(
+            String matricula,
+            LocalDate fechaDesde,
+            LocalDate fechaHasta,
+            Integer nroEmpresa,
+            String correlacion
+    ) {
+        if (matricula == null || matricula.isBlank()) {
+            throw new BusinessException("La matrícula es obligatoria para consultar pesadas de vehículo.");
+        }
+        String pesadasBase = resolverPesadasUrl();
+        String sep = pesadasBase.contains("?") ? "&" : "?";
+        StringBuilder sb = new StringBuilder(pesadasBase)
+                .append(sep)
+                .append("matricula=").append(URLEncoder.encode(matricula.trim(), StandardCharsets.UTF_8));
+        if (fechaDesde != null) {
+            sb.append("&fechaDesde=").append(URLEncoder.encode(fechaDesde.toString(), StandardCharsets.UTF_8));
+        }
+        if (fechaHasta != null) {
+            sb.append("&fechaHasta=").append(URLEncoder.encode(fechaHasta.toString(), StandardCharsets.UTF_8));
+        }
+        if (nroEmpresa != null) {
+            sb.append("&nroEmpresa=").append(nroEmpresa);
+        }
+        return ejecutarConsultaResiliente(sb.toString(), correlacion);
+    }
+
+    /**
+     * Registra una nueva pesada en el nodo periférico de balanzas (POST /pesadas) aplicando
+     * Bulkhead, Circuit Breaker y propagación de X-Correlation-ID.
+     */
+    public PesadaBalanzaDTO registrarPesadaEnPeriferico(PesadaBalanzaDTO dto, Integer nroEmpresa, String peaje, String correlacion) {
+        if (dto == null || dto.matricula() == null || dto.matricula().isBlank()) {
+            throw new BusinessException("La matrícula es obligatoria para registrar una pesada en balanza.");
+        }
+        String corr = normalizarCorrelacion(correlacion);
+        if (!capacidad.tryAcquire()) {
+            rechazadas.incrementAndGet();
+            throw new BusinessException("Capacidad de operaciones simultáneas a balanza agotada (Bulkhead).");
+        }
+        boolean admitida = false;
+        boolean exito = false;
+        long inicio = System.nanoTime();
+        try {
+            admitida = admitirCircuito();
+            if (!admitida) {
+                rechazadas.incrementAndGet();
+                throw new BusinessException("Circuito de balanza periférica abierto temporalmente por fallas previas.");
+            }
+            var payloadBuilder = Json.createObjectBuilder()
+                    .add("matricula", dto.matricula().trim())
+                    .add("pesoRegistrado", dto.pesoRegistrado());
+            if (nroEmpresa != null) {
+                payloadBuilder.add("nroEmpresa", nroEmpresa);
+            }
+            if (peaje != null && !peaje.isBlank()) {
+                payloadBuilder.add("peaje", peaje.trim());
+            }
+            if (dto.fecha() != null) {
+                payloadBuilder.add("fecha", dto.fecha().toString());
+            }
+            if (dto.hora() != null) {
+                payloadBuilder.add("hora", dto.hora().withNano(0).toString());
+            }
+            String jsonBody = payloadBuilder.build().toString();
+
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(resolverPesadasUrl()))
+                    .timeout(TIMEOUT)
+                    .header("X-Correlation-ID", corr)
+                    .header("Content-Type", "application/json")
+                    .header("Accept", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+                    .build();
+
+            llamadas.incrementAndGet();
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() != 200 && response.statusCode() != 201) {
+                throw new BusinessException("El nodo de balanza rechazó el registro con código " + response.statusCode());
+            }
+
+            List<PesadaBalanzaDTO> resultado = parsearRespuestaBalanza(response.body());
+            if (resultado.isEmpty()) {
+                exito = true;
+                return dto;
+            }
+            exito = true;
+            return resultado.get(0);
+        } catch (BusinessException be) {
+            if (!admitida || be.getMessage() == null || !be.getMessage().contains("Circuito")) {
+                fallas.incrementAndGet();
+            }
+            throw be;
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            fallas.incrementAndGet();
+            throw new BusinessException("El registro en la balanza periférica fue interrumpido.");
+        } catch (Exception e) {
+            fallas.incrementAndGet();
+            throw new BusinessException("No fue posible registrar la pesada en la balanza periférica: " + e.getMessage());
+        } finally {
+            if (admitida) {
+                registrarResultado(exito);
+            }
+            capacidad.release();
+            long duracionMs = (System.nanoTime() - inicio) / 1_000_000;
+            LOGGER.info("{\"evento\":\"balanza.registro\",\"correlacion\":\"" + corr
+                    + "\",\"ok\":" + exito + ",\"duracionMs\":" + duracionMs + "}");
+        }
+    }
+
+    private String baseUrl() {
+        String url = endpointUrl == null ? "http://localhost:8082" : endpointUrl.trim();
+        while (url.endsWith("/")) {
+            url = url.substring(0, url.length() - 1);
+        }
+        if (url.endsWith("/pesadas")) {
+            url = url.substring(0, url.length() - "/pesadas".length());
+        }
+        return url;
+    }
+
+    private String resolverPesadasUrl() {
+        return baseUrl() + "/pesadas";
+    }
+
+    private String resolverHealthUrl() {
+        return baseUrl() + "/health";
     }
 
     private List<PesadaBalanzaDTO> ejecutarConsultaResiliente(String url, String correlacion) {
@@ -250,7 +399,7 @@ public class BalanzaClient {
     }
 
     /**
-     * Sondeo rápido de salud (timeout 2s) que retorna true si el nodo responde HTTP 200 y el circuito está cerrado.
+     * Sondeo rápido de salud (timeout 2s) contra /health que retorna true si el nodo responde HTTP 200 y el circuito está cerrado.
      */
     public boolean verificarSalud() {
         if (estaCircuitoAbierto()) {
@@ -258,7 +407,7 @@ public class BalanzaClient {
         }
         try {
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(endpointUrl))
+                    .uri(URI.create(resolverHealthUrl()))
                     .timeout(HEALTH_TIMEOUT)
                     .header("X-Correlation-ID", UUID.randomUUID().toString())
                     .GET()

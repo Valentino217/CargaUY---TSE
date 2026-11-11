@@ -29,6 +29,22 @@ public interface GestionBalanzaServiceLocal {
     }
 
     /**
+     * Sincroniza (request-response) las pesadas registradas en el nodo periférico de balanzas
+     * para el vehículo y fecha de la guía indicada, evitando duplicados.
+     */
+    default List<PesadaBalanzaDTO> sincronizarPesadasDeGuia(Long guiaId, String correlacion) {
+        return List.of();
+    }
+
+    /**
+     * Registra una pesada en el nodo periférico de balanzas (POST /pesadas) simulando
+     * el paso por peaje, quedando disponible para su posterior consulta (request-response).
+     */
+    default PesadaBalanzaDTO registrarPesadaViaPeriferico(PesadaBalanzaDTO dto, String peaje, String correlacion) {
+        return registrarPesada(dto);
+    }
+
+    /**
      * Retorna todas las pesadas asociadas a una guía de viaje ordenadas cronológicamente.
      */
     List<PesadaBalanzaDTO> listarPesadasPorGuia(Long guiaId);

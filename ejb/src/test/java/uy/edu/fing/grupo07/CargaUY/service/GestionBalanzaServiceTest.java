@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import uy.edu.fing.grupo07.CargaUY.domain.entity.Empresa;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.GuiaDeViaje;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.PesadaBalanza;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.Vehiculo;
@@ -211,5 +212,63 @@ class GestionBalanzaServiceTest {
         assertThrows(BusinessException.class, () -> service.registrarPesada(dto));
         verify(fiscalizacionProducer).solicitarEvaluacionSinGuia(eq("123456"), contains("FINALIZADO"));
         verify(em, never()).persist(any(PesadaBalanza.class));
+    }
+
+    @Test
+    @DisplayName("sincronizarPesadasDeGuia importa solo pesadas nuevas evitando duplicados y encola fiscalización")
+    void testSincronizarPesadasDeGuiaIdempotente() {
+        Empresa empresa = new Empresa();
+        empresa.setNroEmpresa(101);
+        guiaPrueba.setEmpresa(empresa);
+        LocalDate fechaGuia = LocalDate.of(2026, 11, 10);
+        guiaPrueba.setFecha(fechaGuia);
+
+        when(em.find(GuiaDeViaje.class, 10L)).thenReturn(guiaPrueba);
+        when(em.createQuery(anyString(), eq(PesadaBalanza.class))).thenReturn(queryPesada);
+        when(queryPesada.setParameter(eq("guiaId"), eq(10L))).thenReturn(queryPesada);
+
+        PesadaBalanza yaExistente = new PesadaBalanza(fechaGuia, LocalTime.of(9, 15, 0), 30000, guiaPrueba);
+        when(queryPesada.getResultList()).thenReturn(List.of(yaExistente));
+
+        List<PesadaBalanzaDTO> remotas = List.of(
+                new PesadaBalanzaDTO(1, fechaGuia, LocalTime.of(9, 15, 0), 30000, "123456", null),
+                new PesadaBalanzaDTO(2, fechaGuia, LocalTime.of(11, 40, 0), 35500, "123456", null)
+        );
+        when(balanzaClient.consultarPesadasVehiculo(eq("123456"), eq(fechaGuia), any(LocalDate.class), eq(101), eq("corr-1")))
+                .thenReturn(remotas);
+
+        List<PesadaBalanzaDTO> importadas = service.sincronizarPesadasDeGuia(10L, "corr-1");
+
+        assertEquals(1, importadas.size());
+        assertEquals(35500, importadas.get(0).pesoRegistrado());
+        verify(em, times(1)).persist(any(PesadaBalanza.class));
+        verify(fiscalizacionProducer, times(1)).solicitarEvaluacion(10L);
+    }
+
+    @Test
+    @DisplayName("registrarPesadaViaPeriferico registra en el periférico sin persistir en central hasta consultar balanzas")
+    void testRegistrarPesadaViaPeriferico() {
+        Empresa empresa = new Empresa();
+        empresa.setNroEmpresa(101);
+        guiaPrueba.setEmpresa(empresa);
+        when(em.find(GuiaDeViaje.class, 10L)).thenReturn(guiaPrueba);
+
+        LocalDate hoy = LocalDate.of(2026, 11, 10);
+        LocalTime ahora = LocalTime.of(14, 0);
+        PesadaBalanzaDTO entrada = new PesadaBalanzaDTO(null, hoy, ahora, 39200, null, 10L);
+        PesadaBalanzaDTO confirmadaPeriferico = new PesadaBalanzaDTO(88, hoy, ahora, 39200, "123456", null);
+
+        when(balanzaClient.registrarPesadaEnPeriferico(any(PesadaBalanzaDTO.class), eq(101), eq("Peaje Pando"), eq("corr-2")))
+                .thenReturn(confirmadaPeriferico);
+
+        PesadaBalanzaDTO resultado = service.registrarPesadaViaPeriferico(entrada, "Peaje Pando", "corr-2");
+
+        assertNotNull(resultado);
+        assertEquals(88, resultado.idPesada());
+        assertEquals(10L, resultado.guiaId());
+        assertEquals(39200, resultado.pesoRegistrado());
+        verify(balanzaClient).registrarPesadaEnPeriferico(argThat(d -> "123456".equals(d.matricula())), eq(101), eq("Peaje Pando"), eq("corr-2"));
+        verify(em, never()).persist(any(PesadaBalanza.class));
+        verify(fiscalizacionProducer, never()).solicitarEvaluacion(anyLong());
     }
 }

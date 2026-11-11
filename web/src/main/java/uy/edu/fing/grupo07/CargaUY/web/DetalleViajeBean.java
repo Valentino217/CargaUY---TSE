@@ -544,6 +544,39 @@ public class DetalleViajeBean implements Serializable {
     }
 
     /**
+     * Consulta (request-response) las pesadas registradas en el nodo periférico de balanzas
+     * para la guía seleccionada y refresca los datos en pantalla.
+     */
+    public void consultarBalanzasGuia() {
+        if (guiaIdSeleccionada == null) {
+            mostrarMensaje(FacesMessage.SEVERITY_WARN, "Validación", "Debe seleccionar una guía de viaje para consultar balanzas.");
+            return;
+        }
+        try {
+            String correlacion = UUID.randomUUID().toString();
+            List<PesadaBalanzaDTO> importadas = balanzaService.sincronizarPesadasDeGuia(guiaIdSeleccionada, correlacion);
+            consultarViaje();
+            if (importadas == null || importadas.isEmpty()) {
+                mostrarMensaje(
+                        FacesMessage.SEVERITY_INFO,
+                        "Sin Pesadas Nuevas",
+                        "La guía #" + guiaIdSeleccionada + " ya se encuentra sincronizada con el nodo de balanzas."
+                );
+            } else {
+                mostrarMensaje(
+                        FacesMessage.SEVERITY_INFO,
+                        "Pesadas Sincronizadas",
+                        String.format("Se importaron %d pesada(s) desde el nodo periférico para la guía #%d.",
+                                importadas.size(), guiaIdSeleccionada)
+                );
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error al consultar balanzas para guía #" + guiaIdSeleccionada, e);
+            mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error en Balanzas", e.getMessage());
+        }
+    }
+
+    /**
      * Dispara la consulta al Mock periférico de balanza y registra automáticamente la pesada,
      * actualizando los datos en tiempo real para la guía impactada.
      */
