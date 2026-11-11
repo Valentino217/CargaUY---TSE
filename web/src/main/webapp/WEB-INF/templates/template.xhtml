@@ -37,43 +37,25 @@
             flex-direction: column;
         }
         .cuy-header {
-            background: linear-gradient(135deg, var(--cuy-primary) 0%, var(--cuy-secondary) 100%);
+            background: linear-gradient(90deg, #0e2843 0%, #0e2843 30%, var(--cuy-secondary) 100%);
             color: #ffffff;
-            padding: 0.75rem 2rem;
+            padding: 0.55rem 2rem;
             display: flex;
             align-items: center;
             justify-content: space-between;
             box-shadow: 0 2px 8px rgba(15, 41, 66, 0.18);
         }
         .cuy-brand {
-            display: flex;
+            display: inline-flex;
             align-items: center;
-            gap: 0.85rem;
             text-decoration: none;
             color: #ffffff;
         }
-        .cuy-brand-icon {
-            background: rgba(255, 255, 255, 0.14);
-            border: 1px solid rgba(255, 255, 255, 0.25);
-            width: 42px;
-            height: 42px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.35rem;
-        }
-        .cuy-brand-title {
-            font-size: 1.25rem;
-            font-weight: 700;
-            letter-spacing: 0.3px;
-            margin: 0;
-            line-height: 1.2;
-        }
-        .cuy-brand-subtitle {
-            font-size: 0.75rem;
-            color: #cbd5e1;
-            margin: 0;
+        .cuy-brand-logo {
+            height: 46px;
+            width: auto;
+            display: block;
+            object-fit: contain;
         }
         .cuy-user-box {
             display: flex;
@@ -107,7 +89,7 @@
         .cuy-main {
             flex: 1;
             width: 100%;
-            max-width: 1440px;
+            max-width: 1620px;
             margin: 0 auto;
             padding: 1.5rem 2rem;
         }
@@ -413,12 +395,7 @@
     <!-- Header Institucional -->
     <header class="cuy-header">
         <h:link outcome="/index.xhtml" styleClass="cuy-brand">
-            <div class="cuy-brand-icon">
-                <i class="pi pi-truck" />
-            </div>
-            <div>
-                <p class="cuy-brand-title">CargaUY</p>
-            </div>
+            <img src="#{request.contextPath}/img/logo-cargauy.png" alt="CargaUY" class="cuy-brand-logo" />
         </h:link>
 
         <h:form id="headerAuthForm" styleClass="cuy-user-box">
@@ -479,6 +456,7 @@
                 <!-- 3. FUNCIONARIO -->
                 <p:submenu label="Fiscalización y Ruta" icon="pi pi-shield" rendered="#{authBean.esFuncionario()}">
                     <p:menuitem value="Empresas" icon="pi pi-building" outcome="/funcionario/empresas.xhtml" />
+                    <p:menuitem value="Consulta PDI" icon="pi pi-id-card" outcome="/funcionario/pdi.xhtml" />
                     <p:menuitem value="Documentación de Vehículos" icon="pi pi-check-square" outcome="/funcionario/fiscalizacion-vehiculos.xhtml" />
                     <p:menuitem value="Monitoreo de Viajes" icon="pi pi-compass" outcome="/funcionario/monitoreo.xhtml" />
                     <p:separator />
@@ -497,7 +475,6 @@
                     <p:menuitem value="Nodos" icon="pi pi-server" outcome="/admin/nodos.xhtml" />
                     <p:menuitem value="Catálogos" icon="pi pi-tags" outcome="/admin/catalogos.xhtml" />
                     <p:menuitem value="Reglas de Fiscalización" icon="pi pi-sliders-h" outcome="/admin/reglas-fiscalizacion.xhtml" />
-                    <p:menuitem value="Validar Permisos" icon="pi pi-verified" outcome="/empresa/validar-permisos.xhtml" />
                 </p:submenu>
 
             </p:menubar>

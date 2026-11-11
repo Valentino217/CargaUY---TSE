@@ -97,17 +97,17 @@ public class AuthBean implements Serializable {
 
     public boolean esCiudadanoEmpresa() {
         Acceso actor = resolverAcceso();
-        return actor != null && (actor.tiene(TipoUsuario.CIUDADANO) || actor.tiene(TipoUsuario.ADMINISTRADOR));
+        return actor != null && actor.tiene(TipoUsuario.CIUDADANO);
     }
 
     public boolean esSoloCiudadanoEmpresa() {
         Acceso actor = resolverAcceso();
-        return actor != null && actor.tiene(TipoUsuario.CIUDADANO) && !actor.tiene(TipoUsuario.ADMINISTRADOR);
+        return actor != null && actor.tiene(TipoUsuario.CIUDADANO);
     }
 
     public boolean esFuncionario() {
         Acceso actor = resolverAcceso();
-        return actor != null && (actor.tiene(TipoUsuario.FUNCIONARIO) || actor.tiene(TipoUsuario.ADMINISTRADOR));
+        return actor != null && actor.tiene(TipoUsuario.FUNCIONARIO);
     }
 
     public boolean esAutoridad() {

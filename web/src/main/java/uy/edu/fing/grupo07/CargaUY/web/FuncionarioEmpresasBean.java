@@ -55,6 +55,7 @@ public class FuncionarioEmpresasBean implements Serializable {
 
     private Integer ciConsultaPdi;
     private ResultadoPdi resultadoPdi;
+    private List<ResultadoPdi> historialPdi = new ArrayList<>();
 
     @PostConstruct
     public void init() {
@@ -199,10 +200,32 @@ public class FuncionarioEmpresasBean implements Serializable {
         }
         try {
             resultadoPdi = pdiService.consultar(SesionActual.token(), ciConsultaPdi, UUID.randomUUID().toString());
+            if (resultadoPdi != null) {
+                historialPdi.removeIf(r -> r.ci() != null && r.ci().equals(resultadoPdi.ci()));
+                historialPdi.add(0, resultadoPdi);
+            }
             mostrarMensaje(FacesMessage.SEVERITY_INFO, "PDI Consultado", "Estado respuesta PDI: " + resultadoPdi.estado());
         } catch (Exception e) {
             mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error PDI", e.getMessage());
         }
+    }
+
+    public void limpiarPdi() {
+        this.ciConsultaPdi = null;
+        this.resultadoPdi = null;
+    }
+
+    public Integer buscarUsuarioIdPorCi(Integer ci) {
+        if (ci == null || ci <= 0) return null;
+        try {
+            return identidadesService.buscarIdPorCi(ci);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public List<ResultadoPdi> getHistorialPdi() {
+        return historialPdi;
     }
 
     public long getTotalActivas() {
