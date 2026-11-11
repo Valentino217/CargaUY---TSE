@@ -9,7 +9,9 @@ import jakarta.inject.Named;
 import uy.edu.fing.grupo07.CargaUY.dto.DatosUsuario;
 import uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario;
 import uy.edu.fing.grupo07.CargaUY.dto.UsuarioResumen;
+import uy.edu.fing.grupo07.CargaUY.integration.ResultadoPdi;
 import uy.edu.fing.grupo07.CargaUY.security.IdentidadesService;
+import uy.edu.fing.grupo07.CargaUY.service.ConsultaCiudadanoService;
 import uy.edu.fing.grupo07.CargaUY.service.GestionPerfilesService;
 
 import java.io.Serializable;
@@ -19,6 +21,7 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * Managed Bean para /admin/usuarios.xhtml.
@@ -36,6 +39,11 @@ public class AdminUsuariosBean implements Serializable {
     @EJB
     private IdentidadesService identidadesService;
 
+    @EJB
+    private ConsultaCiudadanoService pdiService;
+
+    private Integer ciConsultaPdi;
+    private ResultadoPdi resultadoPdi;
     private List<UsuarioResumen> usuarios;
     private List<UsuarioResumen> usuariosFiltrados;
 
@@ -236,6 +244,32 @@ public class AdminUsuariosBean implements Serializable {
         return usuarios.stream()
                 .filter(u -> "ADMINISTRADOR".equals(u.tipo()) || "AUTORIDAD".equals(u.tipo()) || "FUNCIONARIO".equals(u.tipo()))
                 .count();
+    }
+
+    public void consultarEnPdi() {
+        resultadoPdi = null;
+        if (ciConsultaPdi == null || ciConsultaPdi <= 0) {
+            mostrarMensaje(FacesMessage.SEVERITY_WARN, "Validación", "Ingrese una Cédula de Identidad válida.");
+            return;
+        }
+        try {
+            resultadoPdi = pdiService.consultar(SesionActual.token(), ciConsultaPdi, UUID.randomUUID().toString());
+            mostrarMensaje(FacesMessage.SEVERITY_INFO, "PDI Consultado", "Estado respuesta PDI: " + resultadoPdi.estado());
+        } catch (Exception e) {
+            mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error PDI", e.getMessage());
+        }
+    }
+
+    public Integer getCiConsultaPdi() {
+        return ciConsultaPdi;
+    }
+
+    public void setCiConsultaPdi(Integer ciConsultaPdi) {
+        this.ciConsultaPdi = ciConsultaPdi;
+    }
+
+    public ResultadoPdi getResultadoPdi() {
+        return resultadoPdi;
     }
 
     private void mostrarMensaje(FacesMessage.Severity sev, String res, String det) {

@@ -22,6 +22,20 @@ class ClientePdiTest {
     @Test void ciudadanoInexistenteNoEsFallaDeRed()throws Exception{
         assertEquals(ResultadoPdi.Estado.NO_ENCONTRADO,new ClientePdi().interpretar(respuesta(ID,true),12345678,ID).estado());
     }
+    @Test void perfilGubPendienteConservaLaCi()throws Exception{
+        String xml=respuesta(ID,true).replace("CiudadanoNoEncontrado","CiudadanoPendiente");
+        var resultado=new ClientePdi().interpretar(xml,12345678,ID);
+        assertEquals(ResultadoPdi.Estado.PENDIENTE,resultado.estado());
+        assertEquals(12345678,resultado.ci());
+        assertNull(resultado.fechaNacimiento());
+    }
+    @Test void fichaDelMockSeIdentificaComoSimulada()throws Exception{
+        String xml=respuesta(ID,false).replace("<apellido>Perez</apellido>","<apellido/>")
+            .replace("</vigente>","</vigente><simulado>true</simulado>");
+        var resultado=new ClientePdi().interpretar(xml,12345678,ID);
+        assertEquals(ResultadoPdi.Estado.DISPONIBLE,resultado.estado());
+        assertEquals("Dato de prueba del simulador PDI",resultado.mensaje());
+    }
     @Test void rechazaRespuestaDeOtraSolicitud(){
         assertThrows(Exception.class,()->new ClientePdi().interpretar(respuesta(ID,false),12345678,"otro"));
     }

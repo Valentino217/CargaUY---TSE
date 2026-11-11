@@ -7,19 +7,16 @@ import jakarta.faces.context.FacesContext;
 import jakarta.faces.view.ViewScoped;
 import jakarta.inject.Named;
 import uy.edu.fing.grupo07.CargaUY.dto.EmpresaResumen;
-import uy.edu.fing.grupo07.CargaUY.integration.ResultadoPdi;
 import uy.edu.fing.grupo07.CargaUY.security.IdentidadesService;
-import uy.edu.fing.grupo07.CargaUY.service.ConsultaCiudadanoService;
 import uy.edu.fing.grupo07.CargaUY.service.GestionPerfilesService;
 
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Managed Bean para /funcionario/empresas.xhtml.
- * Gestión integral de empresas, consulta PDI y vinculación de responsables/choferes.
+ * Gestión integral de empresas y vinculación de responsables/choferes.
  */
 @Named("funcionarioEmpresasBean")
 @ViewScoped
@@ -32,9 +29,6 @@ public class FuncionarioEmpresasBean implements Serializable {
 
     @EJB
     private IdentidadesService identidadesService;
-
-    @EJB
-    private ConsultaCiudadanoService pdiService;
 
     private List<EmpresaResumen> empresas;
     private List<EmpresaResumen> empresasFiltradas;
@@ -52,9 +46,6 @@ public class FuncionarioEmpresasBean implements Serializable {
     private Integer usuarioCiVinculo;
     private String tipoBusquedaVinculo = "ID";
     private String funcionVinculo = "RESPONSABLE";
-
-    private Integer ciConsultaPdi;
-    private ResultadoPdi resultadoPdi;
 
     @PostConstruct
     public void init() {
@@ -192,19 +183,6 @@ public class FuncionarioEmpresasBean implements Serializable {
         }
     }
 
-    public void consultarEnPdi() {
-        if (ciConsultaPdi == null || ciConsultaPdi <= 0) {
-            mostrarMensaje(FacesMessage.SEVERITY_WARN, "Validación", "Ingrese una Cédula de Identidad válida.");
-            return;
-        }
-        try {
-            resultadoPdi = pdiService.consultar(SesionActual.token(), ciConsultaPdi, UUID.randomUUID().toString());
-            mostrarMensaje(FacesMessage.SEVERITY_INFO, "PDI Consultado", "Estado respuesta PDI: " + resultadoPdi.estado());
-        } catch (Exception e) {
-            mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error PDI", e.getMessage());
-        }
-    }
-
     public long getTotalActivas() {
         if (empresas == null) return 0;
         return empresas.stream().filter(EmpresaResumen::activa).count();
@@ -310,15 +288,4 @@ public class FuncionarioEmpresasBean implements Serializable {
         this.usuarioCiVinculo = usuarioCiVinculo;
     }
 
-    public Integer getCiConsultaPdi() {
-        return ciConsultaPdi;
-    }
-
-    public void setCiConsultaPdi(Integer ciConsultaPdi) {
-        this.ciConsultaPdi = ciConsultaPdi;
-    }
-
-    public ResultadoPdi getResultadoPdi() {
-        return resultadoPdi;
-    }
 }

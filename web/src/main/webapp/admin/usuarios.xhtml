@@ -16,7 +16,12 @@
                 </h1>
             </div>
             <div>
-                <h:form id="usrTopForm" style="margin: 0;">
+                <h:form id="usrTopForm" style="margin: 0; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.6rem;">
+                    <p:commandButton value="Consultar Ciudadano PDI"
+                                     icon="pi pi-id-card"
+                                     type="button"
+                                     onclick="PF('dlgPdiWidget').show()"
+                                     styleClass="ui-button-outlined ui-button-info" />
                     <p:commandButton value="Nuevo Usuario"
                                      icon="pi pi-user-plus"
                                      actionListener="#{adminUsuariosBean.prepararNuevoUsuario}"
@@ -271,6 +276,53 @@
                         </div>
                     </h:panelGroup>
                 </h:panelGroup>
+            </h:form>
+        </p:dialog>
+
+        <!-- Modal Consulta Ciudadano en PDI (DNIC SOAP) -->
+        <p:dialog header="Consulta de Identidad en PDI (DNIC - SOAP)"
+                  widgetVar="dlgPdiWidget"
+                  modal="true"
+                  responsive="true"
+                  width="520"
+                  closeOnEscape="true">
+            <h:form id="dlgPdiForm">
+                <div class="ui-fluid">
+                    <p style="margin-top: 0; font-size: 0.88rem; color: #475569;">
+                        Consultar datos de la persona por cédula en PDI.
+                    </p>
+                    <div style="display: flex; gap: 0.75rem; align-items: flex-end; margin-bottom: 1rem;">
+                        <div class="cuy-field" style="flex: 1;">
+                            <p:outputLabel for="ciPdiInput" value="Cédula de Identidad (sin puntos ni guión)" />
+                            <p:inputNumber id="ciPdiInput" label="Cédula de Identidad (sin puntos ni guión)" value="#{adminUsuariosBean.ciConsultaPdi}" decimalPlaces="0" thousandSeparator="" placeholder="Ej. 41234567" />
+                        </div>
+                        <p:commandButton value="Consultar PDI"
+                                         icon="pi pi-search"
+                                         actionListener="#{adminUsuariosBean.consultarEnPdi}"
+                                         process="@this ciPdiInput"
+                                         update="panelResultadoPdi"
+                                         style="width: auto;" />
+                    </div>
+
+                    <h:panelGroup id="panelResultadoPdi">
+                        <h:panelGroup rendered="#{adminUsuariosBean.resultadoPdi != null}">
+                            <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 1rem;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                    <span style="font-weight: 700; color: #0f2942;">Resultado DNIC / PDI</span>
+                                    <p:tag value="#{adminUsuariosBean.resultadoPdi.estado()}"
+                                           severity="#{adminUsuariosBean.resultadoPdi.estado().name() eq 'DISPONIBLE' ? 'success' : 'warning'}"
+                                           rounded="true" />
+                                </div>
+                                <div style="font-size: 0.9rem; color: #334155; display: grid; gap: 0.35rem;">
+                                    <div><strong>Cédula:</strong> #{adminUsuariosBean.resultadoPdi.ci()}</div>
+                                    <div><strong>Nombre:</strong> #{adminUsuariosBean.resultadoPdi.nombre()} #{adminUsuariosBean.resultadoPdi.apellido()}</div>
+                                    <div><strong>Fecha Nacimiento:</strong> #{adminUsuariosBean.resultadoPdi.fechaNacimiento()}</div>
+                                    <div><strong>Mensaje:</strong> #{adminUsuariosBean.resultadoPdi.mensaje()}</div>
+                                </div>
+                            </div>
+                        </h:panelGroup>
+                    </h:panelGroup>
+                </div>
             </h:form>
         </p:dialog>
     </ui:define>
