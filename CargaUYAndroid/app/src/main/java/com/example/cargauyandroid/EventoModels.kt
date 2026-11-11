@@ -8,27 +8,27 @@ enum class TipoEventoOption(
     INICIO(
         codigo = "INICIO",
         etiqueta = "Inicio de viaje",
-        descripcionAyuda = "Registra la fecha y hora del inicio del viaje."
+        descripcionAyuda = "Marcá el comienzo de tu recorrido."
     ),
     FIN(
         codigo = "FIN",
         etiqueta = "Fin de viaje",
-        descripcionAyuda = "Registra la fecha y hora de finalizacion del viaje."
+        descripcionAyuda = "Marcá la llegada a destino y el cierre del viaje."
     ),
     CARGA_PARCIAL(
         codigo = "CARGA_PARCIAL",
         etiqueta = "Carga parcial",
-        descripcionAyuda = "Ingresa la cantidad en Kg, que se carga y a que empresa pertenece."
+        descripcionAyuda = "Indicá los kilos cargados, la mercadería y el cliente."
     ),
     DESCARGA_PARCIAL(
         codigo = "DESCARGA_PARCIAL",
         etiqueta = "Descarga parcial",
-        descripcionAyuda = "Ingresa la cantidad en Kg, que se descargo y a que empresa pertenece."
+        descripcionAyuda = "Indicá los kilos descargados, la mercadería y el cliente."
     ),
     INCIDENTE(
         codigo = "INCIDENTE",
         etiqueta = "Incidente",
-        descripcionAyuda = "Ingresa la descripcion del incidente y opcionalmente adjunta una foto."
+        descripcionAyuda = "Contá brevemente qué pasó en la ruta. Podés agregar una foto."
     );
 
     companion object {
@@ -45,8 +45,18 @@ enum class TipoEventoOption(
                 "DESCARGA" -> "Descarga"
                 "DESCARGA_PARCIAL" -> "Descarga parcial"
                 "INCIDENTE" -> "Incidente"
-                "POSICION" -> "Desvío de ruta (Posición)"
+                "POSICION" -> "Desvío de ruta"
                 else -> codigo
+            }
+        }
+
+        fun etiquetaEstadoViaje(estado: String?): String {
+            return when (estado?.trim()?.uppercase()) {
+                "SIN_INICIAR" -> "Pendiente"
+                "EN_CURSO" -> "En viaje"
+                "FINALIZADO" -> "Finalizado"
+                null, "" -> "-"
+                else -> estado
             }
         }
 
