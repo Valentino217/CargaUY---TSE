@@ -467,6 +467,7 @@ class GestionInfraccionesServiceTest {
         InfraccionDTO trasNotificar = service.procesarNotificacionAutomatica(1);
         assertNotNull(trasNotificar);
         assertEquals(EstadoInfraccion.NOTIFICADA, trasNotificar.estado());
+        assertNotNull(infraccionPrueba.getFechaNotificacion());
         assertEquals(2, trasNotificar.historialAuditoria().size());
 
         // Reintento idempotente de notificación automática: no agrega un tercer registro
@@ -494,5 +495,66 @@ class GestionInfraccionesServiceTest {
         assertEquals("PRESENTAR_DESCARGO", trasConfirmar.historialAuditoria().get(2).accion());
         assertEquals("CONFIRMAR_INFRACCION", trasConfirmar.historialAuditoria().get(3).accion());
         assertEquals("CONFIRMAR_INFRACCION", trasConfirmar.auditoria().accion());
+    }
+
+    @Test
+    @DisplayName("Cierre automático - confirma sanción solo tras 7 días notificada sin descargo")
+    void testCerrarInfraccionesNotificadasVencidas() {
+        LocalDate hoy = LocalDate.now();
+
+        // Caso 1: notificada hace exactamente 7 días sin descargo -> debe confirmarse
+        Infraccion vencidaConFecha = new Infraccion(hoy.minusDays(8), TipoInfraccion.EXCESO_DE_CARGA, EstadoInfraccion.NOTIFICADA, guiaPrueba);
+        vencidaConFecha.setIdCaso(101);
+        vencidaConFecha.setFechaNotificacion(hoy.minusDays(7));
+
+        // Caso 2: notificada hace 6 días -> no debe cerrarse todavía
+        Infraccion vigente = new Infraccion(hoy.minusDays(10), TipoInfraccion.EXCESO_DE_CARGA, EstadoInfraccion.NOTIFICADA, guiaPrueba);
+        vigente.setIdCaso(102);
+        vigente.setFechaNotificacion(hoy.minusDays(6));
+
+        // Caso 3: sin fechaNotificacion explícita, con evento NOTIFICAR_INFRACCION de hace 9 días -> debe confirmarse por fallback de auditoría
+        Infraccion vencidaPorAuditoria = new Infraccion(hoy.minusDays(12), TipoInfraccion.DESVIO_DE_RUTA, EstadoInfraccion.NOTIFICADA, guiaPrueba);
+        vencidaPorAuditoria.setIdCaso(103);
+        vencidaPorAuditoria.agregarRegistroAuditoria(new RegistroAuditoria(
+                vencidaPorAuditoria,
+                EstadoInfraccion.NOTIFICADA.name(),
+                hoy.minusDays(9),
+                "SISTEMA (Notificación Automática)",
+                "NOTIFICAR_INFRACCION",
+                "Notificación inicial"
+        ));
+
+        // Caso 4: guarda defensiva si ya tiene descargo aunque permaneciera en NOTIFICADA -> no cerrar automáticamente
+        Infraccion conDescargo = new Infraccion(hoy.minusDays(15), TipoInfraccion.EXCESO_DE_CARGA, EstadoInfraccion.NOTIFICADA, guiaPrueba);
+        conDescargo.setIdCaso(104);
+        conDescargo.setFechaNotificacion(hoy.minusDays(15));
+        conDescargo.setDescargo(new Descargo(hoy.minusDays(10), "Descargo presentado", conDescargo));
+
+        @SuppressWarnings("unchecked")
+        TypedQuery<Infraccion> query = org.mockito.Mockito.mock(TypedQuery.class);
+        when(em.createQuery(anyString(), eq(Infraccion.class))).thenReturn(query);
+        when(query.setParameter(eq("estado"), eq(EstadoInfraccion.NOTIFICADA))).thenReturn(query);
+        when(query.getResultList()).thenReturn(List.of(vencidaConFecha, vigente, vencidaPorAuditoria, conDescargo));
+
+        int cerrados = service.cerrarInfraccionesNotificadasVencidas();
+
+        assertEquals(2, cerrados);
+
+        assertEquals(EstadoInfraccion.CONFIRMADA, vencidaConFecha.getEstado());
+        assertEquals(EstadoInfraccion.CONFIRMADA.name(), vencidaConFecha.getResolucion());
+        assertEquals(hoy, vencidaConFecha.getFechaResolucion());
+        assertNotNull(vencidaConFecha.getFundamento());
+        assertEquals(1, vencidaConFecha.getRegistrosAuditoria().size());
+        assertEquals("CONFIRMAR_INFRACCION", vencidaConFecha.getRegistrosAuditoria().get(0).getAccion());
+        assertEquals("SISTEMA (Cierre Automático)", vencidaConFecha.getRegistrosAuditoria().get(0).getUsuario());
+
+        assertEquals(EstadoInfraccion.NOTIFICADA, vigente.getEstado());
+        assertNull(vigente.getResolucion());
+
+        assertEquals(EstadoInfraccion.CONFIRMADA, vencidaPorAuditoria.getEstado());
+        assertEquals(2, vencidaPorAuditoria.getRegistrosAuditoria().size());
+        assertEquals("CONFIRMAR_INFRACCION", vencidaPorAuditoria.getRegistrosAuditoria().get(1).getAccion());
+
+        assertEquals(EstadoInfraccion.NOTIFICADA, conDescargo.getEstado());
     }
 }

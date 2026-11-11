@@ -42,4 +42,12 @@ public interface GestionInfraccionesServiceLocal {
     InfraccionDTO desestimarInfraccion(int idCaso, ResolucionInfraccionDTO resolucion);
 
     InfraccionDTO desestimarInfraccion(String token, int idCaso, String fundamento);
+
+    /**
+     * Cierra automáticamente como CONFIRMADA (aplicando sanción) toda infracción en estado NOTIFICADA
+     * para la cual hayan transcurrido al menos 7 días desde la notificación sin que la empresa presente descargo.
+     *
+     * @return cantidad de casos cerrados automáticamente
+     */
+    int cerrarInfraccionesNotificadasVencidas();
 }

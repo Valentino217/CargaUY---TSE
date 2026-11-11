@@ -46,6 +46,9 @@ public class Infraccion implements Serializable {
     @Column(name = "fecha_resolucion")
     private LocalDate fechaResolucion;
 
+    @Column(name = "fecha_notificacion")
+    private LocalDate fechaNotificacion;
+
     @Column(length = 1000)
     private String evidencia;
 
@@ -143,6 +146,14 @@ public class Infraccion implements Serializable {
 
     public void setFechaResolucion(LocalDate fechaResolucion) {
         this.fechaResolucion = fechaResolucion;
+    }
+
+    public LocalDate getFechaNotificacion() {
+        return fechaNotificacion;
+    }
+
+    public void setFechaNotificacion(LocalDate fechaNotificacion) {
+        this.fechaNotificacion = fechaNotificacion;
     }
 
     public String getEvidencia() {
