@@ -105,14 +105,14 @@
         <!-- Diálogo de Constancia de Validación Pública -->
         <p:dialog id="dialogFichaPublica"
                   widgetVar="wvFichaPublica"
-                  header="Constancia de Situación Registral"
+                  header="Registro de la empresa"
                   modal="true"
                   responsive="true"
                   width="520"
                   closeOnEscape="true">
             <p:outputPanel rendered="#{not empty portalPublicoBean.empresaInspeccionada}">
                 <div style="text-align: center; padding: 0.75rem 0 1.25rem 0;">
-                    <p:tag value="#{portalPublicoBean.empresaInspeccionada.activa ? 'EMPRESA HABILITADA POR DNT / MTOP' : 'EMPRESA NO HABILITADA'}"
+                    <p:tag value="#{portalPublicoBean.empresaInspeccionada.activa ? 'EMPRESA HABILITADA' : 'EMPRESA NO HABILITADA'}"
                            severity="#{portalPublicoBean.empresaInspeccionada.activa ? 'success' : 'danger'}"
                            style="font-size: 0.9rem; padding: 0.4rem 0.85rem;"
                            rounded="true" />
