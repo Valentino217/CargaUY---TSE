@@ -1,6 +1,6 @@
 FROM python:3.11-alpine
 WORKDIR /app
-RUN mkdir -p /data
+RUN mkdir -p /data && chmod 777 /data
 ENV PORT=8080 \
     BALANZA_DB_PATH=/data/balanzas.db \
     PYTHONUNBUFFERED=1

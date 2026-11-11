@@ -265,21 +265,26 @@
             </h:form>
         </p:dialog>
 
-        <!-- Modal Simulador de Tracking -->
-        <p:dialog header="Simular tracking"
+        <!-- Modal Simulador de Tracking (Nodo Periférico) -->
+        <p:dialog header="Nodo Periférico de Tracking (Mock)"
                   widgetVar="dlgTrackingWidget"
                   modal="true"
                   responsive="true"
                   width="560"
                   closeOnEscape="true">
             <h:form id="dlgTrackingForm" styleClass="ui-fluid">
-                <h:panelGroup id="trackingEstado" layout="block" style="display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem;">
-                    <p:tag value="#{detalleViajeBean.mockTrackingActivo ? 'ACTIVO' : 'DETENIDO'}"
-                           severity="#{detalleViajeBean.mockTrackingActivo ? 'success' : 'secondary'}"
-                           icon="#{detalleViajeBean.mockTrackingActivo ? 'pi pi-spin pi-spinner' : 'pi pi-pause'}"
-                           rounded="true" />
-                    <span style="font-size: 0.85rem; color: #0f2942; font-weight: 600;">
-                        Puntos emitidos: #{detalleViajeBean.mockTotalEventosEmitidos} | Desvíos: #{detalleViajeBean.mockTotalDesviosEmitidos}
+                <h:panelGroup id="trackingEstado" layout="block" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 1rem;">
+                    <div style="display: flex; align-items: center; gap: 0.6rem;">
+                        <p:tag value="#{detalleViajeBean.mockTrackingActivo ? 'ACTIVO' : 'DETENIDO'}"
+                               severity="#{detalleViajeBean.mockTrackingActivo ? 'success' : 'secondary'}"
+                               icon="#{detalleViajeBean.mockTrackingActivo ? 'pi pi-spin pi-spinner' : 'pi pi-pause'}"
+                               rounded="true" />
+                        <span style="font-size: 0.85rem; color: #0f2942; font-weight: 600;">
+                            Puntos emitidos: #{detalleViajeBean.mockTotalEventosEmitidos} | Desvíos: #{detalleViajeBean.mockTotalDesviosEmitidos}
+                        </span>
+                    </div>
+                    <span class="cuy-mono" style="font-size: 0.75rem;" title="Endpoint del contenedor periférico mock-tracking">
+                        #{detalleViajeBean.nodoTrackingEndpoint}
                     </span>
                 </h:panelGroup>
 

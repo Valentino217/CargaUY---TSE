@@ -67,19 +67,9 @@ services:
     ports:
       - "8081:8080"
 
-  mock-balanza:
-    build: ./docker/mock-balanza
-    restart: unless-stopped
-    environment:
-      PORT: "8080"
-      BALANZA_DB_PATH: /data/balanzas.db
-    ports:
-      - "8082:8080"
-    volumes:
-      - balanza_p1:/data
-
   wildfly:
     env_file:
+      - .env
       - ./.local-p1/gub-real.env
     build:
       context: .
@@ -106,7 +96,10 @@ services:
       BOOTSTRAP_ADMIN_MAIL: "admin@example.invalid"
       BOOTSTRAP_ADMIN_NACIMIENTO: "1990-01-01"
       PDI_ENDPOINT: http://mock-pdi:8080/pdi/ws
-      BALANZA_ENDPOINT: http://mock-balanza:8080
+      BALANZA_ENDPOINT: ${BALANZA_ENDPOINT:-https://cargauy-mock-balanza-latest.onrender.com}
+      BALANZA_TIMEOUT_SECONDS: ${BALANZA_TIMEOUT_SECONDS:-15}
+      TRACKING_ENDPOINT: ${TRACKING_ENDPOINT:-https://cargauy-mock-tracking-latest.onrender.com}
+      TRACKING_TIMEOUT_SECONDS: ${TRACKING_TIMEOUT_SECONDS:-15}
       MONGO_URI: mongodb://mongodb:27017
       LDAP_URL: ldap://ldap:1389
       GUB_PROVEEDOR: iduruguay
@@ -129,4 +122,3 @@ volumes:
   ldap_p1:
   keycloak_p1:
   mongo_p1:
-  balanza_p1:

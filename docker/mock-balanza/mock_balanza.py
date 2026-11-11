@@ -51,18 +51,32 @@ def log_json(evento: str, **campos):
     print(json.dumps(registro, ensure_ascii=False), flush=True)
 
 
-def init_db() -> sqlite3.Connection:
-    db_path = DB_PATH
-    if db_path != ":memory:":
-        parent = os.path.dirname(db_path)
-        if parent:
-            try:
-                os.makedirs(parent, exist_ok=True)
-            except OSError:
-                db_path = ":memory:"
+def _abrir_conexion_sqlite() -> tuple[sqlite3.Connection, str]:
+    candidatos = [DB_PATH]
+    if DB_PATH != "/tmp/balanzas.db":
+        candidatos.append("/tmp/balanzas.db")
+    candidatos.append(":memory:")
 
-    conn = sqlite3.connect(db_path, check_same_thread=False)
-    conn.row_factory = sqlite3.Row
+    for ruta in candidatos:
+        if ruta != ":memory:":
+            parent = os.path.dirname(ruta)
+            if parent:
+                try:
+                    os.makedirs(parent, exist_ok=True)
+                except OSError:
+                    continue
+        try:
+            conn = sqlite3.connect(ruta, check_same_thread=False)
+            conn.row_factory = sqlite3.Row
+            conn.execute("SELECT 1").fetchone()
+            return conn, ruta
+        except sqlite3.Error as err:
+            log_json("balanza.db.fallback", ruta=ruta, error=str(err))
+    raise RuntimeError("No fue posible inicializar SQLite para balanzas")
+
+
+def init_db() -> tuple[sqlite3.Connection, str]:
+    conn, db_path = _abrir_conexion_sqlite()
     with conn:
         conn.execute(
             """
@@ -105,10 +119,10 @@ def init_db() -> sqlite3.Connection:
                     """,
                     (mat, normalizar_matricula(mat), emp, f, h, peso, peaje),
                 )
-    return conn
+    return conn, db_path
 
 
-_CONN = init_db()
+_CONN, ACTIVE_DB_PATH = init_db()
 
 
 def row_to_dict(row: sqlite3.Row) -> dict:
@@ -216,15 +230,41 @@ class BalanzaHandler(BaseHTTPRequestHandler):
     def _correlacion(self) -> str:
         return self.headers.get("X-Correlation-ID") or ""
 
+    def _enviar_headers_cors(self, correlacion: str = ""):
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, HEAD, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-Correlation-ID")
+        if correlacion:
+            self.send_header("X-Correlation-ID", correlacion)
+
     def _enviar_json(self, status: int, payload, correlacion: str):
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
-        if correlacion:
-            self.send_header("X-Correlation-ID", correlacion)
+        self._enviar_headers_cors(correlacion)
         self.end_headers()
         self.wfile.write(body)
+
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self._enviar_headers_cors(self._correlacion())
+        self.end_headers()
+
+    def do_HEAD(self):
+        parsed = urlparse(self.path)
+        correlacion = self._correlacion()
+        if parsed.path in ("/", "/health"):
+            with _LOCK:
+                modo_fallo = _CONFIG["modoFallo"]
+            self.send_response(503 if modo_fallo else 200)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self._enviar_headers_cors(correlacion)
+            self.end_headers()
+            return
+        self.send_response(404)
+        self._enviar_headers_cors(correlacion)
+        self.end_headers()
 
     def _aplicar_simulacion_entorno(self, correlacion: str, path: str) -> bool:
         with _LOCK:
@@ -371,5 +411,5 @@ class BalanzaHandler(BaseHTTPRequestHandler):
 
 if __name__ == "__main__":
     server = ThreadingHTTPServer(("0.0.0.0", PORT), BalanzaHandler)
-    log_json("balanza.startup", port=PORT, dbPath=DB_PATH)
+    log_json("balanza.startup", port=PORT, dbPath=ACTIVE_DB_PATH)
     server.serve_forever()

@@ -32,6 +32,7 @@ public class AdminNodosBean implements Serializable {
 
     private static final long serialVersionUID = 1L;
     private static final Duration PROBE_TIMEOUT = Duration.ofMillis(350);
+    private static final Duration HTTP_PROBE_TIMEOUT = Duration.ofSeconds(5);
 
     @EJB
     private GestionBalanzaServiceLocal balanzaService;
@@ -60,7 +61,8 @@ public class AdminNodosBean implements Serializable {
 
         // 1. Balanza
         String envBalanza = System.getenv("BALANZA_ENDPOINT");
-        String balanzaEndpoint = (envBalanza != null && !envBalanza.isBlank()) ? envBalanza.trim() : "http://localhost:8082";
+        boolean tieneEnvBalanza = envBalanza != null && !envBalanza.isBlank();
+        String balanzaEndpoint = tieneEnvBalanza ? envBalanza.trim() : "http://localhost:8082";
         while (balanzaEndpoint.endsWith("/")) {
             balanzaEndpoint = balanzaEndpoint.substring(0, balanzaEndpoint.length() - 1);
         }
@@ -68,7 +70,7 @@ public class AdminNodosBean implements Serializable {
                 ? balanzaEndpoint.substring(0, balanzaEndpoint.length() - "/pesadas".length())
                 : balanzaEndpoint;
         boolean balanzaUp = sondearHealthHttp(balanzaBase + "/health")
-                || sondearHealthHttp("http://localhost:8082/health");
+                || (!tieneEnvBalanza && sondearHealthHttp("http://localhost:8082/health"));
 
         nodos.add(new NodoPerifericoVista(
                 "NODO-BAL-01",
@@ -77,6 +79,28 @@ public class AdminNodosBean implements Serializable {
                 balanzaBase,
                 balanzaUp,
                 balanzaUp ? "Operativo" : "OFFLINE"
+        ));
+
+        // 1.5 Tracking Periférico
+        String envTracking = System.getenv("TRACKING_ENDPOINT");
+        boolean tieneEnvTracking = envTracking != null && !envTracking.isBlank();
+        String trackingEndpoint = tieneEnvTracking ? envTracking.trim() : Config.valor("tracking.endpoint", "http://localhost:8085");
+        while (trackingEndpoint.endsWith("/")) {
+            trackingEndpoint = trackingEndpoint.substring(0, trackingEndpoint.length() - 1);
+        }
+        String trackingBase = trackingEndpoint.endsWith("/estado")
+                ? trackingEndpoint.substring(0, trackingEndpoint.length() - "/estado".length())
+                : trackingEndpoint;
+        boolean trackingUp = sondearHealthHttp(trackingBase + "/health")
+                || (!tieneEnvTracking && (sondearHealthHttp("http://localhost:8085/health") || sondearHealthHttp("http://mock-tracking:8080/health")));
+
+        nodos.add(new NodoPerifericoVista(
+                "NODO-TRK-01",
+                "Nodo Periférico Tracking",
+                "HTTP",
+                trackingBase,
+                trackingUp,
+                trackingUp ? "Operativo" : "OFFLINE"
         ));
 
         // 2. PDI (DNIC)
@@ -172,11 +196,12 @@ public class AdminNodosBean implements Serializable {
         try {
             URI uri = URI.create(urlStr);
             HttpClient client = HttpClient.newBuilder()
-                    .connectTimeout(PROBE_TIMEOUT)
+                    .connectTimeout(HTTP_PROBE_TIMEOUT)
+                    .followRedirects(HttpClient.Redirect.NORMAL)
                     .build();
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(uri)
-                    .timeout(PROBE_TIMEOUT)
+                    .timeout(HTTP_PROBE_TIMEOUT)
                     .header("X-Correlation-ID", UUID.randomUUID().toString())
                     .GET()
                     .build();
@@ -222,6 +247,9 @@ public class AdminNodosBean implements Serializable {
                 }
                 if (port == 8082 || uriStr.contains("balanza")) {
                     if (probarSocket("mock-balanza", 8080)) return true;
+                }
+                if (port == 8085 || uriStr.contains("tracking")) {
+                    if (probarSocket("mock-tracking", 8080)) return true;
                 }
                 if (port == 27017) {
                     if (probarSocket("mongodb", 27017)) return true;

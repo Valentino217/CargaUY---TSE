@@ -21,6 +21,7 @@ import uy.edu.fing.grupo07.CargaUY.dto.IncidenteDTO;
 import uy.edu.fing.grupo07.CargaUY.fiscalizacion.MotorFiscalizacionLocal;
 import uy.edu.fing.grupo07.CargaUY.integration.FaasTrackingClient;
 import uy.edu.fing.grupo07.CargaUY.integration.RedVialUruguay;
+import uy.edu.fing.grupo07.CargaUY.integration.TrackingClient;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -39,12 +40,14 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Servicio Mock del sistema de tracking GPS para guías de viaje activas (EN_CURSO).
+ * Servicio coordinador del Nodo Periférico Descentralizado de Tracking GPS (mock-tracking)
+ * para guías de viaje activas (EN_CURSO).
  * <p>
- * Emite periódicamente eventos de posición siguiendo la ruta planificada (origen -> destino),
- * permite intercalar una cantidad configurable de episodios de desvío durante el trayecto y,
- * al llegar al lugar de finalización (destino), continúa emitiendo puntos en el destino
- * hasta que el chofer finalice el viaje.
+ * Se comunica vía HTTP REST con el contenedor periférico {@code mock-tracking} para activar,
+ * pausar, reiniciar o avanzar la simulación de recorridos viales y drenar de forma idempotente
+ * los puntos emitidos por el nodo periférico hacia la persistencia (MongoDB/PostgreSQL) y el
+ * motor de fiscalización. Incluye respaldo local transparente para entornos de pruebas unitarias
+ * sin contenedor activo.
  * </p>
  */
 @Singleton
@@ -70,6 +73,9 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
     @Inject
     private FaasTrackingClient faasTrackingClient;
 
+    @Inject
+    private TrackingClient trackingClient;
+
     @Resource
     private SessionContext sessionContext;
 
@@ -77,6 +83,7 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
     private ScheduledFuture<?> tareaProgramada;
 
     private volatile boolean activo = false;
+    private volatile boolean nodoPerifericoOnline = false;
     private volatile int eventosPorMinuto = EVENTOS_POR_MINUTO_DEFECTO;
     private volatile int cantidadDesvios = 0;
     private volatile String ultimoResultado = "Mock detenido.";
@@ -140,7 +147,22 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
         this.faasTrackingClient = faasTrackingClient;
     }
 
+    public TrackingMockServiceImpl(
+            EntityManager em,
+            GestionEventosServiceLocal eventosService,
+            MotorFiscalizacionLocal motorFiscalizacion,
+            FaasTrackingClient faasTrackingClient,
+            TrackingClient trackingClient
+    ) {
+        this.em = em;
+        this.eventosService = eventosService;
+        this.motorFiscalizacion = motorFiscalizacion;
+        this.faasTrackingClient = faasTrackingClient;
+        this.trackingClient = trackingClient;
+    }
+
     @Override
+    @TransactionAttribute(TransactionAttributeType.REQUIRED)
     public synchronized void iniciar(int nuevoEventosPorMinuto, int nuevaCantidadDesvios) {
         int epmNormalizado = Math.max(MIN_EVENTOS_POR_MINUTO, Math.min(MAX_EVENTOS_POR_MINUTO, nuevoEventosPorMinuto));
         int desviosNormalizados = Math.max(0, nuevaCantidadDesvios);
@@ -153,10 +175,51 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
             estadosPorGuia.clear();
         }
 
+        long intervaloMs = Math.max(500L, Math.round(60_000.0 / this.eventosPorMinuto));
+
+        if (trackingClient != null) {
+            try {
+                List<GuiaDeViaje> guiasActivas = buscarGuiasEnCurso();
+                String faasUrl = faasTrackingClient != null ? faasTrackingClient.getEndpointUrl() : "";
+                TrackingClient.EstadoNodoTracking estadoRemoto = trackingClient.iniciar(
+                        this.eventosPorMinuto,
+                        this.cantidadDesvios,
+                        construirPayloadGuias(guiasActivas),
+                        faasUrl,
+                        UUID.randomUUID().toString()
+                );
+                this.nodoPerifericoOnline = true;
+                procesarEventosDePeriferico(estadoRemoto.eventosEmitidos());
+                actualizarEstadoDesdePeriferico(estadoRemoto);
+
+                cancelarTareaActual();
+                asegurarScheduler();
+                long syncIntervalMs = Math.min(2500L, intervaloMs);
+                this.tareaProgramada = scheduler.scheduleAtFixedRate(
+                        this::ejecutarTickSeguro,
+                        syncIntervalMs,
+                        syncIntervalMs,
+                        TimeUnit.MILLISECONDS
+                );
+                LOGGER.log(
+                        Level.INFO,
+                        "Nodo periférico de Tracking iniciado en {0}: {1} eventos/min, desvíos={2}",
+                        new Object[]{trackingClient.getEndpointUrl(), this.eventosPorMinuto, this.cantidadDesvios}
+                );
+                return;
+            } catch (Exception e) {
+                this.nodoPerifericoOnline = false;
+                LOGGER.log(
+                        Level.WARNING,
+                        "Nodo periférico de Tracking no disponible en {0} ({1}); activando motor de respaldo.",
+                        new Object[]{trackingClient.getEndpointUrl(), e.getMessage()}
+                );
+            }
+        }
+
         cancelarTareaActual();
         asegurarScheduler();
 
-        long intervaloMs = Math.max(500L, Math.round(60_000.0 / this.eventosPorMinuto));
         this.activo = true;
         this.tareaProgramada = scheduler.scheduleAtFixedRate(
                 this::ejecutarTickSeguro,
@@ -181,13 +244,42 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
     public synchronized void detener() {
         this.activo = false;
         cancelarTareaActual();
+        if (trackingClient != null) {
+            try {
+                TrackingClient.EstadoNodoTracking estadoRemoto = trackingClient.detener(UUID.randomUUID().toString());
+                this.nodoPerifericoOnline = true;
+                actualizarEstadoDesdePeriferico(estadoRemoto);
+                this.activo = false;
+                LOGGER.info("Nodo periférico de Tracking detenido.");
+                return;
+            } catch (Exception e) {
+                this.nodoPerifericoOnline = false;
+                LOGGER.log(Level.FINE, "No se pudo contactar al nodo periférico al detener: {0}", e.getMessage());
+            }
+        }
         this.ultimoResultado = "Mock detenido por el usuario. Total eventos emitidos: " + totalEventosEmitidos.get();
         LOGGER.info("Mock de Tracking detenido.");
     }
 
     @Override
+    @TransactionAttribute(TransactionAttributeType.REQUIRED)
     public synchronized void reiniciarRecorridos() {
         estadosPorGuia.clear();
+        if (trackingClient != null) {
+            try {
+                List<GuiaDeViaje> guiasActivas = buscarGuiasEnCurso();
+                TrackingClient.EstadoNodoTracking estadoRemoto = trackingClient.reiniciar(
+                        construirPayloadGuias(guiasActivas),
+                        UUID.randomUUID().toString()
+                );
+                this.nodoPerifericoOnline = true;
+                actualizarEstadoDesdePeriferico(estadoRemoto);
+                return;
+            } catch (Exception e) {
+                this.nodoPerifericoOnline = false;
+                LOGGER.log(Level.FINE, "No se pudo contactar al nodo periférico al reiniciar: {0}", e.getMessage());
+            }
+        }
         this.ultimoResultado = "Recorridos del Mock reiniciados al punto de origen.";
     }
 
@@ -208,12 +300,42 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
         try {
             if (sessionContext != null) {
                 TrackingMockServiceLocal proxy = sessionContext.getBusinessObject(TrackingMockServiceLocal.class);
-                proxy.emitirPasoGuiasActivas();
+                if (trackingClient != null && nodoPerifericoOnline) {
+                    proxy.sincronizarConNodoPeriferico();
+                } else {
+                    proxy.emitirPasoGuiasActivas();
+                }
             } else {
-                emitirPasoGuiasActivas();
+                if (trackingClient != null && nodoPerifericoOnline) {
+                    sincronizarConNodoPeriferico();
+                } else {
+                    emitirPasoGuiasActivas();
+                }
             }
         } catch (Exception e) {
             LOGGER.log(Level.WARNING, "Error durante el ciclo automático del Mock de Tracking: {0}", e.getMessage());
+        }
+    }
+
+    @Override
+    @TransactionAttribute(TransactionAttributeType.REQUIRED)
+    public void sincronizarConNodoPeriferico() {
+        if (trackingClient == null) {
+            return;
+        }
+        try {
+            List<GuiaDeViaje> guiasActivas = buscarGuiasEnCurso();
+            TrackingClient.EstadoNodoTracking estadoRemoto = trackingClient.sincronizarGuiasYDrenar(
+                    construirPayloadGuias(guiasActivas),
+                    true,
+                    UUID.randomUUID().toString()
+            );
+            this.nodoPerifericoOnline = true;
+            procesarEventosDePeriferico(estadoRemoto.eventosEmitidos());
+            actualizarEstadoDesdePeriferico(estadoRemoto);
+        } catch (Exception e) {
+            this.nodoPerifericoOnline = false;
+            LOGGER.log(Level.FINE, "No fue posible sincronizar con el nodo periférico de Tracking: {0}", e.getMessage());
         }
     }
 
@@ -224,7 +346,38 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
         if (guiasActivas.isEmpty()) {
             this.ultimoResultado = "No hay guías de viaje en estado EN_CURSO actualmente.";
             estadosPorGuia.clear();
+            if (trackingClient != null) {
+                try {
+                    trackingClient.sincronizarGuiasYDrenar(List.of(), true, UUID.randomUUID().toString());
+                    this.nodoPerifericoOnline = true;
+                } catch (Exception ignored) {
+                }
+            }
             return 0;
+        }
+
+        if (trackingClient != null) {
+            try {
+                String faasUrl = faasTrackingClient != null ? faasTrackingClient.getEndpointUrl() : "";
+                TrackingClient.EstadoNodoTracking estadoRemoto = trackingClient.emitirPaso(
+                        this.eventosPorMinuto,
+                        this.cantidadDesvios,
+                        construirPayloadGuias(guiasActivas),
+                        faasUrl,
+                        UUID.randomUUID().toString()
+                );
+                this.nodoPerifericoOnline = true;
+                int procesados = procesarEventosDePeriferico(estadoRemoto.eventosEmitidos());
+                actualizarEstadoDesdePeriferico(estadoRemoto);
+                return procesados > 0 ? procesados : (estadoRemoto.eventosEmitidos() != null ? estadoRemoto.eventosEmitidos().size() : 0);
+            } catch (Exception e) {
+                this.nodoPerifericoOnline = false;
+                LOGGER.log(
+                        Level.WARNING,
+                        "Fallo al solicitar paso al nodo periférico de Tracking ({0}); ejecutando paso local de respaldo.",
+                        e.getMessage()
+                );
+            }
         }
 
         Set<Long> idsActivos = new HashSet<>();
@@ -330,6 +483,71 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
             this.ultimoResultado = detalleUltimo;
         }
         return emitidosEnPaso;
+    }
+
+    private int procesarEventosDePeriferico(List<EventoViajeDTO> eventosRemotos) {
+        if (eventosRemotos == null || eventosRemotos.isEmpty()) {
+            return 0;
+        }
+        int persistidos = 0;
+        for (EventoViajeDTO ev : eventosRemotos) {
+            if (ev == null || ev.uuid() == null || ev.uuid().isBlank()) {
+                continue;
+            }
+            try {
+                if (eventosService != null) {
+                    if (!eventosService.existeEvento(ev.uuid())) {
+                        eventosService.guardarEvento(ev);
+                        persistidos++;
+                    }
+                }
+                if (motorFiscalizacion != null && ev.guiaId() != null) {
+                    motorFiscalizacion.evaluarGuia(ev.guiaId());
+                }
+            } catch (Exception e) {
+                LOGGER.log(Level.FINE, "Evento de nodo periférico {0} omitido o ya procesado: {1}",
+                        new Object[]{ev.uuid(), e.getMessage()});
+            }
+        }
+        return persistidos;
+    }
+
+    private void actualizarEstadoDesdePeriferico(TrackingClient.EstadoNodoTracking estadoRemoto) {
+        if (estadoRemoto == null) {
+            return;
+        }
+        this.activo = estadoRemoto.activo();
+        this.eventosPorMinuto = estadoRemoto.eventosPorMinuto();
+        this.cantidadDesvios = estadoRemoto.cantidadDesvios();
+        this.totalEventosEmitidos.set(estadoRemoto.totalEventosEmitidos());
+        this.totalDesviosEmitidos.set(estadoRemoto.totalDesviosEmitidos());
+        if (estadoRemoto.ultimoResultado() != null && !estadoRemoto.ultimoResultado().isBlank()) {
+            this.ultimoResultado = estadoRemoto.ultimoResultado();
+        }
+    }
+
+    private static List<TrackingClient.GuiaActivaPayload> construirPayloadGuias(List<GuiaDeViaje> guias) {
+        if (guias == null || guias.isEmpty()) {
+            return List.of();
+        }
+        List<TrackingClient.GuiaActivaPayload> resultado = new ArrayList<>(guias.size());
+        for (GuiaDeViaje g : guias) {
+            if (g == null || g.getId() == null) {
+                continue;
+            }
+            String matricula = g.getVehiculo() != null ? g.getVehiculo().getMatricula() : null;
+            String origen = (g.getOrigen() != null && !g.getOrigen().isBlank()) ? g.getOrigen().trim() : "Montevideo";
+            String destino = (g.getDestino() != null && !g.getDestino().isBlank()) ? g.getDestino().trim() : "Rivera";
+            resultado.add(new TrackingClient.GuiaActivaPayload(
+                    g.getId(),
+                    origen,
+                    destino,
+                    matricula,
+                    g.getCorredorVial(),
+                    g.getPolilineaRuta()
+            ));
+        }
+        return resultado;
     }
 
     static EstadoSimulacionGuia construirEstadoSimulacion(GuiaDeViaje guia, int desviosDeseados) {
@@ -460,6 +678,23 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
             tareaProgramada.cancel(false);
             tareaProgramada = null;
         }
+    }
+
+    @Override
+    public boolean isNodoPerifericoOnline() {
+        if (nodoPerifericoOnline) {
+            return true;
+        }
+        if (trackingClient != null && trackingClient.verificarSalud()) {
+            this.nodoPerifericoOnline = true;
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public String getEndpointNodoPeriferico() {
+        return trackingClient != null ? trackingClient.getEndpointUrl() : "http://localhost:8085";
     }
 
     @Override

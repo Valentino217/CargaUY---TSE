@@ -120,6 +120,7 @@ public class DetalleViajeBean implements Serializable {
             this.faasEndpointUrl = faasTrackingClient.getEndpointUrl();
         }
         if (trackingMockService != null) {
+            trackingMockService.sincronizarConNodoPeriferico();
             this.mockEventosPorMinuto = trackingMockService.getEventosPorMinuto();
             this.mockCantidadDesvios = trackingMockService.getCantidadDesvios();
         }
@@ -1014,9 +1015,20 @@ public class DetalleViajeBean implements Serializable {
     }
 
     public void refrescarPorPollMock() {
+        if (trackingMockService != null) {
+            trackingMockService.sincronizarConNodoPeriferico();
+        }
         if (guiaIdSeleccionada != null) {
             consultarViaje();
         }
+    }
+
+    public boolean isNodoTrackingOnline() {
+        return trackingMockService != null && trackingMockService.isNodoPerifericoOnline();
+    }
+
+    public String getNodoTrackingEndpoint() {
+        return trackingMockService != null ? trackingMockService.getEndpointNodoPeriferico() : "http://localhost:8085";
     }
 
     public boolean isMockTrackingActivo() {

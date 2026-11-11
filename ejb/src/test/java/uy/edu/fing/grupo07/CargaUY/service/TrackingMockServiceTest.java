@@ -17,7 +17,9 @@ import uy.edu.fing.grupo07.CargaUY.dto.EventoViajeDTO;
 import uy.edu.fing.grupo07.CargaUY.fiscalizacion.MotorFiscalizacionLocal;
 import uy.edu.fing.grupo07.CargaUY.integration.FaasTrackingClient;
 import uy.edu.fing.grupo07.CargaUY.integration.RedVialUruguay;
+import uy.edu.fing.grupo07.CargaUY.integration.TrackingClient;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -170,6 +172,71 @@ class TrackingMockServiceTest {
 
         trackingMockService.detener();
         assertFalse(trackingMockService.estaActivo());
+    }
+
+    @Test
+    void deberiaDelegarEnNodoPerifericoTrackingEIngerirPuntosDeFormaIdempotente() {
+        TrackingClient trackingClientMock = mock(TrackingClient.class);
+        lenient().when(trackingClientMock.getEndpointUrl()).thenReturn("http://mock-tracking:8080");
+        lenient().when(trackingClientMock.verificarSalud()).thenReturn(true);
+
+        TrackingMockServiceImpl serviceConPeriferico = new TrackingMockServiceImpl(
+                em,
+                eventosService,
+                motorFiscalizacion,
+                new FaasTrackingClient(),
+                trackingClientMock
+        );
+
+        GuiaDeViaje guia = crearGuiaActiva(303L, "Montevideo", "Colonia del Sacramento", "STP7777");
+        when(em.createQuery(anyString(), eq(GuiaDeViaje.class))).thenReturn(queryGuias);
+        when(queryGuias.setParameter("enCurso", TipoEstado.EN_CURSO)).thenReturn(queryGuias);
+        when(queryGuias.getResultList()).thenReturn(List.of(guia));
+
+        EventoViajeDTO puntoPeriferico = new EventoViajeDTO(
+                "uuid-perif-1",
+                LocalDateTime.now(),
+                TipoEvento.POSICION,
+                -34.4626,
+                -57.8400,
+                303L,
+                null,
+                0.25,
+                null,
+                null,
+                null,
+                "STP7777"
+        );
+
+        when(trackingClientMock.iniciar(eq(18), eq(1), anyList(), anyString(), anyString())).thenReturn(
+                new TrackingClient.EstadoNodoTracking(
+                        true, 18, 1, 1L, 0L,
+                        "Simulación iniciada en nodo periférico",
+                        List.of(puntoPeriferico)
+                )
+        );
+        when(eventosService.existeEvento("uuid-perif-1")).thenReturn(false, true);
+
+        serviceConPeriferico.iniciar(18, 1);
+
+        assertTrue(serviceConPeriferico.estaActivo());
+        assertTrue(serviceConPeriferico.isNodoPerifericoOnline());
+        assertEquals("http://mock-tracking:8080", serviceConPeriferico.getEndpointNodoPeriferico());
+        verify(eventosService, times(1)).guardarEvento(any(EventoViajeDTO.class));
+        verify(motorFiscalizacion, times(1)).evaluarGuia(303L);
+
+        // Si el mismo UUID llega de nuevo al sincronizar, no debe duplicarse
+        when(trackingClientMock.sincronizarGuiasYDrenar(anyList(), eq(true), anyString())).thenReturn(
+                new TrackingClient.EstadoNodoTracking(
+                        true, 18, 1, 1L, 0L,
+                        "Sincronizado",
+                        List.of(puntoPeriferico)
+                )
+        );
+        serviceConPeriferico.sincronizarConNodoPeriferico();
+        verify(eventosService, times(1)).guardarEvento(any(EventoViajeDTO.class));
+
+        serviceConPeriferico.cerrar();
     }
 
     private GuiaDeViaje crearGuiaActiva(Long id, String origen, String destino, String matricula) {
