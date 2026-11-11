@@ -50,6 +50,7 @@ public class CertificadoDigitalEJB {
         .setParameter("ci", ci)
         .setParameter("roles", List.of(
             TipoUsuario.FUNCIONARIO,
+            TipoUsuario.AUTORIDAD,
             TipoUsuario.ADMINISTRADOR
         ))
         .getResultList();
@@ -257,6 +258,39 @@ public class CertificadoDigitalEJB {
             "ORDER BY c.fechaRegistro DESC",
             CertificadoDigital.class
         ).getResultList();
+    }
+
+    public List<CertificadoDigital> listarCertificadosPorUsuario(int usuarioId) {
+
+        return em.createQuery(
+            "SELECT c FROM CertificadoDigital c " +
+            "JOIN FETCH c.usuario u " +
+            "WHERE u.id = :usuarioId " +
+            "ORDER BY c.fechaRegistro DESC",
+            CertificadoDigital.class
+        )
+        .setParameter("usuarioId", usuarioId)
+        .getResultList();
+    }
+
+    public void revocarCertificadoDeUsuario(int idCertificado, int usuarioId, String motivo) {
+
+        CertificadoDigital certificado =
+            em.find(CertificadoDigital.class, idCertificado);
+
+        if (certificado == null) {
+            throw new IllegalArgumentException(
+                "No existe ese certificado."
+            );
+        }
+
+        if (certificado.getUsuario() == null || certificado.getUsuario().getId() != usuarioId) {
+            throw new SecurityException(
+                "No tiene permisos para revocar el certificado de otro usuario."
+            );
+        }
+
+        revocarCertificado(idCertificado, motivo);
     }
     
     public CertificadoDigital buscarCertificadoActivoPorCiInspector(int ci) {

@@ -5,13 +5,13 @@
                 xmlns:p="http://primefaces.org/ui"
                 template="/WEB-INF/templates/template.xhtml">
 
-    <ui:define name="title">Certificados Digitales</ui:define>
+    <ui:define name="title">Mis Certificados Digitales</ui:define>
 
     <ui:define name="content">
         <div class="cuy-page-header">
             <div>
                 <h1 class="cuy-page-title">
-                    Gestión de Certificados Digitales
+                    Mis Certificados Digitales
                 </h1>
             </div>
             <div style="display: flex; gap: 0.6rem;">
@@ -28,122 +28,72 @@
         <!-- KPIs -->
         <h:panelGroup id="kpiCertGroup" layout="block" styleClass="cuy-kpi-grid">
             <div class="cuy-kpi-card">
-                <div class="cuy-kpi-label"><i class="pi pi-key" /> Total Registrados</div>
+                <div class="cuy-kpi-label"><i class="pi pi-key" /> Mis Certificados</div>
                 <div class="cuy-kpi-value">#{certificadoDigitalBean.totalCertificados}</div>
             </div>
             <div class="cuy-kpi-card success">
-                <div class="cuy-kpi-label"><i class="pi pi-verified" /> Certificados Activos</div>
+                <div class="cuy-kpi-label"><i class="pi pi-verified" /> Activos</div>
                 <div class="cuy-kpi-value">#{certificadoDigitalBean.totalActivos}</div>
             </div>
             <div class="cuy-kpi-card danger">
-                <div class="cuy-kpi-label"><i class="pi pi-ban" /> Certificados Revocados</div>
+                <div class="cuy-kpi-label"><i class="pi pi-ban" /> Revocados</div>
                 <div class="cuy-kpi-value">#{certificadoDigitalBean.totalRevocados}</div>
             </div>
         </h:panelGroup>
 
-        <!-- Tarjeta de Alta y Validación de Certificado PKCS#12 -->
+        <!-- Tarjeta de Alta y Validación del Certificado Propio (PKCS#12) -->
         <h:form id="formCertificado" enctype="multipart/form-data">
             <div class="cuy-card" style="margin-bottom: 1.5rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.85rem; margin-bottom: 1.25rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.85rem; margin-bottom: 1.25rem;">
                     <div>
                         <h3 style="margin: 0; font-size: 1.05rem; font-weight: 700; color: #0f2942;">
-                            <i class="pi pi-shield" style="color: #2563eb; margin-right: 0.4rem;" /> Asociar Nuevo Certificado Digital (PKCS#12)
+                            <i class="pi pi-shield" style="color: #2563eb; margin-right: 0.4rem;" /> Registrar Mi Certificado Digital (PKCS#12)
                         </h3>
                         <p style="margin: 0.25rem 0 0 0; font-size: 0.85rem; color: #64748b;">
-                            Busque al funcionario por cédula, adjunte su almacén de claves (.p12 / .pfx) y verifique su contraseña para habilitar la firma de actas.
+                            Adjunte su archivo de certificado (.p12 / .pfx) e ingrese la contraseña para asociarlo a su cuenta de firma.
                         </p>
+                    </div>
+                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.45rem 0.85rem; font-size: 0.82rem; color: #334155;">
+                        <strong>Titular:</strong> #{authBean.usuarioActivo.nombre}
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; align-items: start;">
-                    <!-- Paso 1: Buscar Funcionario -->
-                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.1rem;">
-                        <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: #475569; margin-bottom: 0.75rem;">
-                            1. Identificación del Funcionario
-                        </div>
-
-                        <div style="display: flex; gap: 0.6rem; align-items: flex-end; flex-wrap: wrap;">
-                            <div style="flex: 1; min-width: 180px;">
-                                <p:outputLabel for="ci" value="Cédula de Identidad (sin puntos ni guión)" style="display: block; font-size: 0.82rem; font-weight: 600; color: #334155; margin-bottom: 0.35rem;" />
-                                <p:inputNumber id="ci"
-                                               value="#{certificadoDigitalBean.ci}"
-                                               decimalPlaces="0"
-                                               thousandSeparator=""
-                                               placeholder="Ej: 41234567"
-                                               style="width: 100%;"
-                                               inputStyle="width: 100%;" />
-                            </div>
-                            <p:commandButton value="Buscar"
-                                             icon="pi pi-search"
-                                             process="@this ci"
-                                             actionListener="#{certificadoDigitalBean.buscarUsuario}"
-                                             update="resultado :growl"
-                                             styleClass="ui-button-outlined ui-button-primary" />
-                        </div>
-
-                        <p:outputPanel id="resultado" style="margin-top: 0.9rem;">
-                            <h:panelGroup layout="block"
-                                          rendered="#{certificadoDigitalBean.usuarioEncontrado ne null}"
-                                          style="background: #ecfdf5; border: 1px solid #a7f3d0; border-left: 4px solid #059669; border-radius: 6px; padding: 0.75rem 0.95rem;">
-                                <div style="font-size: 0.78rem; font-weight: 700; color: #065f46; text-transform: uppercase; margin-bottom: 0.25rem;">
-                                    <i class="pi pi-check-circle" /> Funcionario Habilitado
-                                </div>
-                                <div style="font-size: 0.95rem; font-weight: 700; color: #0f2942;">
-                                    #{certificadoDigitalBean.usuarioEncontrado.nombre}
-                                </div>
-                                <div style="font-size: 0.82rem; color: #047857; margin-top: 0.15rem;">
-                                    C.I.: <span class="cuy-mono">#{certificadoDigitalBean.usuarioEncontrado.ci}</span> &#8226; ID Interno: <span class="cuy-mono">##{certificadoDigitalBean.usuarioEncontrado.id}</span>
-                                </div>
-                            </h:panelGroup>
-
-                            <h:panelGroup layout="block"
-                                          rendered="#{certificadoDigitalBean.usuarioEncontrado eq null}"
-                                          style="font-size: 0.82rem; color: #64748b; padding-top: 0.25rem;">
-                                <i class="pi pi-info-circle" style="margin-right: 0.25rem;" /> Solo se admiten usuarios con rol <strong>FUNCIONARIO</strong> o <strong>ADMINISTRADOR</strong>.
-                            </h:panelGroup>
-                        </p:outputPanel>
+                <div style="display: flex; gap: 1rem; align-items: flex-end; flex-wrap: wrap;">
+                    <div style="min-width: 240px;">
+                        <p:outputLabel value="Archivo del Certificado (.p12 / .pfx)"
+                                       style="display: block; font-size: 0.82rem; font-weight: 600; color: #334155; margin-bottom: 0.35rem;" />
+                        <p:fileUpload mode="simple"
+                                      skinSimple="true"
+                                      value="#{certificadoDigitalBean.certificado}"
+                                      accept=".p12,.pfx"
+                                      label="Seleccionar archivo .p12 / .pfx" />
                     </div>
 
-                    <!-- Paso 2: Subir Certificado y Contraseña -->
-                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1.1rem;">
-                        <div style="font-size: 0.8rem; font-weight: 700; text-transform: uppercase; color: #475569; margin-bottom: 0.75rem;">
-                            2. Validación de Almacén PKCS#12 (.p12 / .pfx)
-                        </div>
+                    <div style="flex: 1; min-width: 240px; max-width: 360px;">
+                        <p:outputLabel for="password" value="Contraseña del Certificado"
+                                       style="display: block; font-size: 0.82rem; font-weight: 600; color: #334155; margin-bottom: 0.35rem;" />
+                        <p:password id="password"
+                                    value="#{certificadoDigitalBean.passwordCertificado}"
+                                    placeholder="Contraseña de apertura PKCS#12"
+                                    feedback="false"
+                                    toggleMask="true"
+                                    redisplay="false"
+                                    style="width: 100%;"
+                                    inputStyle="width: 100%;" />
+                    </div>
 
-                        <div style="margin-bottom: 0.85rem;">
-                            <p:outputLabel value="Archivo del Certificado Digital" style="display: block; font-size: 0.82rem; font-weight: 600; color: #334155; margin-bottom: 0.35rem;" />
-                            <p:fileUpload mode="simple"
-                                          skinSimple="true"
-                                          value="#{certificadoDigitalBean.certificado}"
-                                          accept=".p12,.pfx"
-                                          label="Seleccionar archivo .p12 / .pfx" />
-                        </div>
-
-                        <div style="display: flex; gap: 0.75rem; align-items: flex-end; flex-wrap: wrap;">
-                            <div style="flex: 1; min-width: 200px;">
-                                <p:outputLabel for="password" value="Contraseña del Certificado" style="display: block; font-size: 0.82rem; font-weight: 600; color: #334155; margin-bottom: 0.35rem;" />
-                                <p:password id="password"
-                                            value="#{certificadoDigitalBean.passwordCertificado}"
-                                            placeholder="Contraseña de apertura PKCS#12"
-                                            feedback="false"
-                                            toggleMask="true"
-                                            redisplay="false"
-                                            style="width: 100%;"
-                                            inputStyle="width: 100%;" />
-                            </div>
-
-                            <p:commandButton value="Registrar Certificado"
-                                             icon="pi pi-shield"
-                                             ajax="false"
-                                             action="#{certificadoDigitalBean.probarCargaCertificado}"
-                                             styleClass="ui-button-primary" />
-                        </div>
+                    <div>
+                        <p:commandButton value="Registrar Certificado"
+                                         icon="pi pi-shield"
+                                         ajax="false"
+                                         action="#{certificadoDigitalBean.registrarMiCertificado}"
+                                         styleClass="ui-button-primary" />
                     </div>
                 </div>
             </div>
         </h:form>
 
-        <!-- Tabla de Certificados Registrados -->
+        <!-- Tabla de Certificados Propios -->
         <h:form id="tablaCertificadosForm">
             <div class="cuy-card">
                 <p:dataTable id="tablaCertificados"
@@ -151,7 +101,7 @@
                              filteredValue="#{certificadoDigitalBean.certificadosFiltrados}"
                              var="certificado"
                              widgetVar="dtCertificados"
-                             emptyMessage="No hay certificados digitales registrados."
+                             emptyMessage="Aún no tiene certificados digitales registrados."
                              paginator="true"
                              paginatorPosition="bottom"
                              rows="10"
@@ -162,7 +112,7 @@
                     <f:facet name="header">
                         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
                             <span style="font-weight: 700; color: #0f2942;">
-                                <i class="pi pi-list" style="margin-right: 0.4rem;" /> Registro de Certificados de Firma Digital
+                                <i class="pi pi-list" style="margin-right: 0.4rem;" /> Mis Certificados Registrados
                             </span>
                         </div>
                     </f:facet>
@@ -171,19 +121,11 @@
                         <span class="cuy-mono">#<h:outputText value="#{certificado.id}" /></span>
                     </p:column>
 
-                    <p:column headerText="Funcionario" filterBy="#{certificado.usuario.nombre}" filterMatchMode="contains" filterPlaceholder="Nombre">
-                        <strong style="color: #0f2942;">#{certificado.usuario.nombre}</strong>
+                    <p:column headerText="Archivo" filterBy="#{certificado.nombreArchivo}" filterMatchMode="contains" filterPlaceholder="Archivo">
+                        <span class="cuy-mono" style="font-size: 0.85rem;"><i class="pi pi-file" style="margin-right: 0.3rem;" />#{certificado.nombreArchivo}</span>
                     </p:column>
 
-                    <p:column headerText="Cédula" filterBy="#{certificado.usuario.ci}" filterMatchMode="contains" filterPlaceholder="C.I." style="width: 130px;">
-                        <span class="cuy-mono"><h:outputText value="#{certificado.usuario.ci}" /></span>
-                    </p:column>
-
-                    <p:column headerText="Archivo" filterBy="#{certificado.nombreArchivo}" filterMatchMode="contains" filterPlaceholder="Archivo" style="width: 190px;">
-                        <span class="cuy-mono" style="font-size: 0.82rem;"><i class="pi pi-file" style="margin-right: 0.25rem;" />#{certificado.nombreArchivo}</span>
-                    </p:column>
-
-                    <p:column headerText="Registro" style="width: 145px;">
+                    <p:column headerText="Registro" style="width: 155px;">
                         <span class="cuy-mono" style="font-size: 0.8rem;">
                             <h:outputText value="#{certificado.fechaRegistro}">
                                 <f:convertDateTime type="localDateTime" pattern="dd/MM/yyyy HH:mm" />
@@ -191,7 +133,7 @@
                         </span>
                     </p:column>
 
-                    <p:column headerText="Vencimiento" style="width: 145px;">
+                    <p:column headerText="Vencimiento" style="width: 155px;">
                         <span class="cuy-mono" style="font-size: 0.8rem;">
                             <h:outputText value="#{certificado.fechaVencimiento}">
                                 <f:convertDateTime type="localDateTime" pattern="dd/MM/yyyy HH:mm" />
@@ -199,7 +141,7 @@
                         </span>
                     </p:column>
 
-                    <p:column headerText="Estado" filterBy="#{certificado.estado}" filterMatchMode="exact" style="width: 140px; text-align: center;">
+                    <p:column headerText="Estado" filterBy="#{certificado.estado}" filterMatchMode="exact" style="width: 145px; text-align: center;">
                         <f:facet name="filter">
                             <p:selectOneMenu onchange="PF('dtCertificados').filter()" styleClass="ui-custom-filter" style="width: 100%;">
                                 <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
@@ -212,7 +154,7 @@
                                rounded="true" />
                     </p:column>
 
-                    <p:column headerText="Detalle / Motivo Revocación" style="min-width: 200px;">
+                    <p:column headerText="Detalle / Motivo Revocación" style="min-width: 220px;">
                         <h:panelGroup rendered="#{certificado.estado.name() eq 'REVOCADO'}">
                             <div style="font-size: 0.82rem; color: #991b1b; font-weight: 600;">
                                 #{not empty certificado.motivoRevocacion ? certificado.motivoRevocacion : 'Sin motivo especificado'}
@@ -262,10 +204,7 @@
                             <div style="font-size: 0.78rem; color: #991b1b; text-transform: uppercase; font-weight: 700;">
                                 Revocación Permanente
                             </div>
-                            <div style="font-size: 1rem; font-weight: 800; color: #0f2942; margin-top: 0.15rem;">
-                                #{certificadoDigitalBean.certificadoSeleccionado.usuario.nombre} (C.I. #{certificadoDigitalBean.certificadoSeleccionado.usuario.ci})
-                            </div>
-                            <div style="font-size: 0.82rem; color: #7f1d1d; margin-top: 0.2rem;">
+                            <div style="font-size: 0.95rem; font-weight: 800; color: #0f2942; margin-top: 0.2rem;">
                                 Archivo: <span class="cuy-mono">#{certificadoDigitalBean.certificadoSeleccionado.nombreArchivo}</span>
                             </div>
                         </div>
@@ -279,7 +218,7 @@
                                              rows="3"
                                              maxlength="255"
                                              autoResize="false"
-                                             placeholder="Indique la causa de revocación (ej: renovación de clave, extravío, cambio de funciones)..." />
+                                             placeholder="Indique la causa de revocación (ej: renovación de clave, extravío, actualización)..." />
                         </div>
                     </div>
 

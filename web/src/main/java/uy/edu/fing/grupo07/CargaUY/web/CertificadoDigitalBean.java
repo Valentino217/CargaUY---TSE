@@ -5,13 +5,12 @@ import java.security.cert.X509Certificate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.primefaces.model.file.UploadedFile;
 
 import jakarta.annotation.PostConstruct;
+import jakarta.ejb.EJB;
 import jakarta.faces.application.FacesMessage;
 import jakarta.faces.context.FacesContext;
 import jakarta.faces.view.ViewScoped;
@@ -19,8 +18,9 @@ import jakarta.inject.Inject;
 import jakarta.inject.Named;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.CertificadoDigital;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.CredencialesFirma;
-import uy.edu.fing.grupo07.CargaUY.domain.entity.Usuario;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.EstadoCertificado;
+import uy.edu.fing.grupo07.CargaUY.security.Acceso;
+import uy.edu.fing.grupo07.CargaUY.security.AutenticacionService;
 import uy.edu.fing.grupo07.CargaUY.service.CertificadoDigitalEJB;
 
 @Named("certificadoDigitalBean")
@@ -33,9 +33,9 @@ public class CertificadoDigitalBean implements Serializable {
     @Inject
     private CertificadoDigitalEJB certificadoDigitalEJB;
 
-    private Integer ci;
-    private String mensaje;
-    private Usuario usuarioEncontrado;
+    @EJB
+    private AutenticacionService auth;
+
     private UploadedFile certificado;
     private String passwordCertificado;
 
@@ -44,59 +44,49 @@ public class CertificadoDigitalBean implements Serializable {
 
     private CertificadoDigital certificadoSeleccionado;
     private String motivoRevocacion;
-    private Map<Integer, String> motivosPorCertificado = new HashMap<>();
 
     @PostConstruct
     public void inicializar() {
         cargarCertificados();
     }
 
+    private Acceso resolverUsuarioAutenticado() {
+        String token = null;
+        try {
+            token = SesionActual.token();
+        } catch (Throwable ignored) {
+        }
+        if (token == null && FacesContext.getCurrentInstance() != null) {
+            token = (String) FacesContext.getCurrentInstance()
+                    .getExternalContext()
+                    .getSessionMap()
+                    .get("token");
+        }
+        if (token == null || auth == null) {
+            return null;
+        }
+        return auth.validarToken(token);
+    }
+
     public void cargarCertificados() {
         try {
-            certificados = certificadoDigitalEJB.listarCertificados();
-        } catch (Exception e) {
-            certificados = new ArrayList<>();
-            mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error", "No se pudieron cargar los certificados: " + e.getMessage());
-        }
-    }
-
-    public void prepararNuevoCertificado() {
-        this.ci = null;
-        this.usuarioEncontrado = null;
-        this.certificado = null;
-        this.passwordCertificado = null;
-        this.mensaje = null;
-    }
-
-    public void buscarUsuario() {
-        try {
-            if (ci == null || ci <= 0) {
-                usuarioEncontrado = null;
-                mostrarMensaje(FacesMessage.SEVERITY_WARN, "Atención", "Debe ingresar una cédula válida.");
+            Acceso actor = resolverUsuarioAutenticado();
+            if (actor == null) {
+                certificados = new ArrayList<>();
                 return;
             }
-            usuarioEncontrado = certificadoDigitalEJB.buscarUsuarioPorCi(ci);
-
-            if (usuarioEncontrado != null) {
-                mensaje = "Usuario encontrado: " + usuarioEncontrado.getNombre();
-                mostrarMensaje(FacesMessage.SEVERITY_INFO, "Funcionario verificado",
-                        usuarioEncontrado.getNombre() + " (C.I. " + usuarioEncontrado.getCi() + ")");
-            } else {
-                mensaje = "No existe un funcionario o administrador con esa cédula.";
-                mostrarMensaje(FacesMessage.SEVERITY_WARN, "No encontrado", mensaje);
-            }
+            certificados = certificadoDigitalEJB.listarCertificadosPorUsuario(actor.id());
         } catch (Exception e) {
-            usuarioEncontrado = null;
-            mensaje = "Error al buscar usuario: " + e.getMessage();
-            mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error", mensaje);
+            certificados = new ArrayList<>();
+            mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error", "No se pudieron cargar sus certificados: " + e.getMessage());
         }
     }
 
-    public void probarCargaCertificado() {
+    public void registrarMiCertificado() {
         try {
-            int ciObjetivo = usuarioEncontrado != null ? usuarioEncontrado.getCi() : (ci != null ? ci : 0);
-            if (ciObjetivo <= 0) {
-                throw new IllegalArgumentException("Primero debe buscar o indicar la cédula del funcionario.");
+            Acceso actor = resolverUsuarioAutenticado();
+            if (actor == null) {
+                throw new IllegalStateException("Debe iniciar sesión nuevamente para registrar un certificado.");
             }
 
             if (certificado == null || certificado.getSize() == 0) {
@@ -114,7 +104,7 @@ public class CertificadoDigitalBean implements Serializable {
             LocalDateTime vencimiento = certificadoDigitalEJB.obtenerFechaVencimiento(x509);
 
             certificadoDigitalEJB.registrarCertificado(
-                    ciObjetivo,
+                    actor.ci(),
                     archivo,
                     certificado.getFileName(),
                     vencimiento
@@ -125,11 +115,8 @@ public class CertificadoDigitalBean implements Serializable {
             mostrarMensaje(
                     FacesMessage.SEVERITY_INFO,
                     "Certificado registrado",
-                    "El certificado digital se validó y asoció correctamente. Vencimiento: " + vencStr
+                    "Su certificado digital se validó y asoció correctamente. Vencimiento: " + vencStr
             );
-
-            this.usuarioEncontrado = null;
-            this.ci = null;
         } catch (Exception e) {
             mostrarMensaje(
                     FacesMessage.SEVERITY_ERROR,
@@ -163,12 +150,12 @@ public class CertificadoDigitalBean implements Serializable {
 
     public void revocarCertificado(int idCertificado, String motivo) {
         try {
-            String motivoFinal = (motivo != null && !motivo.isBlank())
-                    ? motivo.trim()
-                    : motivosPorCertificado.get(idCertificado);
+            Acceso actor = resolverUsuarioAutenticado();
+            if (actor == null) {
+                throw new IllegalStateException("Debe iniciar sesión nuevamente.");
+            }
 
-            certificadoDigitalEJB.revocarCertificado(idCertificado, motivoFinal);
-            motivosPorCertificado.remove(idCertificado);
+            certificadoDigitalEJB.revocarCertificadoDeUsuario(idCertificado, actor.id(), motivo);
             cargarCertificados();
 
             mostrarMensaje(
@@ -236,22 +223,6 @@ public class CertificadoDigitalBean implements Serializable {
         this.certificadosFiltrados = certificadosFiltrados;
     }
 
-    public Integer getCi() {
-        return ci;
-    }
-
-    public void setCi(Integer ci) {
-        this.ci = ci;
-    }
-
-    public String getMensaje() {
-        return mensaje;
-    }
-
-    public Usuario getUsuarioEncontrado() {
-        return usuarioEncontrado;
-    }
-
     public String getPasswordCertificado() {
         return passwordCertificado;
     }
@@ -282,9 +253,5 @@ public class CertificadoDigitalBean implements Serializable {
 
     public void setMotivoRevocacion(String motivoRevocacion) {
         this.motivoRevocacion = motivoRevocacion;
-    }
-
-    public Map<Integer, String> getMotivosPorCertificado() {
-        return motivosPorCertificado;
     }
 }
