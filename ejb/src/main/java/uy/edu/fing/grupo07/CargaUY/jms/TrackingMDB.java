@@ -69,7 +69,10 @@ public class TrackingMDB implements MessageListener {
         try {
             String propCorr = null;
             try {
-                propCorr = textMsg.getStringProperty("X-Correlation-ID");
+                propCorr = textMsg.getJMSCorrelationID();
+                if (propCorr == null || propCorr.isBlank()) {
+                    propCorr = textMsg.getStringProperty("X_Correlation_ID");
+                }
             } catch (Exception ignored) {
             }
 
