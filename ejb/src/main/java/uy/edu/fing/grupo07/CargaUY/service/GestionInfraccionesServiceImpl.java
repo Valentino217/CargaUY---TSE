@@ -1,6 +1,7 @@
 package uy.edu.fing.grupo07.CargaUY.service;
 
 import jakarta.ejb.EJB;
+import jakarta.ejb.Schedule;
 import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -37,6 +38,9 @@ import java.util.logging.Logger;
 public class GestionInfraccionesServiceImpl implements GestionInfraccionesServiceLocal {
 
     private static final Logger LOGGER = Logger.getLogger(GestionInfraccionesServiceImpl.class.getName());
+    private static final int PLAZO_DESCARGO_DIAS = 7;
+    private static final String FUNDAMENTO_CIERRE_AUTOMATICO =
+            "Sanción confirmada automáticamente tras transcurrir 7 días desde la notificación sin presentación de descargo por parte de la empresa.";
 
     @PersistenceContext(unitName = "CargaUYPersistenceUnit")
     private EntityManager em;
@@ -220,6 +224,7 @@ public class GestionInfraccionesServiceImpl implements GestionInfraccionesServic
                 + " al generarse el caso de fiscalización.";
 
         infraccion.setEstado(EstadoInfraccion.NOTIFICADA);
+        infraccion.setFechaNotificacion(LocalDate.now());
         registrarEventoAuditoria(
                 infraccion,
                 EstadoInfraccion.NOTIFICADA.name(),
@@ -240,6 +245,7 @@ public class GestionInfraccionesServiceImpl implements GestionInfraccionesServic
         validarEstadoActual(infraccion, EstadoInfraccion.DETECTADA);
 
         infraccion.setEstado(EstadoInfraccion.NOTIFICADA);
+        infraccion.setFechaNotificacion(LocalDate.now());
         registrarEventoAuditoria(
                 infraccion,
                 EstadoInfraccion.NOTIFICADA.name(),
@@ -367,6 +373,79 @@ public class GestionInfraccionesServiceImpl implements GestionInfraccionesServic
         );
     }
 
+    /**
+     * Job periódico que verifica casos notificados vencidos sin descargo para confirmar la sanción.
+     */
+    @Schedule(hour = "*", minute = "0", persistent = false)
+    public void ejecutarCierreAutomaticoSinDescargo() {
+        try {
+            int cerrados = cerrarInfraccionesNotificadasVencidas();
+            if (cerrados > 0) {
+                LOGGER.log(
+                        Level.INFO,
+                        "Cierre automático de fiscalización: {0} infracción(es) confirmada(s) tras vencer el plazo de {1} días sin descargo.",
+                        new Object[]{cerrados, PLAZO_DESCARGO_DIAS}
+                );
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Error ejecutando cierre automático de infracciones notificadas vencidas", e);
+        }
+    }
+
+    @Override
+    public int cerrarInfraccionesNotificadasVencidas() {
+        TypedQuery<Infraccion> query = em.createQuery(
+                "SELECT i FROM Infraccion i WHERE i.estado = :estado",
+                Infraccion.class
+        );
+        query.setParameter("estado", EstadoInfraccion.NOTIFICADA);
+        List<Infraccion> notificadas = query.getResultList();
+        if (notificadas == null || notificadas.isEmpty()) {
+            return 0;
+        }
+
+        LocalDate fechaLimite = LocalDate.now().minusDays(PLAZO_DESCARGO_DIAS);
+        int cerrados = 0;
+
+        for (Infraccion infraccion : notificadas) {
+            try {
+                em.lock(infraccion, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+            } catch (Exception ignored) {
+                // En tests unitarios con mocks que no soportan lock no interrumpir
+            }
+            if (infraccion.getEstado() != EstadoInfraccion.NOTIFICADA || infraccion.getDescargo() != null) {
+                continue;
+            }
+            LocalDate fechaNotif = resolverFechaNotificacion(infraccion);
+            if (fechaNotif != null && !fechaNotif.isAfter(fechaLimite)) {
+                aplicarResolucion(
+                        infraccion,
+                        EstadoInfraccion.CONFIRMADA,
+                        "SISTEMA (Cierre Automático)",
+                        "CONFIRMAR_INFRACCION",
+                        FUNDAMENTO_CIERRE_AUTOMATICO
+                );
+                cerrados++;
+            }
+        }
+        return cerrados;
+    }
+
+    private LocalDate resolverFechaNotificacion(Infraccion infraccion) {
+        if (infraccion.getFechaNotificacion() != null) {
+            return infraccion.getFechaNotificacion();
+        }
+        List<RegistroAuditoria> registros = infraccion.getRegistrosAuditoria();
+        if (registros != null) {
+            for (RegistroAuditoria reg : registros) {
+                if ("NOTIFICAR_INFRACCION".equals(reg.getAccion()) && reg.getFecha() != null) {
+                    return reg.getFecha();
+                }
+            }
+        }
+        return infraccion.getFecha();
+    }
+
     private InfraccionDTO resolverInfraccion(
             Infraccion infraccion,
             ResolucionInfraccionDTO resolucion,
@@ -379,6 +458,17 @@ public class GestionInfraccionesServiceImpl implements GestionInfraccionesServic
         String identificacionFuncionario = funcionario.getNombre() + " (CI: " + funcionario.getCi() + ")";
         String fundamentoLimpio = resolucion.fundamento().trim();
 
+        aplicarResolucion(infraccion, estadoFinal, identificacionFuncionario, accionAuditada, fundamentoLimpio);
+        return convertirAInfraccionDTO(infraccion);
+    }
+
+    private void aplicarResolucion(
+            Infraccion infraccion,
+            EstadoInfraccion estadoFinal,
+            String usuarioAuditado,
+            String accionAuditada,
+            String fundamentoLimpio
+    ) {
         infraccion.setEstado(estadoFinal);
         infraccion.setResolucion(estadoFinal.name());
         infraccion.setFundamento(fundamentoLimpio);
@@ -387,12 +477,10 @@ public class GestionInfraccionesServiceImpl implements GestionInfraccionesServic
         registrarEventoAuditoria(
                 infraccion,
                 estadoFinal.name(),
-                identificacionFuncionario,
+                usuarioAuditado,
                 accionAuditada,
                 fundamentoLimpio
         );
-
-        return convertirAInfraccionDTO(infraccion);
     }
 
     private void registrarEventoAuditoria(

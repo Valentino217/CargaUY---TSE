@@ -81,6 +81,28 @@ public class AdminNodosBean implements Serializable {
                 balanzaUp ? "Operativo" : "OFFLINE"
         ));
 
+        // 1.5 Tracking Periférico
+        String envTracking = System.getenv("TRACKING_ENDPOINT");
+        boolean tieneEnvTracking = envTracking != null && !envTracking.isBlank();
+        String trackingEndpoint = tieneEnvTracking ? envTracking.trim() : Config.valor("tracking.endpoint", "http://localhost:8085");
+        while (trackingEndpoint.endsWith("/")) {
+            trackingEndpoint = trackingEndpoint.substring(0, trackingEndpoint.length() - 1);
+        }
+        String trackingBase = trackingEndpoint.endsWith("/estado")
+                ? trackingEndpoint.substring(0, trackingEndpoint.length() - "/estado".length())
+                : trackingEndpoint;
+        boolean trackingUp = sondearHealthHttp(trackingBase + "/health")
+                || (!tieneEnvTracking && (sondearHealthHttp("http://localhost:8085/health") || sondearHealthHttp("http://mock-tracking:8080/health")));
+
+        nodos.add(new NodoPerifericoVista(
+                "NODO-TRK-01",
+                "Nodo Periférico Tracking",
+                "HTTP",
+                trackingBase,
+                trackingUp,
+                trackingUp ? "Operativo" : "OFFLINE"
+        ));
+
         // 2. PDI (DNIC)
         String pdiEndpoint = Config.valor("pdi.endpoint", "http://localhost:8081/pdi/ws");
         boolean pdiUp = probarSocket("mock-pdi", 8080)
@@ -225,6 +247,9 @@ public class AdminNodosBean implements Serializable {
                 }
                 if (port == 8082 || uriStr.contains("balanza")) {
                     if (probarSocket("mock-balanza", 8080)) return true;
+                }
+                if (port == 8085 || uriStr.contains("tracking")) {
+                    if (probarSocket("mock-tracking", 8080)) return true;
                 }
                 if (port == 27017) {
                     if (probarSocket("mongodb", 27017)) return true;

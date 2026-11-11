@@ -36,8 +36,8 @@ from typing import Dict, List, Optional, Tuple
 
 
 DEFAULT_BASE_URL = "http://localhost:8080/CargaUY-web"
-DEFAULT_CEDULA_CHOFER = 45678901
-DEFAULT_GUIA_ID = 1
+DEFAULT_CEDULA_CHOFER = 11223344
+DEFAULT_GUIA_ID = 1001
 
 
 def http_json(

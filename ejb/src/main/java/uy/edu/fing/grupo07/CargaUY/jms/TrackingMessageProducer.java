@@ -62,7 +62,8 @@ public class TrackingMessageProducer implements TrackingProducerLocal {
             message.setStringProperty("uuid", evento.uuid());
             message.setLongProperty("guiaId", evento.guiaId() != null ? evento.guiaId() : -1L);
             message.setStringProperty("tipo", evento.tipo() != null ? evento.tipo().name() : "");
-            message.setStringProperty("X-Correlation-ID", correlacion);
+            message.setJMSCorrelationID(correlacion);
+            message.setStringProperty("X_Correlation_ID", correlacion);
 
             JMSProducer producer = jmsContext.createProducer();
             producer.send(trackingQueue, message);
