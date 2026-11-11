@@ -70,6 +70,8 @@ services:
 
   mock-balanza:
     build: ./docker/mock-balanza
+    security_opt:
+      - seccomp:unconfined
     restart: unless-stopped
     environment:
       PORT: "8080"
