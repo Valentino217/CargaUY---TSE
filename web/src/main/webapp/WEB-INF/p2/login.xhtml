@@ -37,9 +37,14 @@
             </form>
         </section>
         <section class="card external-login" aria-labelledby="ingreso-ciudadano">
-            <h2 id="ingreso-ciudadano">Ciudadanos, choferes y funcionarios</h2>
+            <h2 id="ingreso-ciudadano">Ciudadanos y funcionarios</h2>
             <p>El ingreso se realiza a través de Usuario gub.uy. Al finalizar, volverás a esta plataforma.</p>
-            <a class="button button-secondary button-full" href="#{request.contextPath}/gub/iniciar">Ingresar con Usuario gub.uy</a>
+            <a class="button button-secondary button-full" href="#{request.contextPath}/gub/iniciar"
+               style="display: flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap;">
+                <span style="white-space: nowrap; flex-shrink: 0;">Ingresar con</span>
+                <img src="#{request.contextPath}/img/gub-uy.png?v=3" alt="gub.uy" width="56" height="18"
+                     style="height: 18px !important; width: 56px !important; flex-shrink: 0; display: block;"/>
+            </a>
         </section>
     </div>
     <p class="login-footer">CargaUY · Gestión de transporte de carga</p>
