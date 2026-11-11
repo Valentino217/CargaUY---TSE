@@ -264,8 +264,8 @@ public class CertificadoDigitalEJB {
 
         return em.createQuery(
             "SELECT c FROM CertificadoDigital c " +
-            "JOIN FETCH c.usuario u " +
-            "WHERE u.id = :usuarioId " +
+            "JOIN FETCH c.usuario " +
+            "WHERE c.usuario.id = :usuarioId " +
             "ORDER BY c.fechaRegistro DESC",
             CertificadoDigital.class
         )

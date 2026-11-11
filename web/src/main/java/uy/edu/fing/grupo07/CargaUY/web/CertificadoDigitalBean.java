@@ -173,6 +173,22 @@ public class CertificadoDigitalBean implements Serializable {
         }
     }
 
+    public CertificadoDigital getCertificadoActivo() {
+        if (certificados == null) return null;
+        return certificados.stream()
+                .filter(c -> c.getEstado() == EstadoCertificado.ACTIVO)
+                .findFirst()
+                .orElse(null);
+    }
+
+    public CertificadoDigital getUltimoCertificadoRevocado() {
+        if (certificados == null) return null;
+        return certificados.stream()
+                .filter(c -> c.getEstado() == EstadoCertificado.REVOCADO)
+                .findFirst()
+                .orElse(null);
+    }
+
     public int getTotalCertificados() {
         return certificados != null ? certificados.size() : 0;
     }

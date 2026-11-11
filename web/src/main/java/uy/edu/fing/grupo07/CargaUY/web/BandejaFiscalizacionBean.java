@@ -221,7 +221,7 @@ public class BandejaFiscalizacionBean implements Serializable {
                 return null;
             }
 
-            CredencialesFirma credenciales = actaEJB.abrirCredenciales(archivoCertificado, passwordCertificado);
+            CredencialesFirma credenciales = certificadoEJB.abrirCredenciales(archivoCertificado, passwordCertificado);
             if (credenciales == null) {
                 mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error de Firma", "No se pudo abrir el certificado con la clave provista.");
                 return null;
