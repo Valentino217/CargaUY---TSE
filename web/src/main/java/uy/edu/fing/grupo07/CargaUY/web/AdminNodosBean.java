@@ -32,6 +32,7 @@ public class AdminNodosBean implements Serializable {
 
     private static final long serialVersionUID = 1L;
     private static final Duration PROBE_TIMEOUT = Duration.ofMillis(350);
+    private static final Duration HTTP_PROBE_TIMEOUT = Duration.ofSeconds(5);
 
     @EJB
     private GestionBalanzaServiceLocal balanzaService;
@@ -60,7 +61,8 @@ public class AdminNodosBean implements Serializable {
 
         // 1. Balanza
         String envBalanza = System.getenv("BALANZA_ENDPOINT");
-        String balanzaEndpoint = (envBalanza != null && !envBalanza.isBlank()) ? envBalanza.trim() : "http://localhost:8082";
+        boolean tieneEnvBalanza = envBalanza != null && !envBalanza.isBlank();
+        String balanzaEndpoint = tieneEnvBalanza ? envBalanza.trim() : "http://localhost:8082";
         while (balanzaEndpoint.endsWith("/")) {
             balanzaEndpoint = balanzaEndpoint.substring(0, balanzaEndpoint.length() - 1);
         }
@@ -68,7 +70,7 @@ public class AdminNodosBean implements Serializable {
                 ? balanzaEndpoint.substring(0, balanzaEndpoint.length() - "/pesadas".length())
                 : balanzaEndpoint;
         boolean balanzaUp = sondearHealthHttp(balanzaBase + "/health")
-                || sondearHealthHttp("http://localhost:8082/health");
+                || (!tieneEnvBalanza && sondearHealthHttp("http://localhost:8082/health"));
 
         nodos.add(new NodoPerifericoVista(
                 "NODO-BAL-01",
@@ -172,11 +174,12 @@ public class AdminNodosBean implements Serializable {
         try {
             URI uri = URI.create(urlStr);
             HttpClient client = HttpClient.newBuilder()
-                    .connectTimeout(PROBE_TIMEOUT)
+                    .connectTimeout(HTTP_PROBE_TIMEOUT)
+                    .followRedirects(HttpClient.Redirect.NORMAL)
                     .build();
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(uri)
-                    .timeout(PROBE_TIMEOUT)
+                    .timeout(HTTP_PROBE_TIMEOUT)
                     .header("X-Correlation-ID", UUID.randomUUID().toString())
                     .GET()
                     .build();

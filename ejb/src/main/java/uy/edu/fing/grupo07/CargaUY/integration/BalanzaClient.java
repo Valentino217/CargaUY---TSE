@@ -38,9 +38,24 @@ import java.util.logging.Logger;
 public class BalanzaClient {
 
     private static final Logger LOGGER = Logger.getLogger(BalanzaClient.class.getName());
-    private static final Duration TIMEOUT = Duration.ofSeconds(5);
-    private static final Duration HEALTH_TIMEOUT = Duration.ofSeconds(2);
+    private static final Duration TIMEOUT = resolverTimeout();
+    private static final Duration HEALTH_TIMEOUT = Duration.ofSeconds(5);
     private static final Duration CIRCUIT_OPEN_DURATION = Duration.ofSeconds(10);
+
+    private static Duration resolverTimeout() {
+        String envTimeout = System.getenv("BALANZA_TIMEOUT_SECONDS");
+        if (envTimeout != null && !envTimeout.isBlank()) {
+            try {
+                int secs = Integer.parseInt(envTimeout.trim());
+                if (secs > 0) {
+                    return Duration.ofSeconds(secs);
+                }
+            } catch (NumberFormatException ignored) {
+                // fallback al valor por defecto
+            }
+        }
+        return Duration.ofSeconds(15);
+    }
 
     private final HttpClient httpClient;
     private final String endpointUrl;
@@ -56,6 +71,7 @@ public class BalanzaClient {
     public BalanzaClient() {
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(TIMEOUT)
+                .followRedirects(HttpClient.Redirect.NORMAL)
                 .build();
         String envUrl = System.getenv("BALANZA_ENDPOINT");
         this.endpointUrl = (envUrl != null && !envUrl.isBlank()) ? envUrl : "http://localhost:8082";
