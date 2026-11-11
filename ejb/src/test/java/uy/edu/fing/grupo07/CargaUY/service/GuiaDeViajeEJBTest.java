@@ -240,6 +240,22 @@ class GuiaDeViajeEJBTest {
         assertEquals(TipoEstado.FINALIZADO, guia.getEstado());
 
         assertThrows(IllegalStateException.class, () -> guiaEJB.avanzarEstadoAdmin("token", 100L));
+
+        // No permite iniciar una guía si el vehículo ya está en otra guía EN_CURSO
+        GuiaDeViaje otraEnCurso = new GuiaDeViaje(LocalDate.now(), "A", "B", "C", 100f, emp, vehiculo, chofer);
+        otraEnCurso.setId(200L);
+        otraEnCurso.setEstado(TipoEstado.EN_CURSO);
+
+        GuiaDeViaje nuevaSinIniciar = new GuiaDeViaje(LocalDate.now(), "A", "B", "C", 100f, emp, vehiculo, chofer);
+        nuevaSinIniciar.setId(101L);
+        when(em.find(GuiaDeViaje.class, 101L)).thenReturn(nuevaSinIniciar);
+        when(em.createQuery(contains("UPPER(v.matricula) = :matricula"), eq(GuiaDeViaje.class))).thenReturn(qGuias);
+        when(qGuias.setParameter(anyString(), any())).thenReturn(qGuias);
+        when(qGuias.setMaxResults(1)).thenReturn(qGuias);
+        when(qGuias.getResultList()).thenReturn(List.of(otraEnCurso));
+
+        assertThrows(IllegalStateException.class, () -> guiaEJB.avanzarEstadoAdmin("token", 101L));
+        assertEquals(TipoEstado.SIN_INICIAR, nuevaSinIniciar.getEstado());
     }
 
     @Test

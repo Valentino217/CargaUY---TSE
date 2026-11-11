@@ -18,7 +18,9 @@ import uy.edu.fing.grupo07.CargaUY.jms.FiscalizacionProducerLocal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -257,6 +259,173 @@ public class GestionBalanzaServiceImpl implements GestionBalanzaServiceLocal {
     }
 
     @Override
+    public List<PesadaBalanzaDTO> sincronizarPesadasDeGuia(Long guiaId, String correlacion) {
+        if (guiaId == null) {
+            throw new BusinessException("El ID de guía es obligatorio para consultar balanzas.");
+        }
+        if (balanzaClient == null) {
+            throw new BusinessException("El cliente de balanza no está configurado.");
+        }
+        GuiaDeViaje guia = em.find(GuiaDeViaje.class, guiaId);
+        if (guia == null) {
+            throw new BusinessException("No existe la guía de viaje #" + guiaId);
+        }
+        if (guia.getVehiculo() == null || guia.getVehiculo().getMatricula() == null || guia.getVehiculo().getMatricula().isBlank()) {
+            throw new BusinessException("La guía #" + guiaId + " no tiene un vehículo asignado.");
+        }
+
+        String matricula = guia.getVehiculo().getMatricula().trim();
+        LocalDate fechaDesde = guia.getFecha() != null ? guia.getFecha() : LocalDate.now();
+        LocalDate hoy = LocalDate.now();
+        LocalDate fechaHasta = fechaDesde.isAfter(hoy) ? fechaDesde : hoy;
+        Integer nroEmpresa = guia.getEmpresa() != null ? guia.getEmpresa().getNroEmpresa() : null;
+
+        List<PesadaBalanzaDTO> remotas = balanzaClient.consultarPesadasVehiculo(
+                matricula, fechaDesde, fechaHasta, nroEmpresa, correlacion
+        );
+        List<PesadaBalanzaDTO> importadas = persistirPesadasRemotasIdempotentes(em, guia, remotas, hoy);
+
+        if (!importadas.isEmpty() && fiscalizacionProducer != null && guia.getId() != null) {
+            fiscalizacionProducer.solicitarEvaluacion(guia.getId());
+        }
+
+        LOGGER.log(Level.INFO, "Sincronización de balanza para guía #{0}: {1} remotas consultadas, {2} nuevas importadas.",
+                new Object[]{guiaId, remotas != null ? remotas.size() : 0, importadas.size()});
+        return importadas;
+    }
+
+    /**
+     * Persiste de forma idempotente en la base central las pesadas recibidas del nodo periférico
+     * para una guía dada, evitando duplicados por (fecha, hora sin nanosegundos, pesoRegistrado).
+     */
+    static List<PesadaBalanzaDTO> persistirPesadasRemotasIdempotentes(
+            EntityManager em,
+            GuiaDeViaje guia,
+            List<PesadaBalanzaDTO> remotas,
+            LocalDate fechaDefecto
+    ) {
+        if (em == null || guia == null || remotas == null || remotas.isEmpty()) {
+            return List.of();
+        }
+        Set<String> existentes = new HashSet<>();
+        TypedQuery<PesadaBalanza> q = em.createQuery(
+                "SELECT p FROM PesadaBalanza p WHERE p.guia.id = :guiaId",
+                PesadaBalanza.class
+        );
+        if (q != null) {
+            q.setParameter("guiaId", guia.getId());
+            List<PesadaBalanza> actuales = q.getResultList();
+            if (actuales != null) {
+                for (PesadaBalanza p : actuales) {
+                    existentes.add(clavePesada(p.getFecha(), p.getHora(), p.getPesoRegistrado()));
+                }
+            }
+        }
+
+        String matricula = guia.getVehiculo() != null ? guia.getVehiculo().getMatricula() : null;
+        LocalDate fallbackFecha = fechaDefecto != null ? fechaDefecto : LocalDate.now();
+        List<PesadaBalanzaDTO> importadas = new ArrayList<>();
+        for (PesadaBalanzaDTO remota : remotas) {
+            if (remota == null || remota.pesoRegistrado() <= 0) {
+                continue;
+            }
+            LocalDate f = remota.fecha() != null ? remota.fecha() : fallbackFecha;
+            LocalTime h = remota.hora() != null ? remota.hora().withNano(0) : LocalTime.now().withNano(0);
+            if (!existentes.add(clavePesada(f, h, remota.pesoRegistrado()))) {
+                continue;
+            }
+            PesadaBalanza pesada = new PesadaBalanza(f, h, remota.pesoRegistrado(), guia);
+            em.persist(pesada);
+            em.flush();
+            importadas.add(new PesadaBalanzaDTO(
+                    pesada.getIdPesada(),
+                    pesada.getFecha(),
+                    pesada.getHora(),
+                    pesada.getPesoRegistrado(),
+                    matricula != null ? matricula : remota.matricula(),
+                    guia.getId()
+            ));
+        }
+        return importadas;
+    }
+
+    @Override
+    public PesadaBalanzaDTO registrarPesadaViaPeriferico(PesadaBalanzaDTO dto, String peaje, String correlacion) {
+        if (dto == null) {
+            throw new BusinessException("La información de pesada no puede ser nula.");
+        }
+        if (dto.pesoRegistrado() <= 0) {
+            throw new BusinessException("El peso registrado debe ser mayor a 0.");
+        }
+        if (balanzaClient == null) {
+            throw new BusinessException("El cliente de balanza no está configurado.");
+        }
+
+        String matricula = dto.matricula() != null && !dto.matricula().isBlank() ? dto.matricula().trim() : null;
+        Integer nroEmpresa = null;
+
+        if (dto.guiaId() != null) {
+            GuiaDeViaje guia = em.find(GuiaDeViaje.class, dto.guiaId());
+            if (guia == null) {
+                throw new BusinessException("No existe la guía de viaje con ID " + dto.guiaId());
+            }
+            if (guia.getEstado() != TipoEstado.EN_CURSO) {
+                throw new BusinessException(
+                        "Solo se pueden registrar pesajes en guías con estado EN_CURSO (la guía #"
+                                + guia.getId() + " se encuentra en estado " + guia.getEstado() + ")."
+                );
+            }
+            if (matricula == null && guia.getVehiculo() != null) {
+                matricula = guia.getVehiculo().getMatricula();
+            }
+            if (guia.getEmpresa() != null) {
+                nroEmpresa = guia.getEmpresa().getNroEmpresa();
+            }
+        }
+
+        if (matricula == null || matricula.isBlank()) {
+            throw new BusinessException("Debe indicar una matrícula o una guía con vehículo asignado.");
+        }
+
+        if (nroEmpresa == null) {
+            Vehiculo v = buscarVehiculoPorMatricula(matricula);
+            if (v != null && v.getEmpresa() != null) {
+                nroEmpresa = v.getEmpresa().getNroEmpresa();
+            }
+        }
+
+        LocalDate fechaEfectiva = dto.fecha() != null ? dto.fecha() : LocalDate.now();
+        LocalTime horaEfectiva = dto.hora() != null ? dto.hora().withNano(0) : LocalTime.now().withNano(0);
+
+        PesadaBalanzaDTO paraPeriferico = new PesadaBalanzaDTO(
+                null,
+                fechaEfectiva,
+                horaEfectiva,
+                dto.pesoRegistrado(),
+                matricula,
+                dto.guiaId()
+        );
+        PesadaBalanzaDTO confirmada = balanzaClient.registrarPesadaEnPeriferico(paraPeriferico, nroEmpresa, peaje, correlacion);
+        LOGGER.log(Level.INFO, "Pesada registrada en nodo periférico (idPesada={0}, matrícula={1}, peso={2} kg). Pendiente de sincronización request-response.",
+                new Object[]{confirmada.idPesada(), matricula, confirmada.pesoRegistrado()});
+
+        return new PesadaBalanzaDTO(
+                confirmada.idPesada(),
+                confirmada.fecha() != null ? confirmada.fecha() : fechaEfectiva,
+                confirmada.hora() != null ? confirmada.hora() : horaEfectiva,
+                confirmada.pesoRegistrado() > 0 ? confirmada.pesoRegistrado() : dto.pesoRegistrado(),
+                matricula,
+                dto.guiaId()
+        );
+    }
+
+    private static String clavePesada(LocalDate fecha, LocalTime hora, int peso) {
+        LocalDate f = fecha != null ? fecha : LocalDate.MIN;
+        LocalTime h = hora != null ? hora.withNano(0) : LocalTime.MIDNIGHT;
+        return f + "|" + h + "|" + peso;
+    }
+
+    @Override
     public List<PesadaBalanzaDTO> listarPesadasPorGuia(Long guiaId) {
         if (guiaId == null) {
             throw new BusinessException("El ID de guía no puede ser nulo.");
@@ -266,6 +435,9 @@ public class GestionBalanzaServiceImpl implements GestionBalanzaServiceLocal {
                 "SELECT p FROM PesadaBalanza p WHERE p.guia.id = :guiaId ORDER BY p.fecha ASC, p.hora ASC",
                 PesadaBalanza.class
         );
+        if (q == null) {
+            return List.of();
+        }
         q.setParameter("guiaId", guiaId);
 
         List<PesadaBalanza> pesadas = q.getResultList();

@@ -1,7 +1,9 @@
 package uy.edu.fing.grupo07.CargaUY.web;
 
 import java.io.Serializable;
+import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -13,7 +15,11 @@ import jakarta.faces.context.FacesContext;
 import jakarta.faces.view.ViewScoped;
 import jakarta.inject.Named;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.Empresa;
+import uy.edu.fing.grupo07.CargaUY.domain.entity.ITV;
+import uy.edu.fing.grupo07.CargaUY.domain.entity.PNC;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.Vehiculo;
+import uy.edu.fing.grupo07.CargaUY.service.ITVEJB;
+import uy.edu.fing.grupo07.CargaUY.service.PNCEJB;
 import uy.edu.fing.grupo07.CargaUY.service.VehiculoEJB;
 
 @Named("VehiculoBean")
@@ -67,8 +73,17 @@ public class VehiculoBean implements Serializable {
     @EJB
     private VehiculoEJB vehiculoEJB;
 
+    @EJB
+    private ITVEJB itvEJB;
+
+    @EJB
+    private PNCEJB pncEJB;
+
     private List<Vehiculo> vehiculos;
+    private List<Vehiculo> vehiculosFiltrados;
     private List<Empresa> empresas;
+    private List<ITV> itvs;
+    private List<PNC> pncs;
 
     private Vehiculo vehiculo;
     private boolean editando;
@@ -83,18 +98,27 @@ public class VehiculoBean implements Serializable {
             empresas = new ArrayList<>();
             mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error", "No se pudieron cargar las empresas: " + extraerMensaje(e));
         }
+        cargarFlota();
+        nuevo();
+    }
+
+    public void cargarFlota() {
+        String token = SesionActual.token();
         try {
             vehiculos = vehiculoEJB.listarParaActor(token);
+            itvs = itvEJB != null ? itvEJB.listarITVs() : new ArrayList<>();
+            pncs = pncEJB != null ? pncEJB.listarPNCs() : new ArrayList<>();
         } catch (Exception e) {
             vehiculos = new ArrayList<>();
+            itvs = new ArrayList<>();
+            pncs = new ArrayList<>();
             mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error", "No se pudo inicializar la flota: " + extraerMensaje(e));
         }
-        nuevo();
     }
 
     public void nuevo() {
         vehiculo = new Vehiculo();
-        vehiculo.setEstadoHabilitacion(true);
+        vehiculo.setEstadoHabilitacion(false);
         editando = false;
 
         if (empresas != null && !empresas.isEmpty()) {
@@ -189,7 +213,7 @@ public class VehiculoBean implements Serializable {
                 mostrarMensaje(FacesMessage.SEVERITY_INFO, "Unidad Registrada", "El vehículo " + vehiculo.getMatricula() + " fue dado de alta correctamente.");
             }
 
-            vehiculos = vehiculoEJB.listarParaActor(SesionActual.token());
+            cargarFlota();
             nuevo();
 
         } catch (Exception e) {
@@ -200,6 +224,94 @@ public class VehiculoBean implements Serializable {
                     extraerMensaje(e)
             );
         }
+    }
+
+    public LocalDate obtenerVencimientoItv(String matricula) {
+        if (matricula == null) return null;
+        if (vehiculos != null) {
+            for (Vehiculo v : vehiculos) {
+                if (v != null && matricula.equalsIgnoreCase(v.getMatricula()) && v.getItv() != null && !v.getItv().isEmpty()) {
+                    LocalDate max = v.getItv().stream()
+                            .filter(i -> i != null && i.getFechaVencimiento() != null)
+                            .map(ITV::getFechaVencimiento)
+                            .max(Comparator.naturalOrder())
+                            .orElse(null);
+                    if (max != null) return max;
+                }
+            }
+        }
+        if (itvs == null) return null;
+        return itvs.stream()
+                .filter(i -> i.getVehiculo() != null && matricula.equalsIgnoreCase(i.getVehiculo().getMatricula()) && i.getFechaVencimiento() != null)
+                .map(ITV::getFechaVencimiento)
+                .max(Comparator.naturalOrder())
+                .orElse(null);
+    }
+
+    public LocalDate obtenerVencimientoPnc(String matricula) {
+        if (matricula == null) return null;
+        if (vehiculos != null) {
+            for (Vehiculo v : vehiculos) {
+                if (v != null && matricula.equalsIgnoreCase(v.getMatricula()) && v.getPncs() != null && !v.getPncs().isEmpty()) {
+                    LocalDate max = v.getPncs().stream()
+                            .filter(p -> p != null && p.getFechaVencimiento() != null)
+                            .map(PNC::getFechaVencimiento)
+                            .max(Comparator.naturalOrder())
+                            .orElse(null);
+                    if (max != null) return max;
+                }
+            }
+        }
+        if (pncs == null) return null;
+        return pncs.stream()
+                .filter(p -> p.getVehiculo() != null && matricula.equalsIgnoreCase(p.getVehiculo().getMatricula()) && p.getFechaVencimiento() != null)
+                .map(PNC::getFechaVencimiento)
+                .max(Comparator.naturalOrder())
+                .orElse(null);
+    }
+
+    public String obtenerEstadoVigencia(LocalDate fechaVenc) {
+        if (fechaVenc == null) {
+            return "SIN CERTIFICADO";
+        }
+        LocalDate hoy = LocalDate.now();
+        if (fechaVenc.isBefore(hoy)) {
+            return "VENCIDO";
+        }
+        if (!fechaVenc.isAfter(hoy.plusDays(30))) {
+            return "POR VENCER";
+        }
+        return "VIGENTE";
+    }
+
+    public String obtenerSeveridadVigencia(LocalDate fechaVenc) {
+        String est = obtenerEstadoVigencia(fechaVenc);
+        return switch (est) {
+            case "VIGENTE" -> "success";
+            case "POR VENCER" -> "warning";
+            default -> "danger";
+        };
+    }
+
+    public boolean tieneDocumentacionEnRegla(Vehiculo v) {
+        if (v == null || !v.isEstadoHabilitacion()) return false;
+        LocalDate itv = obtenerVencimientoItv(v.getMatricula());
+        LocalDate pnc = obtenerVencimientoPnc(v.getMatricula());
+        LocalDate hoy = LocalDate.now();
+        return itv != null && !itv.isBefore(hoy) && pnc != null && !pnc.isBefore(hoy);
+    }
+
+    public long getTotalUnidades() {
+        return vehiculos != null ? vehiculos.size() : 0;
+    }
+
+    public long getTotalEnRegla() {
+        if (vehiculos == null) return 0;
+        return vehiculos.stream().filter(this::tieneDocumentacionEnRegla).count();
+    }
+
+    public long getTotalConAlerta() {
+        return getTotalUnidades() - getTotalEnRegla();
     }
 
     public boolean estaApto(Vehiculo v) {
@@ -235,7 +347,7 @@ public class VehiculoBean implements Serializable {
         copia.setModelo(v.getModelo());
         copia.setPeso(v.getPeso());
         copia.setCapacidadCarga(v.getCapacidadCarga());
-        copia.setEstadoHabilitacion(v.isEstadoHabilitacion() && estaApto(v));
+        copia.setEstadoHabilitacion(v.isEstadoHabilitacion());
         copia.setEmpresa(v.getEmpresa());
 
         this.vehiculo = copia;
@@ -248,7 +360,7 @@ public class VehiculoBean implements Serializable {
     public void eliminar(Vehiculo v) {
         try {
             vehiculoEJB.eliminar(SesionActual.token(), v);
-            vehiculos = vehiculoEJB.listarParaActor(SesionActual.token());
+            cargarFlota();
 
             mostrarMensaje(
                     FacesMessage.SEVERITY_INFO,
@@ -295,6 +407,14 @@ public class VehiculoBean implements Serializable {
 
     public List<Vehiculo> getVehiculos() {
         return vehiculos;
+    }
+
+    public List<Vehiculo> getVehiculosFiltrados() {
+        return vehiculosFiltrados;
+    }
+
+    public void setVehiculosFiltrados(List<Vehiculo> vehiculosFiltrados) {
+        this.vehiculosFiltrados = vehiculosFiltrados;
     }
 
     public List<Empresa> getEmpresas() {

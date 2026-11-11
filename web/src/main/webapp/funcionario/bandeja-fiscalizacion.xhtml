@@ -1,4 +1,4 @@
-﻿<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
                 xmlns:h="jakarta.faces.html"
                 xmlns:f="jakarta.faces.core"
                 xmlns:ui="jakarta.faces.facelets"
@@ -11,8 +11,7 @@
         <div class="cuy-page-header">
             <div>
                 <h1 class="cuy-page-title">
-                    <i class="pi pi-inbox" style="color: #1d4ed8;" />
-                    Bandeja de Trabajo de Fiscalización e Infracciones
+                    Bandeja de Infracciones
                 </h1>
             </div>
             <div style="display: flex; gap: 0.6rem;">
@@ -63,7 +62,7 @@
                     <f:facet name="header">
                         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
                             <span style="font-weight: 700; color: #0f2942;">
-                                <i class="pi pi-briefcase" style="margin-right: 0.4rem;" /> Expedientes
+                                Expedientes
                             </span>
                         </div>
                     </f:facet>
@@ -126,11 +125,11 @@
                         <f:facet name="filter">
                             <p:selectOneMenu onchange="PF('dtBandeja').filter()" styleClass="ui-custom-filter" style="width: 100%;">
                                 <f:selectItem itemLabel="Todas" itemValue="#{null}" noSelectionOption="true" />
-                                <f:selectItem itemLabel="Evaluar / Resolver" itemValue="RESOLVER" />
+                                <f:selectItem itemLabel="Resolver" itemValue="RESOLVER" />
                                 <f:selectItem itemLabel="Ver Auditoría" itemValue="AUDITORIA" />
                             </p:selectOneMenu>
                         </f:facet>
-                        <p:commandButton value="#{(caso.estado().name() eq 'CONFIRMADA' or caso.estado().name() eq 'DESESTIMADA') ? 'Ver Auditoría' : 'Evaluar / Resolver'}"
+                        <p:commandButton value="#{(caso.estado().name() eq 'CONFIRMADA' or caso.estado().name() eq 'DESESTIMADA') ? 'Ver Auditoría' : 'Resolver'}"
                                          icon="#{(caso.estado().name() eq 'CONFIRMADA' or caso.estado().name() eq 'DESESTIMADA') ? 'pi pi-eye' : 'pi pi-check-square'}"
                                          actionListener="#{bandejaFiscalizacionBean.seleccionarCaso(caso)}"
                                          update=":dlgResolverForm"
@@ -218,7 +217,7 @@
                                         <h:outputText value="#{aud.usuario()}" style="font-size: 0.78rem;" />
                                     </p:column>
                                     <p:column headerText="Timestamp" style="width: 175px; min-width: 150px;" styleClass="cuy-aud-col-fixed">
-                                        <span class="cuy-mono" style="font-size: 0.74rem;">#{aud.timestampCreacion()}</span>
+                                        <span class="cuy-mono" style="font-size: 0.74rem;"><h:outputText value="#{aud.timestampCreacion()}"><f:convertDateTime type="localDateTime" pattern="dd/MM/yyyy HH:mm" /></h:outputText></span>
                                     </p:column>
                                     <p:column headerText="Fundamento / Detalle" style="min-width: 250px;">
                                         <h:outputText value="#{aud.fundamento()}" style="font-size: 0.78rem; white-space: normal;" />

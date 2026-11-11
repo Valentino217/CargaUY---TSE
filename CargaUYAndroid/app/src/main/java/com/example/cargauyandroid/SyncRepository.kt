@@ -180,7 +180,7 @@ class SyncRepository(context: Context) {
             return@withContext ConsultaGuiasResult(
                 guias = cache,
                 desdeCacheOffline = true,
-                mensajeAviso = "Modo sin conexion: mostrando guias guardadas en el telefono."
+                mensajeAviso = "Sin señal: viendo tus viajes guardados en el teléfono."
             )
         }
 
@@ -209,7 +209,7 @@ class SyncRepository(context: Context) {
             return@withContext ConsultaGuiasResult(
                 guias = cache,
                 desdeCacheOffline = true,
-                mensajeAviso = "Modo sin conexion: mostrando guias guardadas en el telefono. Detalle: ${e.javaClass.simpleName}: ${e.message}"
+                mensajeAviso = "No se pudo conectar al servidor (${e.message}). Mostrando tus viajes guardados."
             )
         }
     }
@@ -222,8 +222,8 @@ class SyncRepository(context: Context) {
     suspend fun registrarEvento(
         guiaId: Long,
         tipo: TipoEventoOption,
-        latitud: Double,
-        longitud: Double,
+        latitud: Double = 0.0,
+        longitud: Double = 0.0,
         descripcion: String?,
         foto: String?,
         cedulaChofer: Int,
@@ -250,13 +250,26 @@ class SyncRepository(context: Context) {
             estadoSync = EstadoSyncLocal.PENDIENTE.name
         )
 
+        if (tipo == TipoEventoOption.INICIO) {
+            val otraEnCurso = dbHelper.obtenerGuiaEnCurso(cedulaChofer, excluirGuiaId = guiaId)
+            if (otraEnCurso != null) {
+                val msg = "Ya tenés el Viaje #${otraEnCurso.id} en curso. Finalizalo antes de iniciar otro."
+                return@withContext ResultadoOperacionEvento(
+                    evento = eventoLocal.copy(estadoSync = EstadoSyncLocal.ERROR.name, mensajeSync = msg),
+                    guardadoOffline = false,
+                    rechazadoPorServidor = true,
+                    mensajeUsuario = msg
+                )
+            }
+        }
+
         val insertado = dbHelper.insertarEventoLocal(eventoLocal)
         if (!insertado) {
             return@withContext ResultadoOperacionEvento(
                 evento = eventoLocal.copy(estadoSync = EstadoSyncLocal.DUPLICADO.name),
                 guardadoOffline = false,
                 duplicadoDetectado = true,
-                mensajeUsuario = "Ya existe un evento con el mismo identificador ($uuid) y no se volvera a registrar."
+                mensajeUsuario = "Este evento ya fue registrado."
             )
         }
 
@@ -272,7 +285,7 @@ class SyncRepository(context: Context) {
             return@withContext ResultadoOperacionEvento(
                 evento = eventoLocal,
                 guardadoOffline = true,
-                mensajeUsuario = "Modo sin conexion: Evento '${tipo.etiqueta}' guardado en el telefono (UUID: ${uuid.take(8)}...) para sincronizar al recuperar conexion."
+                mensajeUsuario = "${tipo.etiqueta} guardado en el teléfono. Se enviará solo cuando vuelva la señal."
             )
         }
 
@@ -292,7 +305,7 @@ class SyncRepository(context: Context) {
                     dbHelper.actualizarEstadoEvento(
                         uuid,
                         EstadoSyncLocal.SINCRONIZADO,
-                        resultado?.mensaje ?: "Sincronizado con el servidor"
+                        resultado?.mensaje ?: "Enviado"
                     )
                     try {
                         val guiasActualizadas = RetrofitClient.executeWithFallback { api ->
@@ -309,7 +322,7 @@ class SyncRepository(context: Context) {
                     ResultadoOperacionEvento(
                         evento = eventoLocal.copy(estadoSync = EstadoSyncLocal.SINCRONIZADO.name),
                         guardadoOffline = false,
-                        mensajeUsuario = "Evento '${tipo.etiqueta}' registrado y sincronizado en el sistema (UUID: ${uuid.take(8)}...)."
+                        mensajeUsuario = "${tipo.etiqueta} registrado correctamente."
                     )
                 }
 
@@ -319,12 +332,12 @@ class SyncRepository(context: Context) {
                         evento = eventoLocal.copy(estadoSync = EstadoSyncLocal.DUPLICADO.name),
                         guardadoOffline = false,
                         duplicadoDetectado = true,
-                        mensajeUsuario = "El sistema indica que ya existe el evento con UUID ${uuid.take(8)}... Se descarto el duplicado."
+                        mensajeUsuario = "Este evento ya estaba registrado."
                     )
                 }
 
                 EstadoSyncLocal.ERROR -> {
-                    val msgRechazo = resultado?.mensaje ?: "Transición de viaje no permitida"
+                    val msgRechazo = resultado?.mensaje ?: "Operación no permitida"
                     dbHelper.actualizarEstadoEvento(
                         uuid,
                         EstadoSyncLocal.ERROR,
@@ -344,16 +357,16 @@ class SyncRepository(context: Context) {
                         ),
                         guardadoOffline = false,
                         rechazadoPorServidor = true,
-                        mensajeUsuario = "Evento rechazado por el servidor: $msgRechazo"
+                        mensajeUsuario = "No se pudo registrar: $msgRechazo"
                     )
                 }
 
                 EstadoSyncLocal.PENDIENTE -> {
-                    val msgError = resultado?.mensaje ?: "No se pudo confirmar en el servidor"
+                    val msgError = resultado?.mensaje ?: "No se pudo confirmar el envío"
                     ResultadoOperacionEvento(
                         evento = eventoLocal,
                         guardadoOffline = true,
-                        mensajeUsuario = "El servidor devolvio un aviso ($msgError). El evento quedo guardado localmente para reintentar."
+                        mensajeUsuario = "No se pudo enviar ahora ($msgError). Quedó guardado para reintentar."
                     )
                 }
             }
@@ -368,7 +381,7 @@ class SyncRepository(context: Context) {
             ResultadoOperacionEvento(
                 evento = eventoLocal,
                 guardadoOffline = true,
-                mensajeUsuario = "Sin conexion al servidor: Evento '${tipo.etiqueta}' guardado en el telefono (UUID: ${uuid.take(8)}...) para sincronizar al recuperar conexion."
+                mensajeUsuario = "${tipo.etiqueta} guardado en el teléfono. Se enviará cuando vuelva la señal."
             )
         }
     }
@@ -391,7 +404,7 @@ class SyncRepository(context: Context) {
                 duplicados = 0,
                 errores = pendientes.size,
                 rutaActualizada = false,
-                mensaje = "Sin conexion (${pendientes.size} eventos siguen guardados en el telefono esperando red)."
+                mensaje = "Sin señal. Quedan ${pendientes.size} evento(s) por enviar."
             )
         }
 
@@ -425,7 +438,7 @@ class SyncRepository(context: Context) {
                             dbHelper.actualizarEstadoEvento(
                                 ev.uuid,
                                 EstadoSyncLocal.SINCRONIZADO,
-                                r?.mensaje ?: "Sincronizado correctamente"
+                                r?.mensaje ?: "Enviado"
                             )
                         }
 
@@ -439,7 +452,7 @@ class SyncRepository(context: Context) {
                             dbHelper.actualizarEstadoEvento(
                                 ev.uuid,
                                 EstadoSyncLocal.ERROR,
-                                r?.mensaje ?: "Rechazado por validación de negocio"
+                                r?.mensaje ?: "No se pudo procesar el evento"
                             )
                         }
 
@@ -448,7 +461,7 @@ class SyncRepository(context: Context) {
                             dbHelper.actualizarEstadoEvento(
                                 ev.uuid,
                                 EstadoSyncLocal.PENDIENTE,
-                                r?.mensaje ?: "Pendiente de reintento"
+                                r?.mensaje ?: "Pendiente de envío"
                             )
                         }
                     }
@@ -474,16 +487,13 @@ class SyncRepository(context: Context) {
 
             val partesMensaje = mutableListOf<String>()
             if (aceptados > 0) {
-                partesMensaje.add("$aceptados eventos sincronizados con el sistema")
-            }
-            if (duplicados > 0) {
-                partesMensaje.add("$duplicados eventos duplicados omitidos ")
+                partesMensaje.add(if (aceptados == 1) "1 evento enviado" else "$aceptados eventos enviados")
             }
             if (rutaActualizada) {
-                partesMensaje.add("Ruta/guia actualizada desde el servidor ")
+                partesMensaje.add("Recorrido actualizado")
             }
             if (errores > 0) {
-                partesMensaje.add("$errores eventos rechazados o pendientes")
+                partesMensaje.add(if (errores == 1) "1 evento con error" else "$errores eventos con error")
             }
 
             ResumenSincronizacion(
@@ -492,16 +502,16 @@ class SyncRepository(context: Context) {
                 duplicados = duplicados,
                 errores = errores,
                 rutaActualizada = rutaActualizada,
-                mensaje = partesMensaje.joinToString(" • ").ifBlank { "Sincronizacion completada." }
+                mensaje = partesMensaje.joinToString(" • ").ifBlank { "Todo al día." }
             )
         } catch (e: Exception) {
             servidorAlcanzable = false
             Log.w("CARGAUY", "Fallo al sincronizar lote pendiente: ${e.message}")
             val restantes = (pendientes.size - aceptados - duplicados).coerceAtLeast(0)
             val msg = if (aceptados + duplicados > 0) {
-                "Sincronizacion parcial ($aceptados sincronizados, $restantes siguen guardados en el telefono esperando red)."
+                "Se enviaron $aceptados evento(s). Quedan $restantes por enviar cuando vuelva la señal."
             } else {
-                "Offline (${pendientes.size} eventos siguen guardados en el telefono esperando red)."
+                "Sin señal. Quedan ${pendientes.size} evento(s) por enviar."
             }
             ResumenSincronizacion(
                 totalEnviados = pendientes.size,
@@ -529,15 +539,19 @@ class SyncRepository(context: Context) {
             }
             servidorAlcanzable = true
             for (rem in remotos) {
+                if (rem.tipo.equals("POSICION", ignoreCase = true) && (rem.distanciaDesvioKm ?: 0.0) <= 5.0) {
+                    continue
+                }
                 mapaPorUuid[rem.uuid] = EventoLocal(
                     uuid = rem.uuid,
                     guiaId = rem.guiaId,
                     tipo = rem.tipo,
                     tiempo = rem.tiempo,
-                    latitud = rem.latitud,
-                    longitud = rem.longitud,
+                    latitud = rem.latitud ?: 0.0,
+                    longitud = rem.longitud ?: 0.0,
                     descripcion = rem.incidente?.descripcion,
                     foto = rem.incidente?.foto,
+                    distanciaDesvioKm = rem.distanciaDesvioKm,
                     cantidadKg = rem.cantidadKg,
                     mercaderia = rem.mercaderia,
                     empresaCarga = rem.empresaCarga,

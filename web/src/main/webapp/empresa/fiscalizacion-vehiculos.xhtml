@@ -1,0 +1,151 @@
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/templates/template.xhtml">
+
+    <ui:define name="title">Documentación y Permisos de Vehículos</ui:define>
+
+    <ui:define name="content">
+        <div class="cuy-page-header">
+            <div>
+                <h1 class="cuy-page-title">
+                    Documentación de Vehículos
+                </h1>
+            </div>
+            <div>
+                <h:form id="refreshFlotaForm" style="margin: 0;">
+                    <p:commandButton value="Actualizar estado"
+                                     icon="pi pi-refresh"
+                                     actionListener="#{VehiculoBean.cargarFlota}"
+                                     update=":flotaFiscForm :kpiFlotaFisc"
+                                     styleClass="ui-button-outlined ui-button-secondary" />
+                </h:form>
+            </div>
+        </div>
+
+        <!-- KPIs -->
+        <h:panelGroup id="kpiFlotaFisc" layout="block" styleClass="cuy-kpi-grid">
+            <div class="cuy-kpi-card">
+                <div class="cuy-kpi-label"><i class="pi pi-truck" /> Total Vehículos</div>
+                <div class="cuy-kpi-value">#{VehiculoBean.totalUnidades}</div>
+            </div>
+            <div class="cuy-kpi-card success">
+                <div class="cuy-kpi-label"><i class="pi pi-verified" /> Documentación en Regla</div>
+                <div class="cuy-kpi-value">#{VehiculoBean.totalEnRegla}</div>
+            </div>
+            <div class="cuy-kpi-card danger">
+                <div class="cuy-kpi-label"><i class="pi pi-exclamation-triangle" /> Con Alerta / Vencimiento</div>
+                <div class="cuy-kpi-value">#{VehiculoBean.totalConAlerta}</div>
+            </div>
+        </h:panelGroup>
+
+        <h:form id="flotaFiscForm">
+            <div class="cuy-card">
+                <p:dataTable id="tablaFlotaFisc"
+                             var="veh"
+                             value="#{VehiculoBean.vehiculos}"
+                             filteredValue="#{VehiculoBean.vehiculosFiltrados}"
+                             widgetVar="dtFlotaFisc"
+                             paginator="true"
+                             rows="10"
+                             paginatorPosition="bottom"
+                             stripedRows="true"
+                             size="small"
+                             emptyMessage="No hay vehículos registrados para sus empresas.">
+
+                    <f:facet name="header">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                            <span style="font-weight: 700; color: #0f2942;">
+                                <i class="pi pi-shield" style="margin-right: 0.4rem;" /> Estado de Permisos y Vencimientos (ITV / PNC)
+                            </span>
+                        </div>
+                    </f:facet>
+
+                    <p:column headerText="Matrícula" filterBy="#{veh.matricula}" filterMatchMode="contains" style="width: 135px;" filterPlaceholder="Matrícula">
+                        <span class="cuy-mono"><i class="pi pi-car" /> #{veh.matricula}</span>
+                    </p:column>
+
+                    <p:column headerText="Empresa" filterBy="#{veh.empresa.razonSocial}" filterMatchMode="contains" filterPlaceholder="Empresa">
+                        <strong>#{veh.empresa.razonSocial}</strong>
+                        <small style="display: block; color: var(--cuy-muted);">Nro. #{veh.empresa.nroEmpresa}</small>
+                    </p:column>
+
+                    <p:column headerText="Marca y Modelo" filterBy="#{veh.marca}" filterMatchMode="contains" filterPlaceholder="Marca y Modelo">
+                        <strong style="color: #0f2942;">#{veh.marca} #{veh.modelo}</strong>
+                        <div style="font-size: 0.78rem; color: #64748b;">
+                            Capacidad: <h:outputText value="#{veh.capacidadCarga}"><f:convertNumber pattern="#,##0" /></h:outputText> kg | Peso: <h:outputText value="#{veh.peso}"><f:convertNumber pattern="#,##0" /></h:outputText> kg
+                        </div>
+                    </p:column>
+
+                    <p:column headerText="Habilitación" filterBy="#{veh.estadoHabilitacion ? 'HABILITADO' : 'SUSPENDIDO'}" filterMatchMode="exact" style="width: 150px; text-align: center;">
+                        <f:facet name="filter">
+                            <p:selectOneMenu onchange="PF('dtFlotaFisc').filter()" styleClass="ui-custom-filter" style="width: 100%;">
+                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItem itemLabel="HABILITADO" itemValue="HABILITADO" />
+                                <f:selectItem itemLabel="SUSPENDIDO" itemValue="SUSPENDIDO" />
+                            </p:selectOneMenu>
+                        </f:facet>
+                        <p:tag value="#{veh.estadoHabilitacion ? 'HABILITADO' : 'SUSPENDIDO'}"
+                               severity="#{veh.estadoHabilitacion ? 'success' : 'danger'}"
+                               rounded="true" />
+                    </p:column>
+
+                    <p:column headerText="Vigencia ITV" filterBy="#{VehiculoBean.obtenerEstadoVigencia(VehiculoBean.obtenerVencimientoItv(veh.matricula))}" filterMatchMode="exact" style="width: 185px; text-align: center;">
+                        <f:facet name="filter">
+                            <p:selectOneMenu onchange="PF('dtFlotaFisc').filter()" styleClass="ui-custom-filter" style="width: 100%;">
+                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItem itemLabel="VIGENTE" itemValue="VIGENTE" />
+                                <f:selectItem itemLabel="POR VENCER" itemValue="POR VENCER" />
+                                <f:selectItem itemLabel="VENCIDO" itemValue="VENCIDO" />
+                                <f:selectItem itemLabel="SIN CERTIFICADO" itemValue="SIN CERTIFICADO" />
+                            </p:selectOneMenu>
+                        </f:facet>
+                        <ui:param name="vencItv" value="#{VehiculoBean.obtenerVencimientoItv(veh.matricula)}" />
+                        <p:tag value="#{VehiculoBean.obtenerEstadoVigencia(vencItv)}"
+                               severity="#{VehiculoBean.obtenerSeveridadVigencia(vencItv)}"
+                               icon="#{VehiculoBean.obtenerSeveridadVigencia(vencItv) eq 'success' ? 'pi pi-check-circle' : 'pi pi-exclamation-triangle'}"
+                               rounded="true" />
+                        <div style="font-size: 0.76rem; color: #475569; margin-top: 0.2rem;">
+                            #{vencItv != null ? 'Vence: '.concat(vencItv.toString()) : 'Sin registro ITV'}
+                        </div>
+                    </p:column>
+
+                    <p:column headerText="Vigencia Permiso" filterBy="#{VehiculoBean.obtenerEstadoVigencia(VehiculoBean.obtenerVencimientoPnc(veh.matricula))}" filterMatchMode="exact" style="width: 185px; text-align: center;">
+                        <f:facet name="filter">
+                            <p:selectOneMenu onchange="PF('dtFlotaFisc').filter()" styleClass="ui-custom-filter" style="width: 100%;">
+                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItem itemLabel="VIGENTE" itemValue="VIGENTE" />
+                                <f:selectItem itemLabel="POR VENCER" itemValue="POR VENCER" />
+                                <f:selectItem itemLabel="VENCIDO" itemValue="VENCIDO" />
+                                <f:selectItem itemLabel="SIN CERTIFICADO" itemValue="SIN CERTIFICADO" />
+                            </p:selectOneMenu>
+                        </f:facet>
+                        <ui:param name="vencPnc" value="#{VehiculoBean.obtenerVencimientoPnc(veh.matricula)}" />
+                        <p:tag value="#{VehiculoBean.obtenerEstadoVigencia(vencPnc)}"
+                               severity="#{VehiculoBean.obtenerSeveridadVigencia(vencPnc)}"
+                               icon="#{VehiculoBean.obtenerSeveridadVigencia(vencPnc) eq 'success' ? 'pi pi-check-circle' : 'pi pi-exclamation-triangle'}"
+                               rounded="true" />
+                        <div style="font-size: 0.76rem; color: #475569; margin-top: 0.2rem;">
+                            #{vencPnc != null ? 'Vence: '.concat(vencPnc.toString()) : 'Sin registro PNC'}
+                        </div>
+                    </p:column>
+
+                    <p:column headerText="Apto para circular" filterBy="#{VehiculoBean.tieneDocumentacionEnRegla(veh) ? 'APTO RUTA' : 'BLOQUEADO'}" filterMatchMode="exact" style="width: 165px; text-align: center;">
+                        <f:facet name="filter">
+                            <p:selectOneMenu onchange="PF('dtFlotaFisc').filter()" styleClass="ui-custom-filter" style="width: 100%;">
+                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
+                                <f:selectItem itemLabel="APTO RUTA" itemValue="APTO RUTA" />
+                                <f:selectItem itemLabel="BLOQUEADO" itemValue="BLOQUEADO" />
+                            </p:selectOneMenu>
+                        </f:facet>
+                        <p:tag value="#{VehiculoBean.tieneDocumentacionEnRegla(veh) ? 'APTO RUTA' : 'BLOQUEADO / ALERTA'}"
+                               severity="#{VehiculoBean.tieneDocumentacionEnRegla(veh) ? 'success' : 'danger'}"
+                               rounded="true" />
+                    </p:column>
+                </p:dataTable>
+            </div>
+        </h:form>
+    </ui:define>
+</ui:composition>

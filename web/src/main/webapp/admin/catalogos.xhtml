@@ -11,7 +11,6 @@
         <div class="cuy-page-header">
             <div>
                 <h1 class="cuy-page-title">
-                    <i class="pi pi-tags" style="color: #1d4ed8;" />
                     Administración de Catálogos
                 </h1>
             </div>
@@ -32,7 +31,7 @@
                 <!-- Rubros -->
                 <div class="cuy-card" style="margin-bottom: 0;">
                     <h3 class="cuy-card-title">
-                        <i class="pi pi-tags" style="color: #2563eb;" /> Catálogo de Rubros de Actividad
+                        Catálogo de Rubros de Actividad
                     </h3>
                     <div style="display: flex; gap: 0.5rem; margin-bottom: 0.85rem;">
                         <p:inputText value="#{adminCatalogosBean.nuevoRubroNombre}" placeholder="Nombre del rubro..." style="flex: 1;" />
@@ -43,7 +42,7 @@
                                          update="tablaRubrosAdmin :growl"
                                          styleClass="ui-button-primary" />
                     </div>
-                    <p:dataTable id="tablaRubrosAdmin" widgetVar="dtRubrosAdmin" var="rub" value="#{adminCatalogosBean.rubros}" size="small" stripedRows="true" paginator="true" rows="8">
+                    <p:dataTable id="tablaRubrosAdmin" widgetVar="dtRubrosAdmin" var="rub" value="#{adminCatalogosBean.rubros}" size="small" stripedRows="true" paginator="true" paginatorPosition="bottom" rows="8">
                         <p:column headerText="Cód." filterBy="#{rub.codigo()}" filterMatchMode="contains" filterPlaceholder="Cód." style="width: 100px;">
                             <span class="cuy-mono">##{rub.codigo()}</span>
                         </p:column>
@@ -65,7 +64,7 @@
                 <!-- Tipos de Carga -->
                 <div class="cuy-card" style="margin-bottom: 0;">
                     <h3 class="cuy-card-title">
-                        <i class="pi pi-box" style="color: #059669;" /> Catálogo de Tipos de Carga
+                        Catálogo de Tipos de Carga
                     </h3>
                     <div style="display: flex; gap: 0.5rem; margin-bottom: 0.85rem;">
                         <p:inputText value="#{adminCatalogosBean.nuevoTipoCargaDesc}" placeholder="Descripción del tipo de carga (ej. Celulosa, Granel)..." style="flex: 1;" />
@@ -75,7 +74,7 @@
                                          update="tablaTiposCargaAdmin :growl"
                                          styleClass="ui-button-primary" />
                     </div>
-                    <p:dataTable id="tablaTiposCargaAdmin" widgetVar="dtTiposCargaAdmin" var="tc" value="#{adminCatalogosBean.tiposCarga}" size="small" stripedRows="true" paginator="true" rows="8">
+                    <p:dataTable id="tablaTiposCargaAdmin" widgetVar="dtTiposCargaAdmin" var="tc" value="#{adminCatalogosBean.tiposCarga}" size="small" stripedRows="true" paginator="true" paginatorPosition="bottom" rows="8">
                         <p:column headerText="Cód." filterBy="#{tc.codigo()}" filterMatchMode="contains" filterPlaceholder="Cód." style="width: 100px;">
                             <span class="cuy-mono">##{tc.codigo()}</span>
                         </p:column>

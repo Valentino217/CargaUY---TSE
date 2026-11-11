@@ -101,6 +101,39 @@ public class DashboardBean implements Serializable {
         inicializar();
     }
 
+    private java.util.Map<String, String> filtrosComoTexto() {
+        java.util.Map<String, String> m = new java.util.LinkedHashMap<>();
+        m.put("Rubro", filtroRubro == null || filtroRubro.isBlank() ? "Todos" : filtroRubro);
+        m.put("Tipo de carga", filtroTipoCarga == null || filtroTipoCarga.isBlank() ? "Todos" : filtroTipoCarga);
+        m.put("Ubicacion", filtroUbicacion == null || filtroUbicacion.isBlank() ? "Todas" : filtroUbicacion);
+        m.put("Desde", filtroFechaDesde == null ? "-" : filtroFechaDesde.toString());
+        m.put("Hasta", filtroFechaHasta == null ? "-" : filtroFechaHasta.toString());
+        return m;
+    }
+
+    private void descargar(byte[] datos, String nombre, String contentType) throws java.io.IOException {
+        jakarta.faces.context.FacesContext fc = jakarta.faces.context.FacesContext.getCurrentInstance();
+        jakarta.faces.context.ExternalContext ec = fc.getExternalContext();
+        ec.responseReset();
+        ec.setResponseContentType(contentType);
+        ec.setResponseContentLength(datos.length);
+        ec.setResponseHeader("Content-Disposition", "attachment; filename=\"" + nombre + "\"");
+        ec.getResponseOutputStream().write(datos);
+        fc.responseComplete();
+    }
+
+    public void exportarCsv() throws java.io.IOException {
+        aplicarFiltros();
+        descargar(ReporteDashboardExporter.generarCsv(resumen, filtrosComoTexto()),
+                "reporte-dashboard-cargauy.csv", "text/csv;charset=UTF-8");
+    }
+
+    public void exportarPdf() throws java.io.IOException {
+        aplicarFiltros();
+        descargar(ReporteDashboardExporter.generarPdf(resumen, filtrosComoTexto()),
+                "reporte-dashboard-cargauy.pdf", "application/pdf");
+    }
+
     private boolean tieneFiltrosActivos() {
         return (filtroRubro != null && !filtroRubro.isBlank())
                 || (filtroTipoCarga != null && !filtroTipoCarga.isBlank())
@@ -135,6 +168,23 @@ public class DashboardBean implements Serializable {
             return 0.0;
         }
         return resumen.tasaConfirmadasSobreDetectadas();
+    }
+
+    public long getTotalCasosDetectados() {
+        if (resumen == null || resumen.infraccionesPorEstado() == null) {
+            return 0L;
+        }
+        return resumen.infraccionesPorEstado().values().stream()
+                .filter(java.util.Objects::nonNull)
+                .mapToLong(Long::longValue)
+                .sum();
+    }
+
+    public long getTotalSancionesConfirmadas() {
+        if (resumen == null || resumen.infraccionesPorEstado() == null) {
+            return 0L;
+        }
+        return resumen.infraccionesPorEstado().getOrDefault(EstadoInfraccion.CONFIRMADA, 0L);
     }
 
     public List<Map.Entry<TipoEstado, Long>> getListaGuiasPorEstado() {

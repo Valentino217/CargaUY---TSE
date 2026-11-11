@@ -1,6 +1,8 @@
 package uy.edu.fing.grupo07.CargaUY.security;
 
+import java.nio.charset.StandardCharsets;
 import java.util.*;
+import at.favre.lib.crypto.bcrypt.BCrypt;
 import jakarta.ejb.*;
 import jakarta.persistence.*;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.*;
@@ -40,18 +42,28 @@ public class IdentidadesService {
         u.setUidExterno(uid);
 
         if ("LDAP".equals(origen)) {
-            String pwdAUsar = (password != null && !password.isBlank()) ? password : u.getPassword();
-            if (pwdAUsar == null || pwdAUsar.startsWith("{")) {
-                pwdAUsar = "admin123";
+            String pwdAUsar = (password != null && !password.isBlank()) ? password : null;
+            if (pwdAUsar != null) {
+                if (pwdAUsar.getBytes(StandardCharsets.UTF_8).length > 72) {
+                    throw new ErrorAcceso(400, "Contraseña LDAP supera 72 bytes UTF-8");
+                }
+                try {
+                    ldapClient.crearOActualizarUsuario(uid, u.getNombre(), u.getMail(), pwdAUsar);
+                } catch (Exception e) {
+                    // Log and continue if running in testing without active LDAP write permissions
+                }
+                char[] caracteres = pwdAUsar.toCharArray();
+                try {
+                    u.setPassword(BCrypt.withDefaults().hashToString(12, caracteres));
+                } finally {
+                    Arrays.fill(caracteres, '\0');
+                }
+            } else {
+                u.setPassword("{" + origen + "}");
             }
-            try {
-                ldapClient.crearOActualizarUsuario(uid, u.getNombre(), u.getMail(), pwdAUsar);
-            } catch (Exception e) {
-                // Log and continue if running in testing without active LDAP write permissions
-            }
+        } else {
+            u.setPassword("{" + origen + "}");
         }
-        
-        u.setPassword("{" + origen + "}");
         sesiones.revocarUsuario(id);
     }
     
@@ -72,9 +84,37 @@ public class IdentidadesService {
         if ("GUB".equals(u.getOrigenIdentidad()) && interno) {
             throw new ErrorAcceso(409, "Cuentas gub.uy no admiten roles internos que requieren LDAP");
         }
+        if (unicoRol != TipoUsuario.CHOFER) {
+            var qGuias = em.createQuery(
+                    "select count(g) from GuiaDeViaje g where g.chofer.id = :id and g.estado in (:estados)", Long.class);
+            if (qGuias != null) {
+                Long guiasActivas = qGuias
+                        .setParameter("id", id)
+                        .setParameter("estados", List.of(
+                                uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado.EN_CURSO,
+                                uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado.SIN_INICIAR))
+                        .getSingleResult();
+                if (guiasActivas != null && guiasActivas > 0) {
+                    throw new ErrorAcceso(409, "No se puede cambiar el rol del chofer porque tiene guías de viaje en curso o sin iniciar.");
+                }
+            }
+        }
 
         u.getRoles().clear(); 
         u.getRoles().add(unicoRol);
+        em.flush();
+
+        if (unicoRol == TipoUsuario.CHOFER) {
+            Query q1 = em.createNativeQuery("INSERT INTO choferes (usuario_id) VALUES (:id) ON CONFLICT DO NOTHING");
+            if (q1 != null) q1.setParameter("id", id).executeUpdate();
+            Query q2 = em.createNativeQuery("UPDATE usuarios SET tipo_usuario = 'CHOFER' WHERE id = :id");
+            if (q2 != null) q2.setParameter("id", id).executeUpdate();
+        } else if (unicoRol == TipoUsuario.CIUDADANO || unicoRol == TipoUsuario.CIUDADANO_COMUN) {
+            Query q1 = em.createNativeQuery("INSERT INTO ciudadanos (usuario_id) VALUES (:id) ON CONFLICT DO NOTHING");
+            if (q1 != null) q1.setParameter("id", id).executeUpdate();
+            Query q2 = em.createNativeQuery("UPDATE usuarios SET tipo_usuario = 'CIUDADANO' WHERE id = :id");
+            if (q2 != null) q2.setParameter("id", id).executeUpdate();
+        }
 
         // Si el usuario deja de ser CIUDADANO responsable o CHOFER, limpiar vínculos incompatibles
         var qVinculos = em.createQuery(
@@ -161,6 +201,22 @@ public class IdentidadesService {
         }
 
         VinculoEmpresa v = em.find(VinculoEmpresa.class, VinculoEmpresa.clave(empresa, usuario));
+        if (Boolean.FALSE.equals(chofer)) {
+            var qGuias = em.createQuery(
+                "select count(g) from GuiaDeViaje g where g.empresa.nroEmpresa = :empresa and g.chofer.id = :usuario and g.estado in (:estados)", Long.class);
+            if (qGuias != null) {
+                Long guiasActivas = qGuias
+                    .setParameter("empresa", empresa)
+                    .setParameter("usuario", usuario)
+                    .setParameter("estados", List.of(
+                        uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado.EN_CURSO,
+                        uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado.SIN_INICIAR))
+                    .getSingleResult();
+                if (guiasActivas != null && guiasActivas > 0) {
+                    throw new ErrorAcceso(409, "No se puede desvincular al chofer porque tiene guías de viaje en curso o sin iniciar.");
+                }
+            }
+        }
         if (responsable != null && !responsable && chofer != null && !chofer) {
             // Desvinculación definitiva
             if (v != null) {

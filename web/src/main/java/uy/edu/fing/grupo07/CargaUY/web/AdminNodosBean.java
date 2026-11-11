@@ -60,16 +60,21 @@ public class AdminNodosBean implements Serializable {
 
         // 1. Balanza
         String envBalanza = System.getenv("BALANZA_ENDPOINT");
-        String balanzaEndpoint = (envBalanza != null && !envBalanza.isBlank()) ? envBalanza : "http://localhost:8082";
-        boolean balanzaUp = probarSocket("mock-balanza", 8080)
-                || probarSocket("localhost", 8082)
-                || (balanzaService != null && sondearEndpoint(balanzaEndpoint));
+        String balanzaEndpoint = (envBalanza != null && !envBalanza.isBlank()) ? envBalanza.trim() : "http://localhost:8082";
+        while (balanzaEndpoint.endsWith("/")) {
+            balanzaEndpoint = balanzaEndpoint.substring(0, balanzaEndpoint.length() - 1);
+        }
+        String balanzaBase = balanzaEndpoint.endsWith("/pesadas")
+                ? balanzaEndpoint.substring(0, balanzaEndpoint.length() - "/pesadas".length())
+                : balanzaEndpoint;
+        boolean balanzaUp = sondearHealthHttp(balanzaBase + "/health")
+                || sondearHealthHttp("http://localhost:8082/health");
 
         nodos.add(new NodoPerifericoVista(
                 "NODO-BAL-01",
-                "Simulador Balanza",
+                "Nodo Periférico Balanzas",
                 "HTTP",
-                balanzaEndpoint,
+                balanzaBase,
                 balanzaUp,
                 balanzaUp ? "Operativo" : "OFFLINE"
         ));
@@ -143,26 +148,7 @@ public class AdminNodosBean implements Serializable {
                 oidcUp ? "Operativo" : "OFFLINE"
         ));
 
-        // 5. Colas JMS Artemis
-        nodos.add(new NodoPerifericoVista(
-                "JMS-TRACKING",
-                "Cola de Tracking GPS",
-                "JMS",
-                "java:/jms/queue/TrackingQueue",
-                true,
-                "Operativo"
-        ));
-
-        nodos.add(new NodoPerifericoVista(
-                "JMS-FISC",
-                "Cola de Fiscalización",
-                "JMS",
-                "java:/jms/queue/FiscalizacionQueue",
-                true,
-                "Operativo"
-        ));
-
-        // 6. MongoDB NoSQL
+        // 5. MongoDB NoSQL
         boolean mongoUp = (posicionNoSqlRepository != null && posicionNoSqlRepository.estaOperativo())
                 || probarSocket("mongodb", 27017)
                 || probarSocket("localhost", 27017);
@@ -182,7 +168,7 @@ public class AdminNodosBean implements Serializable {
         ));
     }
 
-    private boolean sondearEndpoint(String urlStr) {
+    private boolean sondearHealthHttp(String urlStr) {
         try {
             URI uri = URI.create(urlStr);
             HttpClient client = HttpClient.newBuilder()
@@ -195,12 +181,12 @@ public class AdminNodosBean implements Serializable {
                     .GET()
                     .build();
             HttpResponse<Void> response = client.send(request, HttpResponse.BodyHandlers.discarding());
-            return response.statusCode() >= 200 && response.statusCode() < 500;
+            return response.statusCode() == 200;
         } catch (InterruptedException ie) {
             Thread.currentThread().interrupt();
             return false;
         } catch (Exception e) {
-            return sondearSocketDesdeUri(urlStr, 8082);
+            return false;
         }
     }
 

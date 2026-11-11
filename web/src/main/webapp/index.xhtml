@@ -15,7 +15,6 @@
         <div class="cuy-page-header">
             <div>
                 <h1 class="cuy-page-title">
-                    <i class="pi pi-th-large" style="color: #1d4ed8;" />
                     Bienvenido a CargaUY, #{authBean.usuarioActivo.nombre}
                 </h1>
             </div>
@@ -69,13 +68,28 @@
                         <p:button value="Mi Perfil" outcome="/empresa/perfil" icon="pi pi-id-card" styleClass="ui-button-outlined" />
                     </div>
                 </div>
+
+                <ui:fragment rendered="#{authBean.esSoloCiudadanoEmpresa()}">
+                    <div class="cuy-card" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: space-between;">
+                        <div>
+                            <h3 class="cuy-card-title"><i class="pi pi-compass" style="color: #059669;" /> Permisos y Monitoreo</h3>
+                            <p style="font-size: 0.92rem; color: #475569; line-height: 1.5; margin-top: 0;">
+                                Consulte la vigencia y vencimientos de permisos (ITV y PNC) de sus vehículos y el monitoreo de eventos en ruta de sus viajes.
+                            </p>
+                        </div>
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem;">
+                            <p:button value="Documentación de Vehículos" outcome="/empresa/fiscalizacion-vehiculos" icon="pi pi-check-square" styleClass="ui-button-primary" />
+                            <p:button value="Monitoreo de Viajes" outcome="/empresa/monitoreo" icon="pi pi-map-marker" styleClass="ui-button-outlined" />
+                        </div>
+                    </div>
+                </ui:fragment>
             </ui:fragment>
 
             <!-- Accesos Funcionario -->
             <ui:fragment rendered="#{authBean.esFuncionario()}">
                 <div class="cuy-card" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: space-between;">
                     <div>
-                        <h3 class="cuy-card-title"><i class="pi pi-shield" style="color: #059669;" /> Fiscalización</h3>
+                        <h3 class="cuy-card-title">Fiscalización</h3>
                         <p style="font-size: 0.92rem; color: #475569; line-height: 1.5; margin-top: 0;">
                             Bandeja de resolución de infracciones, control de ITV y PNC, empresas y monitoreo de balanzas.
                         </p>
@@ -84,7 +98,8 @@
                         <p:button value="Bandeja Fiscalización" outcome="/funcionario/bandeja-fiscalizacion" icon="pi pi-inbox" styleClass="ui-button-primary" />
                         <p:button value="Monitoreo y Balanzas" outcome="/funcionario/monitoreo" icon="pi pi-map-marker" styleClass="ui-button-outlined" />
                         <p:button value="Documentación" outcome="/funcionario/fiscalizacion-vehiculos" icon="pi pi-car" styleClass="ui-button-outlined" />
-                        <p:button value="Empresas y PDI" outcome="/funcionario/empresas" icon="pi pi-building" styleClass="ui-button-outlined" />
+                        <p:button value="Empresas" outcome="/funcionario/empresas" icon="pi pi-building" styleClass="ui-button-outlined" />
+                        <p:button value="Consulta PDI" outcome="/funcionario/pdi" icon="pi pi-id-card" styleClass="ui-button-outlined" />
                     </div>
                 </div>
             </ui:fragment>
@@ -108,7 +123,7 @@
             <ui:fragment rendered="#{authBean.esAdministrador()}">
                 <div class="cuy-card" style="margin-bottom: 0; display: flex; flex-direction: column; justify-content: space-between;">
                     <div>
-                        <h3 class="cuy-card-title"><i class="pi pi-cog" style="color: #dc2626;" /> Administración de Plataforma</h3>
+                        <h3 class="cuy-card-title">Administración de Plataforma</h3>
                         <p style="font-size: 0.92rem; color: #475569; line-height: 1.5; margin-top: 0;">
                             Gestión de usuarios y roles, monitoreo de nodos, catálogos y reglas de fiscalización.
                         </p>
@@ -118,7 +133,6 @@
                         <p:button value="Nodos" outcome="/admin/nodos" icon="pi pi-server" styleClass="ui-button-outlined" />
                         <p:button value="Catálogos" outcome="/admin/catalogos" icon="pi pi-tags" styleClass="ui-button-outlined" />
                         <p:button value="Parámetros de Fiscalización" outcome="/admin/reglas-fiscalizacion" icon="pi pi-sliders-h" styleClass="ui-button-outlined ui-button-danger" />
-                        <p:button value="Validar Permisos" outcome="/empresa/validar-permisos" icon="pi pi-verified" styleClass="ui-button-outlined" />
                     </div>
                 </div>
             </ui:fragment>

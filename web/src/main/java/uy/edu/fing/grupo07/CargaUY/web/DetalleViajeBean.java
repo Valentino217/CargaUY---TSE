@@ -22,6 +22,7 @@ import uy.edu.fing.grupo07.CargaUY.nosql.PosicionNoSqlRepositoryLocal;
 import uy.edu.fing.grupo07.CargaUY.service.GestionBalanzaServiceLocal;
 import uy.edu.fing.grupo07.CargaUY.service.GestionEventosServiceLocal;
 import uy.edu.fing.grupo07.CargaUY.service.GuiaDeViajeEJBLocal;
+import uy.edu.fing.grupo07.CargaUY.service.TrackingMockServiceLocal;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -62,6 +63,9 @@ public class DetalleViajeBean implements Serializable {
     @EJB
     private PosicionNoSqlRepositoryLocal posicionNoSqlRepository;
 
+    @EJB
+    private TrackingMockServiceLocal trackingMockService;
+
     @Inject
     private FaasTrackingClient faasTrackingClient;
 
@@ -87,6 +91,10 @@ public class DetalleViajeBean implements Serializable {
     private boolean evaluarDesvioInmediato = true;
     private String ultimoResultadoFaas;
 
+    // Campos de configuración del Mock de Sistema de Tracking
+    private Integer mockEventosPorMinuto = 12;
+    private Integer mockCantidadDesvios = 0;
+
     public DetalleViajeBean() {
         this.guiasDisponibles = new ArrayList<>();
         this.eventos = new ArrayList<>();
@@ -110,6 +118,10 @@ public class DetalleViajeBean implements Serializable {
     public void init() {
         if (faasTrackingClient != null) {
             this.faasEndpointUrl = faasTrackingClient.getEndpointUrl();
+        }
+        if (trackingMockService != null) {
+            this.mockEventosPorMinuto = trackingMockService.getEventosPorMinuto();
+            this.mockCantidadDesvios = trackingMockService.getCantidadDesvios();
         }
         cargarGuiasDisponibles();
 
@@ -144,12 +156,44 @@ public class DetalleViajeBean implements Serializable {
         }
     }
 
+    private boolean esVistaEmpresa() {
+        try {
+            FacesContext context = FacesContext.getCurrentInstance();
+            if (context != null && context.getExternalContext() != null) {
+                Object reqObj = context.getExternalContext().getRequest();
+                if (reqObj instanceof jakarta.servlet.http.HttpServletRequest req) {
+                    String uri = req.getRequestURI();
+                    if (uri != null && uri.contains("/empresa/")) {
+                        return true;
+                    }
+                    Object actorObj = req.getAttribute("actor");
+                    if (actorObj instanceof uy.edu.fing.grupo07.CargaUY.security.Acceso actor) {
+                        return actor.tiene(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.CIUDADANO)
+                                && !actor.tiene(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.FUNCIONARIO)
+                                && !actor.tiene(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.AUTORIDAD)
+                                && !actor.tiene(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.ADMINISTRADOR);
+                    }
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        return false;
+    }
+
     /**
-     * Carga el listado de todas las guías existentes en el sistema para permitir su selección.
+     * Carga el listado de todas las guías existentes en el sistema (o las de las empresas del actor en vista empresa) para permitir su selección.
      */
     public void cargarGuiasDisponibles() {
         try {
-            List<GuiaDeViaje> lista = guiaDeViajeEJB.listarGuias();
+            List<GuiaDeViaje> lista;
+            if (esVistaEmpresa()) {
+                String token = SesionActual.token();
+                lista = (token != null && !token.isBlank())
+                        ? guiaDeViajeEJB.listarParaActor(token)
+                        : new ArrayList<>();
+            } else {
+                lista = guiaDeViajeEJB.listarGuias();
+            }
             if (lista != null) {
                 this.guiasDisponibles = lista;
             } else {
@@ -192,6 +236,21 @@ public class DetalleViajeBean implements Serializable {
             this.eventos = new ArrayList<>();
             this.pesadas = new ArrayList<>();
             return;
+        }
+
+        if (esVistaEmpresa()) {
+            if (this.guiasDisponibles == null || this.guiasDisponibles.isEmpty()) {
+                cargarGuiasDisponibles();
+            }
+            boolean permitida = this.guiasDisponibles != null && this.guiasDisponibles.stream()
+                    .anyMatch(g -> g != null && g.getId() != null && g.getId().equals(guiaIdSeleccionada));
+            if (!permitida) {
+                this.guiaActual = null;
+                this.eventos = new ArrayList<>();
+                this.pesadas = new ArrayList<>();
+                mostrarMensaje(FacesMessage.SEVERITY_WARN, "Acceso Restringido", "La guía seleccionada no pertenece a su empresa.");
+                return;
+            }
         }
 
         try {
@@ -482,6 +541,39 @@ public class DetalleViajeBean implements Serializable {
             faasTrackingClient = new FaasTrackingClient();
         }
         return faasTrackingClient;
+    }
+
+    /**
+     * Consulta (request-response) las pesadas registradas en el nodo periférico de balanzas
+     * para la guía seleccionada y refresca los datos en pantalla.
+     */
+    public void consultarBalanzasGuia() {
+        if (guiaIdSeleccionada == null) {
+            mostrarMensaje(FacesMessage.SEVERITY_WARN, "Validación", "Debe seleccionar una guía de viaje para consultar balanzas.");
+            return;
+        }
+        try {
+            String correlacion = UUID.randomUUID().toString();
+            List<PesadaBalanzaDTO> importadas = balanzaService.sincronizarPesadasDeGuia(guiaIdSeleccionada, correlacion);
+            consultarViaje();
+            if (importadas == null || importadas.isEmpty()) {
+                mostrarMensaje(
+                        FacesMessage.SEVERITY_INFO,
+                        "Sin Pesadas Nuevas",
+                        "La guía #" + guiaIdSeleccionada + " ya se encuentra sincronizada con el nodo de balanzas."
+                );
+            } else {
+                mostrarMensaje(
+                        FacesMessage.SEVERITY_INFO,
+                        "Pesadas Sincronizadas",
+                        String.format("Se importaron %d pesada(s) desde el nodo periférico para la guía #%d.",
+                                importadas.size(), guiaIdSeleccionada)
+                );
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Error al consultar balanzas para guía #" + guiaIdSeleccionada, e);
+            mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error en Balanzas", e.getMessage());
+        }
     }
 
     /**
@@ -854,5 +946,112 @@ public class DetalleViajeBean implements Serializable {
 
     public String getUltimoResultadoFaas() {
         return ultimoResultadoFaas;
+    }
+    public void iniciarMockTracking() {
+        if (trackingMockService == null) {
+            mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error", "El servicio Mock de Tracking no está disponible.");
+            return;
+        }
+        int epm = mockEventosPorMinuto != null && mockEventosPorMinuto > 0 ? mockEventosPorMinuto : 12;
+        int desvios = mockCantidadDesvios != null && mockCantidadDesvios >= 0 ? mockCantidadDesvios : 0;
+        this.mockEventosPorMinuto = epm;
+        this.mockCantidadDesvios = desvios;
+
+        trackingMockService.iniciar(epm, desvios);
+        consultarViaje();
+        mostrarMensaje(
+                FacesMessage.SEVERITY_INFO,
+                "Mock de Tracking Iniciado",
+                String.format("Emitiendo %d evento(s)/minuto para las guías EN_CURSO (%d desvío(s) configurado(s)).", epm, desvios)
+        );
+    }
+
+    public void detenerMockTracking() {
+        if (trackingMockService == null) {
+            return;
+        }
+        trackingMockService.detener();
+        consultarViaje();
+        mostrarMensaje(
+                FacesMessage.SEVERITY_INFO,
+                "Mock de Tracking Detenido",
+                "Se detuvo el envío automático de puntos de posición."
+        );
+    }
+
+    public void emitirPasoMockAhora() {
+        if (trackingMockService == null) {
+            mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error", "El servicio Mock de Tracking no está disponible.");
+            return;
+        }
+        int emitidos = trackingMockService.emitirPasoGuiasActivas();
+        consultarViaje();
+        if (emitidos > 0) {
+            mostrarMensaje(
+                    FacesMessage.SEVERITY_INFO,
+                    "Paso de Tracking Emitido",
+                    trackingMockService.getUltimoResultado()
+            );
+        } else {
+            mostrarMensaje(
+                    FacesMessage.SEVERITY_WARN,
+                    "Sin Guías Activas",
+                    "No se encontraron guías en estado EN_CURSO para emitir posiciones."
+            );
+        }
+    }
+
+    public void reiniciarRecorridoMock() {
+        if (trackingMockService == null) {
+            return;
+        }
+        trackingMockService.reiniciarRecorridos();
+        mostrarMensaje(
+                FacesMessage.SEVERITY_INFO,
+                "Recorrido Reiniciado",
+                "El progreso de ruta del Mock volvió al punto de origen para las guías activas."
+        );
+    }
+
+    public void refrescarPorPollMock() {
+        if (guiaIdSeleccionada != null) {
+            consultarViaje();
+        }
+    }
+
+    public boolean isMockTrackingActivo() {
+        return trackingMockService != null && trackingMockService.estaActivo();
+    }
+
+    public long getMockTotalEventosEmitidos() {
+        return trackingMockService != null ? trackingMockService.getTotalEventosEmitidos() : 0L;
+    }
+
+    public long getMockTotalDesviosEmitidos() {
+        return trackingMockService != null ? trackingMockService.getTotalDesviosEmitidos() : 0L;
+    }
+
+    public String getMockUltimoResultado() {
+        return trackingMockService != null ? trackingMockService.getUltimoResultado() : "Mock detenido.";
+    }
+
+    public Integer getMockEventosPorMinuto() {
+        return mockEventosPorMinuto;
+    }
+
+    public void setMockEventosPorMinuto(Integer mockEventosPorMinuto) {
+        this.mockEventosPorMinuto = mockEventosPorMinuto;
+    }
+
+    public Integer getMockCantidadDesvios() {
+        return mockCantidadDesvios;
+    }
+
+    public void setMockCantidadDesvios(Integer mockCantidadDesvios) {
+        this.mockCantidadDesvios = mockCantidadDesvios;
+    }
+
+    void setTrackingMockService(TrackingMockServiceLocal trackingMockService) {
+        this.trackingMockService = trackingMockService;
     }
 }

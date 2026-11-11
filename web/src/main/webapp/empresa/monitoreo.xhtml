@@ -1,0 +1,173 @@
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:ui="jakarta.faces.facelets"
+                xmlns:p="http://primefaces.org/ui"
+                template="/WEB-INF/templates/template.xhtml">
+
+    <ui:define name="title">Monitoreo de Viajes</ui:define>
+
+    <ui:define name="content">
+        <div class="cuy-page-header">
+            <div>
+                <h1 class="cuy-page-title">
+                    <i class="pi pi-map-marker" style="color: #1d4ed8;" />
+                    Monitoreo de Viajes
+                </h1>
+            </div>
+            <div style="display: flex; gap: 0.6rem;">
+                <h:form id="monitoreoTopForm" style="margin: 0; display: flex; gap: 0.6rem;">
+                    <p:commandButton value="Actualizar"
+                                     icon="pi pi-refresh"
+                                     actionListener="#{detalleViajeBean.consultarViaje}"
+                                     update=":monitoreoForm :growl"
+                                     styleClass="ui-button-outlined ui-button-secondary" />
+                </h:form>
+            </div>
+        </div>
+
+        <h:form id="monitoreoForm">
+            <!-- Selector de Guía de Viaje -->
+            <div class="cuy-card" style="background: #f8fafc;">
+                <div class="cuy-grid-3" style="align-items: center;">
+                    <div class="cuy-field ui-fluid">
+                        <p:outputLabel for="selGuiaMon" value="Seleccionar Guía de Viaje a Monitorear" />
+                        <p:selectOneMenu id="selGuiaMon" label="Seleccionar Guía de Viaje a Monitorear" value="#{detalleViajeBean.guiaIdSeleccionada}">
+                            <f:selectItem itemLabel="-- Seleccione una Guía --" itemValue="#{null}" noSelectionOption="true" />
+                            <f:selectItems value="#{detalleViajeBean.guiasDisponibles}"
+                                           var="g"
+                                           itemLabel="#{detalleViajeBean.obtenerEtiquetaGuia(g)}"
+                                           itemValue="#{g.id}" />
+                            <p:ajax listener="#{detalleViajeBean.onGuiaChange}" update=":monitoreoForm :monitoreoTopForm" />
+                        </p:selectOneMenu>
+                    </div>
+
+                    <h:panelGroup rendered="#{detalleViajeBean.guiaActual != null}">
+                        <div style="font-size: 0.78rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Ruta y Unidad Asignada</div>
+                        <div style="font-size: 1.05rem; font-weight: 700; color: #0f2942; margin-top: 0.25rem;">
+                            #{detalleViajeBean.guiaActual.origen} &#8594; #{detalleViajeBean.guiaActual.destino}
+                        </div>
+                        <h:panelGroup rendered="#{not empty detalleViajeBean.guiaActual.corredorVial}">
+                            <div style="font-size: 0.82rem; color: #1d4ed8; font-weight: 600; margin-top: 0.15rem;">
+                                <i class="pi pi-directions" style="font-size: 0.8rem;" /> Corredor Planificado: #{detalleViajeBean.guiaActual.corredorVial}
+                            </div>
+                        </h:panelGroup>
+                        <div style="font-size: 0.85rem; color: #475569; margin-top: 0.2rem;">
+                            Matrícula: <span class="cuy-mono">#{detalleViajeBean.vehiculoMatricula}</span> | Chofer: <strong>#{detalleViajeBean.choferNombreCompleto}</strong>
+                        </div>
+                    </h:panelGroup>
+
+                    <h:panelGroup rendered="#{detalleViajeBean.guiaActual != null}" style="text-align: right;">
+                        <p:tag value="#{detalleViajeBean.guiaActual.estado}"
+                                severity="#{detalleViajeBean.guiaActual.estado.name() eq 'EN_CURSO' ? 'info' : (detalleViajeBean.guiaActual.estado.name() eq 'FINALIZADO' ? 'success' : 'warning')}"
+                                rounded="true" />
+                        <div style="font-size: 0.9rem; color: #0f2942; font-weight: 700; margin-top: 0.4rem;">
+                            Peso de la carga: <h:outputText value="#{detalleViajeBean.guiaActual.volumenCarga}"><f:convertNumber pattern="#,##0" /></h:outputText> kg
+                        </div>
+                    </h:panelGroup>
+                </div>
+            </div>
+
+            <p:poll interval="3"
+                    listener="#{detalleViajeBean.refrescarPorPollMock}"
+                    update=":monitoreoForm"
+                    stop="#{not detalleViajeBean.mockTrackingActivo}" />
+
+            <!-- Línea Temporal de Eventos de Ruta -->
+            <div class="cuy-card" style="margin-bottom: 0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.65rem;">
+                    <h3 class="cuy-card-title" style="margin-bottom: 0;">
+                        <i class="pi pi-compass" style="color: #2563eb;" />
+                        Línea Temporal de Eventos (#{detalleViajeBean.totalEventos})
+                    </h3>
+                </div>
+                <p:dataTable id="tablaEventosViaje"
+                             var="ev"
+                             value="#{detalleViajeBean.eventos}"
+                             paginator="true"
+                             rows="10"
+                             paginatorPosition="bottom"
+                             stripedRows="true"
+                             size="small"
+                             emptyMessage="Sin eventos de tracking registrados para esta guía.">
+
+                    <p:column headerText="Fecha / Hora" sortBy="#{ev.tiempo()}" style="width: 165px;">
+                        <h:outputText value="#{ev.tiempo()}" style="font-size: 0.82rem;" />
+                    </p:column>
+
+                    <p:column headerText="Tipo" sortBy="#{ev.tipo()}" style="width: 145px;">
+                        <p:tag value="#{ev.tipo()}"
+                               severity="#{ev.tipo().name() eq 'INCIDENTE' ? 'danger' : (ev.tipo().name() eq 'INICIO' ? 'success' : (ev.tipo().name() eq 'FIN' ? 'info' : 'secondary'))}"
+                               rounded="true" />
+                    </p:column>
+
+                    <p:column headerText="Coordenadas / Detalle">
+                        <h:panelGroup rendered="#{ev.latitud() != 0 or ev.longitud() != 0}">
+                            <span class="cuy-mono" style="font-size: 0.78rem;">#{ev.latitud()}, #{ev.longitud()}</span>
+                        </h:panelGroup>
+                        <h:panelGroup rendered="#{ev.distanciaDesvioKm() != null}">
+                            <div style="margin-top: 0.2rem;">
+                                <span style="font-size: 0.8rem; font-weight: 700; color: #{ev.distanciaDesvioKm() > 5.0 ? '#dc2626' : '#059669'};">
+                                    <i class="#{ev.distanciaDesvioKm() > 5.0 ? 'pi pi-exclamation-triangle' : 'pi pi-check-circle'}" /> Desvío: #{ev.distanciaDesvioKm()} km
+                                </span>
+                            </div>
+                        </h:panelGroup>
+                        <h:panelGroup rendered="#{ev.cantidadKg() != null or not empty ev.mercaderia() or not empty ev.empresaCarga()}">
+                            <div style="font-size: 0.8rem; color: #334155; margin-top: 0.25rem;">
+                                <i class="pi pi-box" style="color: #4f46e5;" />
+                                <h:outputText value=" #{ev.cantidadKg()} kg" rendered="#{ev.cantidadKg() != null}" />
+                                <h:outputText value=" &#8226; #{ev.mercaderia()}" rendered="#{not empty ev.mercaderia()}" />
+                                <h:outputText value=" &#8226; #{ev.empresaCarga()}" rendered="#{not empty ev.empresaCarga()}" />
+                            </div>
+                        </h:panelGroup>
+                        <h:panelGroup rendered="#{ev.incidente() != null}">
+                            <div style="font-size: 0.8rem; color: #dc2626; font-weight: 600; margin-top: 0.2rem;">
+                                <i class="pi pi-exclamation-circle" /> #{ev.incidente().descripcion()}
+                            </div>
+                            <h:panelGroup rendered="#{not empty ev.incidente().foto() and ev.incidente().foto().startsWith('data:image/')}">
+                                <div style="margin-top: 0.35rem;">
+                                    <img src="#{ev.incidente().foto()}"
+                                         alt="Foto del incidente"
+                                         title="Haga clic para ver en tamaño completo"
+                                         onclick="abrirFotoIncidente(this.src)"
+                                         style="max-width: 150px; max-height: 110px; border-radius: 6px; border: 1px solid #cbd5e1; object-fit: cover; cursor: zoom-in; transition: transform 0.15s ease;" />
+                                </div>
+                            </h:panelGroup>
+                            <h:panelGroup rendered="#{not empty ev.incidente().foto() and not ev.incidente().foto().startsWith('data:image/')}">
+                                <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.15rem;">
+                                    <i class="pi pi-image" /> Foto: #{ev.incidente().foto()}
+                                </div>
+                            </h:panelGroup>
+                        </h:panelGroup>
+                    </p:column>
+                </p:dataTable>
+            </div>
+        </h:form>
+
+        <!-- Modal Vista Previa de Foto de Incidente -->
+        <p:dialog header="Evidencia Fotográfica del Incidente"
+                  widgetVar="dlgFotoIncidenteWidget"
+                  modal="true"
+                  responsive="true"
+                  fitViewport="true"
+                  width="760"
+                  closeOnEscape="true">
+            <div style="text-align: center; padding: 0.5rem;">
+                <img id="imgFotoIncidenteAmpliada"
+                     src=""
+                     alt="Foto ampliada del incidente"
+                     style="max-width: 100%; max-height: 72vh; border-radius: 8px; border: 1px solid #cbd5e1; object-fit: contain;" />
+            </div>
+        </p:dialog>
+
+        <script type="text/javascript">
+            function abrirFotoIncidente(src) {
+                var img = document.getElementById('imgFotoIncidenteAmpliada');
+                if (img) {
+                    img.src = src;
+                    PF('dlgFotoIncidenteWidget').show();
+                }
+            }
+        </script>
+    </ui:define>
+</ui:composition>

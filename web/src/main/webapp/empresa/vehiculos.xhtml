@@ -1,4 +1,4 @@
-﻿<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
                 xmlns:h="jakarta.faces.html"
                 xmlns:f="jakarta.faces.core"
                 xmlns:ui="jakarta.faces.facelets"
@@ -71,17 +71,17 @@
                         </strong>
                     </p:column>
 
-                    <p:column headerText="Estado" filterBy="#{v.estadoHabilitacion ? 'HABILITADO' : 'SUSPENDIDO'}" filterMatchMode="exact" style="width: 165px; text-align: center;">
+                    <p:column headerText="Estado" filterBy="#{VehiculoBean.tieneDocumentacionEnRegla(v) ? 'APTO RUTA' : 'BLOQUEADO'}" filterMatchMode="exact" style="width: 175px; text-align: center;">
                         <f:facet name="filter">
                             <p:selectOneMenu onchange="PF('wvTablaVehiculos').filter()" styleClass="ui-custom-filter" style="width: 100%;">
                                 <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
-                                <f:selectItem itemLabel="HABILITADO" itemValue="HABILITADO" />
-                                <f:selectItem itemLabel="SUSPENDIDO" itemValue="SUSPENDIDO" />
+                                <f:selectItem itemLabel="APTO RUTA" itemValue="APTO RUTA" />
+                                <f:selectItem itemLabel="BLOQUEADO" itemValue="BLOQUEADO" />
                             </p:selectOneMenu>
                         </f:facet>
-                        <p:tag value="#{v.estadoHabilitacion ? 'HABILITADO' : 'SUSPENDIDO'}"
-                               severity="#{v.estadoHabilitacion ? 'success' : 'danger'}"
-                               icon="#{v.estadoHabilitacion ? 'pi pi-check-circle' : 'pi pi-ban'}"
+                        <p:tag value="#{VehiculoBean.tieneDocumentacionEnRegla(v) ? 'APTO RUTA' : 'BLOQUEADO'}"
+                               severity="#{VehiculoBean.tieneDocumentacionEnRegla(v) ? 'success' : 'danger'}"
+                               icon="#{VehiculoBean.tieneDocumentacionEnRegla(v) ? 'pi pi-check-circle' : 'pi pi-ban'}"
                                rounded="true" />
                     </p:column>
 
@@ -170,12 +170,7 @@
                     </div>
                 </div>
 
-                <div style="margin: 1.15rem 0 1.35rem 0; padding: 0.75rem 1rem; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; align-items: center; gap: 0.6rem;">
-                    <p:selectBooleanCheckbox id="habCheck" label="Vehículo habilitado para circular" value="#{VehiculoBean.vehiculo.estadoHabilitacion}" />
-                    <p:outputLabel for="habCheck" value="Vehículo habilitado para circular" style="font-weight: 600; color: #0f2942; margin: 0;" />
-                </div>
-
-                <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
+                <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.75rem;">
                     <p:commandButton value="Cancelar"
                                      type="button"
                                      icon="pi pi-times"

@@ -71,8 +71,13 @@ services:
   mock-balanza:
     build: ./docker/mock-balanza
     restart: unless-stopped
+    environment:
+      PORT: "8080"
+      BALANZA_DB_PATH: /data/balanzas.db
     ports:
       - "8082:8080"
+    volumes:
+      - balanza_p1:/data
 
   wildfly:
     env_file:
@@ -114,7 +119,8 @@ services:
       GUB_CLIENT_ID: "890192"
       GUB_REDIRECT: ${GUB_REDIRECT:-https://carga-uy.web.elasticloud.uy/CargaUY-web/gub/callback}
       GUB_PKCE: "false"
-      GUB_MOBILE_ENABLED: "false"
+      GUB_MOBILE_ENABLED: "true"
+      GUB_MOBILE_REDIRECT: http://localhost:8080/CargaUY-web/gub/callback
       GUB_DOCUMENT_PAIS: Uruguay
       GUB_DOCUMENT_TIPO: DNI
       GUB_DOCUMENT_ASUMIR_LOCAL: "true"
@@ -137,3 +143,4 @@ volumes:
   ldap_p1:
   keycloak_p1:
   mongo_p1:
+  balanza_p1:

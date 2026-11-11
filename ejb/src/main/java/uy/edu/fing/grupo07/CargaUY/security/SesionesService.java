@@ -32,14 +32,33 @@ public class SesionesService {
         if (u == null) {
             long existe = em.createQuery("select count(u) from Usuario u where u.ci=:ci", Long.class)
                 .setParameter("ci", i.ci()).getSingleResult();
-            if (existe > 0) throw new ErrorAcceso(409,
-                "La CI existe: un administrador debe vincular la identidad verificada. Referencia: "+i.subject());
-            // El proveedor real no entrega nacimiento: se completa luego en Mi perfil.
-            // La identidad se vincula automáticamente solo al crear una cuenta nueva.
-            Ciudadano c = new Ciudadano(i.nombre(), i.mail(), i.nacimiento(), i.ci(), "{GUB}");
-            c.getRoles().add(TipoUsuario.CIUDADANO_COMUN);
-            c.setOrigenIdentidad("GUB"); c.setUidExterno(i.subject());
-            em.persist(c); em.flush(); u = c;
+            if (existe > 0) {
+                if (Boolean.parseBoolean(Config.valor("p1.entorno.local", "false"))) {
+                    Usuario porCi = em.createQuery("select u from Usuario u where u.ci=:ci", Usuario.class)
+                        .setParameter("ci", i.ci()).getResultStream().findFirst().orElse(null);
+                    if (porCi != null && !porCi.getRoles().contains(TipoUsuario.ADMINISTRADOR)
+                            && !porCi.getRoles().contains(TipoUsuario.AUTORIDAD)) {
+                        porCi.setOrigenIdentidad("GUB");
+                        porCi.setUidExterno(i.subject());
+                        if (porCi instanceof Chofer && !porCi.getRoles().contains(TipoUsuario.CHOFER)) {
+                            porCi.getRoles().add(TipoUsuario.CHOFER);
+                        }
+                        em.flush();
+                        u = porCi;
+                    }
+                }
+                if (u == null) {
+                    throw new ErrorAcceso(409,
+                        "La CI existe: un administrador debe vincular la identidad verificada. Referencia: "+i.subject());
+                }
+            } else {
+                // El proveedor real no entrega nacimiento: se completa luego en Mi perfil.
+                // La identidad se vincula automáticamente solo al crear una cuenta nueva.
+                Ciudadano c = new Ciudadano(i.nombre(), i.mail(), i.nacimiento(), i.ci(), "{GUB}");
+                c.getRoles().add(TipoUsuario.CIUDADANO_COMUN);
+                c.setOrigenIdentidad("GUB"); c.setUidExterno(i.subject());
+                em.persist(c); em.flush(); u = c;
+            }
         }
         if (u.getCi()!=i.ci()) throw new ErrorAcceso(409,"La identidad no corresponde a la CI del perfil vinculado");
         if (u.getRoles().contains(TipoUsuario.ADMINISTRADOR)

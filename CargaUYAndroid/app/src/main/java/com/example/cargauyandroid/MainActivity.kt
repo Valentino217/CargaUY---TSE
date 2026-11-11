@@ -140,19 +140,22 @@ fun NavegationComponent(
     // Procesar retorno del login OIDC PKCE desde Keycloak / gub.uy
     LaunchedEffect(deepLinkUri) {
         val uri = deepLinkUri ?: return@LaunchedEffect
-        onDeepLinkConsumido()
         autenticandoOidc = true
-        mensajeGlobalSync = "Verificando identidad con gub.uy..."
-        val resultado = OidcAuthManager.procesarCallback(uri)
-        autenticandoOidc = false
-        resultado.onSuccess { res ->
-            mensajeGlobalSync = "¡Bienvenido, ${res.nombre ?: "Chofer"}! Sesión iniciada vía gub.uy."
-            res.ci?.let { ci ->
-                cedulaTexto = ci.toString()
+        mensajeGlobalSync = "Ingresando con gub.uy..."
+        try {
+            val resultado = OidcAuthManager.procesarCallback(uri)
+            resultado.onSuccess { res ->
+                mensajeGlobalSync = "¡Hola, ${res.nombre ?: "Chofer"}!"
+                res.ci?.let { ci ->
+                    cedulaTexto = ci.toString()
+                }
+                sesionTick++
+            }.onFailure { err ->
+                mensajeGlobalSync = "Error al iniciar sesión: ${err.message}"
             }
-            sesionTick++
-        }.onFailure { err ->
-            mensajeGlobalSync = "Error al completar autenticación: ${err.message}"
+        } finally {
+            autenticandoOidc = false
+            onDeepLinkConsumido()
         }
     }
 
@@ -167,7 +170,7 @@ fun NavegationComponent(
             val pendientesAntes = syncRepository.dbHelper.contarEventosPendientes()
             if (pendientesAntes == 0) {
                 if (mostrarSiVacio) {
-                    mensajeGlobalSync = "No hay eventos pendientes por sincronizar."
+                    mensajeGlobalSync = "Todo está al día."
                 }
                 return@launch
             }
@@ -182,18 +185,7 @@ fun NavegationComponent(
         }
     }
 
-    // Solicitar permiso de ubicacion al iniciar para tener coordenadas GPS listas
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) { _ -> }
-
     LaunchedEffect(Unit) {
-        permissionLauncher.launch(
-            arrayOf(
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION
-            )
-        )
         refrescarEstadoLocal()
         if (syncRepository.baseDatosReiniciadaPorNuevaCompilacion) {
         } else if (enLinea && pendientesCount > 0) {
@@ -215,7 +207,7 @@ fun NavegationComponent(
                         sincronizando = false
                         pendientesCount = syncRepository.dbHelper.contarEventosPendientes()
                         if (resumen != null) {
-                            mensajeGlobalSync = "Conexion recuperada: ${resumen.mensaje}"
+                            mensajeGlobalSync = "Señal recuperada: ${resumen.mensaje}"
                             syncTick++
                         }
                     }
@@ -265,7 +257,7 @@ fun NavegationComponent(
                     onLimpiarBd = {
                         syncRepository.limpiarBaseDeDatosManual()
                         refrescarEstadoLocal()
-                        mensajeGlobalSync = "Base de datos local reiniciada correctamente."
+                        mensajeGlobalSync = "Datos locales borrados."
                         syncTick++
                     }
                 )
@@ -340,16 +332,16 @@ fun BarraEstadoConexionSync(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = if (enLinea) "● En linea con CargaUY" else "○ Modo sin conexion (Offline)",
+                    text = if (enLinea) "● Conectado" else "○ Sin señal",
                     color = textColor,
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp
                 )
                 Text(
                     text = if (pendientesCount > 0) {
-                        "$pendientesCount evento(s) guardado(s) en el telefono pendiente(s) de sincronizar"
+                        if (pendientesCount == 1) "1 evento pendiente de envío" else "$pendientesCount eventos pendientes de envío"
                     } else {
-                        "Todos los eventos estan sincronizados"
+                        "Todo al día"
                     },
                     color = textColor,
                     fontSize = 12.sp
@@ -362,7 +354,7 @@ fun BarraEstadoConexionSync(
                     enabled = !sincronizando,
                     modifier = Modifier.padding(start = 8.dp)
                 ) {
-                    Text(if (sincronizando) "Sincronizando..." else "Sincronizar ($pendientesCount)")
+                    Text(if (sincronizando) "Enviando..." else "Enviar ($pendientesCount)")
                 }
             }
         }
@@ -417,6 +409,8 @@ fun MainScreen(
     var cargandoLoginGub by remember { mutableStateOf(false) }
     var cargandoDevToken by remember { mutableStateOf(false) }
     var mostrarAvanzadoDev by rememberSaveable { mutableStateOf(false) }
+    var modoDevHabilitado by rememberSaveable { mutableStateOf(Constants.HABILITAR_OPCIONES_DEV) }
+    var contadorClicksDev by remember { mutableStateOf(0) }
 
     Column(
         modifier = Modifier
@@ -425,13 +419,21 @@ fun MainScreen(
             .padding(16.dp)
     ) {
         Text(
-            text = "CargaUY - App Chofer",
+            text = "CargaUY",
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFF1E3A8A)
+            color = Color(0xFF1E3A8A),
+            modifier = Modifier.clickable {
+                contadorClicksDev++
+                if (contadorClicksDev >= 5) {
+                    modoDevHabilitado = !modoDevHabilitado
+                    contadorClicksDev = 0
+                    onMensajeGlobal(if (modoDevHabilitado) "Opciones de desarrollo habilitadas" else "Opciones de desarrollo ocultas")
+                }
+            }
         )
         Text(
-            text = "Gestion de guias de viaje y registro de eventos en ruta",
+            text = "Tus viajes y registro en ruta",
             style = MaterialTheme.typography.bodyMedium,
             color = Color(0xFF475569)
         )
@@ -462,7 +464,7 @@ fun MainScreen(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text("● ", color = Color(0xFF16A34A), fontSize = 16.sp, fontWeight = FontWeight.Bold)
                                 Text(
-                                    text = "Sesión iniciada vía gub.uy",
+                                    text = "Sesión activa",
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF15803D),
                                     fontSize = 14.sp
@@ -470,7 +472,7 @@ fun MainScreen(
                             }
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = SesionMovil.nombreChofer ?: "Chofer Autenticado",
+                                text = SesionMovil.nombreChofer ?: "Chofer",
                                 fontWeight = FontWeight.SemiBold,
                                 color = Color(0xFF1E293B),
                                 fontSize = 15.sp
@@ -485,7 +487,7 @@ fun MainScreen(
                             onClick = {
                                 SesionMovil.limpiar()
                                 onCedulaChange("")
-                                onMensajeGlobal("Sesión cerrada correctamente.")
+                                onMensajeGlobal("Sesión cerrada.")
                             },
                             colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFB91C1C))
                         ) {
@@ -494,13 +496,13 @@ fun MainScreen(
                     }
                 } else {
                     Text(
-                        text = "Identificación de Chofer",
+                        text = "Iniciar sesión",
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 16.sp,
                         color = Color(0xFF0F172A)
                     )
                     Text(
-                        text = "Para consultar y certificar eventos en ruta, inicie sesión con su Usuario gub.uy.",
+                        text = "Ingresá con tu usuario gub.uy para ver tus viajes asignados.",
                         fontSize = 13.sp,
                         color = Color(0xFF64748B)
                     )
@@ -515,7 +517,7 @@ fun MainScreen(
                                 val resultado = OidcAuthManager.iniciarFlujoLogin(context)
                                 cargandoLoginGub = false
                                 resultado.onFailure { err ->
-                                    mensajeError = "No se pudo iniciar el login con gub.uy: ${err.message}"
+                                    mensajeError = "No se pudo abrir gub.uy: ${err.message}"
                                 }
                             }
                         },
@@ -538,7 +540,7 @@ fun MainScreen(
                             Text("Abriendo gub.uy...")
                         } else {
                             Text(
-                                "Ingresar con Usuario gub.uy",
+                                "Ingresar con gub.uy",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 15.sp
                             )
@@ -548,129 +550,149 @@ fun MainScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        if (modoDevHabilitado) {
+            Spacer(modifier = Modifier.height(12.dp))
 
-        // Opciones de pruebas de desarrollo
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { mostrarAvanzadoDev = !mostrarAvanzadoDev }
-                .padding(vertical = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = if (mostrarAvanzadoDev) "▲ Ocultar opciones de pruebas (Dev)" else "▼ Opciones de pruebas y manual (Dev)",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color(0xFF64748B)
-            )
-        }
-
-        if (mostrarAvanzadoDev) {
-            Spacer(modifier = Modifier.height(6.dp))
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F5F9)),
-                shape = RoundedCornerShape(8.dp)
+            // Opciones de pruebas de desarrollo
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { mostrarAvanzadoDev = !mostrarAvanzadoDev }
+                    .padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Text(
-                        text = "Conexión con el Servidor:",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF475569)
-                    )
-                    Text(
-                        text = "Activo: ${RetrofitClient.activeBaseUrl}",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF0284C7)
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        OutlinedButton(
-                            onClick = {
-                                RetrofitClient.actualizarBaseUrl("http://10.0.2.2:8080/")
-                                onMensajeGlobal("Cambiado a host de emulador 10.0.2.2:8080")
-                            },
-                            modifier = Modifier.weight(1f)
+                Text(
+                    text = if (mostrarAvanzadoDev) "▲ Ocultar opciones de pruebas (Dev)" else "▼ Opciones de pruebas y manual (Dev)",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFF64748B)
+                )
+            }
+
+            if (mostrarAvanzadoDev) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F5F9)),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Text(
+                            text = "Conexión con el Servidor:",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF475569)
+                        )
+                        Text(
+                            text = "Activo: ${RetrofitClient.activeBaseUrl}",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF0284C7)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text("10.0.2.2 (Emulador)", fontSize = 10.sp)
+                            OutlinedButton(
+                                onClick = {
+                                    RetrofitClient.actualizarBaseUrl("http://10.0.2.2:8080/")
+                                    onMensajeGlobal("Cambiado a host de emulador 10.0.2.2:8080")
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("10.0.2.2 (Emulador)", fontSize = 10.sp)
+                            }
+                            OutlinedButton(
+                                onClick = {
+                                    RetrofitClient.actualizarBaseUrl("http://10.0.0.16:8080/")
+                                    onMensajeGlobal("Cambiado a host LAN 10.0.0.16:8080")
+                                },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("10.0.0.16 (LAN)", fontSize = 10.sp)
+                            }
                         }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = "Configuración manual de chofer (sin OIDC)",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF475569)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = cedulaTexto,
+                            onValueChange = { nuevo ->
+                                onCedulaChange(nuevo.filter { it.isDigit() })
+                            },
+                            label = { Text("Cédula de Identidad manual (CI)") },
+                            placeholder = { Text("Ej: 11223344") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        var tokenTexto by remember(SesionMovil.token) { mutableStateOf(SesionMovil.token) }
+                        OutlinedTextField(
+                            value = tokenTexto,
+                            onValueChange = {
+                                tokenTexto = it.trim()
+                                SesionMovil.token = tokenTexto
+                            },
+                            label = { Text("Token Bearer manual") },
+                            visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = {
+                                val ci = cedulaTexto.toIntOrNull() ?: Constants.DEFAULT_CEDULA
+                                cargandoDevToken = true
+                                scope.launch {
+                                    try {
+                                        val res = RetrofitClient.executeWithFallback { api ->
+                                            api.obtenerDevToken(mapOf("ci" to ci))
+                                        }
+                                        val tok = (res["token"] as? String) ?: ""
+                                        SesionMovil.token = tok
+                                        SesionMovil.cedulaAsociada = ci
+                                        SesionMovil.nombreChofer = (res["nombre"] as? String) ?: "Chofer Dev #$ci"
+                                        tokenTexto = tok
+                                        cargandoDevToken = false
+                                        onMensajeGlobal("Token Dev obtenido para CI $ci")
+                                    } catch (e: Exception) {
+                                        cargandoDevToken = false
+                                        onMensajeGlobal("Fallo al obtener token Dev: ${e.message}")
+                                    }
+                                }
+                            },
+                            enabled = !cargandoDevToken,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF475569)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(if (cargandoDevToken) "Obteniendo token..." else "Obtener Token de Prueba Dev")
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
                         OutlinedButton(
                             onClick = {
                                 RetrofitClient.actualizarBaseUrl(Constants.CLOUD_URL)
                                 onMensajeGlobal("Cambiado a ElastiCloud (${Constants.CLOUD_URL})")
                             },
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.fillMaxWidth()
                         ) {
                             Text("☁️ ElastiCloud", fontSize = 10.sp)
                         }
-                    }
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(
-                        text = "Configuración manual de chofer (sin OIDC)",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF475569)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = cedulaTexto,
-                        onValueChange = { nuevo ->
-                            onCedulaChange(nuevo.filter { it.isDigit() })
-                        },
-                        label = { Text("Cédula de Identidad manual (CI)") },
-                        placeholder = { Text("Ej: 11223344") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    var tokenTexto by remember(SesionMovil.token) { mutableStateOf(SesionMovil.token) }
-                    OutlinedTextField(
-                        value = tokenTexto,
-                        onValueChange = {
-                            tokenTexto = it.trim()
-                            SesionMovil.token = tokenTexto
-                        },
-                        label = { Text("Token Bearer manual") },
-                        visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Button(
-                        onClick = {
-                            val ci = cedulaTexto.toIntOrNull() ?: Constants.DEFAULT_CEDULA
-                            cargandoDevToken = true
-                            scope.launch {
-                                try {
-                                    val res = RetrofitClient.executeWithFallback { api ->
-                                        api.obtenerDevToken(mapOf("ci" to ci))
-                                    }
-                                    val tok = (res["token"] as? String) ?: ""
-                                    SesionMovil.token = tok
-                                    SesionMovil.cedulaAsociada = ci
-                                    SesionMovil.nombreChofer = (res["nombre"] as? String) ?: "Chofer Dev #$ci"
-                                    tokenTexto = tok
-                                    cargandoDevToken = false
-                                    onMensajeGlobal("Token Dev obtenido para CI $ci")
-                                } catch (e: Exception) {
-                                    cargandoDevToken = false
-                                    onMensajeGlobal("Fallo al obtener token Dev: ${e.message}")
-                                }
-                            }
-                        },
-                        enabled = !cargandoDevToken,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF475569)),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(if (cargandoDevToken) "Obteniendo token..." else "Obtener Token de Prueba Dev")
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedButton(
+                            onClick = onLimpiarBd,
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF64748B)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Borrar datos guardados en el teléfono")
+                        }
                     }
                 }
             }
@@ -678,53 +700,14 @@ fun MainScreen(
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        Text(
-            text = "Operaciones disponibles:",
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 16.sp
-        )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
         Button(
             onClick = { navController.navigate("viajes") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(48.dp)
         ) {
-            Text("Ver Mis Guias de Viaje")
+            Text("Mis Viajes", fontWeight = FontWeight.Bold, fontSize = 15.sp)
         }
-
-        Spacer(modifier = Modifier.height(10.dp))
-/*
-        Button(
-            onClick = {
-                val ci = cedulaTexto.toIntOrNull() ?: Constants.DEFAULT_CEDULA
-                buscandoViajeActivo = true
-                mensajeError = null
-                scope.launch {
-                    val resultado = syncRepository.consultarGuiasChofer(ci)
-                    buscandoViajeActivo = false
-                    val guiaActiva = resultado.guias.firstOrNull {
-                        it.estado.equals("EN_CURSO", ignoreCase = true)
-                    } ?: resultado.guias.firstOrNull {
-                        it.estado.equals("SIN_INICIAR", ignoreCase = true)
-                    } ?: resultado.guias.firstOrNull()
-
-                    if (guiaActiva != null) {
-                        navController.navigate("registrarEvento/${guiaActiva.id}")
-                    } else {
-                        mensajeError = "No se encontraron guias asignadas para la CI $ci. Consulte 'Ver Mis Guias de Viaje' primero con conexion."
-                    }
-                }
-            },
-            enabled = !buscandoViajeActivo,
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0284C7)),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(
-                if (buscandoViajeActivo) "Buscando viaje asignado..."
-                else "Registrar Evento en Viaje Asignado"
-            )
-        }*/
 
         if (pendientesCount > 0) {
             Spacer(modifier = Modifier.height(10.dp))
@@ -732,7 +715,7 @@ fun MainScreen(
                 onClick = onEventoChange,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Sincronizar Eventos Pendientes ($pendientesCount)")
+                Text("Enviar eventos pendientes ($pendientesCount)")
             }
         }
 
@@ -749,16 +732,6 @@ fun MainScreen(
                     fontSize = 13.sp
                 )
             }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedButton(
-            onClick = onLimpiarBd,
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF64748B)),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Reiniciar base de datos local")
         }
     }
 }
@@ -805,41 +778,19 @@ fun PantallaViajes(
         ) {
             Column {
                 Text(
-                    text = "Guias de Viaje",
+                    text = "Mis Viajes",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF1E3A8A)
                 )
                 Text(
-                    text = "Chofer CI: $cedulaChofer",
+                    text = SesionMovil.nombreChofer ?: "CI: $cedulaChofer",
                     fontSize = 13.sp,
                     color = Color(0xFF475569)
                 )
             }
             OutlinedButton(onClick = { cargarGuias() }) {
                 Text("Actualizar")
-            }
-        }
-
-        if (!SesionMovil.estaAutenticado) {
-            Spacer(modifier = Modifier.height(8.dp))
-            Card(
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF3C7)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(10.dp)) {
-                    Text(
-                        text = "⚠️ Modo no autenticado",
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF92400E),
-                        fontSize = 12.sp
-                    )
-                    Text(
-                        text = "Mostrando guías de prueba asignadas a la CI $cedulaChofer. Para viajar oficialmente, inicie sesión con Usuario gub.uy.",
-                        color = Color(0xFF92400E),
-                        fontSize = 11.sp
-                    )
-                }
             }
         }
 
@@ -877,18 +828,25 @@ fun PantallaViajes(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "No se encontraron guias de viaje para la CI $cedulaChofer.",
+                    text = "No tenés viajes asignados en este momento.",
                     color = Color(0xFF64748B)
                 )
             }
         } else {
+            val guiaEnCurso = guias.firstOrNull { it.estado.equals("EN_CURSO", ignoreCase = true) }
             LazyColumn(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(guias) { viaje ->
+                    val otraGuiaEnCursoId = if (guiaEnCurso != null && guiaEnCurso.id != viaje.id) {
+                        guiaEnCurso.id
+                    } else {
+                        null
+                    }
                     TarjetaGuiaViaje(
                         viaje = viaje,
+                        otraGuiaEnCursoId = otraGuiaEnCursoId,
                         onRegistrarEvento = {
                             navController.navigate("registrarEvento/${viaje.id}")
                         },
@@ -906,7 +864,7 @@ fun PantallaViajes(
             onClick = { navController.popBackStack() },
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Volver al menu principal")
+            Text("Volver")
         }
     }
 }
@@ -914,6 +872,7 @@ fun PantallaViajes(
 @Composable
 fun TarjetaGuiaViaje(
     viaje: Viaje,
+    otraGuiaEnCursoId: Long? = null,
     onRegistrarEvento: () -> Unit,
     onVerEventos: () -> Unit
 ) {
@@ -940,7 +899,7 @@ fun TarjetaGuiaViaje(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Guia #${viaje.id}",
+                    text = "Viaje #${viaje.id}",
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp,
                     color = Color(0xFF1E3A8A)
@@ -950,7 +909,7 @@ fun TarjetaGuiaViaje(
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
-                        text = viaje.estado,
+                        text = TipoEventoOption.etiquetaEstadoViaje(viaje.estado),
                         color = badgeText,
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.sp,
@@ -967,39 +926,59 @@ fun TarjetaGuiaViaje(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "Fecha: ${viaje.fecha ?: "-"} • Rubro: ${viaje.rubroCliente ?: "-"} (${viaje.volumenCarga} m³)",
+                text = "Fecha: ${viaje.fecha ?: "-"}",
                 fontSize = 13.sp,
                 color = Color(0xFF475569)
             )
             Text(
-                text = "Vehiculo: ${viaje.vehiculoMatricula ?: "S/D"} (${viaje.vehiculoMarcaModelo ?: "-"})",
+                text = "Matrícula: ${viaje.vehiculoMatricula ?: "S/D"}",
                 fontSize = 13.sp,
                 color = Color(0xFF475569)
             )
-            Text(
-                text = "Empresa: ${viaje.empresaRazonSocial ?: "-"}",
-                fontSize = 13.sp,
-                color = Color(0xFF475569)
-            )
+            if (!viaje.empresaRazonSocial.isNullOrBlank()) {
+                Text(
+                    text = "Empresa: ${viaje.empresaRazonSocial}",
+                    fontSize = 13.sp,
+                    color = Color(0xFF475569)
+                )
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
             val viajeFinalizado = viaje.estado.equals("FINALIZADO", ignoreCase = true)
+            val viajeSinIniciar = viaje.estado.equals("SIN_INICIAR", ignoreCase = true)
+            val bloqueadoPorOtraEnCurso = viajeSinIniciar && otraGuiaEnCursoId != null
+            if (bloqueadoPorOtraEnCurso) {
+                Text(
+                    text = "Tenés el Viaje #$otraGuiaEnCursoId en curso. Finalizalo antes de iniciar este.",
+                    fontSize = 12.sp,
+                    color = Color(0xFFB45309),
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(bottom = 6.dp)
+                )
+            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Button(
                     onClick = onRegistrarEvento,
-                    enabled = !viajeFinalizado,
+                    enabled = !viajeFinalizado && !bloqueadoPorOtraEnCurso,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text(if (viajeFinalizado) "Viaje Finalizado" else "Registrar Evento")
+                    Text(
+                        when {
+                            viajeFinalizado -> "Finalizado"
+                            bloqueadoPorOtraEnCurso -> "En espera"
+                            viajeSinIniciar -> "Iniciar Viaje"
+                            else -> "Registrar Evento"
+                        }
+                    )
                 }
                 OutlinedButton(
                     onClick = onVerEventos,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Ver Eventos")
+                    Text("Historial")
                 }
             }
         }
@@ -1019,11 +998,15 @@ fun PantallaRegistrarEvento(
     val scope = rememberCoroutineScope()
     var guiaLocal by remember(guiaId) { mutableStateOf(syncRepository.dbHelper.obtenerGuiaPorId(guiaId)) }
     var estadoGuiaActual by remember(guiaId) { mutableStateOf(guiaLocal?.estado) }
+    val otraGuiaEnCurso = remember(guiaId, estadoGuiaActual, cedulaChofer) {
+        syncRepository.dbHelper.obtenerGuiaEnCurso(cedulaChofer, excluirGuiaId = guiaId)
+    }
 
     val opcionesPermitidas = remember(estadoGuiaActual) {
         TipoEventoOption.opcionesPermitidasParaEstado(estadoGuiaActual)
     }
     val viajeFinalizado = estadoGuiaActual.equals("FINALIZADO", ignoreCase = true)
+    val bloqueadoPorOtraEnCurso = estadoGuiaActual.equals("SIN_INICIAR", ignoreCase = true) && otraGuiaEnCurso != null
 
     var tipoSeleccionado by rememberSaveable {
         mutableStateOf(opcionesPermitidas.firstOrNull() ?: TipoEventoOption.INICIO)
@@ -1034,9 +1017,6 @@ fun PantallaRegistrarEvento(
             tipoSeleccionado = opcionesPermitidas.first()
         }
     }
-
-    // Coordenadas GPS automaticas con fallback
-    var coordenadas by remember { mutableStateOf(syncRepository.obtenerUbicacionActual()) }
 
     // Campos 2.C y 2.D (Carga parcial y Descarga parcial)
     var cantidadKg by rememberSaveable { mutableStateOf("") }
@@ -1061,7 +1041,7 @@ fun PantallaRegistrarEvento(
                 fotoIncidente = dataUri
                 errorValidacion = null
             } else {
-                errorValidacion = "No se pudo leer o comprimir la imagen seleccionada."
+                errorValidacion = "No se pudo cargar la imagen seleccionada."
             }
         }
     }
@@ -1083,54 +1063,20 @@ fun PantallaRegistrarEvento(
             .padding(16.dp)
     ) {
         Text(
-            text = "Registrar Evento de Viaje",
+            text = "Registrar Evento",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             color = Color(0xFF1E3A8A)
         )
         Text(
             text = if (guiaLocal != null) {
-                "Guia #${guiaLocal!!.id}: ${guiaLocal!!.origen} → ${guiaLocal!!.destino} (${estadoGuiaActual ?: guiaLocal!!.estado})"
+                "Viaje #${guiaLocal!!.id}: ${guiaLocal!!.origen} → ${guiaLocal!!.destino}"
             } else {
-                "Guia #$guiaId"
+                "Viaje #$guiaId"
             },
             fontSize = 14.sp,
             color = Color(0xFF475569)
         )
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Tarjeta de Ubicacion y Hora automatica
-        Card(
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFF8FAFC)),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Ubicacion GPS y Hora Automatica",
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 13.sp
-                    )
-                    Text(
-                        text = "Lat: ${coordenadas.first}, Lon: ${coordenadas.second}",
-                        fontSize = 12.sp,
-                        color = Color(0xFF475569)
-                    )
-                }
-                OutlinedButton(
-                    onClick = { coordenadas = syncRepository.obtenerUbicacionActual() }
-                ) {
-                    Text("Actualizar GPS", fontSize = 12.sp)
-                }
-            }
-        }
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -1140,8 +1086,21 @@ fun PantallaRegistrarEvento(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "Este viaje ya se encuentra FINALIZADO. No se pueden registrar nuevos eventos sobre esta guía.",
+                    text = "Este viaje ya fue finalizado.",
                     color = Color(0xFF166534),
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(14.dp)
+                )
+            }
+        } else if (bloqueadoPorOtraEnCurso) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF3C7)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "Ya tenés el Viaje #${otraGuiaEnCurso?.id} en curso. Finalizalo antes de iniciar otro.",
+                    color = Color(0xFF92400E),
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 13.sp,
                     modifier = Modifier.padding(14.dp)
@@ -1149,7 +1108,7 @@ fun PantallaRegistrarEvento(
             }
         } else {
             Text(
-                text = "Seleccione el tipo de evento:",
+                text = "¿Qué querés registrar?",
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 15.sp
             )
@@ -1192,13 +1151,17 @@ fun PantallaRegistrarEvento(
                     ) {
                         Column(modifier = Modifier.padding(14.dp)) {
                             Text(
-                                text = "Evento: ${tipoSeleccionado.etiqueta}",
+                                text = tipoSeleccionado.etiqueta,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF1E40AF)
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "Se guardara automaticamente la fecha/hora actual, las coordenadas de ubicacion (${coordenadas.first}, ${coordenadas.second}) y un identificador unico UUID.",
+                                text = if (tipoSeleccionado == TipoEventoOption.INICIO) {
+                                    "Tocá el botón de abajo para dar comienzo al viaje."
+                                } else {
+                                    "Tocá el botón de abajo para finalizar el viaje."
+                                },
                                 fontSize = 13.sp,
                                 color = Color(0xFF1E3A8A)
                             )
@@ -1208,14 +1171,13 @@ fun PantallaRegistrarEvento(
 
                 TipoEventoOption.CARGA_PARCIAL, TipoEventoOption.DESCARGA_PARCIAL -> {
                     val esDescarga = (tipoSeleccionado == TipoEventoOption.DESCARGA_PARCIAL)
-                    val verbo = if (esDescarga) "descarga" else "carga"
 
                     OutlinedTextField(
                         value = cantidadKg,
                         onValueChange = { nuevo ->
                             cantidadKg = nuevo.filter { it.isDigit() || it == '.' }
                         },
-                        label = { Text("Cantidad de $verbo en Kg *") },
+                        label = { Text(if (esDescarga) "Kilos descargados *" else "Kilos cargados *") },
                         placeholder = { Text("Ej: 5000") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
@@ -1227,7 +1189,7 @@ fun PantallaRegistrarEvento(
                     OutlinedTextField(
                         value = queSeCargaDescarga,
                         onValueChange = { queSeCargaDescarga = it },
-                        label = { Text(if (esDescarga) "¿Que se descargo? *" else "¿Que se carga? *") },
+                        label = { Text("Mercadería *") },
                         placeholder = { Text("Ej: Madera") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
@@ -1238,7 +1200,7 @@ fun PantallaRegistrarEvento(
                     OutlinedTextField(
                         value = empresaCarga,
                         onValueChange = { empresaCarga = it },
-                        label = { Text("Empresa a la que pertenece la carga *") },
+                        label = { Text("Empresa / Cliente *") },
                         placeholder = { Text("Ej: Transportes del Plata S.A.") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
@@ -1249,8 +1211,8 @@ fun PantallaRegistrarEvento(
                     OutlinedTextField(
                         value = descripcionIncidente,
                         onValueChange = { descripcionIncidente = it },
-                        label = { Text("Descripcion del incidente *") },
-                        placeholder = { Text("Ej: Pinchadura de neumatico") },
+                        label = { Text("¿Qué pasó? *") },
+                        placeholder = { Text("Ej: Pinchadura de neumático") },
                         minLines = 3,
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -1258,7 +1220,7 @@ fun PantallaRegistrarEvento(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Text(
-                        text = "Evidencia fotografica (opcional):",
+                        text = "Foto (opcional):",
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp,
                         color = Color(0xFF1E293B)
@@ -1275,22 +1237,22 @@ fun PantallaRegistrarEvento(
                                 try {
                                     selectorFotoLauncher.launch("image/*")
                                 } catch (_: Exception) {
-                                    errorValidacion = "No se pudo abrir la galería de imágenes."
+                                    errorValidacion = "No se pudo abrir la galería."
                                 }
                             }
                         ) {
-                            Text("Seleccionar de galería")
+                            Text("Elegir de galería")
                         }
                         OutlinedButton(
                             onClick = {
                                 try {
                                     camaraFotoLauncher.launch(null)
                                 } catch (_: Exception) {
-                                    errorValidacion = "Cámara no disponible en este dispositivo."
+                                    errorValidacion = "Cámara no disponible."
                                 }
                             }
                         ) {
-                            Text("Tomar foto")
+                            Text("Sacar foto")
                         }
                         if (fotoIncidente.isNotBlank()) {
                             OutlinedButton(
@@ -1325,7 +1287,7 @@ fun PantallaRegistrarEvento(
                                     Spacer(modifier = Modifier.height(6.dp))
                                 }
                                 Text(
-                                    text = "Foto adjunta comprimida (${maxOf(1, fotoIncidente.length / 1024)} KB)",
+                                    text = "Foto adjunta",
                                     fontSize = 12.sp,
                                     color = Color(0xFF0369A1),
                                     fontWeight = FontWeight.Medium
@@ -1375,20 +1337,13 @@ fun PantallaRegistrarEvento(
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 13.sp
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "UUID: ${resultadoRegistro!!.evento.uuid}",
-                        color = txtRes,
-                        fontSize = 11.sp,
-                        fontFamily = FontFamily.Monospace
-                    )
                 }
             }
         }
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        if (!viajeFinalizado) {
+        if (!viajeFinalizado && !bloqueadoPorOtraEnCurso) {
             Button(
                 onClick = {
                     errorValidacion = null
@@ -1406,15 +1361,15 @@ fun PantallaRegistrarEvento(
                         TipoEventoOption.CARGA_PARCIAL, TipoEventoOption.DESCARGA_PARCIAL -> {
                             val parsedKg = cantidadKg.toDoubleOrNull()
                             if (parsedKg == null || parsedKg <= 0.0) {
-                                errorValidacion = "Debe ingresar una cantidad en Kg valida mayor a 0."
+                                errorValidacion = "Ingresá una cantidad en kilos mayor a 0."
                                 return@Button
                             }
                             if (queSeCargaDescarga.isBlank()) {
-                                errorValidacion = "Debe indicar que mercaderia se carga o descarga."
+                                errorValidacion = "Indicá qué mercadería es."
                                 return@Button
                             }
                             if (empresaCarga.isBlank()) {
-                                errorValidacion = "Debe indicar a que empresa pertenece la carga."
+                                errorValidacion = "Indicá la empresa o cliente."
                                 return@Button
                             }
                             cantidadKgVal = parsedKg
@@ -1424,7 +1379,7 @@ fun PantallaRegistrarEvento(
 
                         TipoEventoOption.INCIDENTE -> {
                             if (descripcionIncidente.isBlank()) {
-                                errorValidacion = "Debe ingresar la descripcion del incidente."
+                                errorValidacion = "Describí brevemente el incidente."
                                 return@Button
                             }
                             detalleFinal = descripcionIncidente.trim()
@@ -1434,13 +1389,9 @@ fun PantallaRegistrarEvento(
 
                     guardando = true
                     scope.launch {
-                        val coords = syncRepository.obtenerUbicacionActual()
-                        coordenadas = coords
                         val res = syncRepository.registrarEvento(
                             guiaId = guiaId,
                             tipo = tipoSeleccionado,
-                            latitud = coords.first,
-                            longitud = coords.second,
                             descripcion = detalleFinal,
                             foto = fotoFinal,
                             cedulaChofer = cedulaChofer,
@@ -1464,9 +1415,19 @@ fun PantallaRegistrarEvento(
                     }
                 },
                 enabled = !guardando,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
             ) {
-                Text(if (guardando) "Registrando evento..." else "Confirmar y Registrar Evento")
+                Text(
+                    when {
+                        guardando -> "Guardando..."
+                        tipoSeleccionado == TipoEventoOption.INICIO -> "Confirmar Inicio de Viaje"
+                        tipoSeleccionado == TipoEventoOption.FIN -> "Confirmar Fin de Viaje"
+                        else -> "Guardar ${tipoSeleccionado.etiqueta}"
+                    },
+                    fontWeight = FontWeight.Bold
+                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -1480,7 +1441,7 @@ fun PantallaRegistrarEvento(
                 onClick = { navController.navigate("eventosGuia/$guiaId") },
                 modifier = Modifier.weight(1f)
             ) {
-                Text("Ver Eventos de Guia")
+                Text("Ver Historial")
             }
             OutlinedButton(
                 onClick = { navController.popBackStack() },
@@ -1516,16 +1477,18 @@ fun PantallaEventosGuia(
             .padding(16.dp)
     ) {
         Text(
-            text = "Eventos de la Guia #$guiaId",
+            text = "Historial del Viaje #$guiaId",
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             color = Color(0xFF1E3A8A)
         )
-        Text(
-            text = "Historial cronologico (servidor + telefono offline)",
-            fontSize = 13.sp,
-            color = Color(0xFF475569)
-        )
+        if (guiaLocal != null) {
+            Text(
+                text = "${guiaLocal.origen} → ${guiaLocal.destino}",
+                fontSize = 13.sp,
+                color = Color(0xFF475569)
+            )
+        }
 
         Spacer(modifier = Modifier.height(12.dp))
 
@@ -1546,7 +1509,7 @@ fun PantallaEventosGuia(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "No hay eventos registrados para esta guia aun.",
+                    text = "Todavía no hay eventos registrados en este viaje.",
                     color = Color(0xFF64748B)
                 )
             }
@@ -1569,9 +1532,9 @@ fun PantallaEventosGuia(
                         else -> Color(0xFF166534)
                     }
                     val badgeLabel = when {
-                        esError -> "RECHAZADO"
-                        esPendiente -> "PENDIENTE EN TELEFONO"
-                        else -> "SINCRONIZADO"
+                        esError -> "Con error"
+                        esPendiente -> "Pendiente de envío"
+                        else -> "Enviado"
                     }
 
                     Card(
@@ -1607,20 +1570,25 @@ fun PantallaEventosGuia(
 
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
-                                text = "Fecha y hora: ${ev.tiempo.replace('T', ' ')}",
+                                text = ev.tiempo.replace('T', ' '),
                                 fontSize = 13.sp,
                                 color = Color(0xFF334155)
                             )
-                            Text(
-                                text = "Ubicacion: ${ev.latitud}, ${ev.longitud}",
-                                fontSize = 12.sp,
-                                color = Color(0xFF64748B)
-                            )
+
+                            if (ev.distanciaDesvioKm != null && ev.distanciaDesvioKm > 5.0) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "⚠️ Desvío de ruta: ${String.format(java.util.Locale.US, "%.1f", ev.distanciaDesvioKm)} km",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color(0xFFB91C1C)
+                                )
+                            }
 
                             if (ev.cantidadKg != null || !ev.mercaderia.isNullOrBlank() || !ev.empresaCarga.isNullOrBlank()) {
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
-                                    text = "Cantidad: ${ev.cantidadKg ?: "-"} Kg • Mercadería: ${ev.mercaderia ?: "-"} • Empresa: ${ev.empresaCarga ?: "-"}",
+                                    text = "${ev.cantidadKg ?: "-"} kg • ${ev.mercaderia ?: "-"}${if (!ev.empresaCarga.isNullOrBlank()) " (${ev.empresaCarga})" else ""}",
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Medium,
                                     color = Color(0xFF0F172A)
@@ -1654,7 +1622,7 @@ fun PantallaEventosGuia(
                                     )
                                 } else {
                                     Text(
-                                        text = "Foto adjunta: ${ev.foto}",
+                                        text = "Foto adjunta",
                                         fontSize = 12.sp,
                                         color = Color(0xFF0369A1)
                                     )
@@ -1664,19 +1632,11 @@ fun PantallaEventosGuia(
                             if (esError && !ev.mensajeSync.isNullOrBlank()) {
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Text(
-                                    text = "Motivo: ${ev.mensajeSync}",
+                                    text = "Error: ${ev.mensajeSync}",
                                     fontSize = 12.sp,
                                     color = Color(0xFF991B1B)
                                 )
                             }
-
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text(
-                                text = "UUID: ${ev.uuid}",
-                                fontSize = 11.sp,
-                                fontFamily = FontFamily.Monospace,
-                                color = Color(0xFF94A3B8)
-                            )
                         }
                     }
                 }
@@ -1694,7 +1654,7 @@ fun PantallaEventosGuia(
                     onClick = { navController.navigate("registrarEvento/$guiaId") },
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("Nuevo Evento")
+                    Text("Registrar Evento")
                 }
             }
             OutlinedButton(

@@ -55,10 +55,7 @@ public class IntegracionSesionFilter implements Filter {
 
     private boolean evaluarPermisoRuta(String p, String metodo, Acceso actor) {
         if ("/completar-perfil.xhtml".equals(p)) return true;
-        if (actor.tiene(TipoUsuario.ADMINISTRADOR)) {
-            return true;
-        }
-        if (p == null || p.equals("/index.xhtml") || p.startsWith("/portal/")) {
+        if (p == null || p.equals("/index.xhtml") || p.equals("/error.xhtml") || p.startsWith("/portal/")) {
             return true;
         }
         if (p.startsWith("/admin/")) {
@@ -72,7 +69,7 @@ public class IntegracionSesionFilter implements Filter {
                 || (actor.tiene(TipoUsuario.AUTORIDAD) && ("GET".equals(metodo) || "HEAD".equals(metodo)));
         }
         if (p.startsWith("/empresa/")) {
-            return actor.tiene(TipoUsuario.CIUDADANO) || actor.tiene(TipoUsuario.FUNCIONARIO);
+            return actor.tiene(TipoUsuario.CIUDADANO);
         }
         if (p.startsWith("/chofer/")) {
             return actor.tiene(TipoUsuario.CHOFER);

@@ -14,10 +14,12 @@ import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEvento;
 import uy.edu.fing.grupo07.CargaUY.dto.*;
 import uy.edu.fing.grupo07.CargaUY.exception.BusinessException;
+import uy.edu.fing.grupo07.CargaUY.integration.BalanzaClient;
 import uy.edu.fing.grupo07.CargaUY.integration.FaasTrackingClient;
 import uy.edu.fing.grupo07.CargaUY.jms.FiscalizacionProducerLocal;
 import uy.edu.fing.grupo07.CargaUY.nosql.PosicionNoSqlRepositoryLocal;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -25,15 +27,22 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 @Stateless
 public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
+
+    private static final Logger LOGGER = Logger.getLogger(GestionEventosServiceImpl.class.getName());
 
     @PersistenceContext(unitName = "CargaUYPersistenceUnit")
     private EntityManager em;
 
     @Inject
     private FaasTrackingClient faasTrackingClient;
+
+    @Inject
+    private BalanzaClient balanzaClient;
 
     @EJB
     private FiscalizacionProducerLocal fiscalizacionProducer;
@@ -123,9 +132,11 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
             evento.setEmpresaCarga(dto.empresaCarga().trim());
         }
 
+        boolean tienePosicion = Math.abs(dto.latitud()) > 1e-6 || Math.abs(dto.longitud()) > 1e-6;
+
         if (dto.distanciaDesvioKm() != null) {
             evento.setDistanciaDesvioKm(dto.distanciaDesvioKm());
-        } else if (faasTrackingClient != null) {
+        } else if (faasTrackingClient != null && tienePosicion) {
             FaasTrackingClient.ResultadoFaas resultadoFaas = faasTrackingClient.procesarEvento(
                     dto,
                     guia.getOrigen(),
@@ -153,7 +164,7 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
         if (false) {
         }
 
-        if (posicionNoSqlRepository != null) {
+        if (posicionNoSqlRepository != null && tienePosicion) {
             String matriculaGuia = (guia.getVehiculo() != null && guia.getVehiculo().getMatricula() != null)
                     ? guia.getVehiculo().getMatricula()
                     : dto.matricula();
@@ -181,10 +192,50 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
             em.persist(evento);
         }
 
+        if (esHitoBalanza(dto.tipo())) {
+            sincronizarBalanzasPorHito(guia, dto.uuid());
+        }
+
         if (fiscalizacionProducer != null && guia.getId() != null) {
             fiscalizacionProducer.solicitarEvaluacion(guia.getId());
         }
         return evento;
+    }
+
+    private static boolean esHitoBalanza(TipoEvento tipo) {
+        return tipo == TipoEvento.INICIO
+                || tipo == TipoEvento.FIN
+                || tipo == TipoEvento.CARGA
+                || tipo == TipoEvento.DESCARGA;
+    }
+
+    private void sincronizarBalanzasPorHito(GuiaDeViaje guia, String correlacion) {
+        if (balanzaClient == null || guia == null || guia.getVehiculo() == null) {
+            return;
+        }
+        String matricula = guia.getVehiculo().getMatricula();
+        if (matricula == null || matricula.isBlank()) {
+            return;
+        }
+        LocalDate fechaDesde = guia.getFecha() != null ? guia.getFecha() : LocalDate.now();
+        LocalDate hoy = LocalDate.now();
+        LocalDate fechaHasta = fechaDesde.isAfter(hoy) ? fechaDesde : hoy;
+        Integer nroEmpresa = guia.getEmpresa() != null ? guia.getEmpresa().getNroEmpresa() : null;
+        try {
+            List<PesadaBalanzaDTO> remotas = balanzaClient.consultarPesadasVehiculo(
+                    matricula, fechaDesde, fechaHasta, nroEmpresa, correlacion
+            );
+            List<PesadaBalanzaDTO> nuevas = GestionBalanzaServiceImpl.persistirPesadasRemotasIdempotentes(
+                    em, guia, remotas, hoy
+            );
+            if (!nuevas.isEmpty()) {
+                LOGGER.log(Level.INFO, "Se importaron {0} pesada(s) desde balanzas para guía #{1} (correlación={2}).",
+                        new Object[]{nuevas.size(), guia.getId(), correlacion});
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "No se pudieron consultar pesadas de balanza para guía #"
+                    + guia.getId() + " (correlación=" + correlacion + "): " + e.getMessage());
+        }
     }
 
     private GuiaDeViaje validarPrecondicionesYResolverGuia(EventoViajeDTO dto) {
@@ -256,6 +307,28 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
                                 + " se encuentra SIN_INICIAR y solo admite el evento INICIO (se recibió " + tipo + ")."
                 );
             }
+            if (guia.getChofer() != null) {
+                TypedQuery<Long> qOtra = em.createQuery(
+                        "SELECT g.id FROM GuiaDeViaje g WHERE g.chofer.id = :choferId AND g.estado = :enCurso AND g.id <> :guiaId",
+                        Long.class
+                );
+                if (qOtra != null) {
+                    List<Long> enCurso = qOtra
+                            .setParameter("choferId", guia.getChofer().getId())
+                            .setParameter("enCurso", TipoEstado.EN_CURSO)
+                            .setParameter("guiaId", guia.getId())
+                            .setMaxResults(1)
+                            .getResultList();
+                    if (enCurso != null && !enCurso.isEmpty()) {
+                        throw new BusinessException(
+                                "No se puede iniciar la guía #" + guia.getId()
+                                        + " porque el chofer ya tiene la guía #" + enCurso.get(0) + " EN_CURSO."
+                        );
+                    }
+                }
+            }
+            // Verificar que el vehículo no se encuentre ya en otra guía en estado EN_CURSO.
+            verificarVehiculoNoEnCurso(guia);
             // Punto E.7: permitir que el viaje inicie y que el motor de fiscalización evalúe SIN_HABILITACION a la fecha de la guía.
             if (aplicarTransicion) {
                 guia.setEstado(TipoEstado.EN_CURSO);
@@ -285,6 +358,33 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
             throw new BusinessException(
                     "Transición inválida: la guía #" + guia.getId()
                             + " ya se encuentra FINALIZADO y no admite nuevos eventos (" + tipo + ")."
+            );
+        }
+    }
+
+    private void verificarVehiculoNoEnCurso(GuiaDeViaje guia) {
+        if (guia == null || guia.getVehiculo() == null || guia.getVehiculo().getMatricula() == null) {
+            return;
+        }
+        String matricula = guia.getVehiculo().getMatricula().trim();
+        TypedQuery<GuiaDeViaje> q = em.createQuery(
+                "SELECT g FROM GuiaDeViaje g JOIN g.vehiculo v "
+                        + "WHERE UPPER(v.matricula) = :matricula AND g.estado = :enCurso AND (:guiaId IS NULL OR g.id <> :guiaId)",
+                GuiaDeViaje.class
+        );
+        if (q == null) {
+            return;
+        }
+        q.setParameter("matricula", matricula.toUpperCase());
+        q.setParameter("enCurso", TipoEstado.EN_CURSO);
+        q.setParameter("guiaId", guia.getId());
+        q.setMaxResults(1);
+        List<GuiaDeViaje> activas = q.getResultList();
+        if (activas != null && !activas.isEmpty()) {
+            GuiaDeViaje otra = activas.get(0);
+            throw new BusinessException(
+                    "No se puede iniciar la guía #" + guia.getId() + ": el vehículo " + matricula
+                            + " ya se encuentra en una guía de viaje en curso (Guía #" + otra.getId() + ")."
             );
         }
     }

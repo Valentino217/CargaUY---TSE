@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -45,6 +46,7 @@ public class RegistrarPesajeBean implements Serializable {
     private List<GuiaDeViaje> guiasDisponibles;
     private Long guiaIdSeleccionada;
     private String matriculaManual;
+    private String peaje = "Peaje Pando";
     private Integer pesoRegistrado;
     private LocalDate fecha;
     private LocalTime hora;
@@ -157,6 +159,18 @@ public class RegistrarPesajeBean implements Serializable {
      * Da de alta una nueva pesada en balanza y ejecuta la fiscalización.
      */
     public void registrarPesaje() {
+        ejecutarRegistroPesaje(false);
+    }
+
+    /**
+     * Registra la pesada primero en el nodo periférico de balanzas (POST /pesadas) y luego
+     * la sincroniza en el backend central disparando la fiscalización.
+     */
+    public void registrarPesajeEnBalanza() {
+        ejecutarRegistroPesaje(true);
+    }
+
+    private void ejecutarRegistroPesaje(boolean viaPeriferico) {
         boolean tieneMatriculaManual = matriculaManual != null && !matriculaManual.isBlank();
         if (guiaIdSeleccionada == null && !tieneMatriculaManual) {
             mostrarMensaje(
@@ -176,14 +190,11 @@ public class RegistrarPesajeBean implements Serializable {
             return;
         }
 
-        LocalDate fechaEfectiva = this.fecha;
-        if (fechaEfectiva == null) {
-            fechaEfectiva = LocalDate.now();
-        }
-
-        LocalTime horaEfectiva = this.hora;
-        if (horaEfectiva == null) {
-            horaEfectiva = LocalTime.now();
+        LocalDate fechaEfectiva = viaPeriferico ? LocalDate.now() : (this.fecha != null ? this.fecha : LocalDate.now());
+        LocalTime horaEfectiva = viaPeriferico ? LocalTime.now().withNano(0) : (this.hora != null ? this.hora : LocalTime.now());
+        if (viaPeriferico) {
+            this.fecha = fechaEfectiva;
+            this.hora = horaEfectiva;
         }
 
         String matriculaDto = tieneMatriculaManual ? matriculaManual.trim() : null;
@@ -199,6 +210,24 @@ public class RegistrarPesajeBean implements Serializable {
         );
 
         try {
+            if (viaPeriferico) {
+                PesadaBalanzaDTO registradaEnMock = balanzaService.registrarPesadaViaPeriferico(
+                        pesadaDTO, peaje, UUID.randomUUID().toString()
+                );
+                this.matriculaManual = null;
+                String est = (peaje != null && !peaje.isBlank()) ? peaje : "balanza periférica";
+                mostrarMensaje(
+                        FacesMessage.SEVERITY_INFO,
+                        "Registrado en Nodo de Balanzas",
+                        String.format("Pesada #%s (%d kg, vehículo %s) guardada en %s. Presioná 'Consultar Balanzas' para traerla a CargaUY.",
+                                registradaEnMock.idPesada(),
+                                registradaEnMock.pesoRegistrado(),
+                                registradaEnMock.matricula(),
+                                est)
+                );
+                return;
+            }
+
             PesadaBalanzaDTO pesadaGuardada = balanzaService.registrarPesada(pesadaDTO);
             this.matriculaManual = null;
             if (pesadaGuardada.guiaId() != null) {
@@ -292,6 +321,14 @@ public class RegistrarPesajeBean implements Serializable {
 
     public Integer getPesoRegistrado() {
         return pesoRegistrado;
+    }
+
+    public String getPeaje() {
+        return peaje;
+    }
+
+    public void setPeaje(String peaje) {
+        this.peaje = peaje;
     }
 
     public void setPesoRegistrado(Integer pesoRegistrado) {

@@ -11,7 +11,6 @@
         <div class="cuy-page-header">
             <div>
                 <h1 class="cuy-page-title">
-                    <i class="pi pi-chart-bar" style="color: #1d4ed8;" />
                     Dashboard de Fiscalización
                 </h1>
             </div>
@@ -20,20 +19,17 @@
                     <p:commandButton value="Exportar CSV"
                                      icon="pi pi-file-excel"
                                      ajax="false"
-                                     styleClass="ui-button-outlined ui-button-success">
-                        <p:dataExporter type="csv" target=":dashExportForm:tablaConsolidadaInfracciones" fileName="reporte-infracciones-cargauy" />
-                    </p:commandButton>
+                                     actionListener="#{dashboardBean.exportarCsv}"
+                                     styleClass="ui-button-outlined ui-button-success" />
                     <p:commandButton value="Exportar PDF"
                                      icon="pi pi-file-pdf"
                                      ajax="false"
-                                     styleClass="ui-button-outlined ui-button-danger">
-                        <p:dataExporter type="pdf" target=":dashExportForm:tablaConsolidadaInfracciones" fileName="reporte-infracciones-cargauy" />
-                    </p:commandButton>
+                                     actionListener="#{dashboardBean.exportarPdf}"
+                                     styleClass="ui-button-outlined ui-button-danger" />
                     <p:commandButton value="Actualizar Métricas"
                                      icon="pi pi-refresh"
                                      actionListener="#{dashboardBean.inicializar}"
-                                     action="#{bandejaFiscalizacionBean.cargarCasos}"
-                                     update=":kpiDashGroup :dashTablasForm :dashExportForm"
+                                     update=":kpiDashGroup :dashTablasForm"
                                      styleClass="ui-button-primary" />
                 </h:form>
             </div>
@@ -43,7 +39,7 @@
         <h:form id="dashFiltrosForm">
             <div class="cuy-card" style="margin-bottom: 1.25rem;">
                 <h3 class="cuy-card-title" style="margin-bottom: 0.75rem;">
-                    <i class="pi pi-filter" style="color: #1d4ed8;" /> Filtros
+                    Filtros
                 </h3>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(185px, 1fr)); gap: 0.85rem; align-items: end;">
                     <div class="cuy-field">
@@ -139,11 +135,11 @@
             </div>
             <div class="cuy-kpi-card warning">
                 <div class="cuy-kpi-label"><i class="pi pi-folder-open" /> Total Casos Fiscalizados</div>
-                <div class="cuy-kpi-value">#{bandejaFiscalizacionBean.totalCasos}</div>
+                <div class="cuy-kpi-value">#{dashboardBean.totalCasosDetectados}</div>
             </div>
             <div class="cuy-kpi-card danger">
                 <div class="cuy-kpi-label"><i class="pi pi-ban" /> Sanciones Confirmadas</div>
-                <div class="cuy-kpi-value">#{bandejaFiscalizacionBean.totalConfirmadas}</div>
+                <div class="cuy-kpi-value">#{dashboardBean.totalSancionesConfirmadas}</div>
             </div>
             <div class="cuy-kpi-card warning">
                 <div class="cuy-kpi-label"><i class="pi pi-percentage" /> Tasa Confirmadas / Detectadas</div>
@@ -245,162 +241,5 @@
                 </div>
             </div>
         </h:form>
-
-        <!-- Tabla Consolidada Exportable a CSV y PDF -->
-        <h:form id="dashExportForm" style="margin-top: 1.25rem;">
-            <div class="cuy-card">
-                <p:dataTable id="tablaConsolidadaInfracciones"
-                             widgetVar="dtConsolidada"
-                             var="inf"
-                             value="#{bandejaFiscalizacionBean.casos}"
-                             filteredValue="#{bandejaFiscalizacionBean.casosFiltrados}"
-                             paginator="true"
-                             rows="10"
-                             paginatorPosition="bottom"
-                             stripedRows="true"
-                             size="small"
-                             emptyMessage="No hay registros de fiscalización para exportar.">
-
-                    <f:facet name="header">
-                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
-                            <span style="font-weight: 700; color: #0f2942;">
-                                <i class="pi pi-table" style="margin-right: 0.4rem;" /> Expedientes
-                            </span>
-                        </div>
-                    </f:facet>
-
-                    <p:column headerText="Expediente" sortBy="#{inf.idCaso()}" filterBy="#{inf.idCaso()}" filterMatchMode="contains" style="width: 105px;">
-                        <h:outputText value="#{inf.idCaso()}" />
-                    </p:column>
-
-                    <p:column headerText="Fecha" sortBy="#{inf.fecha()}" filterBy="#{inf.fecha()}" filterMatchMode="contains" style="width: 125px;">
-                        <h:outputText value="#{inf.fecha()}" />
-                    </p:column>
-
-                    <p:column headerText="Empresa" sortBy="#{inf.nombreEmpresa()}" filterBy="#{inf.nombreEmpresa()}" filterMatchMode="contains">
-                        <h:outputText value="#{inf.nombreEmpresa()}" />
-                    </p:column>
-
-                    <p:column headerText="Matrícula" sortBy="#{inf.matricula()}" filterBy="#{inf.matricula()}" filterMatchMode="contains" style="width: 120px;">
-                        <h:outputText value="#{inf.matricula()}" />
-                    </p:column>
-
-                    <p:column headerText="Guía #" sortBy="#{inf.guiaId()}" filterBy="#{inf.guiaId()}" filterMatchMode="contains" style="width: 95px;">
-                        <h:outputText value="#{inf.guiaId()}" />
-                    </p:column>
-
-                    <p:column headerText="Tipo" sortBy="#{inf.tipo()}" filterBy="#{inf.tipo()}" filterMatchMode="exact" style="width: 175px;">
-                        <f:facet name="filter">
-                            <p:selectOneMenu onchange="PF('dtConsolidada').filter()" styleClass="ui-custom-filter" style="width: 100%;">
-                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
-                                <f:selectItems value="#{bandejaFiscalizacionBean.tiposInfraccion}" />
-                            </p:selectOneMenu>
-                        </f:facet>
-                        <p:tag value="#{inf.tipo()}"
-                               severity="#{(inf.tipo().name() eq 'EXCESO_DE_CARGA' or inf.tipo().name() eq 'EXCESO_PESO') ? 'danger' : ((inf.tipo().name() eq 'DESVIO_DE_RUTA' or inf.tipo().name() eq 'DESVIO_RUTA') ? 'warning' : 'info')}"
-                               icon="pi pi-exclamation-triangle"
-                               rounded="true" />
-                    </p:column>
-
-                    <p:column headerText="Estado" sortBy="#{inf.estado()}" filterBy="#{inf.estado()}" filterMatchMode="exact" style="width: 155px;">
-                        <f:facet name="filter">
-                            <p:selectOneMenu onchange="PF('dtConsolidada').filter()" styleClass="ui-custom-filter" style="width: 100%;">
-                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
-                                <f:selectItems value="#{bandejaFiscalizacionBean.estadosInfraccion}" />
-                            </p:selectOneMenu>
-                        </f:facet>
-                        <p:tag value="#{inf.estado()}"
-                               severity="#{inf.estado().name() eq 'CONFIRMADA' ? 'danger' : (inf.estado().name() eq 'DESESTIMADA' ? 'success' : (inf.estado().name() eq 'EN_DESCARGO' ? 'warning' : 'info'))}"
-                               rounded="true" />
-                    </p:column>
-
-                    <p:column headerText="Evidencia" filterBy="#{inf.evidencia()}" filterMatchMode="contains">
-                        <h:outputText value="#{inf.evidencia()}" />
-                    </p:column>
-                    <p:column headerText="Gestión" style="width: 155px; text-align: center;" exportable="false">
-                        <p:commandButton value="Ver Expediente"
-                                         icon="pi pi-eye"
-                                         actionListener="#{bandejaFiscalizacionBean.seleccionarCaso(inf)}"
-                                         update=":dlgResolverDashForm"
-                                         oncomplete="PF('dlgResolverDashWidget').show()"
-                                         styleClass="ui-button-outlined ui-button-secondary"
-                                         style="font-size: 0.82rem;" />
-                    </p:column>
-                </p:dataTable>
-            </div>
-        </h:form>
-        <!-- Modal Ver Expediente Auditoría Dashboard con Viewport Amplio -->
-        <p:dialog header="Expediente"
-                  widgetVar="dlgResolverDashWidget"
-                  modal="true"
-                  responsive="true"
-                  styleClass="cuy-modal-expediente"
-                  fitViewport="true"
-                  closeOnEscape="true">
-            <h:form id="dlgResolverDashForm">
-                <h:panelGroup rendered="#{bandejaFiscalizacionBean.casoSeleccionado != null}">
-                    <div class="ui-fluid" style="max-height: 68vh; overflow-y: auto; padding-right: 10px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 1rem;">
-                            <div>
-                                <div style="font-size: 0.78rem; color: #64748b; text-transform: uppercase; font-weight: 700;">
-                                    Expediente ##{bandejaFiscalizacionBean.casoSeleccionado.idCaso()} &#8226; #{bandejaFiscalizacionBean.casoSeleccionado.guiaId() != null ? 'Guía #'.concat(bandejaFiscalizacionBean.casoSeleccionado.guiaId().toString()) : 'Sin guía activa'}
-                                </div>
-                                <div style="font-size: 1.05rem; font-weight: 800; color: #0f2942;">
-                                    #{bandejaFiscalizacionBean.casoSeleccionado.nombreEmpresa() != null ? bandejaFiscalizacionBean.casoSeleccionado.nombreEmpresa() : 'Empresa N/D'} &#8226; Matrícula <span class="cuy-mono">#{bandejaFiscalizacionBean.casoSeleccionado.matricula() != null ? bandejaFiscalizacionBean.casoSeleccionado.matricula() : 'S/D'}</span>
-                                </div>
-                            </div>
-                            <div style="display: flex; gap: 0.5rem; align-items: center;">
-                                <p:tag value="#{bandejaFiscalizacionBean.casoSeleccionado.tipo()}" severity="danger" rounded="true" />
-                                <p:tag value="#{bandejaFiscalizacionBean.casoSeleccionado.estado()}" severity="info" rounded="true" />
-                            </div>
-                        </div>
-
-                        <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-left: 4px solid #2563eb; border-radius: 8px; padding: 0.9rem 1rem; margin-bottom: 1rem;">
-                            <div style="font-weight: 700; color: #1e3a8a; font-size: 0.85rem; margin-bottom: 0.3rem;">
-                                <i class="pi pi-microchip" /> Evidencia (#{bandejaFiscalizacionBean.casoSeleccionado.fecha()})
-                            </div>
-                            <div style="font-family: monospace; font-size: 0.88rem; color: #1e40af; white-space: pre-wrap;">#{bandejaFiscalizacionBean.casoSeleccionado.evidencia()}</div>
-                        </div>
-
-                        <h:panelGroup rendered="#{not empty bandejaFiscalizacionBean.casoSeleccionado.textoDescargo()}">
-                            <div style="background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #d97706; border-radius: 8px; padding: 0.9rem 1rem; margin-bottom: 1rem;">
-                                <div style="font-weight: 700; color: #92400e; font-size: 0.85rem; margin-bottom: 0.3rem;">
-                                    <i class="pi pi-comments" /> Descargo de la empresa (#{bandejaFiscalizacionBean.casoSeleccionado.fechaDescargo()})
-                                </div>
-                                <div style="font-size: 0.9rem; color: #78350f;">"#{bandejaFiscalizacionBean.casoSeleccionado.textoDescargo()}"</div>
-                            </div>
-                        </h:panelGroup>
-
-                        <h:panelGroup rendered="#{not empty bandejaFiscalizacionBean.casoSeleccionado.historialAuditoria()}">
-                            <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-left: 4px solid #059669; border-radius: 8px; padding: 0.9rem 1rem; margin-bottom: 1rem;">
-                                <div style="font-weight: 700; color: #065f46; font-size: 0.85rem; margin-bottom: 0.5rem;">
-                                    <i class="pi pi-lock" /> Historial
-                                </div>
-                                <p:dataTable var="aud" value="#{bandejaFiscalizacionBean.casoSeleccionado.historialAuditoria()}" size="small" stripedRows="true" reflow="false">
-                                    <p:column headerText="Acción" style="width: 160px; min-width: 140px;"><span class="cuy-mono" style="font-size: 0.76rem; font-weight: 700;">#{aud.accion()}</span></p:column>
-                                    <p:column headerText="Estado" style="width: 110px; min-width: 95px;"><h:outputText value="#{aud.resolucion()}" style="font-size: 0.78rem;" /></p:column>
-                                    <p:column headerText="Autor" style="width: 160px; min-width: 130px;"><h:outputText value="#{aud.usuario()}" style="font-size: 0.78rem;" /></p:column>
-                                    <p:column headerText="Timestamp" style="width: 155px; min-width: 135px; word-break: break-all;"><span class="cuy-mono" style="font-size: 0.74rem;">#{aud.timestampCreacion()}</span></p:column>
-                                    <p:column headerText="Detalle" style="min-width: 250px;"><h:outputText value="#{aud.fundamento()}" style="font-size: 0.78rem;" /></p:column>
-                                </p:dataTable>
-                            </div>
-                        </h:panelGroup>
-
-                        <h:panelGroup rendered="#{not empty bandejaFiscalizacionBean.casoSeleccionado.fundamento()}">
-                            <div style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0.9rem 1rem; margin-bottom: 1rem;">
-                                <div style="font-weight: 700; color: #0f2942; margin-bottom: 0.25rem; font-size: 0.85rem;">
-                                    <i class="pi pi-verified" /> Resolución (#{bandejaFiscalizacionBean.casoSeleccionado.fechaResolucion()})
-                                </div>
-                                <div style="font-size: 0.88rem; color: #334155;">#{bandejaFiscalizacionBean.casoSeleccionado.fundamento()}</div>
-                            </div>
-                        </h:panelGroup>
-                    </div>
-
-                    <div style="display: flex; justify-content: flex-end; margin-top: 1.25rem;">
-                        <p:commandButton value="Cerrar" type="button" icon="pi pi-times" onclick="PF('dlgResolverDashWidget').hide()" styleClass="ui-button-outlined ui-button-secondary" />
-                    </div>
-                </h:panelGroup>
-            </h:form>
-        </p:dialog>
     </ui:define>
 </ui:composition>

@@ -11,7 +11,6 @@
         <div class="cuy-page-header">
             <div>
                 <h1 class="cuy-page-title">
-                    <i class="pi pi-users" style="color: #1d4ed8;" />
                     Usuarios y Roles
                 </h1>
             </div>
@@ -61,7 +60,7 @@
                     <f:facet name="header">
                         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
                             <span style="font-weight: 700; color: #0f2942;">
-                                <i class="pi pi-id-card" style="margin-right: 0.4rem;" /> Usuarios del Sistema
+                                Usuarios del Sistema
                             </span>
                         </div>
                     </f:facet>
@@ -171,11 +170,12 @@
                         <p:selectOneMenu id="tipoUsr" label="Rol Base" value="#{adminUsuariosBean.tipoForm}" disabled="#{adminUsuariosBean.modoEdicion}">
                             <f:selectItem itemLabel="ADMINISTRADOR" itemValue="ADMINISTRADOR" />
                             <f:selectItem itemLabel="AUTORIDAD" itemValue="AUTORIDAD" />
+                        <p:ajax update="cargoGrupo" />
                         </p:selectOneMenu>
                     </div>
                     <div class="cuy-field">
                         <p:outputLabel for="ciUsr" value="Cédula de Identidad" />
-                        <p:inputNumber id="ciUsr" label="Cédula de Identidad" value="#{adminUsuariosBean.ciForm}" decimalPlaces="0" thousandSeparator="" required="true" disabled="#{adminUsuariosBean.modoEdicion}" />
+                        <p:inputText id="ciUsr" label="Cédula de Identidad" value="#{adminUsuariosBean.ciForm}" maxlength="8" keyFilter="num" required="true" disabled="#{adminUsuariosBean.modoEdicion}" converterMessage="La cédula debe tener exactamente 8 dígitos numéricos" validatorMessage="La cédula debe tener exactamente 8 dígitos"><f:validateLongRange minimum="10000000" maximum="99999999" /></p:inputText>
                     </div>
                     <div class="cuy-field">
                         <p:outputLabel for="nomUsr" value="Nombre Completo" />
@@ -189,20 +189,7 @@
                         <p:outputLabel for="fnacUsr" value="Fecha de Nacimiento *" />
                         <p:datePicker id="fnacUsr" label="Fecha de Nacimiento" value="#{adminUsuariosBean.fechaNacForm}" pattern="yyyy-MM-dd" showIcon="true" required="true" panelStyleClass="cuy-calendar" monthNavigator="true" yearNavigator="select" showButtonBar="true" showOtherMonths="true" yearRange="1900:2026" showLongMonthNames="true" />
                     </div>
-                    <ui:fragment rendered="#{not adminUsuariosBean.modoEdicion}">
-                        <div class="cuy-field">
-                            <p:outputLabel for="pwdUsr" value="Contraseña Inicial LDAP" />
-                            <p:password id="pwdUsr" label="Contraseña Inicial" value="#{adminUsuariosBean.passwordForm}" redisplay="true" />
-                        </div>
-                    </ui:fragment>
-                    <div class="cuy-field">
-                        <p:outputLabel for="nroFuncUsr" value="N° Funcionario (Si aplica)" />
-                        <p:inputNumber id="nroFuncUsr" label="N° Funcionario (Si aplica)" value="#{adminUsuariosBean.nroFuncionarioForm}" decimalPlaces="0" thousandSeparator="" />
-                    </div>
-                    <div class="cuy-field">
-                        <p:outputLabel for="depUsr" value="Departamento / Cargo (Si aplica)" />
-                        <p:inputText id="depUsr" label="Departamento / Cargo (Si aplica)" value="#{adminUsuariosBean.departamentoForm}" placeholder="Ej. Dirección Nacional de Transporte" />
-                    </div>
+                    <h:panelGroup id="cargoGrupo" layout="block" styleClass="cuy-field"><h:panelGroup rendered="#{adminUsuariosBean.tipoForm eq 'AUTORIDAD'}"><p:outputLabel for="cargoUsr" value="Cargo" /><p:inputText id="cargoUsr" label="Cargo" value="#{adminUsuariosBean.cargoForm}" placeholder="Ej. Director Nacional de Transporte" /></h:panelGroup></h:panelGroup>
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.25rem;">
                     <p:commandButton value="Cancelar" type="button" onclick="PF('dlgUsuarioWidget').hide()" styleClass="ui-button-outlined ui-button-secondary" style="width: auto;" />
@@ -229,14 +216,14 @@
                     <div style="background: #f8fafc; padding: 0.8rem 1rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 1rem;">
                         <strong>#{adminUsuariosBean.usuarioIdentidadSel.nombre()}</strong> (ID ##{adminUsuariosBean.usuarioIdentidadSel.id()})
                         <div style="font-size: 0.78rem; color: #64748b;">
-                            Origen de cuenta: <strong>#{adminUsuariosBean.origenIdentidadForm}</strong> | UID: #{empty adminUsuariosBean.uidExternoActual ? 'No asignado' : adminUsuariosBean.uidExternoActual}
+                            Origen de cuenta: <strong>#{adminUsuariosBean.origenIdentidadForm eq 'GUB' ? 'Gub.uy' : (adminUsuariosBean.origenIdentidadForm eq 'LDAP' ? 'LDAP' : adminUsuariosBean.origenIdentidadForm)}</strong>
                         </div>
                     </div>
 
                     <!-- Bloque 1: Rol Único RBAC -->
                     <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
                         <div style="font-weight: 700; color: #0f2942; margin-bottom: 0.65rem;">
-                            <i class="pi pi-shield" style="color: #2563eb;" /> Rol del usuario
+                            Rol del usuario
                         </div>
                         <p:selectOneRadio value="#{adminUsuariosBean.rolUnicoSeleccionado}" layout="responsive" columns="1" style="line-height: 1.8;">
                             <f:selectItem itemLabel="Ciudadano" itemValue="CIUDADANO_COMUN" />
@@ -261,7 +248,7 @@
                                   rendered="#{adminUsuariosBean.origenIdentidadForm eq 'LDAP' or adminUsuariosBean.usuarioIdentidadSel.tipo() eq 'ADMINISTRADOR' or adminUsuariosBean.usuarioIdentidadSel.tipo() eq 'AUTORIDAD'}"
                                   style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem;">
                         <div style="font-weight: 700; color: #0f2942; margin-bottom: 0.75rem;">
-                            <i class="pi pi-key" style="color: #d97706;" /> Vincular cuenta LDAP
+                            Vincular cuenta LDAP
                         </div>
                         <div class="cuy-form-grid-2">
                             <div class="cuy-field">
@@ -270,14 +257,14 @@
                             </div>
                             <div class="cuy-field">
                                 <p:outputLabel for="pwdLdapInput" value="Contraseña LDAP" />
-                                <p:password id="pwdLdapInput" label="Contraseña LDAP" value="#{adminUsuariosBean.passwordLdapForm}" redisplay="true" placeholder="Dejar en blanco para conservar" />
+                                <p:password id="pwdLdapInput" label="Contraseña LDAP" value="#{adminUsuariosBean.passwordLdapForm}" redisplay="true" placeholder="Ingrese contraseña LDAP" />
                             </div>
                         </div>
                         <div style="margin-top: 0.85rem; text-align: right;">
                             <p:commandButton value="Vincular y Sincronizar LDAP"
                                              icon="pi pi-link"
                                              actionListener="#{adminUsuariosBean.vincularIdentidadExterna}"
-                                             update=":usuariosForm:tablaUsuarios :growl"
+                                             update=":usuariosForm:tablaUsuarios :dlgIdentidadForm :growl"
                                              styleClass="ui-button-warning"
                                              style="width: auto;" />
                         </div>

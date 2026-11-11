@@ -16,9 +16,7 @@ import java.util.Objects;
  * o gestionada por los funcionarios.
  */
 @Entity
-@Table(name = "infracciones", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_infraccion_guia_tipo", columnNames = {"guia_id", "tipo"})
-})
+@Table(name = "infracciones")
 public class Infraccion implements Serializable {
 
     private static final long serialVersionUID = 1L;

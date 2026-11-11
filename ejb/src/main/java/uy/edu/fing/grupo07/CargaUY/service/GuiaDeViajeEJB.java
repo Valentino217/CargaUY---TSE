@@ -8,6 +8,8 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.Usuario;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.GuiaDeViaje;
+import uy.edu.fing.grupo07.CargaUY.domain.entity.Rubro;
+import uy.edu.fing.grupo07.CargaUY.domain.entity.TipoCarga;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.Vehiculo;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado;
 
@@ -24,6 +26,7 @@ public class GuiaDeViajeEJB implements GuiaDeViajeEJBLocal {
             if (g.getEmpresa() != null) g.getEmpresa().getRazonSocial();
             if (g.getVehiculo() != null) g.getVehiculo().getMatricula();
             if (g.getChofer() != null) g.getChofer().getNombre();
+            if (g.getTiposCarga() != null) g.getTiposCarga().size();
             if (g.getCorredorVial() == null || g.getCorredorVial().isBlank()
                     || g.getPolilineaRuta() == null || g.getPolilineaRuta().isBlank()) {
                 g.actualizarRutaPlanificada();
@@ -111,6 +114,28 @@ public class GuiaDeViajeEJB implements GuiaDeViajeEJBLocal {
             throw new IllegalArgumentException("Guía de viaje inexistente: #" + guiaId);
         }
         if (guia.getEstado() == TipoEstado.SIN_INICIAR) {
+            if (guia.getVehiculo() != null && guia.getVehiculo().getMatricula() != null) {
+                String matricula = guia.getVehiculo().getMatricula().trim();
+                var qVeh = em.createQuery(
+                        "SELECT g FROM GuiaDeViaje g JOIN g.vehiculo v "
+                                + "WHERE UPPER(v.matricula) = :matricula AND g.estado = :enCurso AND g.id <> :guiaId",
+                        GuiaDeViaje.class
+                );
+                if (qVeh != null) {
+                    List<GuiaDeViaje> activas = qVeh
+                            .setParameter("matricula", matricula.toUpperCase())
+                            .setParameter("enCurso", TipoEstado.EN_CURSO)
+                            .setParameter("guiaId", guia.getId())
+                            .setMaxResults(1)
+                            .getResultList();
+                    if (activas != null && !activas.isEmpty()) {
+                        throw new IllegalStateException(
+                                "No se puede iniciar la guía #" + guia.getId() + ": el vehículo " + matricula
+                                        + " ya se encuentra en una guía de viaje en curso (Guía #" + activas.get(0).getId() + ")."
+                        );
+                    }
+                }
+            }
             guia.setEstado(TipoEstado.EN_CURSO);
             em.flush();
             if (fiscalizacionProducer != null) {
@@ -136,6 +161,16 @@ public class GuiaDeViajeEJB implements GuiaDeViajeEJBLocal {
     public void crear(GuiaDeViaje guia) {
         if (guia != null) {
             guia.actualizarRutaPlanificada();
+            if (guia.getTiposCarga() != null && !guia.getTiposCarga().isEmpty()) {
+                java.util.List<TipoCarga> gestionados = new java.util.ArrayList<>();
+                for (TipoCarga tc : guia.getTiposCarga()) {
+                    if (tc != null) {
+                        TipoCarga ref = em != null ? em.find(TipoCarga.class, tc.getCodigo()) : tc;
+                        gestionados.add(ref != null ? ref : tc);
+                    }
+                }
+                guia.setTiposCarga(gestionados);
+            }
         }
         em.persist(guia);
     }
@@ -169,8 +204,25 @@ public class GuiaDeViajeEJB implements GuiaDeViajeEJBLocal {
             if (guia.getVehiculo() != null) existente.setVehiculo(guia.getVehiculo());
             existente.setChofer(guia.getChofer());
             if (jakarta.persistence.Persistence.getPersistenceUtil().isLoaded(guia, "tiposCarga") && guia.getTiposCarga() != null) {
-                existente.setTiposCarga(guia.getTiposCarga());
+                java.util.List<TipoCarga> gestionados = new java.util.ArrayList<>();
+                for (TipoCarga tc : guia.getTiposCarga()) {
+                    if (tc != null) {
+                        TipoCarga ref = em != null ? em.find(TipoCarga.class, tc.getCodigo()) : tc;
+                        gestionados.add(ref != null ? ref : tc);
+                    }
+                }
+                existente.setTiposCarga(gestionados);
             }
+    }
+
+    @Override
+    public List<Rubro> listarRubrosCatalogo() {
+        return em.createQuery("SELECT r FROM Rubro r ORDER BY r.nombre", Rubro.class).getResultList();
+    }
+
+    @Override
+    public List<TipoCarga> listarTiposCargaCatalogo() {
+        return em.createQuery("SELECT t FROM TipoCarga t ORDER BY t.desc", TipoCarga.class).getResultList();
     }
 
     @Override

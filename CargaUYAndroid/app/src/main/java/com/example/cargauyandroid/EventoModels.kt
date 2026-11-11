@@ -8,27 +8,27 @@ enum class TipoEventoOption(
     INICIO(
         codigo = "INICIO",
         etiqueta = "Inicio de viaje",
-        descripcionAyuda = "Registra la hora y ubicacion del inicio del viaje."
+        descripcionAyuda = "Marcá el comienzo de tu recorrido."
     ),
     FIN(
         codigo = "FIN",
         etiqueta = "Fin de viaje",
-        descripcionAyuda = "Registra la hora y ubicacion de finalizacion del viaje."
+        descripcionAyuda = "Marcá la llegada a destino y el cierre del viaje."
     ),
     CARGA_PARCIAL(
         codigo = "CARGA_PARCIAL",
         etiqueta = "Carga parcial",
-        descripcionAyuda = "Ingresa la cantidad en Kg, que se carga y a que empresa pertenece."
+        descripcionAyuda = "Indicá los kilos cargados, la mercadería y el cliente."
     ),
     DESCARGA_PARCIAL(
         codigo = "DESCARGA_PARCIAL",
         etiqueta = "Descarga parcial",
-        descripcionAyuda = "Ingresa la cantidad en Kg, que se descargo y a que empresa pertenece."
+        descripcionAyuda = "Indicá los kilos descargados, la mercadería y el cliente."
     ),
     INCIDENTE(
         codigo = "INCIDENTE",
         etiqueta = "Incidente",
-        descripcionAyuda = "Ingresa la descripcion del incidente y opcionalmente adjunta una foto."
+        descripcionAyuda = "Contá brevemente qué pasó en la ruta. Podés agregar una foto."
     );
 
     companion object {
@@ -45,7 +45,18 @@ enum class TipoEventoOption(
                 "DESCARGA" -> "Descarga"
                 "DESCARGA_PARCIAL" -> "Descarga parcial"
                 "INCIDENTE" -> "Incidente"
+                "POSICION" -> "Desvío de ruta"
                 else -> codigo
+            }
+        }
+
+        fun etiquetaEstadoViaje(estado: String?): String {
+            return when (estado?.trim()?.uppercase()) {
+                "SIN_INICIAR" -> "Pendiente"
+                "EN_CURSO" -> "En viaje"
+                "FINALIZADO" -> "Finalizado"
+                null, "" -> "-"
+                else -> estado
             }
         }
 
@@ -69,10 +80,11 @@ data class EventoViajeDto(
     val uuid: String,
     val tiempo: String,
     val tipo: String,
-    val latitud: Double,
-    val longitud: Double,
+    val latitud: Double? = null,
+    val longitud: Double? = null,
     val guiaId: Long,
     val incidente: IncidenteDto? = null,
+    val distanciaDesvioKm: Double? = null,
     val cantidadKg: Double? = null,
     val mercaderia: String? = null,
     val empresaCarga: String? = null,
@@ -112,6 +124,7 @@ data class EventoLocal(
     val longitud: Double,
     val descripcion: String? = null,
     val foto: String? = null,
+    val distanciaDesvioKm: Double? = null,
     val cantidadKg: Double? = null,
     val mercaderia: String? = null,
     val empresaCarga: String? = null,
@@ -131,8 +144,8 @@ data class EventoLocal(
             uuid = uuid,
             tiempo = tiempo,
             tipo = tipo,
-            latitud = latitud,
-            longitud = longitud,
+            latitud = null,
+            longitud = null,
             guiaId = guiaId,
             incidente = inc,
             cantidadKg = cantidadKg,

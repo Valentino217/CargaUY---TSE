@@ -42,4 +42,23 @@ class FuncionesEmpresaTest {
         assertFalse(vinculo.isChofer());assertTrue(vinculo.isResponsable());
         verify(em,never()).persist(any());
     }
+    @Test void noPermiteDesvincularChoferConGuiaEnCursoOSinIniciar(){
+        @SuppressWarnings("unchecked")
+        TypedQuery<Long> qGuias=mock(TypedQuery.class);
+        when(em.createQuery(contains("from GuiaDeViaje"),eq(Long.class))).thenReturn(qGuias);
+        when(qGuias.setParameter(anyString(),any())).thenReturn(qGuias);
+        when(qGuias.getSingleResult()).thenReturn(1L);
+        assertEquals(409,assertThrows(ErrorAcceso.class,()->servicio.desvincular("token",101,7)).getEstado());
+        assertTrue(vinculo.isChofer());
+    }
+    @Test void noPermiteCambiarRolChoferConGuiaEnCursoOSinIniciar(){
+        when(control.admin("token")).thenReturn(new Acceso(1,11111111,"Admin",java.util.Set.of(TipoUsuario.ADMINISTRADOR)));
+        @SuppressWarnings("unchecked")
+        TypedQuery<Long> qGuias=mock(TypedQuery.class);
+        when(em.createQuery(contains("from GuiaDeViaje"),eq(Long.class))).thenReturn(qGuias);
+        when(qGuias.setParameter(anyString(),any())).thenReturn(qGuias);
+        when(qGuias.getSingleResult()).thenReturn(1L);
+        assertEquals(409,assertThrows(ErrorAcceso.class,()->servicio.roles("token",7,java.util.Set.of(TipoUsuario.CIUDADANO_COMUN))).getEstado());
+        assertTrue(usuario.getRoles().contains(TipoUsuario.CHOFER));
+    }
 }

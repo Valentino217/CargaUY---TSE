@@ -15,7 +15,6 @@
         <div class="cuy-page-header">
             <div>
                 <h1 class="cuy-page-title">
-                    <i class="pi pi-chart-bar" style="color: #2563eb;" />
                     Información Pública de Cargas y Transporte
                 </h1>
             </div>
@@ -58,23 +57,23 @@
                                      stripedRows="true"
                                      size="small">
 
-                            <p:column headerText="Ámbito / Corredor" filterBy="#{est.corredor}" filterMatchMode="contains" filterPlaceholder="Filtrar corredor">
-                                <strong><h:outputText value="#{est.corredor}" /></strong>
+                            <p:column headerText="Rubro" filterBy="#{est.rubro}" filterMatchMode="contains" filterPlaceholder="Filtrar rubro">
+                                <strong><h:outputText value="#{est.rubro}" /></strong>
                             </p:column>
 
-                            <p:column headerText="Rubro / Sector Productivo" filterBy="#{est.rubro}" filterMatchMode="contains" filterPlaceholder="Filtrar rubro">
-                                <h:outputText value="#{est.rubro}" />
+                            <p:column headerText="Tipo de Carga" filterBy="#{est.tipoCarga}" filterMatchMode="contains" filterPlaceholder="Filtrar tipo de carga">
+                                <h:outputText value="#{est.tipoCarga}" />
                             </p:column>
 
                             <p:column headerText="Viajes Consolidados" style="width: 210px; text-align: right;">
                                 <strong><h:outputText value="#{est.cantidadViajes}" /></strong>
                             </p:column>
 
-                            <p:column headerText="Volumen Total Transportado" style="width: 210px; text-align: right;">
+                            <p:column headerText="Peso Total Transportado" style="width: 210px; text-align: right;">
                                 <h:outputText value="#{est.volumenTotal}">
-                                    <f:convertNumber pattern="#,##0.0" />
+                                    <f:convertNumber pattern="#,##0" />
                                 </h:outputText>
-                                <span> t/m&#179;</span>
+                                <span> kg</span>
                             </p:column>
                         </p:dataTable>
                     </p:tab>
