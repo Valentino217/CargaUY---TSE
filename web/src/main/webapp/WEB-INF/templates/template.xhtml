@@ -36,55 +36,172 @@
             display: flex;
             flex-direction: column;
         }
-        .cuy-header {
-            background: linear-gradient(90deg, #0e2843 0%, #0e2843 30%, var(--cuy-secondary) 100%);
+        /* Header estilo gub.uy */
+        .gub-header {
+            background-color: #0e2843;
             color: #ffffff;
-            padding: 0.55rem 2rem;
+            box-shadow: 0 2px 10px rgba(9, 29, 62, 0.22);
+            position: relative;
+            z-index: 1500;
+        }
+        .gub-main-bar {
+            max-width: 1620px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            height: 74px;
             display: flex;
-            align-items: center;
+            align-items: stretch;
             justify-content: space-between;
-            box-shadow: 0 2px 8px rgba(15, 41, 66, 0.18);
+            gap: 1.5rem;
         }
         .cuy-brand {
             display: inline-flex;
             align-items: center;
             text-decoration: none;
             color: #ffffff;
+            flex-shrink: 0;
         }
         .cuy-brand-logo {
-            height: 46px;
+            height: 48px;
             width: auto;
             display: block;
             object-fit: contain;
         }
+        .gub-right-zone {
+            display: flex;
+            align-items: stretch;
+            gap: 1.5rem;
+            height: 100%;
+        }
+        .gub-nav {
+            display: flex;
+            align-items: stretch;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            border-bottom: 2px solid #c88a2b;
+        }
+        .gub-nav-item {
+            position: relative;
+            display: flex;
+            align-items: stretch;
+        }
+        .gub-nav-link {
+            display: flex;
+            align-items: center;
+            padding: 0 1.15rem;
+            color: #ffffff !important;
+            text-decoration: none !important;
+            font-size: 0.93rem;
+            font-weight: 500;
+            letter-spacing: 0.1px;
+            cursor: pointer;
+            transition: background-color 0.15s ease;
+            white-space: nowrap;
+            user-select: none;
+        }
+        .gub-nav-item:hover > .gub-nav-link,
+        .gub-nav-item.is-open > .gub-nav-link {
+            background-color: #071526;
+        }
+        .gub-dropdown {
+            position: absolute;
+            top: calc(100% + 2px);
+            left: 0;
+            min-width: 235px;
+            background-color: #071526;
+            padding: 0.65rem 0;
+            margin: 0;
+            list-style: none;
+            box-shadow: 0 14px 28px rgba(0, 0, 0, 0.35);
+            z-index: 3000;
+            display: none;
+            flex-direction: column;
+        }
+        .gub-dropdown::before {
+            content: "";
+            position: absolute;
+            top: -4px;
+            left: 0;
+            right: 0;
+            height: 4px;
+        }
+        .gub-nav-item:hover > .gub-dropdown,
+        .gub-nav-item.is-open > .gub-dropdown {
+            display: flex;
+        }
+        .gub-dropdown-link {
+            display: block;
+            padding: 0.72rem 1.4rem;
+            color: #ffffff !important;
+            text-decoration: none !important;
+            font-size: 0.9rem;
+            font-weight: 400;
+            line-height: 1.35;
+            transition: background-color 0.12s ease;
+        }
+        .gub-dropdown-link:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            text-decoration: underline !important;
+        }
+        .gub-dropdown-divider {
+            height: 1px;
+            background-color: rgba(255, 255, 255, 0.14);
+            margin: 0.35rem 1.4rem;
+        }
         .cuy-user-box {
             display: flex;
             align-items: center;
-            gap: 1rem;
+            gap: 0.85rem;
+            margin: 0;
+        }
+        .gub-user-trigger {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            color: #ffffff;
+        }
+        .gub-user-circle {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            border: 1.8px solid #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95rem;
+            color: #ffffff;
+            flex-shrink: 0;
         }
         .cuy-user-info {
             text-align: right;
-            line-height: 1.25;
+            line-height: 1.22;
         }
         .cuy-user-name {
             font-weight: 600;
-            font-size: 0.9rem;
+            font-size: 0.86rem;
             display: block;
+            color: #ffffff;
         }
         .cuy-user-role {
-            font-size: 0.72rem;
-            color: #93c5fd;
+            font-size: 0.7rem;
+            color: #bfdbfe;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.4px;
         }
-        .cuy-nav-wrapper .ui-menubar {
-            border-radius: 0;
-            border-left: none;
-            border-right: none;
-            border-top: none;
-            border-bottom: 1px solid var(--cuy-border);
-            padding: 0.25rem 1.75rem;
-            background: var(--cuy-surface);
+        .gub-logout-btn {
+            background: transparent !important;
+            border: 1px solid rgba(255, 255, 255, 0.55) !important;
+            color: #ffffff !important;
+            border-radius: 999px !important;
+            padding: 0.35rem 0.85rem !important;
+            font-size: 0.82rem !important;
+            transition: background-color 0.15s ease, border-color 0.15s ease !important;
+        }
+        .gub-logout-btn:hover {
+            background: rgba(255, 255, 255, 0.14) !important;
+            border-color: #ffffff !important;
         }
         .cuy-main {
             flex: 1;
@@ -392,94 +509,131 @@
         <p:autoUpdate />
     </p:growl>
 
-    <!-- Header Institucional -->
-    <header class="cuy-header">
-        <h:link outcome="/index.xhtml" styleClass="cuy-brand">
-            <img src="#{request.contextPath}/img/logo-cargauy.png" alt="CargaUY" class="cuy-brand-logo" />
-        </h:link>
+    <!-- Header Institucional unificado estilo gub.uy -->
+    <header class="gub-header">
+        <div class="gub-main-bar">
+            <h:link outcome="/index.xhtml" styleClass="cuy-brand">
+                <img src="#{request.contextPath}/img/logo-cargauy.png?v=20261110b" alt="CargaUY" class="cuy-brand-logo" />
+            </h:link>
 
-        <h:form id="headerAuthForm" styleClass="cuy-user-box">
-            <ui:fragment rendered="#{authBean.esAnonimo()}">
-                <a href="#{request.contextPath}/login" class="ui-button ui-widget ui-state-default ui-corner-all ui-button-text-icon-left ui-button-info" style="text-decoration: none; padding: 0.45rem 0.9rem; color: #fff; font-weight: 600; border-radius: 6px; background: #0284c7;">
-                    <i class="pi pi-sign-in" style="margin-right: 0.4rem;" />
-                    <span>Iniciar Sesión</span>
-                </a>
-            </ui:fragment>
+            <div class="gub-right-zone">
+                <ui:fragment rendered="#{not authBean.esAnonimo()}">
+                    <ul class="gub-nav">
+                        <!-- Panel General -->
+                        <li class="gub-nav-item">
+                            <h:link outcome="/index.xhtml" styleClass="gub-nav-link" value="Panel Principal" />
+                        </li>
 
-            <ui:fragment rendered="#{not authBean.esAnonimo()}">
-                <div class="cuy-user-info">
-                    <span class="cuy-user-name">#{authBean.usuarioActivo.nombre}</span>
-                    <span class="cuy-user-role">CI: #{authBean.usuarioActivo.ci} &#8226; #{authBean.rolPrincipalLabel}</span>
-                </div>
-                <p:commandButton value="Salir"
-                                 icon="pi pi-power-off"
-                                 action="#{authBean.cerrarSesion}"
-                                 ajax="false"
-                                 styleClass="ui-button-danger ui-button-sm" />
-            </ui:fragment>
-        </h:form>
+                        <!-- 1. PORTAL PÚBLICO -->
+                        <li class="gub-nav-item">
+                            <h:link outcome="/portal/validar-empresa.xhtml" styleClass="gub-nav-link" value="Validar Empresa" />
+                        </li>
+                        <li class="gub-nav-item">
+                            <h:link outcome="/portal/info-publica.xhtml" styleClass="gub-nav-link" value="Información Pública" />
+                        </li>
+
+                        <!-- 2. CIUDADANO EMPRESA -->
+                        <ui:fragment rendered="#{authBean.esCiudadanoEmpresa()}">
+                            <li class="gub-nav-item">
+                                <span class="gub-nav-link" onclick="this.parentElement.classList.toggle('is-open')">Mi Empresa</span>
+                                <ul class="gub-dropdown">
+                                    <li><h:link outcome="/empresa/perfil.xhtml" styleClass="gub-dropdown-link" value="Perfil y Empresas" /></li>
+                                    <li><h:link outcome="/empresa/vehiculos.xhtml" styleClass="gub-dropdown-link" value="Vehículos" /></li>
+                                    <li><h:link outcome="/empresa/viajes.xhtml" styleClass="gub-dropdown-link" value="Guías de Viaje" /></li>
+                                    <li class="gub-dropdown-divider" />
+                                    <li><h:link outcome="/empresa/infracciones.xhtml" styleClass="gub-dropdown-link" value="Infracciones" /></li>
+                                </ul>
+                            </li>
+                        </ui:fragment>
+
+                        <ui:fragment rendered="#{authBean.esSoloCiudadanoEmpresa()}">
+                            <li class="gub-nav-item">
+                                <span class="gub-nav-link" onclick="this.parentElement.classList.toggle('is-open')">Permisos y Monitoreo</span>
+                                <ul class="gub-dropdown">
+                                    <li><h:link outcome="/empresa/fiscalizacion-vehiculos.xhtml" styleClass="gub-dropdown-link" value="Documentación de Vehículos" /></li>
+                                    <li><h:link outcome="/empresa/monitoreo.xhtml" styleClass="gub-dropdown-link" value="Monitoreo de Viajes" /></li>
+                                </ul>
+                            </li>
+                        </ui:fragment>
+
+                        <!-- 2.5 CHOFER -->
+                        <ui:fragment rendered="#{authBean.esChofer()}">
+                            <li class="gub-nav-item">
+                                <h:link outcome="/chofer/mis-viajes.xhtml" styleClass="gub-nav-link" value="Mis Viajes" />
+                            </li>
+                        </ui:fragment>
+
+                        <!-- 3. FUNCIONARIO -->
+                        <ui:fragment rendered="#{authBean.esFuncionario()}">
+                            <li class="gub-nav-item">
+                                <span class="gub-nav-link" onclick="this.parentElement.classList.toggle('is-open')">Fiscalización y Ruta</span>
+                                <ul class="gub-dropdown">
+                                    <li><h:link outcome="/funcionario/empresas.xhtml" styleClass="gub-dropdown-link" value="Empresas" /></li>
+                                    <li><h:link outcome="/funcionario/pdi.xhtml" styleClass="gub-dropdown-link" value="Consulta PDI" /></li>
+                                    <li><h:link outcome="/funcionario/fiscalizacion-vehiculos.xhtml" styleClass="gub-dropdown-link" value="Documentación de Vehículos" /></li>
+                                    <li><h:link outcome="/funcionario/monitoreo.xhtml" styleClass="gub-dropdown-link" value="Monitoreo de Viajes" /></li>
+                                    <li class="gub-dropdown-divider" />
+                                    <li><h:link outcome="/funcionario/bandeja-fiscalizacion.xhtml" styleClass="gub-dropdown-link" value="Bandeja de Fiscalización" /></li>
+                                </ul>
+                            </li>
+                        </ui:fragment>
+
+                        <!-- 4. AUTORIDADES -->
+                        <ui:fragment rendered="#{authBean.esAutoridad()}">
+                            <li class="gub-nav-item">
+                                <h:link outcome="/backoffice/dashboard.xhtml" styleClass="gub-nav-link" value="Dashboard" />
+                            </li>
+                        </ui:fragment>
+
+                        <!-- 5. ADMINISTRADORES -->
+                        <ui:fragment rendered="#{authBean.esAdministrador()}">
+                            <li class="gub-nav-item">
+                                <span class="gub-nav-link" onclick="this.parentElement.classList.toggle('is-open')">Administración</span>
+                                <ul class="gub-dropdown">
+                                    <li><h:link outcome="/admin/usuarios.xhtml" styleClass="gub-dropdown-link" value="Usuarios y Roles" /></li>
+                                    <li><h:link outcome="/admin/nodos.xhtml" styleClass="gub-dropdown-link" value="Nodos" /></li>
+                                    <li><h:link outcome="/admin/catalogos.xhtml" styleClass="gub-dropdown-link" value="Catálogos" /></li>
+                                    <li><h:link outcome="/admin/reglas-fiscalizacion.xhtml" styleClass="gub-dropdown-link" value="Reglas de Fiscalización" /></li>
+                                </ul>
+                            </li>
+                        </ui:fragment>
+                    </ul>
+                </ui:fragment>
+
+                <h:form id="headerAuthForm" styleClass="cuy-user-box">
+                    <ui:fragment rendered="#{authBean.esAnonimo()}">
+                        <a href="#{request.contextPath}/login" class="gub-logout-btn" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.45rem;">
+                            <i class="pi pi-user" />
+                            <span>Iniciar Sesión</span>
+                        </a>
+                    </ui:fragment>
+
+                    <ui:fragment rendered="#{not authBean.esAnonimo()}">
+                        <div class="gub-user-trigger">
+                            <div class="cuy-user-info">
+                                <span class="cuy-user-name">#{authBean.usuarioActivo.nombre}</span>
+                                <span class="cuy-user-role">#{authBean.rolPrincipalLabel}</span>
+                            </div>
+                        </div>
+                        <p:commandButton value="Salir"
+                                         icon="pi pi-power-off"
+                                         action="#{authBean.cerrarSesion}"
+                                         ajax="false"
+                                         styleClass="gub-logout-btn ui-button-sm" />
+                    </ui:fragment>
+                </h:form>
+            </div>
+        </div>
     </header>
-
-    <!-- Barra de Navegación Condicionada por Roles (RBAC) -->
-    <nav class="cuy-nav-wrapper">
-        <h:form id="menuForm">
-            <p:menubar>
-
-                <!-- Panel General (si está autenticado) -->
-                <p:menuitem value="Panel Principal"
-                            icon="pi pi-th-large"
-                            outcome="/index.xhtml"
-                            rendered="#{not authBean.esAnonimo()}" />
-
-                <!-- 1. PORTAL PÚBLICO -->
-                <p:menuitem value="Validar Empresa" icon="pi pi-verified" outcome="/portal/validar-empresa.xhtml" rendered="#{not authBean.esAnonimo()}" />
-                <p:menuitem value="Información Pública" icon="pi pi-chart-bar" outcome="/portal/info-publica.xhtml" rendered="#{not authBean.esAnonimo()}" />
-
-
-                <!-- 2. CIUDADANO EMPRESA -->
-                <p:submenu label="Mi Empresa" icon="pi pi-building" rendered="#{authBean.esCiudadanoEmpresa()}">
-                    <p:menuitem value="Perfil y Empresas" icon="pi pi-id-card" outcome="/empresa/perfil.xhtml" />
-                    <p:menuitem value="Vehículos" icon="pi pi-car" outcome="/empresa/vehiculos.xhtml" />
-                    <p:menuitem value="Guías de Viaje" icon="pi pi-map" outcome="/empresa/viajes.xhtml" />
-                    <p:separator />
-                    <p:menuitem value="Infracciones" icon="pi pi-exclamation-circle" outcome="/empresa/infracciones.xhtml" />
-                </p:submenu>
-
-                <p:submenu label="Permisos y Monitoreo" icon="pi pi-compass" rendered="#{authBean.esSoloCiudadanoEmpresa()}">
-                    <p:menuitem value="Documentación de Vehículos" icon="pi pi-check-square" outcome="/empresa/fiscalizacion-vehiculos.xhtml" />
-                    <p:menuitem value="Monitoreo de Viajes" icon="pi pi-compass" outcome="/empresa/monitoreo.xhtml" />
-                </p:submenu>
-
-                <!-- 2.5 CHOFER -->
-                <p:menuitem value="Mis Viajes" icon="pi pi-compass" outcome="/chofer/mis-viajes.xhtml" rendered="#{authBean.esChofer()}" />
-
-                <!-- 3. FUNCIONARIO -->
-                <p:submenu label="Fiscalización y Ruta" icon="pi pi-shield" rendered="#{authBean.esFuncionario()}">
-                    <p:menuitem value="Empresas" icon="pi pi-building" outcome="/funcionario/empresas.xhtml" />
-                    <p:menuitem value="Consulta PDI" icon="pi pi-id-card" outcome="/funcionario/pdi.xhtml" />
-                    <p:menuitem value="Documentación de Vehículos" icon="pi pi-check-square" outcome="/funcionario/fiscalizacion-vehiculos.xhtml" />
-                    <p:menuitem value="Monitoreo de Viajes" icon="pi pi-compass" outcome="/funcionario/monitoreo.xhtml" />
-                    <p:separator />
-                    <p:menuitem value="Bandeja de Fiscalización" icon="pi pi-inbox" outcome="/funcionario/bandeja-fiscalizacion.xhtml" />
-                </p:submenu>
-
-                <!-- 4. AUTORIDADES (BACKOFFICE ANALÍTICO) -->
-                <p:menuitem value="Dashboard"
-                            icon="pi pi-chart-line"
-                            outcome="/backoffice/dashboard.xhtml"
-                            rendered="#{authBean.esAutoridad()}" />
-
-                <!-- 5. ADMINISTRADORES -->
-                <p:submenu label="Administración" icon="pi pi-cog" rendered="#{authBean.esAdministrador()}">
-                    <p:menuitem value="Usuarios y Roles" icon="pi pi-users" outcome="/admin/usuarios.xhtml" />
-                    <p:menuitem value="Nodos" icon="pi pi-server" outcome="/admin/nodos.xhtml" />
-                    <p:menuitem value="Catálogos" icon="pi pi-tags" outcome="/admin/catalogos.xhtml" />
-                    <p:menuitem value="Reglas de Fiscalización" icon="pi pi-sliders-h" outcome="/admin/reglas-fiscalizacion.xhtml" />
-                </p:submenu>
-
-            </p:menubar>
-        </h:form>
-    </nav>
+    <script>
+        document.addEventListener('click', function(e) {
+            document.querySelectorAll('.gub-nav-item.is-open').forEach(function(item) {
+                if (!item.contains(e.target)) {
+                    item.classList.remove('is-open');
+                }
+            });
+        });
+    </script>
 
     <!-- Área Central de Contenido -->
     <main class="cuy-main">
