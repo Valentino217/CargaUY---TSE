@@ -512,18 +512,13 @@
     <!-- Header Institucional unificado estilo gub.uy -->
     <header class="gub-header">
         <div class="gub-main-bar">
-            <h:link outcome="/index.xhtml" styleClass="cuy-brand">
+            <h:link outcome="/portal/info-publica.xhtml" styleClass="cuy-brand">
                 <img src="#{request.contextPath}/img/logo-cargauy.png?v=20261110b" alt="CargaUY" class="cuy-brand-logo" />
             </h:link>
 
             <div class="gub-right-zone">
                 <ui:fragment rendered="#{not authBean.esAnonimo()}">
                     <ul class="gub-nav">
-                        <!-- Panel General -->
-                        <li class="gub-nav-item">
-                            <h:link outcome="/index.xhtml" styleClass="gub-nav-link" value="Panel Principal" />
-                        </li>
-
                         <!-- 1. PORTAL PÚBLICO -->
                         <li class="gub-nav-item">
                             <h:link outcome="/portal/validar-empresa.xhtml" styleClass="gub-nav-link" value="Validar Empresa" />

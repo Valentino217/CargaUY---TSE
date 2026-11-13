@@ -178,6 +178,15 @@ public class AuthBean implements Serializable {
         }
     }
 
+    public void redirigirAPortalPublico() throws IOException {
+        FacesContext faces = FacesContext.getCurrentInstance();
+        if (faces != null) {
+            ExternalContext ext = faces.getExternalContext();
+            String destino = esAnonimo() ? "/login" : "/portal/info-publica.xhtml";
+            ext.redirect(ext.getRequestContextPath() + destino);
+        }
+    }
+
     public void cerrarSesion() throws IOException {
         FacesContext faces = FacesContext.getCurrentInstance();
         if (faces == null) {

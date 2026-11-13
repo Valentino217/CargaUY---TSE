@@ -66,7 +66,7 @@ public class GubServlet extends HttpServlet {
             if (GubOidcClient.real()) {
                 r.getSession().setAttribute(WebSeguridad.GUB_ID_TOKEN, ingreso.idToken());
             }
-            s.sendRedirect(r.getContextPath()+"/index.xhtml");
+            s.sendRedirect(r.getContextPath()+"/portal/info-publica.xhtml");
         } catch(ErrorAcceso e) { WebSeguridad.error(r,s,e.getEstado(),e.getMessage()); }
     }
 }
