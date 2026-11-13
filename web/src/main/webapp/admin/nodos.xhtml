@@ -63,9 +63,9 @@
                                 <f:selectItem itemLabel="OFFLINE" itemValue="OFFLINE" />
                             </p:selectOneMenu>
                         </f:facet>
-                        <p:tag value="#{nodo.consultando ? 'CONSULTANDO...' : (nodo.online() ? 'ONLINE' : 'OFFLINE')}"
-                               severity="#{nodo.consultando ? 'warning' : (nodo.online() ? 'success' : 'danger')}"
-                               icon="#{nodo.consultando ? 'pi pi-spin pi-spinner' : (nodo.online() ? 'pi pi-check-circle' : 'pi pi-times-circle')}"
+                        <p:tag value="#{nodo.isConsultando() ? 'CONSULTANDO...' : (nodo.online() ? 'ONLINE' : 'OFFLINE')}"
+                               severity="#{nodo.isConsultando() ? 'warning' : (nodo.online() ? 'success' : 'danger')}"
+                               icon="#{nodo.isConsultando() ? 'pi pi-spin pi-spinner' : (nodo.online() ? 'pi pi-check-circle' : 'pi pi-times-circle')}"
                                rounded="true" />
                     </p:column>
                 </p:dataTable>
