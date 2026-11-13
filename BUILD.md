@@ -90,12 +90,12 @@ docker cp ear/target/CargaUY.ear cargauy-p1-wildfly-1:/opt/jboss/wildfly/standal
 Una vez que WildFly creó el esquema en PostgreSQL:
 
 - **Cargar seed inicial** (rubros, tipos de carga, usuarios LDAP/ciudadanos, empresas, vehículos, guías y casos de fiscalización):
-  ```powershell
-  ./scripts/cargar-datos-prueba.ps1
+  ```bash
+  docker compose --profile seed run --rm seed
   ```
-- **Resetear y recargar datos limpios** sin reiniciar Docker:
-  ```powershell
-  ./scripts/reset-datos.ps1
+- **Resetear y recargar datos limpios** (vacía PostgreSQL y MongoDB y vuelve a cargar el seed, sin reiniciar Docker):
+  ```bash
+  docker compose --profile reset run --rm reset
   ```
 - **Sincronizar usuarios de prueba en OpenLDAP** (si el volumen `ldap_p1` quedó desfasado):
   ```powershell

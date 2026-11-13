@@ -117,6 +117,72 @@ services:
       - "8080:8080"
       - "9990:9990"
 
+  seed:
+    profiles: ["seed"]
+    image: postgres:16-alpine
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${DB_PASSWORD:-cargauy123}
+    volumes:
+      - ./scripts:/scripts:ro
+    entrypoint:
+      - psql
+      - -h
+      - postgres
+      - -U
+      - cargauy
+      - -d
+      - cargauy
+      - -v
+      - ON_ERROR_STOP=1
+      - -f
+      - /scripts/seed-datos-prueba.sql
+
+  reset-mongo:
+    profiles: ["reset"]
+    image: mongo:7
+    restart: "no"
+    depends_on:
+      mongodb:
+        condition: service_started
+    entrypoint:
+      - mongosh
+      - mongodb://mongodb:27017/cargauy_tracking
+      - --quiet
+      - --eval
+      - db.eventos_posicion.deleteMany({})
+
+  reset:
+    profiles: ["reset"]
+    image: postgres:16-alpine
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      reset-mongo:
+        condition: service_completed_successfully
+    environment:
+      PGPASSWORD: ${DB_PASSWORD:-cargauy123}
+    volumes:
+      - ./scripts:/scripts:ro
+    entrypoint:
+      - psql
+      - -h
+      - postgres
+      - -U
+      - cargauy
+      - -d
+      - cargauy
+      - -v
+      - ON_ERROR_STOP=1
+      - -f
+      - /scripts/reset-datos.sql
+      - -f
+      - /scripts/seed-datos-prueba.sql
+
 volumes:
   pgdata_p1:
   ldap_p1:

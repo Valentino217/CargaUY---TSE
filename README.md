@@ -14,10 +14,11 @@ Plataforma empresarial **Jakarta EE 10** (`ejb` + `web` + `ear`) desplegada sobr
    docker compose up -d --build
    ```
    *(Para usar Keycloak como simulador local de gub.uy en lugar del proveedor testing real, agregar `--profile mock-gub`.)*
-3. **Cargar datos iniciales de prueba (idempotente):**
-   ```powershell
-   ./scripts/cargar-datos-prueba.ps1
+3. **Cargar datos iniciales de prueba (idempotente y multiplataforma):**
+   ```bash
+   docker compose --profile seed run --rm seed
    ```
+   *(Para vaciar PostgreSQL + MongoDB y recargar los datos limpios desde cero: `docker compose --profile reset run --rm reset`.)*
 4. **Acceso Web:** [`http://localhost:8080/CargaUY-web/`](http://localhost:8080/CargaUY-web/)
 
 ---
