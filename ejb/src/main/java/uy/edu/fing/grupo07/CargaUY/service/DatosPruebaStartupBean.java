@@ -105,7 +105,7 @@ public class DatosPruebaStartupBean {
                 "pedro.empresario@transporte.uy",
                 LocalDate.of(1978, 3, 10),
                 87654321,
-                "ciudadano123"
+                "$2a$12$zhR8dDKWaRxrNbObjjHpqel7X.4ecsYyO/hHxSR7WAUWx7xFG0FMC"
         );
         ciudadano.getRoles().add(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.CIUDADANO);
         entityManager.persist(ciudadano);
@@ -115,7 +115,7 @@ public class DatosPruebaStartupBean {
                 "carlos.chofer@transporte.uy",
                 LocalDate.of(1990, 8, 15),
                 11223344,
-                "chofer123"
+                "$2a$12$D9uyMi9KzNRTutQxItWvvOMOmXZCc0p8BEdkvVF6/F5.cK9yM9Nim"
         );
         chofer.getRoles().add(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.CHOFER);
         entityManager.persist(chofer);
@@ -125,7 +125,7 @@ public class DatosPruebaStartupBean {
                 "juan.chofer@transporte.uy",
                 LocalDate.of(1992, 4, 12),
                 55667788,
-                "chofer123"
+                "$2a$12$D9uyMi9KzNRTutQxItWvvOMOmXZCc0p8BEdkvVF6/F5.cK9yM9Nim"
         );
         choferJuan.getRoles().add(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.CHOFER);
         entityManager.persist(choferJuan);
@@ -135,7 +135,7 @@ public class DatosPruebaStartupBean {
                 "funcionario@cargauy.gub.uy",
                 LocalDate.of(1985, 5, 20),
                 12345678,
-                "funcionario123",
+                "$2a$12$IJzDsFbw93Vcjp6dNQdtvuddNBiPBDzWI2gPVIvHUvwl.jI5mVBEm",
                 101,
                 "Montevideo"
         );
@@ -147,7 +147,7 @@ public class DatosPruebaStartupBean {
                 "autoridad@cargauy.gub.uy",
                 LocalDate.of(1975, 6, 20),
                 20000002,
-                "autoridad123",
+                "$2a$12$JxbgZqu1/dPp0l.pmfL/Qe/c/3zmNm9xR7qHex36O5Ugr1m.MY/r6",
                 "Dirección Nacional de Transporte"
         );
         autoridad.getRoles().add(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.AUTORIDAD);
@@ -158,7 +158,7 @@ public class DatosPruebaStartupBean {
                 "admin@cargauy.gub.uy",
                 LocalDate.of(1980, 1, 15),
                 10000001,
-                "admin123"
+                "$2a$12$DY/Bfsus.do8e6ue9dz66eBPP/tY6v7T.ASnNRuZ65uTBAEHGoOBy"
         );
         administrador.getRoles().add(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.ADMINISTRADOR);
         entityManager.persist(administrador);

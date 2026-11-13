@@ -56,22 +56,26 @@ public class TrackingMessageProducer implements TrackingProducerLocal {
         try {
             String correlacion = (evento.uuid() != null && !evento.uuid().isBlank())
                     ? evento.uuid().trim()
-                    : UUID.randomUUID().toString();
+                    : uy.edu.fing.grupo07.CargaUY.integration.TraceContext.normalizarCorrelacion(null);
+            String reqCorrelacion = uy.edu.fing.grupo07.CargaUY.integration.TraceContext.obtenerCorrelacion();
+            String corrHeader = (reqCorrelacion != null && !reqCorrelacion.isBlank()) ? reqCorrelacion : correlacion;
+            String traceparent = uy.edu.fing.grupo07.CargaUY.integration.TraceContext.siguienteTraceparentHijo(null, corrHeader);
             String json = jsonb.toJson(evento);
             TextMessage message = jmsContext.createTextMessage(json);
             message.setStringProperty("uuid", evento.uuid());
             message.setLongProperty("guiaId", evento.guiaId() != null ? evento.guiaId() : -1L);
             message.setStringProperty("tipo", evento.tipo() != null ? evento.tipo().name() : "");
-            message.setJMSCorrelationID(correlacion);
-            message.setStringProperty("X_Correlation_ID", correlacion);
+            message.setJMSCorrelationID(corrHeader);
+            message.setStringProperty(uy.edu.fing.grupo07.CargaUY.integration.TraceContext.JMS_PROP_CORRELACION, corrHeader);
+            message.setStringProperty(uy.edu.fing.grupo07.CargaUY.integration.TraceContext.JMS_PROP_TRACEPARENT, traceparent);
 
             JMSProducer producer = jmsContext.createProducer();
             producer.send(trackingQueue, message);
             mensajesEncolados.incrementAndGet();
 
             LOGGER.log(Level.INFO,
-                    "{\"evento\":\"jms.tracking.encolado\",\"correlacion\":\"{0}\",\"uuid\":\"{1}\",\"guiaId\":{2}}",
-                    new Object[]{correlacion, evento.uuid(), evento.guiaId() != null ? evento.guiaId() : -1L});
+                    "{\"evento\":\"jms.tracking.encolado\",\"correlacion\":\"{0}\",\"traceparent\":\"{1}\",\"uuid\":\"{2}\",\"guiaId\":{3}}",
+                    new Object[]{corrHeader, traceparent, evento.uuid(), evento.guiaId() != null ? evento.guiaId() : -1L});
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error al encolar evento en TrackingQueue", e);
             throw new RuntimeException("Error al enviar evento a la cola de tracking", e);

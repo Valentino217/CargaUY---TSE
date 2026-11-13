@@ -14,16 +14,40 @@ public interface DashboardServiceLocal {
 
     DashboardResumenDTO obtenerResumen();
 
+    default DashboardResumenDTO obtenerResumenPublico() {
+        return obtenerResumen();
+    }
+
+    default DashboardResumenDTO obtenerResumen(String token) {
+        return obtenerResumen();
+    }
+
+    default DashboardResumenDTO obtenerResumenPortal(String token) {
+        return obtenerResumen();
+    }
+
     default List<String> listarRubrosDisponibles() {
         return List.of();
+    }
+
+    default List<String> listarRubrosDisponibles(String token) {
+        return listarRubrosDisponibles();
     }
 
     default List<String> listarTiposCargaDisponibles() {
         return List.of();
     }
 
+    default List<String> listarTiposCargaDisponibles(String token) {
+        return listarTiposCargaDisponibles();
+    }
+
     default List<String> listarUbicacionesDisponibles() {
         return List.of();
+    }
+
+    default List<String> listarUbicacionesDisponibles(String token) {
+        return listarUbicacionesDisponibles();
     }
 
     default DashboardResumenDTO obtenerResumenFiltrado(
@@ -43,5 +67,16 @@ public interface DashboardServiceLocal {
             LocalDate fechaHasta
     ) {
         return obtenerResumenFiltrado(rubro, ubicacion, fechaDesde, fechaHasta);
+    }
+
+    default DashboardResumenDTO obtenerResumenFiltrado(
+            String token,
+            String rubro,
+            String tipoCarga,
+            String ubicacion,
+            LocalDate fechaDesde,
+            LocalDate fechaHasta
+    ) {
+        return obtenerResumenFiltrado(rubro, tipoCarga, ubicacion, fechaDesde, fechaHasta);
     }
 }

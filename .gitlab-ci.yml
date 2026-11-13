@@ -47,7 +47,6 @@ sonarqube-job:
   only:
     - main
     - develop
-  allow_failure: true
 
 # Etapa 4: Empaquetado final del EAR para entrega / despliegue
 package-job:

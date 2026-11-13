@@ -214,9 +214,13 @@ public class FaasTrackingClient implements java.io.Serializable {
 
         String payloadJson = builder.build().toString();
 
+        String corr = TraceContext.normalizarCorrelacion(null);
+        String traceparent = TraceContext.siguienteTraceparentHijo(null, corr);
         HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
                 .uri(URI.create(endpointUrl))
                 .timeout(TIMEOUT)
+                .header(TraceContext.HEADER_CORRELACION, corr)
+                .header(TraceContext.HEADER_TRACEPARENT, traceparent)
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(payloadJson));
 

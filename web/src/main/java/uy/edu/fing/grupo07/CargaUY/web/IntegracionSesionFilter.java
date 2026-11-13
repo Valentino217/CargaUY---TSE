@@ -77,7 +77,7 @@ public class IntegracionSesionFilter implements Filter {
             return actor.tiene(TipoUsuario.ADMINISTRADOR);
         }
         if (p.startsWith("/backoffice/")) {
-            return actor.tiene(TipoUsuario.AUTORIDAD) || actor.tiene(TipoUsuario.FUNCIONARIO);
+            return actor.tiene(TipoUsuario.AUTORIDAD) || actor.tiene(TipoUsuario.ADMINISTRADOR);
         }
         if (p.startsWith("/funcionario/")) {
             return actor.tiene(TipoUsuario.FUNCIONARIO)
@@ -87,7 +87,7 @@ public class IntegracionSesionFilter implements Filter {
             return actor.tiene(TipoUsuario.CIUDADANO);
         }
         if (p.startsWith("/chofer/")) {
-            return actor.tiene(TipoUsuario.CHOFER);
+            return false;
         }
         boolean gestion = p.equals("/GuiaDeViajeJSF.xhtml") || p.equals("/VehiculoJSF.xhtml")
             || p.equals("/ITV.xhtml") || p.equals("/PNC.xhtml");

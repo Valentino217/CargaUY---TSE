@@ -51,7 +51,10 @@ public class AuthFilter implements ContainerRequestFilter {
         if(faasHeader==null||faasHeader.isBlank()) return false;
         String secret=System.getProperty("cargauy.faas.secret");
         if(secret==null||secret.isBlank()) secret=System.getenv("FAAS_SHARED_SECRET");
-        return secret!=null&&!secret.isBlank()&&secret.trim().equals(faasHeader.trim());
+        if(secret==null||secret.isBlank()) return false;
+        byte[] expected = secret.trim().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        byte[] actual = faasHeader.trim().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        return java.security.MessageDigest.isEqual(expected, actual);
     }
     private void validarP3(ContainerRequestContext r,String p,String token,Acceso actor) throws IOException {
         if(p.startsWith("balanza/")) {
@@ -104,9 +107,14 @@ public class AuthFilter implements ContainerRequestFilter {
                 && !evento.getString("matricula").isBlank();
         boolean esOperadorFiscalizacion = actor.tiene(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.ADMINISTRADOR)
                 || actor.tiene(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.FUNCIONARIO);
-        if (admiteSinGuiaPorMatricula && id == null && tieneMatricula
-                && (esOperadorFiscalizacion || actor.tiene(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.CHOFER))) {
-            return;
+        if (admiteSinGuiaPorMatricula && id == null && tieneMatricula) {
+            if (esOperadorFiscalizacion) {
+                return;
+            }
+            if (actor.tiene(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.CHOFER)) {
+                control.vehiculoChofer(token, evento.getString("matricula"));
+                return;
+            }
         }
         if (esOperadorFiscalizacion && id != null) {
             id.longValueExact();

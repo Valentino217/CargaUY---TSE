@@ -73,10 +73,10 @@
                 </div>
             </div>
 
-            <p:poll interval="3"
+            <p:poll interval="4"
                     listener="#{detalleViajeBean.refrescarPorPollMock}"
-                    update=":monitoreoForm :dlgTrackingForm:trackingEstado"
-                    stop="#{not detalleViajeBean.mockTrackingActivo}" />
+                    update=":monitoreoForm"
+                    stop="#{not detalleViajeBean.pollAutomaticoActivo}" />
 
             <!-- Línea Temporal de Eventos de Ruta -->
             <div class="cuy-card" style="margin-bottom: 0;">

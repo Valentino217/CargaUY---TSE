@@ -21,6 +21,7 @@ import uy.edu.fing.grupo07.CargaUY.jms.TrackingProducerLocal;
 import uy.edu.fing.grupo07.CargaUY.nosql.PosicionNoSqlRepositoryLocal;
 import uy.edu.fing.grupo07.CargaUY.service.GestionBalanzaServiceLocal;
 import uy.edu.fing.grupo07.CargaUY.service.GestionEventosServiceLocal;
+import uy.edu.fing.grupo07.CargaUY.service.GestionNodosPerifericosServiceLocal;
 import uy.edu.fing.grupo07.CargaUY.service.GuiaDeViajeEJBLocal;
 import uy.edu.fing.grupo07.CargaUY.service.TrackingMockServiceLocal;
 
@@ -65,6 +66,9 @@ public class DetalleViajeBean implements Serializable {
 
     @EJB
     private TrackingMockServiceLocal trackingMockService;
+
+    @EJB
+    private GestionNodosPerifericosServiceLocal nodosPerifericosService;
 
     @Inject
     private FaasTrackingClient faasTrackingClient;
@@ -152,7 +156,7 @@ public class DetalleViajeBean implements Serializable {
      */
     public void prepararModalMockTracking() {
         if (trackingMockService != null) {
-            trackingMockService.sincronizarConNodoPeriferico();
+            trackingMockService.sincronizarConNodoPeriferico(SesionActual.token());
             this.mockEventosPorMinuto = trackingMockService.getEventosPorMinuto();
             this.mockCantidadDesvios = trackingMockService.getCantidadDesvios();
         }
@@ -196,15 +200,10 @@ public class DetalleViajeBean implements Serializable {
      */
     public void cargarGuiasDisponibles() {
         try {
-            List<GuiaDeViaje> lista;
-            if (esVistaEmpresa()) {
-                String token = SesionActual.token();
-                lista = (token != null && !token.isBlank())
-                        ? guiaDeViajeEJB.listarParaActor(token)
-                        : new ArrayList<>();
-            } else {
-                lista = guiaDeViajeEJB.listarGuias();
-            }
+            String token = SesionActual.token();
+            List<GuiaDeViaje> lista = esVistaEmpresa()
+                    ? guiaDeViajeEJB.listarParaActor(token)
+                    : guiaDeViajeEJB.listarParaOperador(token);
             if (lista != null) {
                 this.guiasDisponibles = lista;
             } else {
@@ -264,8 +263,9 @@ public class DetalleViajeBean implements Serializable {
             }
         }
 
+        String token = SesionActual.token();
         try {
-            this.guiaActual = guiaDeViajeEJB.buscarGuias(guiaIdSeleccionada);
+            this.guiaActual = guiaDeViajeEJB.buscarGuias(token, guiaIdSeleccionada);
             if (guiaActual == null) {
                 mostrarMensaje(FacesMessage.SEVERITY_WARN, "Guía No Encontrada", "No existe guía de viaje con ID #" + guiaIdSeleccionada);
             }
@@ -275,7 +275,7 @@ public class DetalleViajeBean implements Serializable {
         }
 
         try {
-            List<EventoViajeDTO> evList = eventosService.listarEventosPorGuia(guiaIdSeleccionada);
+            List<EventoViajeDTO> evList = eventosService.listarEventosPorGuia(token, guiaIdSeleccionada);
             if (evList != null) {
                 this.eventos = evList;
             } else {
@@ -287,7 +287,7 @@ public class DetalleViajeBean implements Serializable {
         }
 
         try {
-            List<PesadaBalanzaDTO> pesList = balanzaService.listarPesadasPorGuia(guiaIdSeleccionada);
+            List<PesadaBalanzaDTO> pesList = balanzaService.listarPesadasPorGuia(token, guiaIdSeleccionada);
             if (pesList != null) {
                 this.pesadas = pesList;
             } else {
@@ -307,7 +307,10 @@ public class DetalleViajeBean implements Serializable {
         List<GuiaDeViaje> candidatas = this.guiasDisponibles;
         if (guiaDeViajeEJB != null) {
             try {
-                List<GuiaDeViaje> frescas = guiaDeViajeEJB.listarGuias();
+                String token = SesionActual.token();
+                List<GuiaDeViaje> frescas = esVistaEmpresa()
+                        ? guiaDeViajeEJB.listarParaActor(token)
+                        : guiaDeViajeEJB.listarParaOperador(token);
                 if (frescas != null && !frescas.isEmpty()) {
                     this.guiasDisponibles = frescas;
                     candidatas = frescas;
@@ -462,7 +465,7 @@ public class DetalleViajeBean implements Serializable {
             if (evaluarDesvioInmediato) {
                 uy.edu.fing.grupo07.CargaUY.domain.entity.EventoViaje eventoPersistido;
                 try {
-                    eventoPersistido = eventosService.guardarEvento(eventoEnriquecido);
+                    eventoPersistido = eventosService.guardarEvento(SesionActual.token(), eventoEnriquecido);
                 } catch (uy.edu.fing.grupo07.CargaUY.exception.BusinessException be) {
                     boolean vehiculoInexistente = be.getMessage() != null
                             && be.getMessage().contains("No existe vehículo registrado");
@@ -523,7 +526,7 @@ public class DetalleViajeBean implements Serializable {
                 if (trackingProducer != null) {
                     trackingProducer.enviarEvento(eventoEnriquecido);
                 } else {
-                    uy.edu.fing.grupo07.CargaUY.domain.entity.EventoViaje persistido = eventosService.guardarEvento(eventoEnriquecido);
+                    uy.edu.fing.grupo07.CargaUY.domain.entity.EventoViaje persistido = eventosService.guardarEvento(SesionActual.token(), eventoEnriquecido);
                     if (persistido != null && persistido.getGuia() != null) {
                         this.guiaIdSeleccionada = persistido.getGuia().getId();
                     }
@@ -565,7 +568,8 @@ public class DetalleViajeBean implements Serializable {
         }
         try {
             String correlacion = UUID.randomUUID().toString();
-            List<PesadaBalanzaDTO> importadas = balanzaService.sincronizarPesadasDeGuia(guiaIdSeleccionada, correlacion);
+            List<PesadaBalanzaDTO> importadas = balanzaService.sincronizarPesadasDeGuia(
+                    SesionActual.token(), guiaIdSeleccionada, correlacion);
             consultarViaje();
             if (importadas == null || importadas.isEmpty()) {
                 mostrarMensaje(
@@ -593,7 +597,8 @@ public class DetalleViajeBean implements Serializable {
      */
     public void sincronizarMockBalanza() {
         try {
-            PesadaBalanzaDTO nuevaPesada = balanzaService.registrarPesadaDesdeMock(guiaIdSeleccionada);
+            PesadaBalanzaDTO nuevaPesada = balanzaService.registrarPesadaDesdeMock(
+                    SesionActual.token(), guiaIdSeleccionada);
             if (nuevaPesada != null) {
                 String matricula = "N/A";
                 if (nuevaPesada.matricula() != null) {
@@ -662,7 +667,8 @@ public class DetalleViajeBean implements Serializable {
                     nuevoIncidenteDescripcion
             );
 
-            eventosService.reportarIncidente(dto);
+            String token = SesionActual.token();
+            eventosService.reportarIncidente(token, dto);
             if (motorFiscalizacion != null) {
                 motorFiscalizacion.evaluarGuia(guiaIdSeleccionada);
             }
@@ -679,7 +685,7 @@ public class DetalleViajeBean implements Serializable {
             this.nuevoIncidenteLatitud = null;
             this.nuevoIncidenteLongitud = null;
 
-            this.eventos = eventosService.listarEventosPorGuia(guiaIdSeleccionada);
+            this.eventos = eventosService.listarEventosPorGuia(token, guiaIdSeleccionada);
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error al reportar incidente", e);
             mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error", e.getMessage());
@@ -968,7 +974,7 @@ public class DetalleViajeBean implements Serializable {
         this.mockEventosPorMinuto = epm;
         this.mockCantidadDesvios = desvios;
 
-        trackingMockService.iniciar(epm, desvios);
+        trackingMockService.iniciar(SesionActual.token(), epm, desvios);
         consultarViaje();
         mostrarMensaje(
                 FacesMessage.SEVERITY_INFO,
@@ -981,7 +987,7 @@ public class DetalleViajeBean implements Serializable {
         if (trackingMockService == null) {
             return;
         }
-        trackingMockService.detener();
+        trackingMockService.detener(SesionActual.token());
         consultarViaje();
         mostrarMensaje(
                 FacesMessage.SEVERITY_INFO,
@@ -995,7 +1001,7 @@ public class DetalleViajeBean implements Serializable {
             mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error", "El servicio Mock de Tracking no está disponible.");
             return;
         }
-        int emitidos = trackingMockService.emitirPasoGuiasActivas();
+        int emitidos = trackingMockService.emitirPasoGuiasActivas(SesionActual.token());
         consultarViaje();
         if (emitidos > 0) {
             mostrarMensaje(
@@ -1016,7 +1022,7 @@ public class DetalleViajeBean implements Serializable {
         if (trackingMockService == null) {
             return;
         }
-        trackingMockService.reiniciarRecorridos();
+        trackingMockService.reiniciarRecorridos(SesionActual.token());
         mostrarMensaje(
                 FacesMessage.SEVERITY_INFO,
                 "Recorrido Reiniciado",
@@ -1025,12 +1031,34 @@ public class DetalleViajeBean implements Serializable {
     }
 
     public void refrescarPorPollMock() {
-        if (trackingMockService != null) {
-            trackingMockService.sincronizarConNodoPeriferico();
-        }
         if (guiaIdSeleccionada != null) {
             consultarViaje();
         }
+    }
+
+    public boolean isPollAutomaticoActivo() {
+        return guiaActual != null && guiaActual.getEstado() == TipoEstado.EN_CURSO;
+    }
+
+    public boolean isNodoTrackingActivoSistema() {
+        if (nodosPerifericosService != null) {
+            return nodosPerifericosService.isTrackingHabilitado();
+        }
+        return isMockTrackingActivo();
+    }
+
+    public int getCantidadBalanzasActivas() {
+        if (nodosPerifericosService != null) {
+            return nodosPerifericosService.listarBalanzasHabilitadas().size();
+        }
+        return 0;
+    }
+
+    public String getResumenModoTracking() {
+        if (nodosPerifericosService == null) {
+            return "Estándar";
+        }
+        return nodosPerifericosService.getModoTrackingActivo().getEtiqueta();
     }
 
     public boolean isNodoTrackingOnline() {
@@ -1075,5 +1103,9 @@ public class DetalleViajeBean implements Serializable {
 
     void setTrackingMockService(TrackingMockServiceLocal trackingMockService) {
         this.trackingMockService = trackingMockService;
+    }
+
+    void setNodosPerifericosService(GestionNodosPerifericosServiceLocal nodosPerifericosService) {
+        this.nodosPerifericosService = nodosPerifericosService;
     }
 }

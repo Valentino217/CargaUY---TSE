@@ -1,11 +1,14 @@
 package uy.edu.fing.grupo07.CargaUY.rest;
 
 import jakarta.ejb.EJB;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.*;
+import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import uy.edu.fing.grupo07.CargaUY.dto.PesadaBalanzaDTO;
 import uy.edu.fing.grupo07.CargaUY.exception.BusinessException;
+import uy.edu.fing.grupo07.CargaUY.security.ErrorAcceso;
 import uy.edu.fing.grupo07.CargaUY.service.GestionBalanzaServiceLocal;
 
 import java.util.Collections;
@@ -22,11 +25,23 @@ public class BalanzaResource {
     @EJB
     private GestionBalanzaServiceLocal balanzaService;
 
+    @Context
+    private HttpServletRequest httpRequest;
+
     public BalanzaResource() {
     }
 
     public BalanzaResource(GestionBalanzaServiceLocal balanzaService) {
         this.balanzaService = balanzaService;
+    }
+
+    public BalanzaResource(GestionBalanzaServiceLocal balanzaService, HttpServletRequest httpRequest) {
+        this.balanzaService = balanzaService;
+        this.httpRequest = httpRequest;
+    }
+
+    private String tokenActual() {
+        return httpRequest != null ? (String) httpRequest.getAttribute("token") : null;
     }
 
     /**
@@ -41,8 +56,12 @@ public class BalanzaResource {
                     .build();
         }
         try {
-            PesadaBalanzaDTO resultado = balanzaService.registrarPesada(dto);
+            PesadaBalanzaDTO resultado = balanzaService.registrarPesada(tokenActual(), dto);
             return Response.status(Response.Status.CREATED).entity(resultado).build();
+        } catch (ErrorAcceso ea) {
+            return Response.status(ea.getEstado())
+                    .entity(Collections.singletonMap("error", ea.getMessage()))
+                    .build();
         } catch (BusinessException be) {
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity(Collections.singletonMap("error", be.getMessage()))
@@ -57,8 +76,12 @@ public class BalanzaResource {
     @Path("/mock-sync")
     public Response sincronizarDesdeMock() {
         try {
-            PesadaBalanzaDTO resultado = balanzaService.registrarPesadaDesdeMock();
+            PesadaBalanzaDTO resultado = balanzaService.registrarPesadaDesdeMock(tokenActual());
             return Response.status(Response.Status.CREATED).entity(resultado).build();
+        } catch (ErrorAcceso ea) {
+            return Response.status(ea.getEstado())
+                    .entity(Collections.singletonMap("error", ea.getMessage()))
+                    .build();
         } catch (BusinessException be) {
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity(Collections.singletonMap("error", be.getMessage()))
@@ -78,8 +101,12 @@ public class BalanzaResource {
                     .build();
         }
         try {
-            List<PesadaBalanzaDTO> pesadas = balanzaService.listarPesadasPorGuia(guiaId);
+            List<PesadaBalanzaDTO> pesadas = balanzaService.listarPesadasPorGuia(tokenActual(), guiaId);
             return Response.ok(pesadas).build();
+        } catch (ErrorAcceso ea) {
+            return Response.status(ea.getEstado())
+                    .entity(Collections.singletonMap("error", ea.getMessage()))
+                    .build();
         } catch (BusinessException be) {
             return Response.status(Response.Status.NOT_FOUND)
                     .entity(Collections.singletonMap("error", be.getMessage()))

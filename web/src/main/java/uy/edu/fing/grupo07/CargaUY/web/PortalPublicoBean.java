@@ -114,10 +114,23 @@ public class PortalPublicoBean implements Serializable {
 
     public void cargarDatosPublicos() {
         try {
-            empresasPublicas = vehiculoEJB != null ? vehiculoEJB.listarEmpresas() : new ArrayList<>();
-            vehiculosPublicos = vehiculoEJB != null ? vehiculoEJB.listarVehiculos() : new ArrayList<>();
-            guiasPublicas = guiaDeViajeEJB != null ? guiaDeViajeEJB.listarGuias() : new ArrayList<>();
-            resumen = dashboardService != null ? dashboardService.obtenerResumen() : null;
+            String token = null;
+            try {
+                token = SesionActual.token();
+            } catch (Throwable ignored) {
+            }
+            if (token == null || token.isBlank()) {
+                empresasPublicas = new ArrayList<>();
+                empresasResultado = new ArrayList<>();
+                vehiculosPublicos = new ArrayList<>();
+                guiasPublicas = new ArrayList<>();
+                resumen = dashboardService != null ? dashboardService.obtenerResumenPublico() : null;
+                return;
+            }
+            empresasPublicas = vehiculoEJB != null ? vehiculoEJB.listarEmpresasParaPortal(token) : new ArrayList<>();
+            vehiculosPublicos = vehiculoEJB != null ? vehiculoEJB.listarParaPortal(token) : new ArrayList<>();
+            guiasPublicas = guiaDeViajeEJB != null ? guiaDeViajeEJB.listarParaPortal(token) : new ArrayList<>();
+            resumen = dashboardService != null ? dashboardService.obtenerResumenPortal(token) : null;
             empresasResultado = new ArrayList<>(empresasPublicas);
         } catch (Exception e) {
             empresasPublicas = new ArrayList<>();
@@ -156,6 +169,9 @@ public class PortalPublicoBean implements Serializable {
 
         for (Map.Entry<String, List<GuiaDeViaje>> entry : porRubroYTipo.entrySet()) {
             List<GuiaDeViaje> grupo = entry.getValue();
+            if (grupo.size() < UMBRAL_MINIMO_AGREGACION_K) {
+                continue;
+            }
             String[] partes = entry.getKey().split("\\|\\|\\|", 2);
             String rubro = partes[0];
             String tipoCarga = partes.length > 1 ? partes[1] : "Carga General";
@@ -221,7 +237,7 @@ public class PortalPublicoBean implements Serializable {
         for (Map.Entry<String, List<Vehiculo>> entry : porRango.entrySet()) {
             List<Vehiculo> grupo = entry.getValue();
             if (grupo.size() >= UMBRAL_MINIMO_AGREGACION_K) {
-                long habilitados = grupo.stream().filter(Vehiculo::isEstadoHabilitacion).count();
+                long habilitados = grupo.stream().filter(this::estaVehiculoHabilitado).count();
                 double promedio = grupo.stream().mapToInt(Vehiculo::getCapacidadCarga).average().orElse(0.0);
                 resultado.add(new EstadisticaFlotaPublica(
                         entry.getKey(),
@@ -235,20 +251,11 @@ public class PortalPublicoBean implements Serializable {
         }
 
         if (residuales.size() >= UMBRAL_MINIMO_AGREGACION_K) {
-            long habilitados = residuales.stream().filter(Vehiculo::isEstadoHabilitacion).count();
+            long habilitados = residuales.stream().filter(this::estaVehiculoHabilitado).count();
             double promedio = residuales.stream().mapToInt(Vehiculo::getCapacidadCarga).average().orElse(0.0);
             resultado.add(new EstadisticaFlotaPublica(
                     "Otras Categorías",
                     residuales.size(),
-                    habilitados,
-                    Math.round(promedio * 100.0) / 100.0
-            ));
-        } else if (!residuales.isEmpty() && resultado.isEmpty()) {
-            long habilitados = vehiculosPublicos.stream().filter(Vehiculo::isEstadoHabilitacion).count();
-            double promedio = vehiculosPublicos.stream().mapToInt(Vehiculo::getCapacidadCarga).average().orElse(0.0);
-            resultado.add(new EstadisticaFlotaPublica(
-                    "Flota Nacional Consolidada",
-                    vehiculosPublicos.size(),
                     habilitados,
                     Math.round(promedio * 100.0) / 100.0
             ));
@@ -303,8 +310,24 @@ public class PortalPublicoBean implements Serializable {
             return 0;
         }
         return vehiculosPublicos.stream()
-                .filter(v -> v.getEmpresa() != null && v.getEmpresa().getNroEmpresa() == nroEmpresa && v.isEstadoHabilitacion())
+                .filter(v -> v.getEmpresa() != null
+                        && v.getEmpresa().getNroEmpresa() == nroEmpresa
+                        && estaVehiculoHabilitado(v))
                 .count();
+    }
+
+    private boolean estaVehiculoHabilitado(Vehiculo v) {
+        if (v == null || !v.isEstadoHabilitacion()) {
+            return false;
+        }
+        var persistenceUtil = jakarta.persistence.Persistence.getPersistenceUtil();
+        if (persistenceUtil.isLoaded(v, "itvs") && persistenceUtil.isLoaded(v, "pncs")) {
+            return v.verificarHabilitacionVigente();
+        }
+        if (vehiculoEJB != null && v.getMatricula() != null) {
+            return vehiculoEJB.estaAptoParaOperarEnPortal(SesionActual.token(), v.getMatricula());
+        }
+        return v.verificarHabilitacionVigente();
     }
 
     public int getTotalEmpresasRegistradas() {
@@ -316,25 +339,40 @@ public class PortalPublicoBean implements Serializable {
     }
 
     public int getTotalEmpresasActivas() {
-        if (empresasPublicas == null) {
-            return 0;
+        if (empresasPublicas != null && !empresasPublicas.isEmpty()) {
+            return (int) empresasPublicas.stream().filter(Empresa::isActiva).count();
         }
-        return (int) empresasPublicas.stream().filter(Empresa::isActiva).count();
+        return resumen != null ? (int) resumen.totalEmpresasHabilitadas() : 0;
     }
 
     public int getTotalVehiculosRegistrados() {
-        return vehiculosPublicos != null ? vehiculosPublicos.size() : 0;
+        if (vehiculosPublicos != null && !vehiculosPublicos.isEmpty()) {
+            return vehiculosPublicos.size();
+        }
+        return resumen != null ? (int) resumen.totalVehiculosHabilitados() : 0;
     }
 
     public int getTotalViajesRegistrados() {
-        return guiasPublicas != null ? guiasPublicas.size() : 0;
+        if (guiasPublicas != null && !guiasPublicas.isEmpty()) {
+            return guiasPublicas.size();
+        }
+        if (resumen != null && resumen.guiasPorEstado() != null) {
+            return (int) resumen.guiasPorEstado().values().stream()
+                    .filter(v -> v != null)
+                    .mapToLong(Long::longValue)
+                    .sum();
+        }
+        return 0;
     }
 
     public long getTotalViajesEnCurso() {
-        if (guiasPublicas == null) {
-            return 0;
+        if (guiasPublicas != null && !guiasPublicas.isEmpty()) {
+            return guiasPublicas.stream().filter(g -> g.getEstado() == TipoEstado.EN_CURSO).count();
         }
-        return guiasPublicas.stream().filter(g -> g.getEstado() == TipoEstado.EN_CURSO).count();
+        if (resumen != null && resumen.guiasPorEstado() != null) {
+            return resumen.guiasPorEstado().getOrDefault(TipoEstado.EN_CURSO, 0L);
+        }
+        return 0L;
     }
 
     public long getTotalPesadas() {
@@ -345,7 +383,9 @@ public class PortalPublicoBean implements Serializable {
         if (resumen == null || resumen.guiasPorEstado() == null) {
             return new ArrayList<>();
         }
-        return new ArrayList<>(resumen.guiasPorEstado().entrySet());
+        return resumen.guiasPorEstado().entrySet().stream()
+                .filter(entry -> entry.getValue() != null && entry.getValue() >= UMBRAL_MINIMO_AGREGACION_K)
+                .toList();
     }
 
     public String getCriterioBusquedaEmpresa() {

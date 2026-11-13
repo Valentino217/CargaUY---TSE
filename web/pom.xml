@@ -113,6 +113,17 @@
             <artifactId>jakarta.json.bind-api</artifactId>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>jakarta.jms</groupId>
+            <artifactId>jakarta.jms-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse</groupId>
+            <artifactId>yasson</artifactId>
+            <version>3.0.3</version>
+            <scope>test</scope>
+        </dependency>
 
         <!-- Mockito para tests del módulo web -->
         <dependency>
@@ -159,6 +170,11 @@
                 <configuration>
                     <failOnMissingWebXml>false</failOnMissingWebXml>
                 </configuration>
+            </plugin>
+            <!-- JaCoCo para reporte de cobertura de la capa web/REST -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
             </plugin>
         </plugins>
     </build>

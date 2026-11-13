@@ -47,6 +47,7 @@ public class FiscalizacionFlotaBean implements Serializable {
     private Vehiculo vehiculoSeleccionado;
     private LocalDate nuevaFechaItv;
     private LocalDate nuevaFechaPnc;
+    private String nuevoNumeroPermisoPnc;
 
     @PostConstruct
     public void init() {
@@ -54,10 +55,11 @@ public class FiscalizacionFlotaBean implements Serializable {
     }
 
     public void cargarFlota() {
+        String token = SesionActual.token();
         try {
-            vehiculos = vehiculoEJB.listarVehiculos();
-            itvs = itvEJB.listarITVs();
-            pncs = pncEJB.listarPNCs();
+            vehiculos = vehiculoEJB.listarParaFiscalizacion(token);
+            itvs = itvEJB.listarITVs(token);
+            pncs = pncEJB.listarPNCs(token);
         } catch (Exception e) {
             vehiculos = new ArrayList<>();
             itvs = new ArrayList<>();
@@ -72,6 +74,17 @@ public class FiscalizacionFlotaBean implements Serializable {
                 .filter(i -> i.getVehiculo() != null && matricula.equals(i.getVehiculo().getMatricula()) && i.getFechaVencimiento() != null)
                 .max(Comparator.comparing(ITV::getFechaVencimiento));
         return ultimo.map(ITV::getFechaVencimiento).orElse(null);
+    }
+
+    public String obtenerNumeroPermisoPnc(String matricula) {
+        if (pncs == null || matricula == null) return null;
+        return pncs.stream()
+                .filter(p -> p.getVehiculo() != null && matricula.equals(p.getVehiculo().getMatricula()) && p.getFechaVencimiento() != null)
+                .max(Comparator.comparing(PNC::getFechaVencimiento))
+                .map(PNC::getNumeroPermiso)
+                .filter(n -> n != null && !n.isBlank())
+                .map(String::trim)
+                .orElse(null);
     }
 
     public LocalDate obtenerVencimientoPnc(String matricula) {
@@ -117,6 +130,7 @@ public class FiscalizacionFlotaBean implements Serializable {
         this.vehiculoSeleccionado = v;
         this.nuevaFechaItv = LocalDate.now().plusYears(1);
         this.nuevaFechaPnc = LocalDate.now().plusYears(1);
+        this.nuevoNumeroPermisoPnc = null;
     }
 
     public void registrarRenovacionItv() {
@@ -126,7 +140,7 @@ public class FiscalizacionFlotaBean implements Serializable {
         }
         try {
             ITV nuevo = new ITV(nuevaFechaItv, vehiculoSeleccionado);
-            itvEJB.crear(nuevo);
+            itvEJB.crear(SesionActual.token(), nuevo);
             cargarFlota();
             boolean reactivado = actualizarHabilitacionSiDocumentacionCompleta(vehiculoSeleccionado.getMatricula());
             mostrarMensaje(FacesMessage.SEVERITY_INFO, "ITV Registrada",
@@ -138,17 +152,20 @@ public class FiscalizacionFlotaBean implements Serializable {
     }
 
     public void registrarRenovacionPnc() {
-        if (vehiculoSeleccionado == null || nuevaFechaPnc == null) {
-            mostrarMensaje(FacesMessage.SEVERITY_WARN, "Validación", "Seleccione una fecha de vencimiento válida para el PNC.");
+        String permisoLimpio = nuevoNumeroPermisoPnc != null ? nuevoNumeroPermisoPnc.trim() : "";
+        if (vehiculoSeleccionado == null || nuevaFechaPnc == null || permisoLimpio.isBlank()) {
+            mostrarMensaje(FacesMessage.SEVERITY_WARN, "Validación",
+                    "Ingrese el Nro. de Permiso (PNC) y una fecha de vencimiento válida.");
             return;
         }
         try {
-            PNC nuevo = new PNC(nuevaFechaPnc, vehiculoSeleccionado);
-            pncEJB.crear(nuevo);
+            PNC nuevo = new PNC(nuevaFechaPnc, permisoLimpio, vehiculoSeleccionado);
+            pncEJB.crear(SesionActual.token(), nuevo);
+            this.nuevoNumeroPermisoPnc = null;
             cargarFlota();
             boolean reactivado = actualizarHabilitacionSiDocumentacionCompleta(vehiculoSeleccionado.getMatricula());
             mostrarMensaje(FacesMessage.SEVERITY_INFO, "PNC Registrado",
-                    "Se emitió nuevo Permiso Nacional de Circulación para la unidad " + vehiculoSeleccionado.getMatricula()
+                    "Se emitió el Permiso Nacional de Circulación " + permisoLimpio + " para la unidad " + vehiculoSeleccionado.getMatricula()
                             + (reactivado ? " y se reactivó su habilitación operativa." : "."));
         } catch (Exception e) {
             mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error al registrar PNC", e.getMessage());
@@ -160,7 +177,7 @@ public class FiscalizacionFlotaBean implements Serializable {
         try {
             boolean nuevoEstado = !v.isEstadoHabilitacion();
             v.setEstadoHabilitacion(nuevoEstado);
-            vehiculoEJB.modificar(v);
+            vehiculoEJB.modificar(SesionActual.token(), v);
             cargarFlota();
             mostrarMensaje(FacesMessage.SEVERITY_INFO, "Estado de Unidad Actualizado",
                     "La unidad " + v.getMatricula() + " quedó " + (nuevoEstado ? "HABILITADA" : "SUSPENDIDA") + ".");
@@ -175,10 +192,11 @@ public class FiscalizacionFlotaBean implements Serializable {
         LocalDate pnc = obtenerVencimientoPnc(matricula);
         LocalDate hoy = LocalDate.now();
         if (itv != null && !itv.isBefore(hoy) && pnc != null && !pnc.isBefore(hoy)) {
-            Vehiculo actual = vehiculoEJB.buscar(matricula);
+            String token = SesionActual.token();
+            Vehiculo actual = vehiculoEJB.buscar(token, matricula);
             if (actual != null && !actual.isEstadoHabilitacion()) {
                 actual.setEstadoHabilitacion(true);
-                vehiculoEJB.modificar(actual);
+                vehiculoEJB.modificar(token, actual);
                 this.vehiculoSeleccionado = actual;
                 cargarFlota();
                 return true;
@@ -245,5 +263,13 @@ public class FiscalizacionFlotaBean implements Serializable {
 
     public void setNuevaFechaPnc(LocalDate nuevaFechaPnc) {
         this.nuevaFechaPnc = nuevaFechaPnc;
+    }
+
+    public String getNuevoNumeroPermisoPnc() {
+        return nuevoNumeroPermisoPnc;
+    }
+
+    public void setNuevoNumeroPermisoPnc(String nuevoNumeroPermisoPnc) {
+        this.nuevoNumeroPermisoPnc = nuevoNumeroPermisoPnc;
     }
 }

@@ -60,7 +60,7 @@ public class Infraccion implements Serializable {
     @JoinColumn(name = "vehiculo_matricula", nullable = true)
     private Vehiculo vehiculo;
 
-    @OneToOne(mappedBy = "infraccion", cascade = CascadeType.ALL, optional = true, orphanRemoval = true)
+    @OneToOne(mappedBy = "infraccion", fetch = FetchType.LAZY, cascade = CascadeType.ALL, optional = true, orphanRemoval = true)
     private Descargo descargo;
 
     @OneToMany(mappedBy = "infraccion", cascade = CascadeType.PERSIST, fetch = FetchType.LAZY)

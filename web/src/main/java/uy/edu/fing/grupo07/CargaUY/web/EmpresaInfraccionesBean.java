@@ -114,14 +114,18 @@ public class EmpresaInfraccionesBean implements Serializable {
             return;
         }
         try {
+            boolean yaExistia = seleccionada.textoDescargo() != null && !seleccionada.textoDescargo().isBlank();
             seleccionada = infraccionesService.presentarDescargo(
                     SesionActual.token(),
                     seleccionada.idCaso(),
                     new DescargoRequestDTO(textoDescargo.trim())
             );
             cargarInfracciones();
-            mostrarMensaje(FacesMessage.SEVERITY_INFO, "Descargo Presentado",
-                    "Su descargo para el expediente #" + seleccionada.idCaso() + " fue registrado exitosamente.");
+            mostrarMensaje(FacesMessage.SEVERITY_INFO,
+                    yaExistia ? "Descargo Editado" : "Descargo Presentado",
+                    yaExistia
+                            ? "Su descargo para el expediente #" + seleccionada.idCaso() + " fue actualizado exitosamente."
+                            : "Su descargo para el expediente #" + seleccionada.idCaso() + " fue registrado exitosamente.");
         } catch (Exception e) {
             mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error al presentar descargo", e.getMessage());
             marcarValidacionFallida();
@@ -158,7 +162,7 @@ public class EmpresaInfraccionesBean implements Serializable {
         	int ciInspector = acceso.ci();
         	       	     	
         	// 1. Recuperar certificado válido desde PostgreSQL
-        	CertificadoDigital certificadoDB = certificadoEJB.buscarCertificadoActivoPorCi(ciInspector);
+        	CertificadoDigital certificadoDB = certificadoEJB.buscarCertificadoActivoPorCi(token, ciInspector);
 
         	if (certificadoDB == null) {
         	    mostrarMensaje(
@@ -188,6 +192,7 @@ public class EmpresaInfraccionesBean implements Serializable {
             String fechaString = this.seleccionada.fecha() != null ? this.seleccionada.fecha().format(formato) : "";
 
             byte[] pdfOriginal = actaEJB.emitirYFirmarActa(
+                    token,
                     this.seleccionada.idCaso(),
                     this.seleccionada.nombreEmpresa(),
                     this.seleccionada.matricula(),
@@ -202,13 +207,14 @@ public class EmpresaInfraccionesBean implements Serializable {
             }
             
 
-            CredencialesFirma credenciales = actaEJB.abrirCredenciales(archivoCertificado, passwordCertificado);
+            CredencialesFirma credenciales = actaEJB.abrirCredenciales(token, archivoCertificado, passwordCertificado);
             if (credenciales == null) {
                 mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error de Firma", "No se pudo abrir el certificado con la clave provista.");
                 return null;
             }
 
             byte[] pdfFirmado = actaEJB.firmarPdf(
+                    token,
                     pdfOriginal,
                     credenciales.getClavePrivada(),
                     credenciales.getCertificado()

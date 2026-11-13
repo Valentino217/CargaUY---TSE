@@ -88,6 +88,12 @@ public class VehiculoBean implements Serializable {
     private Vehiculo vehiculo;
     private boolean editando;
     private int empresaId;
+    private String numeroPermisoPnc;
+    private LocalDate fechaVencimientoPnc;
+    private LocalDate fechaVencimientoItv;
+    private String origNumeroPermisoPnc;
+    private LocalDate origFechaVencimientoPnc;
+    private LocalDate origFechaVencimientoItv;
 
     @PostConstruct
     public void init() {
@@ -106,8 +112,8 @@ public class VehiculoBean implements Serializable {
         String token = SesionActual.token();
         try {
             vehiculos = vehiculoEJB.listarParaActor(token);
-            itvs = itvEJB != null ? itvEJB.listarITVs() : new ArrayList<>();
-            pncs = pncEJB != null ? pncEJB.listarPNCs() : new ArrayList<>();
+            itvs = itvEJB != null ? itvEJB.listarITVs(token) : new ArrayList<>();
+            pncs = pncEJB != null ? pncEJB.listarPNCs(token) : new ArrayList<>();
         } catch (Exception e) {
             vehiculos = new ArrayList<>();
             itvs = new ArrayList<>();
@@ -120,6 +126,12 @@ public class VehiculoBean implements Serializable {
         vehiculo = new Vehiculo();
         vehiculo.setEstadoHabilitacion(false);
         editando = false;
+        numeroPermisoPnc = null;
+        fechaVencimientoPnc = null;
+        fechaVencimientoItv = null;
+        origNumeroPermisoPnc = null;
+        origFechaVencimientoPnc = null;
+        origFechaVencimientoItv = null;
 
         if (empresas != null && !empresas.isEmpty()) {
             empresaId = empresas.get(0).getNroEmpresa();
@@ -209,8 +221,9 @@ public class VehiculoBean implements Serializable {
                 vehiculoEJB.modificar(SesionActual.token(), vehiculo);
                 mostrarMensaje(FacesMessage.SEVERITY_INFO, "Unidad Actualizada", "Los datos del vehículo " + vehiculo.getMatricula() + " fueron modificados.");
             } else {
+                vehiculo.setEstadoHabilitacion(false);
                 vehiculoEJB.crear(SesionActual.token(), vehiculo);
-                mostrarMensaje(FacesMessage.SEVERITY_INFO, "Unidad Registrada", "El vehículo " + vehiculo.getMatricula() + " fue dado de alta correctamente.");
+                mostrarMensaje(FacesMessage.SEVERITY_INFO, "Unidad Registrada", "El vehículo " + vehiculo.getMatricula() + " fue dado de alta sin permisos (pendiente de habilitación por la autoridad).");
             }
 
             cargarFlota();
@@ -249,25 +262,37 @@ public class VehiculoBean implements Serializable {
     }
 
     public LocalDate obtenerVencimientoPnc(String matricula) {
+        PNC ultimo = obtenerUltimoPnc(matricula);
+        return ultimo != null ? ultimo.getFechaVencimiento() : null;
+    }
+
+    public String obtenerNumeroPermisoPnc(String matricula) {
+        PNC ultimo = obtenerUltimoPnc(matricula);
+        return ultimo != null ? trimOrNull(ultimo.getNumeroPermiso()) : null;
+    }
+
+    private PNC obtenerUltimoPnc(String matricula) {
         if (matricula == null) return null;
         if (vehiculos != null) {
             for (Vehiculo v : vehiculos) {
                 if (v != null && matricula.equalsIgnoreCase(v.getMatricula()) && v.getPncs() != null && !v.getPncs().isEmpty()) {
-                    LocalDate max = v.getPncs().stream()
+                    PNC ultimo = v.getPncs().stream()
                             .filter(p -> p != null && p.getFechaVencimiento() != null)
-                            .map(PNC::getFechaVencimiento)
-                            .max(Comparator.naturalOrder())
+                            .max(Comparator.comparing(PNC::getFechaVencimiento))
                             .orElse(null);
-                    if (max != null) return max;
+                    if (ultimo != null) return ultimo;
                 }
             }
         }
         if (pncs == null) return null;
         return pncs.stream()
                 .filter(p -> p.getVehiculo() != null && matricula.equalsIgnoreCase(p.getVehiculo().getMatricula()) && p.getFechaVencimiento() != null)
-                .map(PNC::getFechaVencimiento)
-                .max(Comparator.naturalOrder())
+                .max(Comparator.comparing(PNC::getFechaVencimiento))
                 .orElse(null);
+    }
+
+    private static String trimOrNull(String val) {
+        return (val != null && !val.isBlank()) ? val.trim() : null;
     }
 
     public String obtenerEstadoVigencia(LocalDate fechaVenc) {
@@ -317,7 +342,7 @@ public class VehiculoBean implements Serializable {
     public boolean estaApto(Vehiculo v) {
         if (v == null || v.getMatricula() == null) return false;
         try {
-            return vehiculoEJB.estaAptoParaOperar(v.getMatricula());
+            return vehiculoEJB.estaAptoParaOperar(SesionActual.token(), v.getMatricula());
         } catch (Exception e) {
             return false;
         }
@@ -326,7 +351,7 @@ public class VehiculoBean implements Serializable {
     public boolean tieneGuiaEnCurso(Vehiculo v) {
         if (v == null || v.getMatricula() == null) return false;
         try {
-            return vehiculoEJB.tieneGuiaEnCurso(v.getMatricula());
+            return vehiculoEJB.tieneGuiaEnCurso(SesionActual.token(), v.getMatricula());
         } catch (Exception e) {
             return false;
         }
@@ -355,6 +380,13 @@ public class VehiculoBean implements Serializable {
         if (v.getEmpresa() != null) {
             this.empresaId = v.getEmpresa().getNroEmpresa();
         }
+        this.fechaVencimientoItv = obtenerVencimientoItv(v.getMatricula());
+        this.origFechaVencimientoItv = this.fechaVencimientoItv;
+        PNC ultimoPnc = obtenerUltimoPnc(v.getMatricula());
+        this.fechaVencimientoPnc = ultimoPnc != null ? ultimoPnc.getFechaVencimiento() : null;
+        this.numeroPermisoPnc = ultimoPnc != null ? ultimoPnc.getNumeroPermiso() : null;
+        this.origFechaVencimientoPnc = this.fechaVencimientoPnc;
+        this.origNumeroPermisoPnc = this.numeroPermisoPnc;
     }
 
     public void eliminar(Vehiculo v) {
@@ -431,5 +463,29 @@ public class VehiculoBean implements Serializable {
 
     public boolean isEditando() {
         return editando;
+    }
+
+    public String getNumeroPermisoPnc() {
+        return numeroPermisoPnc;
+    }
+
+    public void setNumeroPermisoPnc(String numeroPermisoPnc) {
+        this.numeroPermisoPnc = numeroPermisoPnc;
+    }
+
+    public LocalDate getFechaVencimientoPnc() {
+        return fechaVencimientoPnc;
+    }
+
+    public void setFechaVencimientoPnc(LocalDate fechaVencimientoPnc) {
+        this.fechaVencimientoPnc = fechaVencimientoPnc;
+    }
+
+    public LocalDate getFechaVencimientoItv() {
+        return fechaVencimientoItv;
+    }
+
+    public void setFechaVencimientoItv(LocalDate fechaVencimientoItv) {
+        this.fechaVencimientoItv = fechaVencimientoItv;
     }
 }

@@ -170,7 +170,11 @@
                         <p:selectOneMenu id="tipoUsr" label="Rol Base" value="#{adminUsuariosBean.tipoForm}" disabled="#{adminUsuariosBean.modoEdicion}">
                             <f:selectItem itemLabel="ADMINISTRADOR" itemValue="ADMINISTRADOR" />
                             <f:selectItem itemLabel="AUTORIDAD" itemValue="AUTORIDAD" />
-                        <p:ajax update="cargoGrupo" />
+                            <f:selectItem itemLabel="FUNCIONARIO" itemValue="FUNCIONARIO" />
+                            <f:selectItem itemLabel="CIUDADANO (Empresa)" itemValue="CIUDADANO" />
+                            <f:selectItem itemLabel="CIUDADANO COMÚN" itemValue="CIUDADANO_COMUN" />
+                            <f:selectItem itemLabel="CHOFER" itemValue="CHOFER" />
+                            <p:ajax update="cargoGrupo nroFuncGrupo deptoGrupo" />
                         </p:selectOneMenu>
                     </div>
                     <div class="cuy-field">
@@ -189,7 +193,9 @@
                         <p:outputLabel for="fnacUsr" value="Fecha de Nacimiento *" />
                         <p:datePicker id="fnacUsr" label="Fecha de Nacimiento" value="#{adminUsuariosBean.fechaNacForm}" pattern="yyyy-MM-dd" showIcon="true" required="true" panelStyleClass="cuy-calendar" monthNavigator="true" yearNavigator="select" showButtonBar="true" showOtherMonths="true" yearRange="1900:2026" showLongMonthNames="true" />
                     </div>
-                    <h:panelGroup id="cargoGrupo" layout="block" styleClass="cuy-field"><h:panelGroup rendered="#{adminUsuariosBean.tipoForm eq 'AUTORIDAD'}"><p:outputLabel for="cargoUsr" value="Cargo" /><p:inputText id="cargoUsr" label="Cargo" value="#{adminUsuariosBean.cargoForm}" placeholder="Ej. Director Nacional de Transporte" /></h:panelGroup></h:panelGroup>
+                    <h:panelGroup id="cargoGrupo" layout="block" styleClass="cuy-field"><h:panelGroup rendered="#{adminUsuariosBean.tipoForm eq 'AUTORIDAD'}"><p:outputLabel for="cargoUsr" value="Cargo" /><p:inputText id="cargoUsr" label="Cargo" value="#{adminUsuariosBean.cargoForm}" required="true" placeholder="Ej. Director Nacional de Transporte" /></h:panelGroup></h:panelGroup>
+                    <h:panelGroup id="nroFuncGrupo" layout="block" styleClass="cuy-field"><h:panelGroup rendered="#{adminUsuariosBean.tipoForm eq 'FUNCIONARIO'}"><p:outputLabel for="nroFuncUsr" value="Nro. Funcionario *" /><p:inputNumber id="nroFuncUsr" label="Nro. Funcionario" value="#{adminUsuariosBean.nroFuncionarioForm}" decimalPlaces="0" thousandSeparator="" minValue="1" required="true" /></h:panelGroup></h:panelGroup>
+                    <h:panelGroup id="deptoGrupo" layout="block" styleClass="cuy-field"><h:panelGroup rendered="#{adminUsuariosBean.tipoForm eq 'FUNCIONARIO'}"><p:outputLabel for="deptoUsr" value="Departamento / Área *" /><p:inputText id="deptoUsr" label="Departamento / Área" value="#{adminUsuariosBean.departamentoForm}" required="true" placeholder="Ej. Fiscalización Nacional" /></h:panelGroup></h:panelGroup>
                 </div>
                 <div style="display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.25rem;">
                     <p:commandButton value="Cancelar" type="button" onclick="PF('dlgUsuarioWidget').hide()" styleClass="ui-button-outlined ui-button-secondary" style="width: auto;" />

@@ -10,17 +10,25 @@ import uy.edu.fing.grupo07.CargaUY.domain.entity.GuiaDeViaje;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.PesadaBalanza;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.Vehiculo;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado;
+import uy.edu.fing.grupo07.CargaUY.dto.ModoNodoPeriferico;
+import uy.edu.fing.grupo07.CargaUY.dto.NodoPerifericoConfig;
 import uy.edu.fing.grupo07.CargaUY.dto.PesadaBalanzaDTO;
+import uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario;
 import uy.edu.fing.grupo07.CargaUY.exception.BusinessException;
 import uy.edu.fing.grupo07.CargaUY.integration.BalanzaClient;
 import uy.edu.fing.grupo07.CargaUY.jms.FiscalizacionProducerLocal;
+import uy.edu.fing.grupo07.CargaUY.security.ControlAcceso;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -41,6 +49,87 @@ public class GestionBalanzaServiceImpl implements GestionBalanzaServiceLocal {
     @EJB
     private FiscalizacionProducerLocal fiscalizacionProducer;
 
+    @EJB
+    private GestionNodosPerifericosServiceLocal nodosPerifericosService;
+
+    @EJB
+    private ControlAcceso control;
+
+    private void verificarControl() {
+        if (control == null) {
+            throw new IllegalStateException("ControlAcceso no disponible");
+        }
+    }
+
+    private void validarAccesoGuiaLectura(String token, Long guiaId) {
+        verificarControl();
+        if (guiaId != null && em != null) {
+            GuiaDeViaje guia = em.find(GuiaDeViaje.class, guiaId);
+            if (guia != null && guia.getEmpresa() != null) {
+                control.empresa(token, guia.getEmpresa().getNroEmpresa(), false);
+                return;
+            }
+        }
+        control.exigir(token, TipoUsuario.ADMINISTRADOR, TipoUsuario.FUNCIONARIO, TipoUsuario.AUTORIDAD);
+    }
+
+    @Override
+    public PesadaBalanzaDTO registrarPesada(String token, PesadaBalanzaDTO dto) {
+        verificarControl();
+        control.exigir(token, TipoUsuario.ADMINISTRADOR, TipoUsuario.FUNCIONARIO);
+        return registrarPesada(dto);
+    }
+
+    @Override
+    public PesadaBalanzaDTO registrarPesadaDesdeMock(String token) {
+        verificarControl();
+        control.exigir(token, TipoUsuario.ADMINISTRADOR, TipoUsuario.FUNCIONARIO);
+        return registrarPesadaDesdeMock();
+    }
+
+    @Override
+    public PesadaBalanzaDTO registrarPesadaDesdeMock(String token, Long guiaIdFallback) {
+        verificarControl();
+        control.exigir(token, TipoUsuario.ADMINISTRADOR, TipoUsuario.FUNCIONARIO);
+        return registrarPesadaDesdeMock(guiaIdFallback);
+    }
+
+    @Override
+    public List<PesadaBalanzaDTO> sincronizarPesadasDeGuia(String token, Long guiaId, String correlacion) {
+        validarAccesoGuiaLectura(token, guiaId);
+        return sincronizarPesadasDeGuia(guiaId, correlacion);
+    }
+
+    @Override
+    public PesadaBalanzaDTO registrarPesadaViaPeriferico(
+            String token,
+            PesadaBalanzaDTO dto,
+            String peaje,
+            String correlacion
+    ) {
+        verificarControl();
+        control.exigir(token, TipoUsuario.ADMINISTRADOR, TipoUsuario.FUNCIONARIO);
+        return registrarPesadaViaPeriferico(dto, peaje, correlacion);
+    }
+
+    @Override
+    public List<PesadaBalanzaDTO> listarPesadasPorGuia(String token, Long guiaId) {
+        validarAccesoGuiaLectura(token, guiaId);
+        return listarPesadasPorGuia(guiaId);
+    }
+
+    @Override
+    public PesadaBalanzaDTO registrarLecturaExternaEnNodo(
+            String token,
+            String codigoNodo,
+            String matricula,
+            int pesoKg
+    ) {
+        verificarControl();
+        control.admin(token);
+        return registrarLecturaExternaEnNodo(codigoNodo, matricula, pesoKg);
+    }
+
     public GestionBalanzaServiceImpl() {
     }
 
@@ -57,6 +146,22 @@ public class GestionBalanzaServiceImpl implements GestionBalanzaServiceLocal {
         this.em = em;
         this.balanzaClient = balanzaClient;
         this.fiscalizacionProducer = fiscalizacionProducer;
+    }
+
+    public GestionBalanzaServiceImpl(
+            EntityManager em,
+            BalanzaClient balanzaClient,
+            FiscalizacionProducerLocal fiscalizacionProducer,
+            GestionNodosPerifericosServiceLocal nodosPerifericosService
+    ) {
+        this.em = em;
+        this.balanzaClient = balanzaClient;
+        this.fiscalizacionProducer = fiscalizacionProducer;
+        this.nodosPerifericosService = nodosPerifericosService;
+    }
+
+    void setNodosPerifericosService(GestionNodosPerifericosServiceLocal nodosPerifericosService) {
+        this.nodosPerifericosService = nodosPerifericosService;
     }
 
     @Override
@@ -227,7 +332,7 @@ public class GestionBalanzaServiceImpl implements GestionBalanzaServiceLocal {
 
     @Override
     public PesadaBalanzaDTO registrarPesadaDesdeMock() {
-        return registrarPesadaDesdeMock(null);
+        return registrarPesadaDesdeMock((Long) null);
     }
 
     @Override
@@ -280,9 +385,28 @@ public class GestionBalanzaServiceImpl implements GestionBalanzaServiceLocal {
         LocalDate fechaHasta = fechaDesde.isAfter(hoy) ? fechaDesde : hoy;
         Integer nroEmpresa = guia.getEmpresa() != null ? guia.getEmpresa().getNroEmpresa() : null;
 
-        List<PesadaBalanzaDTO> remotas = balanzaClient.consultarPesadasVehiculo(
-                matricula, fechaDesde, fechaHasta, nroEmpresa, correlacion
-        );
+        List<PesadaBalanzaDTO> remotas;
+        if (nodosPerifericosService != null) {
+            List<NodoPerifericoConfig> activas = nodosPerifericosService.listarBalanzasHabilitadas();
+            if (activas.isEmpty()) {
+                throw new BusinessException("Todas las balanzas periféricas están apagadas por el administrador.");
+            }
+            Set<String> endpoints = new LinkedHashSet<>();
+            for (NodoPerifericoConfig cfg : activas) {
+                endpoints.add(GestionNodosPerifericosServiceImpl.normalizarBalanzaUrl(cfg.endpointUrl()));
+            }
+            remotas = new ArrayList<>();
+            for (String ep : endpoints) {
+                remotas.addAll(balanzaClient.consultarPesadasVehiculoEnEndpoint(
+                        ep, matricula, fechaDesde, fechaHasta, nroEmpresa, correlacion
+                ));
+            }
+        } else {
+            remotas = balanzaClient.consultarPesadasVehiculo(
+                    matricula, fechaDesde, fechaHasta, nroEmpresa, correlacion
+            );
+        }
+
         List<PesadaBalanzaDTO> importadas = persistirPesadasRemotasIdempotentes(em, guia, remotas, hoy);
 
         if (!importadas.isEmpty() && fiscalizacionProducer != null && guia.getId() != null) {
@@ -292,6 +416,282 @@ public class GestionBalanzaServiceImpl implements GestionBalanzaServiceLocal {
         LOGGER.log(Level.INFO, "Sincronización de balanza para guía #{0}: {1} remotas consultadas, {2} nuevas importadas.",
                 new Object[]{guiaId, remotas != null ? remotas.size() : 0, importadas.size()});
         return importadas;
+    }
+
+    @Override
+    public int sondearBalanzasPeriodico() {
+        if (balanzaClient == null || em == null || nodosPerifericosService == null) {
+            return 0;
+        }
+        List<NodoPerifericoConfig> balanzasHabilitadas = nodosPerifericosService.listarBalanzasHabilitadas();
+        if (balanzasHabilitadas.isEmpty()) {
+            return 0;
+        }
+
+        Set<String> endpointsActivos = new LinkedHashSet<>();
+        for (NodoPerifericoConfig cfg : balanzasHabilitadas) {
+            endpointsActivos.add(GestionNodosPerifericosServiceImpl.normalizarBalanzaUrl(cfg.endpointUrl()));
+        }
+
+        LocalDate hoy = LocalDate.now();
+        String corr = UUID.randomUUID().toString();
+
+        // 1. Inicializar watermark de pesadas previas por endpoint para evitar falsos positivos en lecturas semilla
+        for (String endpoint : endpointsActivos) {
+            if (!nodosPerifericosService.isWatermarkInicializado(endpoint)) {
+                try {
+                    List<PesadaBalanzaDTO> existentesHoy = balanzaClient.consultarPesadasPorFechaEnEndpoint(endpoint, hoy, corr);
+                    int maxId = existentesHoy.stream()
+                            .mapToInt(PesadaBalanzaDTO::idPesada)
+                            .max()
+                            .orElse(0);
+                    nodosPerifericosService.inicializarWatermark(endpoint, maxId);
+                } catch (Exception e) {
+                    LOGGER.log(Level.FINE, "No se pudo inicializar watermark de balanza en {0}: {1}",
+                            new Object[]{endpoint, e.getMessage()});
+                }
+            }
+        }
+
+        // 2. Obtener guías EN_CURSO
+        List<GuiaDeViaje> guiasEnCurso = buscarGuiasEnCurso();
+        Set<String> matriculasEnCursoNorm = new HashSet<>();
+        for (GuiaDeViaje g : guiasEnCurso) {
+            if (g.getVehiculo() != null && g.getVehiculo().getMatricula() != null) {
+                matriculasEnCursoNorm.add(normalizarMatriculaClave(g.getVehiculo().getMatricula()));
+            }
+        }
+
+        // 3. Registrar paso automático de guías EN_CURSO en las balanzas habilitadas
+        for (GuiaDeViaje guia : guiasEnCurso) {
+            if (guia.getId() == null || guia.getVehiculo() == null || guia.getVehiculo().getMatricula() == null) {
+                continue;
+            }
+            String matricula = guia.getVehiculo().getMatricula().trim();
+            Integer nroEmpresa = guia.getEmpresa() != null ? guia.getEmpresa().getNroEmpresa() : null;
+
+            for (NodoPerifericoConfig balanza : balanzasHabilitadas) {
+                ModoNodoPeriferico modo = balanza.modoOperacion() != null
+                        ? balanza.modoOperacion()
+                        : ModoNodoPeriferico.CALIBRADA;
+                if (nodosPerifericosService.yaEmitioAutoPesada(guia.getId(), balanza.codigo(), modo)) {
+                    continue;
+                }
+                int peso = calcularPesoAutomaticoParaBalanza(guia, modo);
+                String endpointNorm = GestionNodosPerifericosServiceImpl.normalizarBalanzaUrl(balanza.endpointUrl());
+                try {
+                    PesadaBalanzaDTO reqDto = new PesadaBalanzaDTO(
+                            null, hoy, LocalTime.now().withNano(0), peso, matricula, guia.getId()
+                    );
+                    PesadaBalanzaDTO creada = balanzaClient.registrarPesadaEnPerifericoEnEndpoint(
+                            endpointNorm, reqDto, nroEmpresa, balanza.estacionPeaje(), corr
+                    );
+                    nodosPerifericosService.marcarAutoPesadaEmitida(guia.getId(), balanza.codigo(), modo);
+                    if (creada != null && creada.idPesada() > 0) {
+                        nodosPerifericosService.actualizarWatermarkIdPesada(endpointNorm, creada.idPesada());
+                    }
+                    LOGGER.log(Level.INFO,
+                            "Paso automático por balanza {0} ({1}): Guía #{2}, Vehículo {3}, Peso {4} kg.",
+                            new Object[]{balanza.codigo(), modo, guia.getId(), matricula, peso});
+                } catch (Exception e) {
+                    LOGGER.log(Level.FINE, "No se pudo emitir paso automático de guía #{0} en balanza {1}: {2}",
+                            new Object[]{guia.getId(), balanza.codigo(), e.getMessage()});
+                }
+            }
+        }
+
+        // 4. Sincronización periódica (pull) para cada guía EN_CURSO
+        int totalImportadas = 0;
+        for (GuiaDeViaje guia : guiasEnCurso) {
+            if (guia.getId() == null || guia.getVehiculo() == null || guia.getVehiculo().getMatricula() == null) {
+                continue;
+            }
+            String matricula = guia.getVehiculo().getMatricula().trim();
+            LocalDate fechaDesde = guia.getFecha() != null ? guia.getFecha() : hoy;
+            LocalDate fechaHasta = fechaDesde.isAfter(hoy) ? fechaDesde : hoy;
+            Integer nroEmpresa = guia.getEmpresa() != null ? guia.getEmpresa().getNroEmpresa() : null;
+
+            List<PesadaBalanzaDTO> remotas = new ArrayList<>();
+            for (String endpoint : endpointsActivos) {
+                try {
+                    List<PesadaBalanzaDTO> encontradas = balanzaClient.consultarPesadasVehiculoEnEndpoint(
+                            endpoint, matricula, fechaDesde, fechaHasta, nroEmpresa, corr
+                    );
+                    if (encontradas != null) {
+                        remotas.addAll(encontradas);
+                        for (PesadaBalanzaDTO rem : encontradas) {
+                            if (rem != null && rem.idPesada() > 0) {
+                                nodosPerifericosService.actualizarWatermarkIdPesada(endpoint, rem.idPesada());
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    LOGGER.log(Level.FINE, "Error consultando balanza {0} para guía #{1}: {2}",
+                            new Object[]{endpoint, guia.getId(), e.getMessage()});
+                }
+            }
+
+            List<PesadaBalanzaDTO> importadas = persistirPesadasRemotasIdempotentes(em, guia, remotas, hoy);
+            if (!importadas.isEmpty()) {
+                totalImportadas += importadas.size();
+                if (fiscalizacionProducer != null) {
+                    fiscalizacionProducer.solicitarEvaluacion(guia.getId());
+                }
+            }
+        }
+
+        // 5. Detectar lecturas nuevas registradas después del arranque para vehículos sin guía EN_CURSO (VIAJE_SIN_GUIA)
+        for (String endpoint : endpointsActivos) {
+            if (!nodosPerifericosService.isWatermarkInicializado(endpoint)) {
+                continue;
+            }
+            try {
+                int watermarkActual = nodosPerifericosService.getWatermarkIdPesada(endpoint);
+                List<PesadaBalanzaDTO> delDia = balanzaClient.consultarPesadasPorFechaEnEndpoint(endpoint, hoy, corr);
+                if (delDia == null || delDia.isEmpty()) {
+                    continue;
+                }
+                for (PesadaBalanzaDTO rem : delDia) {
+                    if (rem == null || rem.idPesada() <= watermarkActual || rem.pesoRegistrado() <= 0) {
+                        continue;
+                    }
+                    nodosPerifericosService.actualizarWatermarkIdPesada(endpoint, rem.idPesada());
+                    String matNorm = normalizarMatriculaClave(rem.matricula());
+                    if (matNorm.isEmpty() || matriculasEnCursoNorm.contains(matNorm)) {
+                        continue;
+                    }
+                    Vehiculo vehiculo = buscarVehiculoFlexible(rem.matricula());
+                    if (vehiculo == null) {
+                        continue;
+                    }
+                    LocalDate f = rem.fecha() != null ? rem.fecha() : hoy;
+                    LocalTime h = rem.hora() != null ? rem.hora().withNano(0) : LocalTime.now().withNano(0);
+                    PesadaBalanza sinGuia = new PesadaBalanza(f, h, rem.pesoRegistrado(), null, vehiculo);
+                    em.persist(sinGuia);
+                    em.flush();
+                    totalImportadas++;
+                    if (fiscalizacionProducer != null) {
+                        fiscalizacionProducer.solicitarEvaluacionSinGuia(
+                                vehiculo.getMatricula(),
+                                "Lectura periódica de balanza #" + rem.idPesada() + " (" + rem.pesoRegistrado()
+                                        + " kg el " + f + " " + h + ") sin guía EN_CURSO"
+                        );
+                    }
+                    LOGGER.log(Level.WARNING,
+                            "Sondeo periódico detectó pesada #{0} para vehículo {1} SIN guía EN_CURSO -> VIAJE_SIN_GUIA.",
+                            new Object[]{rem.idPesada(), vehiculo.getMatricula()});
+                }
+            } catch (Exception e) {
+                LOGGER.log(Level.FINE, "Error en detección periódica sin guía contra {0}: {1}",
+                        new Object[]{endpoint, e.getMessage()});
+            }
+        }
+
+        return totalImportadas;
+    }
+
+    @Override
+    public PesadaBalanzaDTO registrarLecturaExternaEnNodo(String codigoNodo, String matricula, int pesoKg) {
+        if (balanzaClient == null || nodosPerifericosService == null) {
+            throw new BusinessException("El subsistema de nodos de balanza no está disponible.");
+        }
+        if (matricula == null || matricula.isBlank()) {
+            throw new BusinessException("La matrícula del vehículo es obligatoria.");
+        }
+        if (pesoKg <= 0) {
+            throw new BusinessException("El peso debe ser mayor a 0 kg.");
+        }
+        Optional<NodoPerifericoConfig> optNodo = nodosPerifericosService.buscarPorCodigo(codigoNodo);
+        if (optNodo.isEmpty() || !optNodo.get().esBalanza()) {
+            throw new BusinessException("No existe la balanza periférica " + codigoNodo + ".");
+        }
+        NodoPerifericoConfig balanza = optNodo.get();
+        if (!balanza.habilitado()) {
+            throw new BusinessException("La balanza " + balanza.codigo() + " está apagada por el administrador.");
+        }
+
+        Vehiculo v = buscarVehiculoFlexible(matricula);
+        Integer nroEmpresa = (v != null && v.getEmpresa() != null) ? v.getEmpresa().getNroEmpresa() : null;
+        String matEfectiva = v != null ? v.getMatricula() : matricula.trim();
+        LocalDate hoy = LocalDate.now();
+        LocalTime ahora = LocalTime.now().withNano(0);
+        String endpointNorm = GestionNodosPerifericosServiceImpl.normalizarBalanzaUrl(balanza.endpointUrl());
+
+        // Asegurar baseline previo para no perder esta lectura si es el primer contacto con el endpoint
+        if (!nodosPerifericosService.isWatermarkInicializado(endpointNorm)) {
+            try {
+                List<PesadaBalanzaDTO> previas = balanzaClient.consultarPesadasPorFechaEnEndpoint(endpointNorm, hoy, UUID.randomUUID().toString());
+                int maxId = previas.stream().mapToInt(PesadaBalanzaDTO::idPesada).max().orElse(0);
+                nodosPerifericosService.inicializarWatermark(endpointNorm, maxId);
+            } catch (Exception ignored) {
+            }
+        }
+
+        PesadaBalanzaDTO dto = new PesadaBalanzaDTO(null, hoy, ahora, pesoKg, matEfectiva, null);
+        return balanzaClient.registrarPesadaEnPerifericoEnEndpoint(
+                endpointNorm, dto, nroEmpresa, balanza.estacionPeaje(), UUID.randomUUID().toString()
+        );
+    }
+
+    static int calcularPesoAutomaticoParaBalanza(GuiaDeViaje guia, ModoNodoPeriferico modo) {
+        Vehiculo v = guia.getVehiculo();
+        int tara = (v != null && v.getPeso() > 0) ? v.getPeso() : 8500;
+        int capacidad = (v != null && v.getCapacidadCarga() > 0) ? v.getCapacidadCarga() : 30000;
+        if (modo == ModoNodoPeriferico.SOBRECARGA) {
+            return tara + capacidad + 2500;
+        }
+        int cargaDeclarada = guia.getVolumenCarga() > 0
+                ? Math.round(guia.getVolumenCarga())
+                : Math.max(1000, (capacidad * 80) / 100);
+        int cargaSegura = Math.min(capacidad, Math.max(1000, cargaDeclarada));
+        return tara + cargaSegura;
+    }
+
+    private List<GuiaDeViaje> buscarGuiasEnCurso() {
+        TypedQuery<GuiaDeViaje> q = em.createQuery(
+                "SELECT g FROM GuiaDeViaje g LEFT JOIN FETCH g.vehiculo LEFT JOIN FETCH g.empresa WHERE g.estado = :enCurso ORDER BY g.id ASC",
+                GuiaDeViaje.class
+        );
+        if (q == null) {
+            return List.of();
+        }
+        q.setParameter("enCurso", TipoEstado.EN_CURSO);
+        List<GuiaDeViaje> res = q.getResultList();
+        return res != null ? res : List.of();
+    }
+
+    private Vehiculo buscarVehiculoFlexible(String matriculaRaw) {
+        if (matriculaRaw == null || matriculaRaw.isBlank()) {
+            return null;
+        }
+        Vehiculo v = buscarVehiculoPorMatricula(matriculaRaw);
+        if (v != null) {
+            return v;
+        }
+        String buscadaNorm = normalizarMatriculaClave(matriculaRaw);
+        if (buscadaNorm.isEmpty()) {
+            return null;
+        }
+        TypedQuery<Vehiculo> q = em.createQuery("SELECT v FROM Vehiculo v", Vehiculo.class);
+        if (q == null) {
+            return null;
+        }
+        List<Vehiculo> todos = q.getResultList();
+        if (todos != null) {
+            for (Vehiculo cand : todos) {
+                if (cand != null && normalizarMatriculaClave(cand.getMatricula()).equals(buscadaNorm)) {
+                    return cand;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static String normalizarMatriculaClave(String matricula) {
+        if (matricula == null) {
+            return "";
+        }
+        return matricula.replaceAll("[\\s-]+", "").toUpperCase(Locale.ROOT);
     }
 
     /**

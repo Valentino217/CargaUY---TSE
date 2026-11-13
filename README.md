@@ -9,14 +9,14 @@ Plataforma empresarial **Jakarta EE 10** (`ejb` + `web` + `ear`) desplegada sobr
 ## Inicio Rápido (Docker Compose)
 
 1. **Requisitos previos:** Docker Desktop en ejecución, puerto `5432` libre (detener PostgreSQL local si estuviera corriendo) y archivo privado `.local-p1/gub-real.env` con las credenciales OIDC de Usuario gub.uy (`GUB_CLIENT_SECRET`, etc.).
-2. **Levantar la plataforma:**
+2. **Levantar la plataforma (construye WildFly, inicia bases/mocks y ejecuta el seed inicial idempotente automáticamente):**
    ```bash
    docker compose up -d --build
    ```
    *(Para usar Keycloak como simulador local de gub.uy en lugar del proveedor testing real, agregar `--profile mock-gub`.)*
-3. **Cargar datos iniciales de prueba (idempotente y multiplataforma):**
+3. **Re-ejecutar el seed o resetear datos:**
    ```bash
-   docker compose --profile seed run --rm seed
+   docker compose run --rm seed
    ```
    *(Para vaciar PostgreSQL + MongoDB y recargar los datos limpios desde cero: `docker compose --profile reset run --rm reset`.)*
 4. **Acceso Web:** [`http://localhost:8080/CargaUY-web/`](http://localhost:8080/CargaUY-web/)
@@ -38,6 +38,8 @@ Plataforma empresarial **Jakarta EE 10** (`ejb` + `web` + `ear`) desplegada sobr
 
 Variables clave en `.env` / `docker-compose.yml`:
 - `P1_ENTORNO_LOCAL=true` y `P1_BOOTSTRAP=true`: habilitan el usuario administrador inicial (`BOOTSTRAP_ADMIN_UID`) y endpoints de prueba/dev para el componente móvil (`/api/auth/dev-chofer`). En producción deben deshabilitarse.
+- `LDAP_ROOT_PASSWORD`: contraseña de administración (`cn=manager`) compartida entre OpenLDAP y WildFly para sincronizar altas/bajas de funcionarios; obligatoria en tiempo de ejecución (sin clave por defecto en Java).
+- `FAAS_TRACKING_URL` y `FAAS_SHARED_SECRET`: endpoint HTTPS y secreto compartido (`X-FaaS-Secret`) para invocación y callback del FaaS serverless de desvío.
 - `GUB_PROVEEDOR=iduruguay`: configura OIDC contra `auth-testing.iduruguay.gub.uy` (sobreescribible por perfil local).
 
 ---

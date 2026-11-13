@@ -43,8 +43,8 @@ mvn -B package -DskipTests
 ## 3. Despliegue con Docker Compose
 
 ### 3.1 Configuración previa de secretos locales
-El archivo `docker-compose.yml` referencia:
-1. `.env` *(no versionado en Git; copiar desde `.env.example`)*: variables de entorno local y URLs de nodos externos (`BALANZA_ENDPOINT`, `TRACKING_ENDPOINT`, timeouts, claves locales).
+El archivo `docker-compose.yml` referencia (como opcionales con `required: false`):
+1. `.env` *(no versionado en Git; copiar desde `.env.example`)*: variables de entorno local, credenciales LDAP (`LDAP_ROOT_PASSWORD`, `LDAP_APP_PASSWORD`), FaaS (`FAAS_TRACKING_URL`, `FAAS_SHARED_SECRET`) y URLs de nodos externos (`BALANZA_ENDPOINT`, `TRACKING_ENDPOINT`, timeouts, claves locales).
    ```bash
    cp .env.example .env
    ```
@@ -63,11 +63,6 @@ docker compose up -d --build --remove-orphans
 Para incluir el contenedor local de **Keycloak** (simulador OIDC en `http://localhost:8083`):
 ```bash
 docker compose --profile mock-gub up -d --build
-```
-
-Para usar el **compose completo con mocks locales de balanza y tracking** (`mock-balanza` en `:8082` y `mock-tracking` en `:8085`):
-```bash
-docker compose -f docker-compose.p1.yml up -d --build
 ```
 
 ### 3.3 Verificar estado y logs
@@ -89,9 +84,9 @@ docker cp ear/target/CargaUY.ear cargauy-p1-wildfly-1:/opt/jboss/wildfly/standal
 
 Una vez que WildFly creó el esquema en PostgreSQL:
 
-- **Cargar seed inicial** (rubros, tipos de carga, usuarios LDAP/ciudadanos, empresas, vehículos, guías y casos de fiscalización):
+- **Ejecutar nuevamente el seed inicial** (se ejecuta automáticamente al hacer `docker compose up -d --build`, y es idempotente):
   ```bash
-  docker compose --profile seed run --rm seed
+  docker compose run --rm seed
   ```
 - **Resetear y recargar datos limpios** (vacía PostgreSQL y MongoDB y vuelve a cargar el seed, sin reiniciar Docker):
   ```bash

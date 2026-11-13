@@ -46,7 +46,7 @@ public class ITVBean implements Serializable {
     private void cargarItvsAutorizadas() {
         Set<String> mats = vehiculos == null ? Set.of()
                 : vehiculos.stream().map(Vehiculo::getMatricula).filter(Objects::nonNull).collect(Collectors.toSet());
-        itvs = itvEJB.listarITVs().stream()
+        itvs = itvEJB.listarITVs(SesionActual.token()).stream()
                 .filter(i -> i.getVehiculo() != null && mats.contains(i.getVehiculo().getMatricula()))
                 .toList();
     }
@@ -78,10 +78,10 @@ public class ITVBean implements Serializable {
             itv.setVehiculo(vehiculoSeleccionado);
 
             if (editando) {
-                itvEJB.modificar(itv);
+                itvEJB.modificar(SesionActual.token(), itv);
                 mostrarMensaje(FacesMessage.SEVERITY_INFO, "Éxito", "ITV modificada correctamente");
             } else {
-                itvEJB.crear(itv);
+                itvEJB.crear(SesionActual.token(), itv);
                 mostrarMensaje(FacesMessage.SEVERITY_INFO, "Éxito", "ITV registrada correctamente");
             }
 
@@ -114,7 +114,7 @@ public class ITVBean implements Serializable {
                     || vehiculos.stream().noneMatch(v -> Objects.equals(v.getMatricula(), itvEliminar.getVehiculo().getMatricula()))) {
                 throw new SecurityException("No tiene permisos para eliminar la ITV seleccionada.");
             }
-            itvEJB.eliminar(itvEliminar);
+            itvEJB.eliminar(SesionActual.token(), itvEliminar);
             cargarItvsAutorizadas();
 
             mostrarMensaje(

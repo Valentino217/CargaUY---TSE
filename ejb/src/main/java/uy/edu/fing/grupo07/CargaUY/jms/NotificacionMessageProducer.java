@@ -42,16 +42,21 @@ public class NotificacionMessageProducer implements NotificacionProducerLocal {
         }
 
         try {
+            String correlacion = uy.edu.fing.grupo07.CargaUY.integration.TraceContext.normalizarCorrelacion(null);
+            String traceparent = uy.edu.fing.grupo07.CargaUY.integration.TraceContext.siguienteTraceparentHijo(null, correlacion);
             TextMessage message = jmsContext.createTextMessage(String.valueOf(idCaso));
             message.setIntProperty("idCaso", idCaso);
+            message.setJMSCorrelationID(correlacion);
+            message.setStringProperty(uy.edu.fing.grupo07.CargaUY.integration.TraceContext.JMS_PROP_CORRELACION, correlacion);
+            message.setStringProperty(uy.edu.fing.grupo07.CargaUY.integration.TraceContext.JMS_PROP_TRACEPARENT, traceparent);
 
             JMSProducer producer = jmsContext.createProducer();
             producer.send(notificacionQueue, message);
 
             LOGGER.log(
                     Level.INFO,
-                    "Notificación automática encolada en NotificacionQueue para el caso #{0}.",
-                    idCaso
+                    "Notificación automática encolada en NotificacionQueue para el caso #{0} [correlacion={1}, traceparent={2}].",
+                    new Object[]{idCaso, correlacion, traceparent}
             );
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Fallo técnico al encolar notificación en NotificacionQueue para el caso #" + idCaso, e);

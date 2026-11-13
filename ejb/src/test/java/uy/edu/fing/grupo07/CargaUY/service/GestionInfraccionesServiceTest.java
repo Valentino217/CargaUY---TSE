@@ -1,6 +1,7 @@
 package uy.edu.fing.grupo07.CargaUY.service;
 
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import jakarta.persistence.TypedQuery;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -198,6 +199,12 @@ class GestionInfraccionesServiceTest {
 
         assertEquals("Texto ampliado y corregido", dto.textoDescargo());
         assertEquals("Texto ampliado y corregido", descargoPrevio.getDescargo());
+        assertEquals("EDITAR_DESCARGO", dto.auditoria().accion());
+
+        // Si el texto no cambió, no genera una entrada duplicada en la auditoría
+        InfraccionDTO sinCambios = service.presentarDescargo(1, new DescargoRequestDTO("Texto ampliado y corregido"));
+        assertEquals("Texto ampliado y corregido", sinCambios.textoDescargo());
+        verify(em, org.mockito.Mockito.times(1)).persist(any(RegistroAuditoria.class));
     }
 
     @Test
@@ -347,6 +354,7 @@ class GestionInfraccionesServiceTest {
 
         // Ciudadano de otra empresa no puede presentar descargo sobre empresa #50
         infraccionPrueba.setEstado(EstadoInfraccion.NOTIFICADA);
+        when(em.find(Infraccion.class, 1)).thenReturn(infraccionPrueba);
         when(controlMock.empresa("tok-otra-empresa", 50, true))
                 .thenThrow(new uy.edu.fing.grupo07.CargaUY.security.ErrorAcceso(403, "No pertenece a la empresa"));
 

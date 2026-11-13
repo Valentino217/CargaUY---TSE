@@ -5,21 +5,27 @@
                 xmlns:p="http://primefaces.org/ui"
                 template="/WEB-INF/templates/template.xhtml">
 
-    <ui:define name="title">Nodos</ui:define>
+    <ui:define name="title">Nodos Periféricos</ui:define>
 
     <ui:define name="content">
-        <div class="cuy-page-header">
+        <div class="cuy-page-header" style="align-items: center;">
             <div>
                 <h1 class="cuy-page-title">
-                    Monitoreo de Nodos y Servicios
+                    Nodos Periféricos
                 </h1>
             </div>
-            <div>
-                <h:form id="sondarNodosForm" style="margin: 0;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <h:form id="sondarNodosForm" style="margin: 0; display: flex; align-items: center; gap: 0.6rem;">
                     <p:remoteCommand name="sondearNodosAuto"
                                      autoRun="true"
                                      actionListener="#{adminNodosBean.sondearNodosInicial}"
                                      update=":nodosForm" />
+                    <p:commandButton value="Agregar Balanza"
+                                     icon="pi pi-plus"
+                                     actionListener="#{adminNodosBean.abrirDialogoNuevaBalanza}"
+                                     update=":dlgNuevaBalanzaForm"
+                                     oncomplete="PF('dlgNuevaBalanzaWidget').show()"
+                                     styleClass="ui-button-outlined ui-button-success" />
                     <p:commandButton value="Sondear Nodos"
                                      icon="pi pi-sync"
                                      actionListener="#{adminNodosBean.cargarEsqueletoNodos}"
@@ -36,6 +42,7 @@
                 <p:dataTable id="tablaNodos" widgetVar="dtNodos"
                              var="nodo"
                              value="#{adminNodosBean.nodos}"
+                             styleClass="cuy-tabla-nodos"
                              stripedRows="true"
                              size="small">
 
@@ -43,33 +50,185 @@
                         <span class="cuy-mono">#{nodo.codigo()}</span>
                     </p:column>
 
-                    <p:column headerText="Nodo / Subsistema" filterBy="#{nodo.nombre()}" filterMatchMode="contains" filterPlaceholder="Nombre" style="width: 250px;">
-                        <strong style="color: #0f2942;">#{nodo.nombre()}</strong>
+                    <p:column headerText="Nodo" filterBy="#{nodo.nombre()}" filterMatchMode="contains" filterPlaceholder="Nombre" style="width: 150px;">
+                        <strong style="color: #0f2942; display: block;">#{nodo.nombre()}</strong>
+                        <ui:fragment rendered="#{nodo.isEsBalanza() and not empty nodo.estacionPeaje()}">
+                            <span style="font-size: 0.76rem; color: #64748b;">
+                                <i class="pi pi-map-marker" style="font-size: 0.72rem;" /> #{nodo.estacionPeaje()}
+                            </span>
+                        </ui:fragment>
                     </p:column>
 
-                    <p:column headerText="Protocolo" filterBy="#{nodo.tipo()}" filterMatchMode="contains" filterPlaceholder="Protocolo" style="width: 140px;">
+                    <p:column headerText="Protocolo" filterBy="#{nodo.tipo()}" filterMatchMode="contains" filterPlaceholder="Protocolo" style="width: 105px;">
                         <p:tag value="#{nodo.tipo()}" severity="info" rounded="true" />
                     </p:column>
 
-                    <p:column headerText="Endpoint / Destino" filterBy="#{nodo.endpoint()}" filterMatchMode="contains" filterPlaceholder="Endpoint">
-                        <span class="cuy-mono" style="font-size: 0.78rem;">#{nodo.endpoint()}</span>
+                    <p:column headerText="Endpoint" filterBy="#{nodo.endpoint()}" filterMatchMode="contains" filterPlaceholder="Endpoint" style="min-width: 260px;">
+                        <span class="cuy-mono" style="font-size: 0.76rem; overflow-wrap: anywhere;">#{nodo.endpoint()}</span>
                     </p:column>
 
-                    <p:column headerText="Estado" filterBy="#{nodo.estado()}" filterMatchMode="exact" style="width: 175px; text-align: center;">
+                    <p:column headerText="Estado" filterBy="#{nodo.estado()}" filterMatchMode="exact" style="width: 132px; text-align: center;">
                         <f:facet name="filter">
                             <p:selectOneMenu onchange="PF('dtNodos').filter()" styleClass="ui-custom-filter" style="width: 100%;">
                                 <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
                                 <f:selectItem itemLabel="ONLINE" itemValue="ONLINE" />
                                 <f:selectItem itemLabel="OFFLINE" itemValue="OFFLINE" />
+                                <f:selectItem itemLabel="APAGADO" itemValue="APAGADO" />
                             </p:selectOneMenu>
                         </f:facet>
-                        <p:tag value="#{nodo.isConsultando() ? 'CONSULTANDO...' : (nodo.online() ? 'ONLINE' : 'OFFLINE')}"
-                               severity="#{nodo.isConsultando() ? 'warning' : (nodo.online() ? 'success' : 'danger')}"
-                               icon="#{nodo.isConsultando() ? 'pi pi-spin pi-spinner' : (nodo.online() ? 'pi pi-check-circle' : 'pi pi-times-circle')}"
+                        <p:tag value="#{nodo.isConsultando() ? 'CONSULTANDO...' : (nodo.isApagadoAdmin() ? 'APAGADO' : (nodo.online() ? 'ONLINE' : 'OFFLINE'))}"
+                               severity="#{nodo.isConsultando() ? 'warning' : (nodo.isApagadoAdmin() ? 'secondary' : (nodo.online() ? 'success' : 'danger'))}"
+                               icon="#{nodo.isConsultando() ? 'pi pi-spin pi-spinner' : (nodo.isApagadoAdmin() ? 'pi pi-power-off' : (nodo.online() ? 'pi pi-check-circle' : 'pi pi-times-circle'))}"
                                rounded="true" />
+                    </p:column>
+
+                    <p:column headerText="Control" styleClass="cuy-col-control" style="width: 380px; text-align: center;">
+                        <ui:fragment rendered="#{nodo.isAdministrable()}">
+                            <div class="cuy-node-controls">
+                                <p:commandButton value="#{nodo.isHabilitado() ? 'Apagar' : 'Encender'}"
+                                                 icon="#{nodo.isHabilitado() ? 'pi pi-power-off' : 'pi pi-play'}"
+                                                 actionListener="#{adminNodosBean.toggleHabilitado(nodo.codigo())}"
+                                                 update=":nodosForm"
+                                                 process="@this"
+                                                 styleClass="cuy-node-power-btn #{nodo.isHabilitado() ? 'ui-button-danger ui-button-outlined' : 'ui-button-success'}" />
+
+                                <ui:fragment rendered="#{nodo.isEsBalanza()}">
+                                    <div class="cuy-node-mode-group" role="group" aria-label="Modo de balanza">
+                                        <p:commandButton value="Normal"
+                                                         title="Modo Calibrado: registra pesajes dentro de tara + capacidad"
+                                                         actionListener="#{adminNodosBean.cambiarModoNodo(nodo.codigo(), 'CALIBRADA')}"
+                                                         update=":nodosForm"
+                                                         process="@this"
+                                                         styleClass="cuy-node-mode-btn #{nodo.modo() eq 'CALIBRADA' ? 'ui-button-info cuy-mode-active' : 'ui-button-secondary ui-button-outlined'}" />
+                                        <p:commandButton value="Sobrecarga"
+                                                         title="Modo Sobrecarga: registra pesajes con exceso para probar fiscalización"
+                                                         actionListener="#{adminNodosBean.cambiarModoNodo(nodo.codigo(), 'SOBRECARGA')}"
+                                                         update=":nodosForm"
+                                                         process="@this"
+                                                         styleClass="cuy-node-mode-btn #{nodo.modo() eq 'SOBRECARGA' ? 'ui-button-warning cuy-mode-active' : 'ui-button-secondary ui-button-outlined'}" />
+                                    </div>
+                                    <ui:fragment rendered="#{nodo.isHabilitado() or nodo.isPersonalizado()}">
+                                        <div class="cuy-node-extra-actions">
+                                            <p:commandButton icon="pi pi-truck"
+                                                             title="Simular paso de camión por esta balanza"
+                                                             rendered="#{nodo.isHabilitado()}"
+                                                             actionListener="#{adminNodosBean.abrirDialogoPasoBalanza(nodo.codigo())}"
+                                                             update=":dlgPasoBalanzaForm"
+                                                             oncomplete="PF('dlgPasoBalanzaWidget').show()"
+                                                             process="@this"
+                                                             styleClass="ui-button-outlined ui-button-secondary" />
+                                            <p:commandButton icon="pi pi-trash"
+                                                             title="Eliminar balanza agregada"
+                                                             rendered="#{nodo.isPersonalizado()}"
+                                                             actionListener="#{adminNodosBean.eliminarBalanza(nodo.codigo())}"
+                                                             update=":nodosForm"
+                                                             process="@this"
+                                                             styleClass="ui-button-danger ui-button-outlined" />
+                                        </div>
+                                    </ui:fragment>
+                                </ui:fragment>
+
+                                <ui:fragment rendered="#{nodo.isEsTracking()}">
+                                    <div class="cuy-node-mode-group" role="group" aria-label="Modo de tracking">
+                                        <p:commandButton value="En Ruta"
+                                                         title="Modo Ruta Normal: sin desvíos"
+                                                         actionListener="#{adminNodosBean.cambiarModoNodo(nodo.codigo(), 'RUTA_NORMAL')}"
+                                                         update=":nodosForm"
+                                                         process="@this"
+                                                         styleClass="cuy-node-mode-btn #{nodo.modo() eq 'RUTA_NORMAL' ? 'ui-button-info cuy-mode-active' : 'ui-button-secondary ui-button-outlined'}" />
+                                        <p:commandButton value="Con Desvío"
+                                                         title="Modo Con Desvío: emite desvío de ruta en guías EN_CURSO"
+                                                         actionListener="#{adminNodosBean.cambiarModoNodo(nodo.codigo(), 'CON_DESVIO')}"
+                                                         update=":nodosForm"
+                                                         process="@this"
+                                                         styleClass="cuy-node-mode-btn #{nodo.modo() eq 'CON_DESVIO' ? 'ui-button-warning cuy-mode-active' : 'ui-button-secondary ui-button-outlined'}" />
+                                    </div>
+                                </ui:fragment>
+                            </div>
+                        </ui:fragment>
                     </p:column>
                 </p:dataTable>
             </div>
         </h:form>
+
+        <!-- Modal: Agregar Nueva Balanza -->
+        <p:dialog header="Agregar Nodo de Balanza" widgetVar="dlgNuevaBalanzaWidget" modal="true" resizable="false" width="490" showEffect="fade" hideEffect="fade">
+            <h:form id="dlgNuevaBalanzaForm">
+                <p style="margin-top: 0; font-size: 0.85rem; color: #64748b;">
+                    Podés apuntar a una instancia externa o reutilizar el endpoint del servicio de balanzas actual asignándole un nuevo peaje y modo operativo.
+                </p>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                    <div>
+                        <label style="font-size: 0.8rem; font-weight: 700; display: block; margin-bottom: 0.25rem;">Código *</label>
+                        <p:inputText value="#{adminNodosBean.nuevaBalanzaCodigo}" style="width: 100%;" placeholder="NODO-BAL-03" />
+                    </div>
+                    <div>
+                        <label style="font-size: 0.8rem; font-weight: 700; display: block; margin-bottom: 0.25rem;">Estación / Peaje</label>
+                        <p:inputText value="#{adminNodosBean.nuevaBalanzaPeaje}" style="width: 100%;" placeholder="Peaje Queguay - Ruta 3" />
+                    </div>
+                </div>
+                <div style="margin-top: 0.75rem;">
+                    <label style="font-size: 0.8rem; font-weight: 700; display: block; margin-bottom: 0.25rem;">Nombre descriptivo *</label>
+                    <p:inputText value="#{adminNodosBean.nuevaBalanzaNombre}" style="width: 100%;" placeholder="Balanza Ruta 3 Km 380" />
+                </div>
+                <div style="margin-top: 0.75rem;">
+                    <label style="font-size: 0.8rem; font-weight: 700; display: block; margin-bottom: 0.25rem;">Endpoint HTTP</label>
+                    <p:inputText value="#{adminNodosBean.nuevaBalanzaEndpoint}" style="width: 100%;" />
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-top: 0.75rem; align-items: center;">
+                    <div>
+                        <label style="font-size: 0.8rem; font-weight: 700; display: block; margin-bottom: 0.25rem;">Modo Inicial</label>
+                        <p:selectOneMenu value="#{adminNodosBean.nuevaBalanzaModo}" style="width: 100%;">
+                            <f:selectItem itemLabel="Calibrada (Normal)" itemValue="CALIBRADA" />
+                            <f:selectItem itemLabel="Sobrecarga (Exceso)" itemValue="SOBRECARGA" />
+                        </p:selectOneMenu>
+                    </div>
+                    <div style="padding-top: 1.25rem;">
+                        <p:selectBooleanCheckbox value="#{adminNodosBean.nuevaBalanzaHabilitada}" itemLabel="Iniciar encendida" />
+                    </div>
+                </div>
+                <div style="margin-top: 1.25rem; display: flex; justify-content: flex-end; gap: 0.5rem;">
+                    <p:commandButton value="Cancelar" type="button" onclick="PF('dlgNuevaBalanzaWidget').hide()" styleClass="ui-button-secondary ui-button-outlined" />
+                    <p:commandButton value="Guardar Balanza" icon="pi pi-check"
+                                     actionListener="#{adminNodosBean.agregarNuevaBalanza}"
+                                     update=":nodosForm"
+                                     oncomplete="if (args &amp;&amp; !args.validationFailed) PF('dlgNuevaBalanzaWidget').hide();"
+                                     styleClass="ui-button-primary" />
+                </div>
+            </h:form>
+        </p:dialog>
+
+        <!-- Modal: Simular Paso de Vehículo por Balanza -->
+        <p:dialog header="Simular Paso por Balanza" widgetVar="dlgPasoBalanzaWidget" modal="true" resizable="false" width="460" showEffect="fade" hideEffect="fade">
+            <h:form id="dlgPasoBalanzaForm">
+                <p style="margin-top: 0; font-size: 0.85rem; color: #475569;">
+                    Nodo seleccionado: <strong>#{adminNodosBean.nombreNodoPaso}</strong> (<span class="cuy-mono">#{adminNodosBean.codigoNodoPaso}</span>)
+                </p>
+                <div style="margin-top: 0.75rem;">
+                    <label style="font-size: 0.8rem; font-weight: 700; display: block; margin-bottom: 0.25rem;">Vehículo registrado</label>
+                    <p:selectOneMenu value="#{adminNodosBean.matriculaPaso}" rendered="#{not empty adminNodosBean.vehiculosDisponibles}" style="width: 100%;" filter="true" filterMatchMode="contains">
+                        <f:selectItems value="#{adminNodosBean.vehiculosDisponibles}" var="v"
+                                       itemLabel="#{v.matricula} - #{v.marca} #{v.modelo}" itemValue="#{v.matricula}" />
+                    </p:selectOneMenu>
+                </div>
+                <div style="margin-top: 0.75rem;">
+                    <label style="font-size: 0.8rem; font-weight: 700; display: block; margin-bottom: 0.25rem;">O matrícula manual (opcional)</label>
+                    <p:inputText value="#{adminNodosBean.matriculaPasoPersonalizada}" style="width: 100%;" placeholder="Ej: STP 1234 (anula selección superior)" />
+                </div>
+                <div style="margin-top: 0.75rem;">
+                    <label style="font-size: 0.8rem; font-weight: 700; display: block; margin-bottom: 0.25rem;">Peso registrado (kg)</label>
+                    <p:inputNumber value="#{adminNodosBean.pesoKgPaso}" decimalPlaces="0" thousandSeparator="." minValue="1000" maxValue="120000" style="width: 100%;" />
+                    <small style="color: #64748b;">Si el vehículo no posee guía EN_CURSO, la lectura será detectada por el sondeo como VIAJE_SIN_GUIA.</small>
+                </div>
+                <div style="margin-top: 1.25rem; display: flex; justify-content: flex-end; gap: 0.5rem;">
+                    <p:commandButton value="Cancelar" type="button" onclick="PF('dlgPasoBalanzaWidget').hide()" styleClass="ui-button-secondary ui-button-outlined" />
+                    <p:commandButton value="Emitir Lectura" icon="pi pi-send"
+                                     actionListener="#{adminNodosBean.registrarPasoSimuladoBalanza}"
+                                     update=":nodosForm"
+                                     oncomplete="if (args &amp;&amp; !args.validationFailed) PF('dlgPasoBalanzaWidget').hide();"
+                                     styleClass="ui-button-primary" />
+                </div>
+            </h:form>
+        </p:dialog>
     </ui:define>
 </ui:composition>

@@ -123,4 +123,104 @@ class EventoViajeStateAndCargoTest {
         }
         assertEquals(eventos.map { it.uuid }, subLotes.flatten().map { it.uuid })
     }
+
+    @Test
+    fun `EventoLocal toDto preserva latitud y longitud GPS reales`() {
+        val local = EventoLocal(
+            uuid = "ev-gps-1",
+            guiaId = 42L,
+            tipo = "INICIO",
+            tiempo = "2026-11-13T10:15:00",
+            latitud = -34.9011,
+            longitud = -56.1645
+        )
+        val dto = local.toDto("STP 4200")
+        assertEquals(-34.9011, dto.latitud ?: 0.0, 0.00001)
+        assertEquals(-56.1645, dto.longitud ?: 0.0, 0.00001)
+        assertEquals("STP 4200", dto.matricula)
+    }
+
+    @Test
+    fun `TraceHeaderHelper genera traceparent W3C valido y preserva traceId desde X-Correlation-ID`() {
+        val corr = "123e4567-e89b-12d3-a456-426614174000"
+        val tp1 = TraceHeaderHelper.generarTraceparent(corr)
+        val tp2 = TraceHeaderHelper.generarTraceparent(corr)
+        val regex = Regex("^00-([0-9a-f]{32})-([0-9a-f]{16})-01$")
+
+        val m1 = regex.matchEntire(tp1)
+        val m2 = regex.matchEntire(tp2)
+        org.junit.Assert.assertNotNull(m1)
+        org.junit.Assert.assertNotNull(m2)
+        assertEquals("123e4567e89b12d3a456426614174000", m1!!.groupValues[1])
+        assertEquals(m1.groupValues[1], m2!!.groupValues[1])
+        org.junit.Assert.assertNotEquals(m1.groupValues[2], m2.groupValues[2])
+
+        val desdeTexto = TraceHeaderHelper.generarTraceparent("texto-libre")
+        assertTrue(regex.matches(desdeTexto))
+    }
+
+    @Test
+    fun `SyncConflictResolver detecta guias reasignadas y actualizaciones de ruta sin descartar eventos vigentes`() {
+        val previas = listOf(
+            Viaje(
+                id = 10L,
+                fecha = "2026-11-13",
+                origen = "Montevideo",
+                destino = "Durazno",
+                rubroCliente = "Granos",
+                volumenCarga = 20f,
+                estado = "EN_CURSO",
+                version = 1
+            ),
+            Viaje(
+                id = 20L,
+                fecha = "2026-11-13",
+                origen = "Salto",
+                destino = "Paysandu",
+                rubroCliente = "Madera",
+                volumenCarga = 15f,
+                estado = "EN_CURSO",
+                version = 1
+            )
+        )
+        val servidor = listOf(
+            Viaje(
+                id = 10L,
+                fecha = "2026-11-13",
+                origen = "Montevideo",
+                destino = "Rivera",
+                rubroCliente = "Granos",
+                volumenCarga = 20f,
+                estado = "EN_CURSO",
+                version = 2
+            )
+        )
+        val evVigente = EventoLocal(
+            uuid = "ev-10",
+            guiaId = 10L,
+            tipo = "CARGA_PARCIAL",
+            tiempo = "2026-11-13T11:00:00",
+            latitud = -33.3,
+            longitud = -56.5
+        )
+        val evReasignada = EventoLocal(
+            uuid = "ev-20",
+            guiaId = 20L,
+            tipo = "FIN",
+            tiempo = "2026-11-13T11:05:00",
+            latitud = -32.3,
+            longitud = -58.0
+        )
+
+        val res = SyncConflictResolver.filtrarPendientesContraGuias(
+            pendientes = listOf(evVigente, evReasignada),
+            guiasPrevias = previas,
+            guiasServidor = servidor
+        )
+
+        assertEquals(listOf(evVigente), res.enviables)
+        assertEquals(listOf(evReasignada), res.enConflicto)
+        assertTrue(res.rutaActualizada)
+        assertTrue(SyncConflictResolver.mensajeConflictoGuia(20L).contains("#20"))
+    }
 }

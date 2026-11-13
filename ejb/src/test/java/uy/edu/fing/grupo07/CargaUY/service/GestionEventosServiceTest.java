@@ -604,4 +604,75 @@ class GestionEventosServiceTest {
         verify(producerMock).solicitarEvaluacionSinGuia(eq("444555"), contains("uuid-track-sin-guia"));
         verify(em, never()).persist(any(EventoViaje.class));
     }
+
+    @Test
+    @DisplayName("Overloads tokenizados de eventos fallan cerrado sin ControlAcceso y validan chofer, empresa y funcionario")
+    void testOverloadsTokenizadosYFailClosed() throws Exception {
+        EventoViajeDTO dtoConGuia = new EventoViajeDTO(
+                "uuid-tok-guia", LocalDateTime.now(), TipoEvento.CARGA, -34.9, -56.16, 1L, null
+        );
+        ReportarIncidenteDTO dtoInc = new ReportarIncidenteDTO(
+                "uuid-tok-inc", 1L, LocalDateTime.now(), -34.9, -56.16, null, "Neumático averiado"
+        );
+
+        assertThrows(IllegalStateException.class, () -> service.guardarEvento("tok", dtoConGuia));
+        assertThrows(IllegalStateException.class, () -> service.listarEventosPorGuia("tok", 1L));
+        assertThrows(IllegalStateException.class, () -> service.reportarIncidente("tok", dtoInc));
+
+        uy.edu.fing.grupo07.CargaUY.security.ControlAcceso controlMock =
+                mock(uy.edu.fing.grupo07.CargaUY.security.ControlAcceso.class);
+        java.lang.reflect.Field field = GestionEventosServiceImpl.class.getDeclaredField("control");
+        field.setAccessible(true);
+        field.set(service, controlMock);
+
+        Empresa emp = new Empresa();
+        emp.setNroEmpresa(88);
+        guiaPrueba.setEmpresa(emp);
+
+        when(em.createQuery(anyString(), eq(Long.class))).thenReturn(queryCount);
+        when(queryCount.setParameter(eq("uuid"), anyString())).thenReturn(queryCount);
+        when(queryCount.getSingleResult()).thenReturn(0L);
+        when(em.find(GuiaDeViaje.class, 1L)).thenReturn(guiaPrueba);
+        when(em.createQuery(anyString(), eq(EventoViaje.class))).thenReturn(queryEventos);
+        when(queryEventos.setParameter(eq("guiaId"), eq(1L))).thenReturn(queryEventos);
+        when(queryEventos.getResultList()).thenReturn(Collections.emptyList());
+
+        uy.edu.fing.grupo07.CargaUY.security.Acceso accesoChofer = new uy.edu.fing.grupo07.CargaUY.security.Acceso(
+                10, 44444444, "Chofer", java.util.Set.of(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.CHOFER)
+        );
+        uy.edu.fing.grupo07.CargaUY.security.Acceso accesoCiudadano = new uy.edu.fing.grupo07.CargaUY.security.Acceso(
+                20, 55555555, "Empresa", java.util.Set.of(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.CIUDADANO)
+        );
+        uy.edu.fing.grupo07.CargaUY.security.Acceso accesoFuncionario = new uy.edu.fing.grupo07.CargaUY.security.Acceso(
+                30, 11111111, "Func", java.util.Set.of(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.FUNCIONARIO)
+        );
+
+        when(controlMock.exigir(eq("tok-ch"), any(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario[].class))).thenReturn(accesoChofer);
+        assertNotNull(service.guardarEvento("tok-ch", dtoConGuia));
+        verify(controlMock).guiaChofer("tok-ch", 1L);
+        assertNotNull(service.reportarIncidente("tok-ch", dtoInc));
+        assertTrue(service.listarEventosPorGuia("tok-ch", 1L).isEmpty());
+
+        when(controlMock.exigir(eq("tok-func"), any(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario[].class))).thenReturn(accesoFuncionario);
+        assertNotNull(service.guardarEvento("tok-func", dtoConGuia));
+        assertTrue(service.listarEventosPorGuia("tok-func", 1L).isEmpty());
+        assertNotNull(service.reportarIncidente("tok-func", dtoInc));
+
+        when(controlMock.exigir(eq("tok-emp"), any(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario[].class))).thenReturn(accesoCiudadano);
+        assertTrue(service.listarEventosPorGuia("tok-emp", 1L).isEmpty());
+        verify(controlMock).empresa("tok-emp", 88, false);
+        assertNotNull(service.reportarIncidente("tok-emp", dtoInc));
+        verify(controlMock).empresa("tok-emp", 88, true);
+
+        EventoViajeDTO dtoSinGuiaId = new EventoViajeDTO(
+                "uuid-tok-mat", LocalDateTime.now(), TipoEvento.POSICION, -34.8, -56.2,
+                null, null, null, null, null, null, "444555"
+        );
+        when(em.createQuery(anyString(), eq(GuiaDeViaje.class))).thenReturn(queryGuia);
+        when(queryGuia.setParameter(anyString(), any())).thenReturn(queryGuia);
+        when(queryGuia.setMaxResults(1)).thenReturn(queryGuia);
+        when(queryGuia.getResultList()).thenReturn(List.of(guiaPrueba));
+        assertNotNull(service.guardarEvento("tok-ch", dtoSinGuiaId));
+        verify(controlMock).vehiculoChofer("tok-ch", "444555");
+    }
 }

@@ -28,9 +28,12 @@ import java.security.Security;
 import java.security.cert.X509Certificate;
 import java.util.Calendar;
 
+import jakarta.ejb.EJB;
 import jakarta.ejb.LocalBean;
 import jakarta.ejb.Stateless;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.CredencialesFirma;
+import uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario;
+import uy.edu.fing.grupo07.CargaUY.security.ControlAcceso;
 
 /**
  * Session Bean implementation class ActaServiceEJB
@@ -39,11 +42,49 @@ import uy.edu.fing.grupo07.CargaUY.domain.entity.CredencialesFirma;
 @LocalBean
 public class ActaServiceEJB implements ActaServiceEJBLocal {
 
+    @EJB
+    private ControlAcceso control;
+
     /**
      * Default constructor. 
      */
     public ActaServiceEJB() {
         // TODO Auto-generated constructor stub
+    }
+
+    private void verificarControl() {
+        if (control == null) {
+            throw new IllegalStateException("ControlAcceso no disponible");
+        }
+    }
+
+    @Override
+    public byte[] emitirYFirmarActa(
+            String token,
+            int idCaso,
+            String empresa,
+            String matricula,
+            String fecha,
+            String tipo,
+            String evidencia
+    ) {
+        verificarControl();
+        control.exigir(token, TipoUsuario.ADMINISTRADOR, TipoUsuario.FUNCIONARIO, TipoUsuario.AUTORIDAD, TipoUsuario.CIUDADANO);
+        return emitirYFirmarActa(idCaso, empresa, matricula, fecha, tipo, evidencia);
+    }
+
+    @Override
+    public CredencialesFirma abrirCredenciales(String token, byte[] archivo, String password) {
+        verificarControl();
+        control.exigir(token, TipoUsuario.ADMINISTRADOR, TipoUsuario.FUNCIONARIO, TipoUsuario.AUTORIDAD, TipoUsuario.CIUDADANO);
+        return abrirCredenciales(archivo, password);
+    }
+
+    @Override
+    public byte[] firmarPdf(String token, byte[] pdfOriginal, PrivateKey clavePrivada, X509Certificate certificado) {
+        verificarControl();
+        control.exigir(token, TipoUsuario.ADMINISTRADOR, TipoUsuario.FUNCIONARIO, TipoUsuario.AUTORIDAD, TipoUsuario.CIUDADANO);
+        return firmarPdf(pdfOriginal, clavePrivada, certificado);
     }
     public byte[] emitirYFirmarActa(int idCaso, String empresa, String matricula, String fecha, String tipo, String evidencia) {
         try (PDDocument doc = new PDDocument();

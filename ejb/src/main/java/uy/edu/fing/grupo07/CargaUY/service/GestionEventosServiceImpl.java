@@ -18,6 +18,9 @@ import uy.edu.fing.grupo07.CargaUY.integration.BalanzaClient;
 import uy.edu.fing.grupo07.CargaUY.integration.FaasTrackingClient;
 import uy.edu.fing.grupo07.CargaUY.jms.FiscalizacionProducerLocal;
 import uy.edu.fing.grupo07.CargaUY.nosql.PosicionNoSqlRepositoryLocal;
+import uy.edu.fing.grupo07.CargaUY.security.Acceso;
+import uy.edu.fing.grupo07.CargaUY.security.ControlAcceso;
+import uy.edu.fing.grupo07.CargaUY.security.ErrorAcceso;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -49,6 +52,77 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
 
     @EJB
     private PosicionNoSqlRepositoryLocal posicionNoSqlRepository;
+
+    @EJB
+    private ControlAcceso control;
+
+    private void verificarControl() {
+        if (control == null) {
+            throw new IllegalStateException("ControlAcceso no disponible");
+        }
+    }
+
+    private void validarAccesoGuiaLectura(String token, Long guiaId) {
+        verificarControl();
+        Acceso actor = control.exigir(token);
+        if (actor.tiene(TipoUsuario.ADMINISTRADOR)
+                || actor.tiene(TipoUsuario.FUNCIONARIO)
+                || actor.tiene(TipoUsuario.AUTORIDAD)) {
+            return;
+        }
+        if (actor.tiene(TipoUsuario.CHOFER)) {
+            control.guiaChofer(token, guiaId);
+            return;
+        }
+        if (guiaId != null && em != null) {
+            GuiaDeViaje guia = em.find(GuiaDeViaje.class, guiaId);
+            if (guia != null && guia.getEmpresa() != null) {
+                control.empresa(token, guia.getEmpresa().getNroEmpresa(), false);
+                return;
+            }
+        }
+        throw new ErrorAcceso(403, "Sin acceso a la guía solicitada");
+    }
+
+    @Override
+    public EventoViaje guardarEvento(String token, EventoViajeDTO dto) {
+        verificarControl();
+        Acceso actor = control.exigir(token, TipoUsuario.ADMINISTRADOR, TipoUsuario.FUNCIONARIO, TipoUsuario.CHOFER);
+        if (!actor.tiene(TipoUsuario.ADMINISTRADOR) && !actor.tiene(TipoUsuario.FUNCIONARIO)) {
+            if (dto != null && dto.guiaId() != null) {
+                control.guiaChofer(token, dto.guiaId());
+            } else {
+                control.vehiculoChofer(token, dto != null ? dto.matricula() : null);
+            }
+        }
+        return guardarEvento(dto);
+    }
+
+    @Override
+    public List<EventoViajeDTO> listarEventosPorGuia(String token, Long guiaId) {
+        validarAccesoGuiaLectura(token, guiaId);
+        return listarEventosPorGuia(guiaId);
+    }
+
+    @Override
+    public EventoViajeDTO reportarIncidente(String token, ReportarIncidenteDTO dto) {
+        verificarControl();
+        Acceso actor = control.exigir(token);
+        if (!actor.tiene(TipoUsuario.ADMINISTRADOR) && !actor.tiene(TipoUsuario.FUNCIONARIO)) {
+            if (actor.tiene(TipoUsuario.CHOFER)) {
+                control.guiaChofer(token, dto != null ? dto.guiaId() : null);
+            } else if (dto != null && dto.guiaId() != null && em != null) {
+                GuiaDeViaje guia = em.find(GuiaDeViaje.class, dto.guiaId());
+                if (guia == null || guia.getEmpresa() == null) {
+                    throw new ErrorAcceso(404, "Guía inexistente");
+                }
+                control.empresa(token, guia.getEmpresa().getNroEmpresa(), true);
+            } else {
+                throw new ErrorAcceso(403, "Sin permisos para reportar incidente");
+            }
+        }
+        return reportarIncidente(dto);
+    }
 
     public GestionEventosServiceImpl() {
     }
@@ -161,9 +235,6 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
             em.persist(evento);
         }
 
-        if (false) {
-        }
-
         if (posicionNoSqlRepository != null && tienePosicion) {
             String matriculaGuia = (guia.getVehiculo() != null && guia.getVehiculo().getMatricula() != null)
                     ? guia.getVehiculo().getMatricula()
@@ -185,13 +256,6 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
             posicionNoSqlRepository.guardarEventoPosicion(dtoPosicion, guia.getId(), matriculaGuia);
         }
 
-        // Requerimiento Opcional 10: los eventos de posición pura (TipoEvento.POSICION) se persisten
-        // en la colección de serie temporal de MongoDB (NoSQL). Si el repositorio NoSQL no está inyectado
-        // (p. ej. dobles de prueba legacy), o si es un hito operativo del viaje, se persiste en JPA.
-        if (false) {
-            em.persist(evento);
-        }
-
         if (esHitoBalanza(dto.tipo())) {
             sincronizarBalanzasPorHito(guia, dto.uuid());
         }
@@ -206,7 +270,9 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
         return tipo == TipoEvento.INICIO
                 || tipo == TipoEvento.FIN
                 || tipo == TipoEvento.CARGA
-                || tipo == TipoEvento.DESCARGA;
+                || tipo == TipoEvento.CARGA_PARCIAL
+                || tipo == TipoEvento.DESCARGA
+                || tipo == TipoEvento.DESCARGA_PARCIAL;
     }
 
     private void sincronizarBalanzasPorHito(GuiaDeViaje guia, String correlacion) {

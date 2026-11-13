@@ -45,7 +45,23 @@ public class FiscalizacionMDB implements MessageListener {
             return;
         }
 
+        uy.edu.fing.grupo07.CargaUY.integration.TraceContext.Estado previo =
+                uy.edu.fing.grupo07.CargaUY.integration.TraceContext.capturar();
+        String correlacion = null;
+        String traceparent = null;
         try {
+            try {
+                correlacion = textMsg.getJMSCorrelationID();
+                if (correlacion == null || correlacion.isBlank()) {
+                    correlacion = textMsg.getStringProperty("X_Correlation_ID");
+                }
+                traceparent = textMsg.getStringProperty("traceparent");
+            } catch (Exception ignored) {
+            }
+            correlacion = uy.edu.fing.grupo07.CargaUY.integration.TraceContext.normalizarCorrelacion(correlacion);
+            traceparent = uy.edu.fing.grupo07.CargaUY.integration.TraceContext.normalizarTraceparent(traceparent, correlacion);
+            uy.edu.fing.grupo07.CargaUY.integration.TraceContext.fijar(correlacion, traceparent);
+
             String cuerpo = textMsg.getText();
             if (cuerpo == null || cuerpo.isBlank()) {
                 LOGGER.log(Level.WARNING, "Mensaje vacío recibido en FiscalizacionQueue.");
@@ -65,8 +81,8 @@ public class FiscalizacionMDB implements MessageListener {
                 boolean generada = motorFiscalizacion.evaluarVehiculoSinGuia(matricula, detalle);
                 LOGGER.log(
                         Level.INFO,
-                        "Fiscalización VIAJE_SIN_GUIA completada para matrícula {0}. Nueva infracción generada: {1}",
-                        new Object[]{matricula, generada}
+                        "Fiscalización VIAJE_SIN_GUIA completada para matrícula {0}. Nueva infracción generada: {1} [correlacion={2}, traceparent={3}]",
+                        new Object[]{matricula, generada, correlacion, traceparent}
                 );
                 return;
             }
@@ -82,8 +98,8 @@ public class FiscalizacionMDB implements MessageListener {
             List<TipoInfraccion> infracciones = motorFiscalizacion.evaluarGuia(guiaId);
             LOGGER.log(
                     Level.INFO,
-                    "Fiscalización completada para la guía {0}. Nuevas infracciones: {1}",
-                    new Object[]{guiaId, infracciones.size()}
+                    "Fiscalización completada para la guía {0}. Nuevas infracciones: {1} [correlacion={2}, traceparent={3}]",
+                    new Object[]{guiaId, infracciones.size(), correlacion, traceparent}
             );
 
         } catch (BusinessException be) {
@@ -91,6 +107,8 @@ public class FiscalizacionMDB implements MessageListener {
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Fallo técnico imprevisto en FiscalizacionMDB al procesar mensaje", e);
             throw new RuntimeException("Error técnico en FiscalizacionMDB", e);
+        } finally {
+            uy.edu.fing.grupo07.CargaUY.integration.TraceContext.restaurar(previo);
         }
     }
 }

@@ -14,33 +14,16 @@
                     Monitoreo de Viajes en Curso y Pesajes en Balanzas
                 </h1>
             </div>
-            <div style="display: flex; gap: 0.6rem;">
-                <h:form id="monitoreoTopForm" style="margin: 0; display: flex; gap: 0.6rem;">
-                    <p:commandButton value="Simular Telemetría"
-                                     icon="pi pi-cloud"
-                                     type="button"
-                                     rendered="false"
-                                     onclick="PF('dlgFaasWidget').show()"
-                                     styleClass="ui-button-outlined ui-button-help" />
-                    <p:commandButton value="Simular Tracking"
-                                     icon="pi pi-send"
-                                     actionListener="#{detalleViajeBean.prepararModalMockTracking}"
-                                     process="@this"
-                                     update=":dlgTrackingForm"
-                                     oncomplete="PF('dlgTrackingWidget').show()"
-                                     styleClass="ui-button-outlined ui-button-success" />
-                    <p:commandButton value="Consultar Balanzas"
-                                     icon="pi pi-refresh"
-                                     actionListener="#{detalleViajeBean.consultarBalanzasGuia}"
-                                     update=":monitoreoForm :growl"
-                                     styleClass="ui-button-outlined ui-button-info" />
-                    <p:commandButton value="Registrar en Balanza"
-                                     icon="pi pi-sliders-h"
-                                     type="button"
-                                     onclick="PF('dlgPesajeWidget').show()"
-                                     styleClass="ui-button-primary" />
-                </h:form>
-            </div>
+            <h:panelGroup id="estadoNodosMon" layout="block" style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                <p:tag value="Tracking GPS: #{detalleViajeBean.nodoTrackingActivoSistema ? 'ACTIVO' : 'APAGADO'}"
+                       severity="#{detalleViajeBean.nodoTrackingActivoSistema ? 'success' : 'secondary'}"
+                       icon="#{detalleViajeBean.nodoTrackingActivoSistema ? 'pi pi-compass' : 'pi pi-power-off'}"
+                       rounded="true" />
+                <p:tag value="Balanzas activas: #{detalleViajeBean.cantidadBalanzasActivas}"
+                       severity="#{detalleViajeBean.cantidadBalanzasActivas gt 0 ? 'info' : 'secondary'}"
+                       icon="pi pi-sliders-h"
+                       rounded="true" />
+            </h:panelGroup>
         </div>
 
         <h:form id="monitoreoForm">
@@ -61,7 +44,7 @@
                                            var="g"
                                            itemLabel="#{detalleViajeBean.obtenerEtiquetaGuia(g)}"
                                            itemValue="#{g.id}" />
-                            <p:ajax listener="#{detalleViajeBean.onGuiaChange}" update=":monitoreoForm :monitoreoTopForm" />
+                            <p:ajax listener="#{detalleViajeBean.onGuiaChange}" update=":monitoreoForm :estadoNodosMon" />
                         </p:selectOneMenu>
                     </div>
 
@@ -91,10 +74,10 @@
                 </div>
             </div>
 
-            <p:poll interval="3"
+            <p:poll interval="4"
                     listener="#{detalleViajeBean.refrescarPorPollMock}"
-                    update=":monitoreoForm :dlgTrackingForm:trackingEstado"
-                    stop="#{not detalleViajeBean.mockTrackingActivo}" />
+                    update=":monitoreoForm :estadoNodosMon"
+                    stop="#{not detalleViajeBean.pollAutomaticoActivo}" />
 
             <!-- Tablas de Eventos de Ruta y Pesajes de Balanza en CSS Grid de 2 columnas -->
             <div class="cuy-grid-2">
@@ -208,247 +191,6 @@
                 </div>
             </div>
         </h:form>
-
-        <!-- Modal Registrar Pesaje de Balanza y Fiscalizar -->
-        <p:dialog header="Registrar pesaje en balanza"
-                  widgetVar="dlgPesajeWidget"
-                  modal="true"
-                  responsive="true"
-                  width="540"
-                  closeOnEscape="true">
-            <h:form id="dlgPesajeForm" styleClass="ui-fluid">
-                <div class="cuy-field" style="margin-bottom: 1rem;">
-                    <p:outputLabel for="guiaPesajeSel" value="Guía de Viaje (EN_CURSO)" />
-                    <p:selectOneMenu id="guiaPesajeSel" label="Guía de Viaje" value="#{registrarPesajeBean.guiaIdSeleccionada}">
-                        <f:selectItem itemLabel="-- Sin guía activa (ingresar matrícula debajo) --" itemValue="#{null}" noSelectionOption="true" />
-                        <f:selectItems value="#{registrarPesajeBean.guiasDisponibles}"
-                                       var="gp"
-                                       itemLabel="#{registrarPesajeBean.obtenerEtiquetaGuia(gp)}"
-                                       itemValue="#{gp.id}" />
-                    </p:selectOneMenu>
-                </div>
-                <div class="cuy-field" style="margin-bottom: 1rem;">
-                    <p:outputLabel for="matPesajeInput" value="Matrícula del Vehículo (para pesaje sin guía activa - VIAJE_SIN_GUIA)" />
-                    <p:inputText id="matPesajeInput" label="Matrícula del Vehículo"
-                                 value="#{registrarPesajeBean.matriculaManual}"
-                                 placeholder="Ej: STP 1234" />
-                </div>
-                <div class="cuy-field" style="margin-bottom: 1rem;">
-                    <p:outputLabel for="peajeSel" value="Estación de Pesaje / Peaje" />
-                    <p:selectOneMenu id="peajeSel" label="Estación de Pesaje"
-                                     value="#{registrarPesajeBean.peaje}"
-                                     editable="true">
-                        <f:selectItem itemLabel="Peaje Pando" itemValue="Peaje Pando" />
-                        <f:selectItem itemLabel="Peaje Queguay" itemValue="Peaje Queguay" />
-                        <f:selectItem itemLabel="Peaje Mercedes" itemValue="Peaje Mercedes" />
-                        <f:selectItem itemLabel="Peaje Capilla de Cella" itemValue="Peaje Capilla de Cella" />
-                        <f:selectItem itemLabel="Peaje Solís" itemValue="Peaje Solís" />
-                    </p:selectOneMenu>
-                </div>
-                <div class="cuy-field" style="margin-bottom: 1rem;">
-                    <p:outputLabel for="pesoMedidoInput" value="Peso Bruto Medido en Balanza (kg)" />
-                    <p:inputNumber id="pesoMedidoInput" label="Peso Bruto Medido en Balanza (kg)"
-                                   value="#{registrarPesajeBean.pesoRegistrado}"
-                                   decimalPlaces="0"
-                                   thousandSeparator="." decimalSeparator=","
-                                   suffix=" kg" minValue="1" maxValue="500000"
-                                   required="true" />
-                </div>
-                <div style="display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1.25rem;">
-                    <p:commandButton value="Cancelar"
-                                     type="button"
-                                     icon="pi pi-times"
-                                     onclick="PF('dlgPesajeWidget').hide()"
-                                     styleClass="ui-button-outlined ui-button-secondary"
-                                     style="width: auto;" />
-                    <p:commandButton value="Registrar en Balanza"
-                                     icon="pi pi-check"
-                                     actionListener="#{registrarPesajeBean.registrarPesajeEnBalanza}"
-                                     action="#{detalleViajeBean.consultarViaje}"
-                                     update=":monitoreoForm :growl"
-                                     oncomplete="if (!args.validationFailed) PF('dlgPesajeWidget').hide()"
-                                     styleClass="ui-button-primary"
-                                     style="width: auto;" />
-                </div>
-            </h:form>
-        </p:dialog>
-
-        <!-- Modal Simulador de Tracking (Nodo Periférico) -->
-        <p:dialog header="Nodo Periférico de Tracking (Mock)"
-                  widgetVar="dlgTrackingWidget"
-                  modal="true"
-                  responsive="true"
-                  width="560"
-                  closeOnEscape="true">
-            <h:form id="dlgTrackingForm" styleClass="ui-fluid">
-                <h:panelGroup id="trackingEstado" layout="block" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 1rem;">
-                    <div style="display: flex; align-items: center; gap: 0.6rem;">
-                        <p:tag value="#{detalleViajeBean.mockTrackingActivo ? 'ACTIVO' : 'DETENIDO'}"
-                               severity="#{detalleViajeBean.mockTrackingActivo ? 'success' : 'secondary'}"
-                               icon="#{detalleViajeBean.mockTrackingActivo ? 'pi pi-spin pi-spinner' : 'pi pi-pause'}"
-                               rounded="true" />
-                        <span style="font-size: 0.85rem; color: #0f2942; font-weight: 600;">
-                            Puntos emitidos: #{detalleViajeBean.mockTotalEventosEmitidos} | Desvíos: #{detalleViajeBean.mockTotalDesviosEmitidos}
-                        </span>
-                    </div>
-                    <span class="cuy-mono" style="font-size: 0.75rem;" title="Endpoint del contenedor periférico mock-tracking">
-                        #{detalleViajeBean.nodoTrackingEndpoint}
-                    </span>
-                </h:panelGroup>
-
-                <div class="cuy-field" style="margin-bottom: 1rem;">
-                    <p:outputLabel for="inputMockEvMin" value="Eventos por minuto" />
-                    <p:inputNumber id="inputMockEvMin"
-                                   label="Eventos por minuto"
-                                   value="#{detalleViajeBean.mockEventosPorMinuto}"
-                                   decimalPlaces="0"
-                                   minValue="1"
-                                   maxValue="120"
-                                   suffix=" ev/min" />
-                </div>
-
-                <div class="cuy-field" style="margin-bottom: 1rem;">
-                    <p:outputLabel for="inputMockDesvios" value="Cantidad de desvíos" />
-                    <p:inputNumber id="inputMockDesvios"
-                                   label="Cantidad de desvíos"
-                                   value="#{detalleViajeBean.mockCantidadDesvios}"
-                                   decimalPlaces="0"
-                                   minValue="0"
-                                   maxValue="50"
-                                   suffix=" desvíos" />
-                </div>
-
-                <h:panelGroup rendered="#{not empty detalleViajeBean.mockUltimoResultado}">
-                    <div style="margin-bottom: 1rem; padding: 0.55rem 0.8rem; background: #e0f2fe; border-left: 3px solid #0284c7; border-radius: 4px; font-size: 0.82rem; color: #0c4a6e;">
-                        <h:outputText value="#{detalleViajeBean.mockUltimoResultado}" />
-                    </div>
-                </h:panelGroup>
-
-                <div style="display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.25rem;">
-                    <p:commandButton value="Cerrar"
-                                     type="button"
-                                     icon="pi pi-times"
-                                     onclick="PF('dlgTrackingWidget').hide()"
-                                     styleClass="ui-button-outlined ui-button-secondary"
-                                     style="width: auto;" />
-                    <p:commandButton value="Reiniciar ruta"
-                                     icon="pi pi-refresh"
-                                     actionListener="#{detalleViajeBean.reiniciarRecorridoMock}"
-                                     process="@this"
-                                     update=":dlgTrackingForm :monitoreoForm :growl"
-                                     styleClass="ui-button-secondary ui-button-outlined"
-                                     style="width: auto;" />
-                    <p:commandButton value="Paso ahora"
-                                     icon="pi pi-step-forward"
-                                     actionListener="#{detalleViajeBean.emitirPasoMockAhora}"
-                                     process="@this inputMockEvMin inputMockDesvios"
-                                     update=":dlgTrackingForm :monitoreoForm :growl"
-                                     styleClass="ui-button-info ui-button-outlined"
-                                     style="width: auto;" />
-                    <p:commandButton value="Detener"
-                                     icon="pi pi-stop"
-                                     actionListener="#{detalleViajeBean.detenerMockTracking}"
-                                     process="@this"
-                                     update=":dlgTrackingForm :monitoreoForm :growl"
-                                     disabled="#{not detalleViajeBean.mockTrackingActivo}"
-                                     styleClass="ui-button-danger ui-button-outlined"
-                                     style="width: auto;" />
-                    <p:commandButton value="#{detalleViajeBean.mockTrackingActivo ? 'Actualizar' : 'Iniciar'}"
-                                     icon="pi pi-play"
-                                     actionListener="#{detalleViajeBean.iniciarMockTracking}"
-                                     process="@this inputMockEvMin inputMockDesvios"
-                                     update=":dlgTrackingForm :monitoreoForm :growl"
-                                     styleClass="ui-button-success"
-                                     style="width: auto;" />
-                </div>
-            </h:form>
-        </p:dialog>
-        <!-- Modal Simulador de Telemetría GPS -->
-        <p:dialog header="Simular telemetría"
-                  widgetVar="dlgFaasWidget"
-                  modal="true"
-                  responsive="true"
-                  width="640"
-                  closeOnEscape="true">
-            <h:form id="dlgFaasForm" styleClass="ui-fluid">
-                <div class="cuy-field" style="margin-bottom: 0.85rem;">
-                    <p:outputLabel for="inputFaasUrl" value="URL de la función (opcional)" />
-                    <p:inputText id="inputFaasUrl" label="URL de la función"
-                                 value="#{detalleViajeBean.faasEndpointUrl}"
-                                 placeholder="https://..." />
-                </div>
-
-                <div class="cuy-field" style="margin-bottom: 0.85rem;">
-                    <p:outputLabel for="inputFaasMatricula" value="Matrícula (opcional)" />
-                    <p:inputText id="inputFaasMatricula"
-                                 value="#{detalleViajeBean.telemetriaMatricula}"
-                                 placeholder="Ej: STP 1234" />
-                </div>
-
-                <div style="display: flex; gap: 0.6rem; margin-bottom: 0.85rem;">
-                    <p:commandButton value="Punto en ruta"
-                                     icon="pi pi-check-circle"
-                                     actionListener="#{detalleViajeBean.cargarCoordenadasEnRuta}"
-                                     process="@this inputFaasMatricula"
-                                     update="inputFaasLat inputFaasLon inputFaasDesc"
-                                     styleClass="ui-button-outlined ui-button-success" />
-                    <p:commandButton value="Punto con desvío"
-                                     icon="pi pi-exclamation-triangle"
-                                     actionListener="#{detalleViajeBean.cargarCoordenadasDesviadas}"
-                                     process="@this inputFaasMatricula"
-                                     update="inputFaasLat inputFaasLon inputFaasDesc"
-                                     styleClass="ui-button-outlined ui-button-danger" />
-                </div>
-
-                <div class="cuy-grid-2" style="margin-bottom: 0.85rem;">
-                    <div class="cuy-field">
-                        <p:outputLabel for="inputFaasLat" value="Latitud GPS" />
-                        <p:inputNumber id="inputFaasLat" label="Latitud GPS"
-                                       value="#{detalleViajeBean.telemetriaLatitud}"
-                                       decimalPlaces="4"
-                                       decimalSeparator="."
-                                       thousandSeparator="" />
-                    </div>
-                    <div class="cuy-field">
-                        <p:outputLabel for="inputFaasLon" value="Longitud GPS" />
-                        <p:inputNumber id="inputFaasLon" label="Longitud GPS"
-                                       value="#{detalleViajeBean.telemetriaLongitud}"
-                                       decimalPlaces="4"
-                                       decimalSeparator="."
-                                       thousandSeparator="" />
-                    </div>
-                </div>
-
-                <div class="cuy-field" style="margin-bottom: 0.85rem;">
-                    <p:outputLabel for="inputFaasDesc" value="Descripción" />
-                    <p:inputText id="inputFaasDesc" label="Descripción"
-                                 value="#{detalleViajeBean.telemetriaDescripcion}"
-                                 placeholder="Opcional" />
-                </div>
-
-                <h:panelGroup rendered="#{not empty detalleViajeBean.ultimoResultadoFaas}">
-                    <div style="margin-bottom: 0.85rem; padding: 0.65rem 0.9rem; background: #eff6ff; border-left: 4px solid #2563eb; border-radius: 6px; font-size: 0.84rem; color: #1e3a8a; font-weight: 600;">
-                        <i class="pi pi-info-circle" style="margin-right: 0.35rem;" />
-                        <h:outputText value="#{detalleViajeBean.ultimoResultadoFaas}" />
-                    </div>
-                </h:panelGroup>
-
-                <div style="display: flex; justify-content: flex-end; gap: 0.6rem; margin-top: 1rem;">
-                    <p:commandButton value="Cerrar"
-                                     type="button"
-                                     icon="pi pi-times"
-                                     onclick="PF('dlgFaasWidget').hide()"
-                                     styleClass="ui-button-outlined ui-button-secondary"
-                                     style="width: auto;" />
-                    <p:commandButton value="Procesar y evaluar desvío"
-                                     icon="pi pi-bolt"
-                                     actionListener="#{detalleViajeBean.enviarTelemetriaFaas}"
-                                     update=":dlgFaasForm :monitoreoForm :growl"
-                                     styleClass="ui-button-primary"
-                                     style="width: auto;" />
-                </div>
-            </h:form>
-        </p:dialog>
 
         <!-- Modal Vista Previa de Foto de Incidente -->
         <p:dialog header="Evidencia Fotográfica del Incidente"

@@ -181,7 +181,7 @@ public class BandejaFiscalizacionBean implements Serializable {
             }
 
             int ciInspector = acceso.ci();
-            CertificadoDigital certificadoDB = certificadoEJB.buscarCertificadoActivoPorCi(ciInspector);
+            CertificadoDigital certificadoDB = certificadoEJB.buscarCertificadoActivoPorCi(token, ciInspector);
 
             if (certificadoDB == null) {
                 mostrarMensaje(
@@ -208,6 +208,7 @@ public class BandejaFiscalizacionBean implements Serializable {
                     : "";
 
             byte[] pdfOriginal = actaEJB.emitirYFirmarActa(
+                    token,
                     this.casoSeleccionado.idCaso(),
                     this.casoSeleccionado.nombreEmpresa(),
                     this.casoSeleccionado.matricula(),
@@ -221,13 +222,14 @@ public class BandejaFiscalizacionBean implements Serializable {
                 return null;
             }
 
-            CredencialesFirma credenciales = certificadoEJB.abrirCredenciales(archivoCertificado, passwordCertificado);
+            CredencialesFirma credenciales = certificadoEJB.abrirCredenciales(token, archivoCertificado, passwordCertificado);
             if (credenciales == null) {
                 mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error de Firma", "No se pudo abrir el certificado con la clave provista.");
                 return null;
             }
 
             byte[] pdfFirmado = actaEJB.firmarPdf(
+                    token,
                     pdfOriginal,
                     credenciales.getClavePrivada(),
                     credenciales.getCertificado()

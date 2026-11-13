@@ -1,5 +1,6 @@
 package uy.edu.fing.grupo07.CargaUY.rest;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.ws.rs.core.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -22,14 +23,20 @@ import static org.mockito.Mockito.*;
 @DisplayName("Pruebas Unitarias - BalanzaResource (REST API de Balanzas)")
 class BalanzaResourceTest {
 
+    private static final String TOKEN_BALANZA = "tok-balanza";
+
     @Mock
     private GestionBalanzaServiceLocal balanzaService;
+
+    @Mock
+    private HttpServletRequest httpRequest;
 
     private BalanzaResource resource;
 
     @BeforeEach
     void setUp() {
-        resource = new BalanzaResource(balanzaService);
+        lenient().when(httpRequest.getAttribute("token")).thenReturn(TOKEN_BALANZA);
+        resource = new BalanzaResource(balanzaService, httpRequest);
     }
 
     @Test
@@ -38,7 +45,7 @@ class BalanzaResourceTest {
         PesadaBalanzaDTO request = new PesadaBalanzaDTO(null, LocalDate.now(), LocalTime.now(), 32000, "123456", null);
         PesadaBalanzaDTO responseDto = new PesadaBalanzaDTO(1, LocalDate.now(), LocalTime.now(), 32000, "123456", 10L);
 
-        when(balanzaService.registrarPesada(request)).thenReturn(responseDto);
+        when(balanzaService.registrarPesada(TOKEN_BALANZA, request)).thenReturn(responseDto);
 
         Response response = resource.registrarPesaje(request);
 
@@ -58,7 +65,7 @@ class BalanzaResourceTest {
     @DisplayName("POST /pesaje cuando servicio lanza BusinessException responde 400 Bad Request")
     void testRegistrarPesajeErrorNegocio() {
         PesadaBalanzaDTO request = new PesadaBalanzaDTO(null, LocalDate.now(), LocalTime.now(), 32000, "999", null);
-        when(balanzaService.registrarPesada(request)).thenThrow(new BusinessException("Sin guía activa"));
+        when(balanzaService.registrarPesada(TOKEN_BALANZA, request)).thenThrow(new BusinessException("Sin guía activa"));
 
         Response response = resource.registrarPesaje(request);
 
@@ -69,7 +76,7 @@ class BalanzaResourceTest {
     @DisplayName("POST /mock-sync invoca sincronización del mock y responde 201 Created")
     void testSincronizarDesdeMockExitoso() {
         PesadaBalanzaDTO responseDto = new PesadaBalanzaDTO(2, LocalDate.now(), LocalTime.now(), 35000, "123456", 10L);
-        when(balanzaService.registrarPesadaDesdeMock()).thenReturn(responseDto);
+        when(balanzaService.registrarPesadaDesdeMock(TOKEN_BALANZA)).thenReturn(responseDto);
 
         Response response = resource.sincronizarDesdeMock();
 
@@ -80,7 +87,7 @@ class BalanzaResourceTest {
     @Test
     @DisplayName("POST /mock-sync ante fallo de conexión responde 400 Bad Request con mensaje amigable")
     void testSincronizarDesdeMockFallo() {
-        when(balanzaService.registrarPesadaDesdeMock()).thenThrow(new BusinessException("Fallo de conexión"));
+        when(balanzaService.registrarPesadaDesdeMock(TOKEN_BALANZA)).thenThrow(new BusinessException("Fallo de conexión"));
 
         Response response = resource.sincronizarDesdeMock();
 
@@ -91,7 +98,7 @@ class BalanzaResourceTest {
     @DisplayName("GET /guia/{guiaId} retorna 200 OK con lista de pesadas")
     void testListarPesadasPorGuiaExitoso() {
         PesadaBalanzaDTO p = new PesadaBalanzaDTO(1, LocalDate.now(), LocalTime.now(), 30000, "123", 10L);
-        when(balanzaService.listarPesadasPorGuia(10L)).thenReturn(List.of(p));
+        when(balanzaService.listarPesadasPorGuia(TOKEN_BALANZA, 10L)).thenReturn(List.of(p));
 
         Response response = resource.listarPesadasPorGuia(10L);
 
@@ -104,7 +111,7 @@ class BalanzaResourceTest {
     @Test
     @DisplayName("GET /guia/{guiaId} con error responde 404 Not Found")
     void testListarPesadasPorGuiaError() {
-        when(balanzaService.listarPesadasPorGuia(99L)).thenThrow(new BusinessException("Guía no encontrada"));
+        when(balanzaService.listarPesadasPorGuia(TOKEN_BALANZA, 99L)).thenThrow(new BusinessException("Guía no encontrada"));
 
         Response response = resource.listarPesadasPorGuia(99L);
 

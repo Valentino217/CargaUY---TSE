@@ -421,6 +421,23 @@ class EntidadesYDtoTest {
         assertEquals(1, idto1.historialAuditoria().size());
         InfraccionDTO idto2 = new InfraccionDTO(2, hoy, TipoInfraccion.EXCESO_DE_CARGA, EstadoInfraccion.DETECTADA, "Ev", "Fund", hoy, 1L, "MAT", "Emp", "Desc", hoy, null, null);
         assertTrue(idto2.historialAuditoria().isEmpty());
+        assertFalse(idto2.isDescargoEditado());
+        assertTrue(idto2.versionesAnterioresDescargo().isEmpty());
+        assertEquals(0, idto2.historialAuditoriaConsolidado().size());
+
+        RegistroAuditoriaDTO h0 = new RegistroAuditoriaDTO(10L, "DETECTADA", hoy, ahora, "SIS", "CREAR_INFRACCION", "Det");
+        RegistroAuditoriaDTO h1 = new RegistroAuditoriaDTO(11L, "EN_DESCARGO", hoy, ahora, "Emp", "PRESENTAR_DESCARGO", "V1");
+        RegistroAuditoriaDTO h2 = new RegistroAuditoriaDTO(12L, "EN_DESCARGO", hoy, ahora.plusMinutes(2), "Emp", "EDITAR_DESCARGO", "V2");
+        InfraccionDTO idtoEdit = new InfraccionDTO(3, hoy, TipoInfraccion.EXCESO_DE_CARGA, EstadoInfraccion.EN_DESCARGO, "Ev", null, null, 1L, "MAT", "Emp", "V2", hoy, h2, List.of(h0, h1, h2));
+        assertTrue(idtoEdit.isDescargoEditado());
+        assertEquals(2, idtoEdit.historialAuditoriaConsolidado().size());
+        assertEquals("PRESENTAR_DESCARGO", idtoEdit.historialAuditoriaConsolidado().get(1).accion());
+        assertEquals("V2", idtoEdit.historialAuditoriaConsolidado().get(1).fundamento());
+        assertTrue(idtoEdit.esDescargoEditado(idtoEdit.historialAuditoriaConsolidado().get(1)));
+        assertFalse(idtoEdit.esDescargoEditado(h0));
+        assertFalse(idtoEdit.esDescargoEditado(null));
+        assertEquals(1, idtoEdit.versionesAnterioresDescargo().size());
+        assertEquals("V1", idtoEdit.versionesAnterioresDescargo().get(0).fundamento());
 
         IncidenteDTO incDto = new IncidenteDTO("foto", "desc");
         assertEquals("foto", incDto.foto());

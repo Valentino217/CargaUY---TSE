@@ -129,6 +129,13 @@
                     </div>
 
                     <div class="form-field">
+                        <h:outputLabel for="numeroPermiso" value="Nro. Permiso (PNC):"/>
+                        <p:inputText id="numeroPermiso" label="Nro. Permiso (PNC)"
+                                     value="#{PNCBean.pnc.numeroPermiso}"
+                                     placeholder="Ej: PNC-2026-00123"/>
+                    </div>
+
+                    <div class="form-field">
                         <h:outputLabel for="fechaVencimiento" value="Fecha de Vencimiento: *"/>
                         <p:datePicker id="fechaVencimiento" label="Fecha de Vencimiento" 
                                       value="#{PNCBean.pnc.fechaVencimiento}"
@@ -161,8 +168,12 @@
                              emptyMessage="No hay PNCs registrados"
                              responsiveLayout="scroll">
 
-                    <p:column headerText="Nro" style="width: 140px; text-align: center;">
+                    <p:column headerText="Nro" style="width: 110px; text-align: center;">
                         <strong>##{p.nro}</strong>
+                    </p:column>
+
+                    <p:column headerText="Nro. Permiso" style="width: 170px;">
+                        <h:outputText value="#{not empty p.numeroPermiso ? p.numeroPermiso : '-'}"/>
                     </p:column>
 
                     <p:column headerText="Vehículo (Matrícula)" style="width: 180px;">

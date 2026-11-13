@@ -13,7 +13,17 @@ public interface VehiculoEJBLocal {
 	List<Empresa> listarEmpresasPorCiudadano(int ciudadanoId);
 	List<Vehiculo> listarVehiculosPorCiudadano(int ciudadanoId);
 	List<Empresa> listarEmpresasParaActor(String token);
+	List<Empresa> listarEmpresasParaPortal(String token);
 	List<Vehiculo> listarParaActor(String token);
+	List<Vehiculo> listarParaPortal(String token);
+	List<Vehiculo> listarParaFiscalizacion(String token);
+	Vehiculo buscar(String token, String matricula);
+	void crear(String token, Vehiculo vehiculo);
+	void modificar(String token, Vehiculo vehiculo);
+	void eliminar(String token, Vehiculo vehiculo);
+	boolean tieneGuiaEnCurso(String token, String matricula);
+	boolean estaAptoParaOperar(String token, String matricula);
+	boolean estaAptoParaOperarEnPortal(String token, String matricula);
 	List<Empresa> listarEmpresas();
 	void crear(Vehiculo vehiculo);
 	void modificar(Vehiculo vehiculo);

@@ -11,11 +11,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import uy.edu.fing.grupo07.CargaUY.domain.entity.GuiaDeViaje;
@@ -34,6 +36,8 @@ import uy.edu.fing.grupo07.CargaUY.service.GuiaDeViajeEJBLocal;
 @DisplayName("Pruebas Unitarias - DetalleViajeBean")
 class DetalleViajeBeanTest {
 
+    private static final String TOKEN_DETALLE = "tok-detalle-viaje";
+
     @Mock
     private GestionEventosServiceLocal eventosService;
 
@@ -43,11 +47,21 @@ class DetalleViajeBeanTest {
     @Mock
     private GuiaDeViajeEJBLocal guiaDeViajeEJB;
 
+    private MockedStatic<SesionActual> sesionActualMock;
     private DetalleViajeBean bean;
 
     @BeforeEach
     void setUp() {
+        sesionActualMock = mockStatic(SesionActual.class);
+        sesionActualMock.when(SesionActual::token).thenReturn(TOKEN_DETALLE);
         bean = new DetalleViajeBean(eventosService, balanzaService, guiaDeViajeEJB);
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (sesionActualMock != null) {
+            sesionActualMock.close();
+        }
     }
 
     @Test
@@ -65,10 +79,10 @@ class DetalleViajeBeanTest {
         guias.add(g1);
         guias.add(g2);
 
-        when(guiaDeViajeEJB.listarGuias()).thenReturn(guias);
-        when(guiaDeViajeEJB.buscarGuias(20L)).thenReturn(g2);
-        when(eventosService.listarEventosPorGuia(20L)).thenReturn(Collections.emptyList());
-        when(balanzaService.listarPesadasPorGuia(20L)).thenReturn(Collections.emptyList());
+        when(guiaDeViajeEJB.listarParaOperador(TOKEN_DETALLE)).thenReturn(guias);
+        when(guiaDeViajeEJB.buscarGuias(TOKEN_DETALLE, 20L)).thenReturn(g2);
+        when(eventosService.listarEventosPorGuia(TOKEN_DETALLE, 20L)).thenReturn(Collections.emptyList());
+        when(balanzaService.listarPesadasPorGuia(TOKEN_DETALLE, 20L)).thenReturn(Collections.emptyList());
 
         bean.init();
 
@@ -107,9 +121,9 @@ class DetalleViajeBeanTest {
         EventoViajeDTO ev = new EventoViajeDTO("uuid-1", LocalDateTime.now(), TipoEvento.INICIO, -34.9, -56.1, 5L, null);
         PesadaBalanzaDTO pes = new PesadaBalanzaDTO(101, LocalDate.now(), LocalTime.now(), 41000, "STP 1234", 5L);
 
-        when(guiaDeViajeEJB.buscarGuias(5L)).thenReturn(guia);
-        when(eventosService.listarEventosPorGuia(5L)).thenReturn(List.of(ev));
-        when(balanzaService.listarPesadasPorGuia(5L)).thenReturn(List.of(pes));
+        when(guiaDeViajeEJB.buscarGuias(TOKEN_DETALLE, 5L)).thenReturn(guia);
+        when(eventosService.listarEventosPorGuia(TOKEN_DETALLE, 5L)).thenReturn(List.of(ev));
+        when(balanzaService.listarPesadasPorGuia(TOKEN_DETALLE, 5L)).thenReturn(List.of(pes));
 
         bean.consultarViaje();
 
@@ -126,17 +140,17 @@ class DetalleViajeBeanTest {
     void testSincronizarMockBalanzaExitoso() {
         bean.setGuiaIdSeleccionada(7L);
         PesadaBalanzaDTO nueva = new PesadaBalanzaDTO(99, LocalDate.now(), LocalTime.now(), 44000, "STP 9999", 7L);
-        when(balanzaService.registrarPesadaDesdeMock(7L)).thenReturn(nueva);
+        when(balanzaService.registrarPesadaDesdeMock(TOKEN_DETALLE, 7L)).thenReturn(nueva);
 
         GuiaDeViaje guia7 = new GuiaDeViaje();
         guia7.setId(7L);
-        when(guiaDeViajeEJB.buscarGuias(7L)).thenReturn(guia7);
-        when(eventosService.listarEventosPorGuia(7L)).thenReturn(Collections.emptyList());
-        when(balanzaService.listarPesadasPorGuia(7L)).thenReturn(List.of(nueva));
+        when(guiaDeViajeEJB.buscarGuias(TOKEN_DETALLE, 7L)).thenReturn(guia7);
+        when(eventosService.listarEventosPorGuia(TOKEN_DETALLE, 7L)).thenReturn(Collections.emptyList());
+        when(balanzaService.listarPesadasPorGuia(TOKEN_DETALLE, 7L)).thenReturn(List.of(nueva));
 
         bean.sincronizarMockBalanza();
 
-        verify(balanzaService, times(1)).registrarPesadaDesdeMock(7L);
+        verify(balanzaService, times(1)).registrarPesadaDesdeMock(TOKEN_DETALLE, 7L);
         verify(balanzaService, never()).registrarPesadaDesdeMock();
         assertEquals(7L, bean.getGuiaIdSeleccionada());
         assertNotNull(bean.getGuiaActual());
@@ -162,12 +176,12 @@ class DetalleViajeBeanTest {
                 new IncidenteDTO("foto_eje.jpg", "Rotura de eje en ruta 5")
         );
 
-        when(eventosService.reportarIncidente(any(ReportarIncidenteDTO.class))).thenReturn(evResult);
-        when(eventosService.listarEventosPorGuia(3L)).thenReturn(List.of(evResult));
+        when(eventosService.reportarIncidente(eq(TOKEN_DETALLE), any(ReportarIncidenteDTO.class))).thenReturn(evResult);
+        when(eventosService.listarEventosPorGuia(TOKEN_DETALLE, 3L)).thenReturn(List.of(evResult));
 
         bean.reportarIncidente();
 
-        verify(eventosService, times(1)).reportarIncidente(any(ReportarIncidenteDTO.class));
+        verify(eventosService, times(1)).reportarIncidente(eq(TOKEN_DETALLE), any(ReportarIncidenteDTO.class));
         assertNull(bean.getNuevoIncidenteDescripcion());
         assertNull(bean.getNuevoIncidenteFoto());
         assertEquals(1, bean.getTotalEventos());
@@ -257,7 +271,7 @@ class DetalleViajeBeanTest {
         bean.setTelemetriaLongitud(-55.8100);
         bean.setEvaluarDesvioInmediato(true);
 
-        when(eventosService.guardarEvento(any(EventoViajeDTO.class))).thenThrow(
+        when(eventosService.guardarEvento(eq(TOKEN_DETALLE), any(EventoViajeDTO.class))).thenThrow(
                 new uy.edu.fing.grupo07.CargaUY.exception.BusinessException(
                         "El vehículo STP 4321 no tiene ninguna guía de viaje EN_CURSO; se derivó a fiscalización automática por VIAJE_SIN_GUIA."
                 )
@@ -283,7 +297,7 @@ class DetalleViajeBeanTest {
         bean.setTelemetriaLongitud(-55.8100);
         bean.setEvaluarDesvioInmediato(true);
 
-        when(eventosService.guardarEvento(any(EventoViajeDTO.class))).thenThrow(
+        when(eventosService.guardarEvento(eq(TOKEN_DETALLE), any(EventoViajeDTO.class))).thenThrow(
                 new uy.edu.fing.grupo07.CargaUY.exception.BusinessException(
                         "No existe vehículo registrado ni guía de viaje EN_CURSO para la matrícula ZZZ 9999"
                 )
@@ -320,11 +334,11 @@ class DetalleViajeBeanTest {
         g2.setEstado(TipoEstado.EN_CURSO);
         g2.setVehiculo(v2);
 
-        when(guiaDeViajeEJB.listarGuias()).thenReturn(List.of(g1, g2));
-        when(guiaDeViajeEJB.buscarGuias(1L)).thenReturn(g1);
-        when(guiaDeViajeEJB.buscarGuias(2L)).thenReturn(g2);
-        when(eventosService.listarEventosPorGuia(anyLong())).thenReturn(Collections.emptyList());
-        when(balanzaService.listarPesadasPorGuia(anyLong())).thenReturn(Collections.emptyList());
+        when(guiaDeViajeEJB.listarParaOperador(TOKEN_DETALLE)).thenReturn(List.of(g1, g2));
+        when(guiaDeViajeEJB.buscarGuias(TOKEN_DETALLE, 1L)).thenReturn(g1);
+        when(guiaDeViajeEJB.buscarGuias(TOKEN_DETALLE, 2L)).thenReturn(g2);
+        when(eventosService.listarEventosPorGuia(eq(TOKEN_DETALLE), anyLong())).thenReturn(Collections.emptyList());
+        when(balanzaService.listarPesadasPorGuia(eq(TOKEN_DETALLE), anyLong())).thenReturn(Collections.emptyList());
 
         bean.setGuiaIdSeleccionada(1L);
         bean.consultarViaje();
@@ -336,13 +350,13 @@ class DetalleViajeBeanTest {
         uy.edu.fing.grupo07.CargaUY.domain.entity.EventoViaje persistidoG2 =
                 new uy.edu.fing.grupo07.CargaUY.domain.entity.EventoViaje();
         persistidoG2.setGuia(g2);
-        when(eventosService.guardarEvento(any(EventoViajeDTO.class))).thenReturn(persistidoG2);
+        when(eventosService.guardarEvento(eq(TOKEN_DETALLE), any(EventoViajeDTO.class))).thenReturn(persistidoG2);
         when(motorMock.evaluarGuia(2L)).thenReturn(Collections.emptyList());
 
         bean.setEvaluarDesvioInmediato(true);
         bean.enviarTelemetriaFaas();
 
-        verify(eventosService).guardarEvento(argThat(dto ->
+        verify(eventosService).guardarEvento(eq(TOKEN_DETALLE), argThat(dto ->
                 "bb 2222".equals(dto.matricula())
                         && dto.distanciaDesvioKm() != null
                         && dto.distanciaDesvioKm() < 1.0
@@ -350,5 +364,44 @@ class DetalleViajeBeanTest {
         verify(motorMock, times(1)).evaluarGuia(2L);
         verify(motorMock, never()).evaluarGuia(1L);
         assertEquals(2L, bean.getGuiaIdSeleccionada());
+    }
+
+    @Test
+    @DisplayName("refrescarPorPollMock, isPollAutomaticoActivo y estado de nodos reflejan estado EN_CURSO y registro periférico")
+    void testPollAutomaticoYEstadoNodos() {
+        uy.edu.fing.grupo07.CargaUY.service.GestionNodosPerifericosServiceImpl registro =
+                new uy.edu.fing.grupo07.CargaUY.service.GestionNodosPerifericosServiceImpl();
+        registro.init();
+        registro.setHabilitado("NODO-TRK-01", true);
+        registro.setHabilitado("NODO-BAL-01", true);
+        bean.setNodosPerifericosService(registro);
+
+        GuiaDeViaje guia = new GuiaDeViaje();
+        guia.setId(50L);
+        guia.setOrigen("Montevideo");
+        guia.setDestino("Rivera");
+        guia.setEstado(TipoEstado.EN_CURSO);
+
+        when(guiaDeViajeEJB.buscarGuias(TOKEN_DETALLE, 50L)).thenReturn(guia);
+        when(eventosService.listarEventosPorGuia(TOKEN_DETALLE, 50L)).thenReturn(Collections.emptyList());
+        when(balanzaService.listarPesadasPorGuia(TOKEN_DETALLE, 50L)).thenReturn(Collections.emptyList());
+
+        bean.setGuiaIdSeleccionada(50L);
+        bean.refrescarPorPollMock();
+
+        assertTrue(bean.isPollAutomaticoActivo());
+        assertTrue(bean.isNodoTrackingActivoSistema());
+        assertEquals(1, bean.getCantidadBalanzasActivas());
+        assertEquals(uy.edu.fing.grupo07.CargaUY.dto.ModoNodoPeriferico.RUTA_NORMAL.getEtiqueta(),
+                bean.getResumenModoTracking());
+
+        registro.setHabilitado("NODO-TRK-01", false);
+        registro.setHabilitado("NODO-BAL-01", false);
+        assertFalse(bean.isNodoTrackingActivoSistema());
+        assertEquals(0, bean.getCantidadBalanzasActivas());
+
+        guia.setEstado(TipoEstado.FINALIZADO);
+        bean.refrescarPorPollMock();
+        assertFalse(bean.isPollAutomaticoActivo());
     }
 }

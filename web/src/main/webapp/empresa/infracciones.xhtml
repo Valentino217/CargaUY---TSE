@@ -122,7 +122,7 @@
                     </p:column>
 
                     <p:column headerText="Acciones" style="width: 170px; text-align: center;" exportable="false">
-                        <p:commandButton value="#{empresaInfraccionesBean.puedePresentarDescargo(inf) ? 'Ver / Descargo' : 'Ver Expediente'}"
+                        <p:commandButton value="#{not empresaInfraccionesBean.puedePresentarDescargo(inf) ? 'Ver Expediente' : (not empty inf.textoDescargo() ? 'Editar Descargo' : 'Ver')}"
                                          icon="#{empresaInfraccionesBean.puedePresentarDescargo(inf) ? 'pi pi-file-edit' : 'pi pi-eye'}"
                                          actionListener="#{empresaInfraccionesBean.seleccionarParaDescargo(inf)}"
                                          update=":dlgDescargoForm"
@@ -184,34 +184,10 @@
                         </h:panelGroup>
 
                         <!-- Historial -->
-                        <h:panelGroup rendered="#{not empty empresaInfraccionesBean.seleccionada.historialAuditoria()}">
-                            <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-left: 4px solid #059669; border-radius: 8px; padding: 0.9rem 1rem; margin-bottom: 1rem;">
-                                <div style="font-weight: 700; color: #065f46; font-size: 0.85rem; margin-bottom: 0.5rem;">
-                                    <i class="pi pi-lock" /> Historial
-                                </div>
-                                <p:dataTable var="aud"
-                                             value="#{empresaInfraccionesBean.seleccionada.historialAuditoria()}"
-                                             size="small"
-                                             stripedRows="true"
-                                             reflow="false">
-                                    <p:column headerText="Acción" style="width: 170px; min-width: 140px;" styleClass="cuy-aud-col-fixed">
-                                        <span class="cuy-mono" style="font-size: 0.76rem; font-weight: 700;">#{aud.accion()}</span>
-                                    </p:column>
-                                    <p:column headerText="Estado" style="width: 120px; min-width: 100px;" styleClass="cuy-aud-col-fixed">
-                                        <h:outputText value="#{aud.resolucion()}" style="font-size: 0.78rem;" />
-                                    </p:column>
-                                    <p:column headerText="Autor" style="width: 180px; min-width: 140px;" styleClass="cuy-aud-col-fixed">
-                                        <h:outputText value="#{aud.usuario()}" style="font-size: 0.78rem;" />
-                                    </p:column>
-                                    <p:column headerText="Timestamp" style="width: 175px; min-width: 150px;" styleClass="cuy-aud-col-fixed">
-                                        <span class="cuy-mono" style="font-size: 0.74rem;"><h:outputText value="#{aud.timestampCreacion()}"><f:convertDateTime type="localDateTime" pattern="dd/MM/yyyy HH:mm" /></h:outputText></span>
-                                    </p:column>
-                                    <p:column headerText="Fundamento / Detalle" style="min-width: 250px;">
-                                        <h:outputText value="#{aud.fundamento()}" style="font-size: 0.78rem; white-space: normal;" />
-                                    </p:column>
-                                </p:dataTable>
-                            </div>
-                        </h:panelGroup>
+                        <ui:include src="/WEB-INF/templates/historialAuditoria.xhtml">
+                            <ui:param name="caso" value="#{empresaInfraccionesBean.seleccionada}" />
+                            <ui:param name="soloTabla" value="#{false}" />
+                        </ui:include>
 
                         <!-- Formulario de descargo editable -->
                         <h:panelGroup rendered="#{empresaInfraccionesBean.puedePresentarDescargo(empresaInfraccionesBean.seleccionada)}">
@@ -249,15 +225,15 @@
                                          onclick="PF('dlgDescargoWidget').hide()"
                                          styleClass="ui-button-outlined ui-button-secondary" />
 
-                        <p:commandButton value="Enviar Descargo Formal"
+                        <p:commandButton value="#{not empty empresaInfraccionesBean.seleccionada.textoDescargo() ? 'Editar Descargo' : 'Enviar Descargo'}"
                                          icon="pi pi-send"
                                          rendered="#{empresaInfraccionesBean.puedePresentarDescargo(empresaInfraccionesBean.seleccionada)}"
                                          actionListener="#{empresaInfraccionesBean.presentarDescargo}"
                                          update=":infraccionesForm:tablaInfracciones :kpiInfGroup :growl"
                                          oncomplete="if (!args.validationFailed) PF('dlgDescargoWidget').hide()"
                                          styleClass="ui-button-primary">
-                            <p:confirm header="Confirmar Envío de Descargo"
-                                       message="¿Confirma el ingreso formal de este descargo? El estado pasará a EN_DESCARGO."
+                            <p:confirm header="Confirmar Descargo"
+                                       message="#{not empty empresaInfraccionesBean.seleccionada.textoDescargo() ? '¿Confirma la actualización de este descargo?' : '¿Confirma el envío de este descargo? El estado pasará a EN_DESCARGO.'}"
                                        icon="pi pi-question-circle" />
                         </p:commandButton>
                     </div>

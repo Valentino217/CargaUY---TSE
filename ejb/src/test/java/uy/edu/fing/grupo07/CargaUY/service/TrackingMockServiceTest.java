@@ -4,6 +4,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.TypedQuery;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -239,6 +240,76 @@ class TrackingMockServiceTest {
         serviceConPeriferico.cerrar();
     }
 
+    @Test
+    @DisplayName("El coordinador automático respeta encendido/apagado, modo de desvíos y sondeo de balanzas")
+    void testCicloAutomaticoConRegistroDeNodos() {
+        GestionNodosPerifericosServiceImpl registro = new GestionNodosPerifericosServiceImpl();
+        registro.init();
+        registro.setHabilitado("NODO-TRK-01", true);
+        GestionBalanzaServiceLocal balanzaMock = mock(GestionBalanzaServiceLocal.class);
+        TrackingClient trackingClientMock = mock(TrackingClient.class);
+        lenient().when(trackingClientMock.getEndpointUrl()).thenReturn("http://mock-tracking:8080");
+
+        TrackingMockServiceImpl serviceAuto = new TrackingMockServiceImpl(
+                em,
+                eventosService,
+                motorFiscalizacion,
+                new FaasTrackingClient(),
+                null
+        );
+        serviceAuto.setNodosPerifericosService(registro);
+        serviceAuto.setBalanzaService(balanzaMock);
+
+        GuiaDeViaje guia = crearGuiaActiva(404L, "Montevideo", "Canelones", "STP 4040");
+        when(em.createQuery(anyString(), eq(GuiaDeViaje.class))).thenReturn(queryGuias);
+        when(queryGuias.setParameter("enCurso", TipoEstado.EN_CURSO)).thenReturn(queryGuias);
+        when(queryGuias.getResultList()).thenReturn(List.of(guia));
+
+        // 1. Modo CON_DESVIO fuerza 1 desvío automático en tick 1 (15s cadence) y sondeo de balanza
+        registro.cambiarModo("NODO-TRK-01", uy.edu.fing.grupo07.CargaUY.dto.ModoNodoPeriferico.CON_DESVIO);
+        serviceAuto.ejecutarCicloAutomaticoSeguro();
+        assertTrue(serviceAuto.estaActivo());
+        assertEquals(1, serviceAuto.getCantidadDesvios());
+        verify(balanzaMock, times(1)).sondearBalanzasPeriodico();
+        verify(eventosService, times(1)).guardarEvento(any(EventoViajeDTO.class));
+
+        // Tick 2 y 3 (5s y 10s): no deben emitir pasos GPS hasta completar el intervalo de 15s (tick 4),
+        // aunque tick 3 sí sondea balanzas cada 10s y notificarCambioBalanza no emite GPS.
+        serviceAuto.ejecutarCicloAutomaticoSeguro(); // tick 2
+        serviceAuto.ejecutarCicloAutomaticoSeguro(); // tick 3 -> balanzas (times 2), sin GPS
+        serviceAuto.notificarCambioBalanza();        // cambio balanza -> balanzas (times 3), sin GPS
+        verify(eventosService, times(1)).guardarEvento(any(EventoViajeDTO.class));
+        verify(balanzaMock, times(3)).sondearBalanzasPeriodico();
+
+        serviceAuto.ejecutarCicloAutomaticoSeguro(); // tick 4 (15s) -> nuevo paso GPS
+        verify(eventosService, times(2)).guardarEvento(any(EventoViajeDTO.class));
+
+        // 2. Apagar nodo de tracking detiene emisión automática y detiene remoto si existe
+        long antes = serviceAuto.getTotalEventosEmitidos();
+        registro.setHabilitado("NODO-TRK-01", false);
+        serviceAuto.ejecutarCicloAutomaticoSeguro();
+        assertFalse(serviceAuto.estaActivo());
+        assertEquals(0, serviceAuto.ejecutarPasoAutomaticoTracking());
+        assertEquals(antes, serviceAuto.getTotalEventosEmitidos());
+
+        // 3. Probar detección de parada remota con trackingClient
+        TrackingMockServiceImpl serviceConCliente = new TrackingMockServiceImpl(
+                em, eventosService, motorFiscalizacion, new FaasTrackingClient(), trackingClientMock
+        );
+        serviceConCliente.setNodosPerifericosService(registro);
+        registro.setHabilitado("NODO-TRK-01", true);
+        serviceConCliente.notificarCambioConfiguracionNodos();
+        assertTrue(serviceConCliente.estaActivo());
+
+        registro.setHabilitado("NODO-TRK-01", false);
+        serviceConCliente.notificarCambioConfiguracionNodos();
+        assertFalse(serviceConCliente.estaActivo());
+        verify(trackingClientMock, atLeastOnce()).detener(anyString());
+
+        serviceAuto.cerrar();
+        serviceConCliente.cerrar();
+    }
+
     private GuiaDeViaje crearGuiaActiva(Long id, String origen, String destino, String matricula) {
         RedVialUruguay.RutaPlanificada ruta = RedVialUruguay.calcularRuta(origen, destino);
         Vehiculo vehiculo = new Vehiculo();
@@ -253,5 +324,49 @@ class TrackingMockServiceTest {
         guia.setCorredorVial(ruta.corredorVial());
         guia.setPolilineaRuta(RedVialUruguay.serializarPolilinea(ruta.polilinea()));
         return guia;
+    }
+
+    @Test
+    @DisplayName("Overloads tokenizados de tracking fallan cerrado sin ControlAcceso y verifican rol admin")
+    void testOverloadsTokenizadosYFailClosed() throws Exception {
+        TrackingMockServiceImpl svc = new TrackingMockServiceImpl(
+                em, eventosService, motorFiscalizacion, new FaasTrackingClient(), null
+        );
+        try {
+            assertThrows(IllegalStateException.class, () -> svc.iniciar("tok-admin", 10, 0));
+            assertThrows(IllegalStateException.class, () -> svc.detener("tok-admin"));
+            assertThrows(IllegalStateException.class, () -> svc.reiniciarRecorridos("tok-admin"));
+            assertThrows(IllegalStateException.class, () -> svc.emitirPasoGuiasActivas("tok-admin"));
+            assertThrows(IllegalStateException.class, () -> svc.sincronizarConNodoPeriferico("tok-admin"));
+            assertThrows(IllegalStateException.class, () -> svc.notificarCambioConfiguracionNodos("tok-admin"));
+            assertThrows(IllegalStateException.class, () -> svc.notificarCambioBalanza("tok-admin"));
+
+            uy.edu.fing.grupo07.CargaUY.security.ControlAcceso controlMock =
+                    mock(uy.edu.fing.grupo07.CargaUY.security.ControlAcceso.class);
+            java.lang.reflect.Field field = TrackingMockServiceImpl.class.getDeclaredField("control");
+            field.setAccessible(true);
+            field.set(svc, controlMock);
+
+            @SuppressWarnings("unchecked")
+            jakarta.persistence.TypedQuery<GuiaDeViaje> qGuias = mock(jakarta.persistence.TypedQuery.class);
+            when(em.createQuery(anyString(), eq(GuiaDeViaje.class))).thenReturn(qGuias);
+            when(qGuias.setParameter(anyString(), any())).thenReturn(qGuias);
+            when(qGuias.getResultList()).thenReturn(List.of());
+
+            svc.iniciar("tok-admin", 12, 0);
+            assertTrue(svc.estaActivo());
+            svc.emitirPasoGuiasActivas("tok-admin");
+            svc.sincronizarConNodoPeriferico("tok-admin");
+            svc.reiniciarRecorridos("tok-admin");
+            svc.notificarCambioConfiguracionNodos("tok-admin");
+            svc.notificarCambioBalanza("tok-admin");
+            svc.detener("tok-admin");
+            assertFalse(svc.estaActivo());
+
+            verify(controlMock, times(2)).admin("tok-admin");
+            verify(controlMock, times(5)).exigir(eq("tok-admin"), any(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario[].class));
+        } finally {
+            svc.cerrar();
+        }
     }
 }

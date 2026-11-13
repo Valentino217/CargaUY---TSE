@@ -1,6 +1,6 @@
 -- ============================================================================
 -- CargaUY - Script Integral de Datos de Prueba (Seed Data)
--- Idempotente y auto-contenido (incluye migraciones de esquema previas)
+-- Idempotente y no destructivo (preserva vínculos, roles y cambios en runtime)
 -- ============================================================================
 SET client_encoding = 'UTF8';
 
@@ -20,6 +20,7 @@ ALTER TABLE IF EXISTS pesadas_balanza ADD COLUMN IF NOT EXISTS vehiculo_matricul
 ALTER TABLE IF EXISTS infracciones ALTER COLUMN guia_id DROP NOT NULL;
 ALTER TABLE IF EXISTS infracciones ADD COLUMN IF NOT EXISTS vehiculo_matricula VARCHAR(255);
 ALTER TABLE IF EXISTS infracciones DROP CONSTRAINT IF EXISTS uk_infraccion_guia_tipo;
+ALTER TABLE IF EXISTS pncs ADD COLUMN IF NOT EXISTS numero_permiso VARCHAR(100);
 ALTER TABLE IF EXISTS registro_auditoria ADD COLUMN IF NOT EXISTS infraccion_id INTEGER;
 
 DO $$
@@ -48,7 +49,7 @@ ALTER TABLE IF EXISTS usuario_roles ADD CONSTRAINT usuario_roles_rol_check
 -- 1. Reglas de Fiscalización
 INSERT INTO reglas_fiscalizacion (id, umbral_carga, umbral_tracking, version)
 VALUES (1, 500, 5.0, 1)
-ON CONFLICT (id) DO UPDATE SET umbral_carga = 500, umbral_tracking = 5.0;
+ON CONFLICT (id) DO NOTHING;
 
 -- 2. Rubros del Catálogo
 INSERT INTO rubros (codigo, nombre, descripcion) VALUES
@@ -58,7 +59,7 @@ INSERT INTO rubros (codigo, nombre, descripcion) VALUES
 (4, 'Combustibles y Peligrosas', 'Transporte de hidrocarburos, sustancias inflamables y químicas'),
 (5, 'Contenedores y Comercio Exterior', 'Transporte de contenedores marítimos de exportación e importación'),
 (6, 'Construcción y Cemento', 'Transporte de cemento, áridos, hierro y materiales de obra')
-ON CONFLICT (codigo) DO UPDATE SET nombre = EXCLUDED.nombre, descripcion = EXCLUDED.descripcion;
+ON CONFLICT (codigo) DO NOTHING;
 
 -- 3. Tipos de Carga del Catálogo
 INSERT INTO tipos_carga (codigo, descripcion) VALUES
@@ -71,10 +72,9 @@ INSERT INTO tipos_carga (codigo, descripcion) VALUES
 (7, 'Gasoil'),
 (8, 'Contenedor 40 Pies'),
 (9, 'Cemento Portland')
-ON CONFLICT (codigo) DO UPDATE SET descripcion = EXCLUDED.descripcion;
+ON CONFLICT (codigo) DO NOTHING;
 
--- 4. Usuarios (Upsert seguro compatible con cuenta BootstrapAdmin previa)
--- Función auxiliar temporal para insertar/actualizar usuarios sin colisionar por id ni por ci
+-- 4. Usuarios (Inserción inicial compatible con cuenta BootstrapAdmin previa, sin sobrescribir usuarios existentes)
 CREATE OR REPLACE FUNCTION pg_temp.upsert_usuario(
     p_id INT, p_tipo VARCHAR, p_ci INT, p_nombre VARCHAR, p_mail VARCHAR,
     p_fecha_nac DATE, p_password VARCHAR, p_origen VARCHAR, p_uid VARCHAR, p_rol VARCHAR,
@@ -96,37 +96,31 @@ BEGIN
             VALUES (p_id, p_tipo, p_ci, p_nombre, p_mail, p_fecha_nac, p_password, true, p_origen, p_uid, 1)
             RETURNING id INTO v_id;
         END IF;
+
+        IF p_tipo = 'ADMINISTRADOR' THEN
+            INSERT INTO administradores (usuario_id) VALUES (v_id) ON CONFLICT (usuario_id) DO NOTHING;
+        ELSIF p_tipo = 'AUTORIDAD' THEN
+            INSERT INTO autoridades (usuario_id, cargo) VALUES (v_id, COALESCE(p_cargo, 'Autoridad Nacional'))
+            ON CONFLICT (usuario_id) DO NOTHING;
+        ELSIF p_tipo = 'FUNCIONARIO' THEN
+            INSERT INTO funcionarios (usuario_id, nro_funcionario, departamento)
+            VALUES (v_id, COALESCE(p_nro_func, 100), COALESCE(p_depto, 'Montevideo'))
+            ON CONFLICT (usuario_id) DO NOTHING;
+        ELSIF p_tipo = 'CIUDADANO' THEN
+            INSERT INTO ciudadanos (usuario_id) VALUES (v_id) ON CONFLICT (usuario_id) DO NOTHING;
+        ELSIF p_tipo = 'CHOFER' THEN
+            INSERT INTO choferes (usuario_id) VALUES (v_id) ON CONFLICT (usuario_id) DO NOTHING;
+        END IF;
+
+        INSERT INTO usuario_roles (usuario_id, rol) VALUES (v_id, p_rol)
+        ON CONFLICT (usuario_id, rol) DO NOTHING;
     ELSE
-        UPDATE usuarios
-        SET tipo_usuario = p_tipo,
-            ci = p_ci,
-            nombre = p_nombre,
-            mail = p_mail,
-            fecha_nac = p_fecha_nac,
-            password = p_password,
-            activo = true,
-            origen_identidad = p_origen,
-            uid_externo = p_uid
-        WHERE id = v_id;
+        -- Usuario ya existente: no sobrescribir perfil, estado ni rol asignado en runtime
+        IF NOT EXISTS (SELECT 1 FROM usuario_roles WHERE usuario_id = v_id) THEN
+            INSERT INTO usuario_roles (usuario_id, rol) VALUES (v_id, p_rol)
+            ON CONFLICT (usuario_id, rol) DO NOTHING;
+        END IF;
     END IF;
-
-    IF p_tipo = 'ADMINISTRADOR' THEN
-        INSERT INTO administradores (usuario_id) VALUES (v_id) ON CONFLICT (usuario_id) DO NOTHING;
-    ELSIF p_tipo = 'AUTORIDAD' THEN
-        INSERT INTO autoridades (usuario_id, cargo) VALUES (v_id, COALESCE(p_cargo, 'Autoridad Nacional'))
-        ON CONFLICT (usuario_id) DO UPDATE SET cargo = EXCLUDED.cargo;
-    ELSIF p_tipo = 'FUNCIONARIO' THEN
-        INSERT INTO funcionarios (usuario_id, nro_funcionario, departamento)
-        VALUES (v_id, COALESCE(p_nro_func, 100), COALESCE(p_depto, 'Montevideo'))
-        ON CONFLICT (usuario_id) DO UPDATE SET nro_funcionario = EXCLUDED.nro_funcionario, departamento = EXCLUDED.departamento;
-    ELSIF p_tipo = 'CIUDADANO' THEN
-        INSERT INTO ciudadanos (usuario_id) VALUES (v_id) ON CONFLICT (usuario_id) DO NOTHING;
-    ELSIF p_tipo = 'CHOFER' THEN
-        INSERT INTO choferes (usuario_id) VALUES (v_id) ON CONFLICT (usuario_id) DO NOTHING;
-    END IF;
-
-    DELETE FROM usuario_roles WHERE usuario_id = v_id;
-    INSERT INTO usuario_roles (usuario_id, rol) VALUES (v_id, p_rol);
 
     RETURN v_id;
 END;
@@ -149,69 +143,71 @@ DECLARE
     id_chof_roberto  INT;
     id_chof_diego    INT;
 BEGIN
-    -- 4.1 Administradores (LDAP: admin.central / admin123 y martin.admin / admin123)
-    id_admin_central := pg_temp.upsert_usuario(10, 'ADMINISTRADOR', 10000001, 'Admin Central', 'admin@cargauy.gub.uy', '1980-01-15', 'admin123', 'LDAP', 'admin.central', 'ADMINISTRADOR');
-    id_martin_admin  := pg_temp.upsert_usuario(11, 'ADMINISTRADOR', 90000001, 'Martin Admin', 'admin@example.invalid', '1990-01-01', 'admin123', 'LDAP', 'martin.admin', 'ADMINISTRADOR');
+    -- 4.1 Administradores (BCrypt cost=12)
+    id_admin_central := pg_temp.upsert_usuario(10, 'ADMINISTRADOR', 10000001, 'Admin Central', 'admin@cargauy.gub.uy', '1980-01-15', '$2a$12$DY/Bfsus.do8e6ue9dz66eBPP/tY6v7T.ASnNRuZ65uTBAEHGoOBy', 'LDAP', 'admin.central', 'ADMINISTRADOR');
+    id_martin_admin  := pg_temp.upsert_usuario(11, 'ADMINISTRADOR', 90000001, 'Martin Admin', 'admin@example.invalid', '1990-01-01', '$2a$12$DY/Bfsus.do8e6ue9dz66eBPP/tY6v7T.ASnNRuZ65uTBAEHGoOBy', 'LDAP', 'martin.admin', 'ADMINISTRADOR');
 
-    -- 4.2 Autoridad MTOP (LDAP: alberto.autoridad / autoridad123)
-    id_autoridad := pg_temp.upsert_usuario(20, 'AUTORIDAD', 20000002, 'Dr. Alberto Director', 'autoridad@cargauy.gub.uy', '1975-06-20', 'autoridad123', 'LDAP', 'alberto.autoridad', 'AUTORIDAD', 'Director Nacional de Transporte');
+    -- 4.2 Autoridad MTOP
+    id_autoridad := pg_temp.upsert_usuario(20, 'AUTORIDAD', 20000002, 'Dr. Alberto Director', 'autoridad@cargauy.gub.uy', '1975-06-20', '$2a$12$JxbgZqu1/dPp0l.pmfL/Qe/c/3zmNm9xR7qHex36O5Ugr1m.MY/r6', 'LDAP', 'alberto.autoridad', 'AUTORIDAD', 'Director Nacional de Transporte');
 
     -- 4.3 Funcionarios Fiscalizadores (gub.uy)
-    id_func_juan  := pg_temp.upsert_usuario(30, 'FUNCIONARIO', 12345678, 'Juan Funcionario', 'funcionario@cargauy.gub.uy', '1985-05-20', 'funcionario123', 'GUB', '30303030-3030-4030-8030-303030303030', 'FUNCIONARIO', NULL, 101, 'Montevideo');
-    id_func_laura := pg_temp.upsert_usuario(31, 'FUNCIONARIO', 12345679, 'Laura Fiscalizadora', 'laura.fiscal@cargauy.gub.uy', '1988-11-14', 'funcionario123', 'GUB', '31313131-3131-4131-8131-313131313131', 'FUNCIONARIO', NULL, 102, 'Rutas Nacionales');
+    id_func_juan  := pg_temp.upsert_usuario(30, 'FUNCIONARIO', 12345678, 'Juan Funcionario', 'funcionario@cargauy.gub.uy', '1985-05-20', '$2a$12$IJzDsFbw93Vcjp6dNQdtvuddNBiPBDzWI2gPVIvHUvwl.jI5mVBEm', 'GUB', '30303030-3030-4030-8030-303030303030', 'FUNCIONARIO', NULL, 101, 'Montevideo');
+    id_func_laura := pg_temp.upsert_usuario(31, 'FUNCIONARIO', 12345679, 'Laura Fiscalizadora', 'laura.fiscal@cargauy.gub.uy', '1988-11-14', '$2a$12$IJzDsFbw93Vcjp6dNQdtvuddNBiPBDzWI2gPVIvHUvwl.jI5mVBEm', 'GUB', '31313131-3131-4131-8131-313131313131', 'FUNCIONARIO', NULL, 102, 'Rutas Nacionales');
 
     -- 4.4 Ciudadanos Empresa y Ciudadanos Comunes (gub.uy)
-    id_emp_pedro   := pg_temp.upsert_usuario(40, 'CIUDADANO', 87654321, 'Pedro Empresario', 'pedro.empresario@transporte.uy', '1978-03-10', 'ciudadano123', 'GUB', '40404040-4040-4040-8040-404040404040', 'CIUDADANO');
-    id_emp_mariana := pg_temp.upsert_usuario(41, 'CIUDADANO', 23456789, 'Mariana Logística', 'mariana.logistica@oriental.uy', '1982-07-25', 'ciudadano123', 'GUB', '41414141-4141-4141-8141-414141414141', 'CIUDADANO');
-    id_emp_gonzalo := pg_temp.upsert_usuario(42, 'CIUDADANO', 24681357, 'Gonzalo Norte', 'gonzalo.norte@expreso.uy', '1979-12-05', 'ciudadano123', 'GUB', '42424242-4242-4242-8242-424242424242', 'CIUDADANO');
-    id_ciud_lucia  := pg_temp.upsert_usuario(43, 'CIUDADANO', 45678901, 'Lucía Ciudadana', 'lucia.ciudadana@correo.uy', '1995-09-30', 'ciudadano123', 'GUB', '43434343-4343-4343-8343-434343434343', 'CIUDADANO_COMUN');
-    id_ciud_ana    := pg_temp.upsert_usuario(44, 'CIUDADANO', 80000001, 'Ana Prueba', 'ana@example.invalid', '1990-01-01', 'ciudadano123', 'GUB', '11111111-1111-4111-8111-111111111111', 'CIUDADANO_COMUN');
+    id_emp_pedro   := pg_temp.upsert_usuario(40, 'CIUDADANO', 87654321, 'Pedro Empresario', 'pedro.empresario@transporte.uy', '1978-03-10', '$2a$12$zhR8dDKWaRxrNbObjjHpqel7X.4ecsYyO/hHxSR7WAUWx7xFG0FMC', 'GUB', '40404040-4040-4040-8040-404040404040', 'CIUDADANO');
+    id_emp_mariana := pg_temp.upsert_usuario(41, 'CIUDADANO', 23456789, 'Mariana Logística', 'mariana.logistica@oriental.uy', '1982-07-25', '$2a$12$zhR8dDKWaRxrNbObjjHpqel7X.4ecsYyO/hHxSR7WAUWx7xFG0FMC', 'GUB', '41414141-4141-4141-8141-414141414141', 'CIUDADANO');
+    id_emp_gonzalo := pg_temp.upsert_usuario(42, 'CIUDADANO', 24681357, 'Gonzalo Norte', 'gonzalo.norte@expreso.uy', '1979-12-05', '$2a$12$zhR8dDKWaRxrNbObjjHpqel7X.4ecsYyO/hHxSR7WAUWx7xFG0FMC', 'GUB', '42424242-4242-4242-8242-424242424242', 'CIUDADANO');
+    id_ciud_lucia  := pg_temp.upsert_usuario(43, 'CIUDADANO', 45678901, 'Lucía Ciudadana', 'lucia.ciudadana@correo.uy', '1995-09-30', '$2a$12$zhR8dDKWaRxrNbObjjHpqel7X.4ecsYyO/hHxSR7WAUWx7xFG0FMC', 'GUB', '43434343-4343-4343-8343-434343434343', 'CIUDADANO_COMUN');
+    id_ciud_ana    := pg_temp.upsert_usuario(44, 'CIUDADANO', 80000001, 'Ana Prueba', 'ana@example.invalid', '1990-01-01', '$2a$12$zhR8dDKWaRxrNbObjjHpqel7X.4ecsYyO/hHxSR7WAUWx7xFG0FMC', 'GUB', '11111111-1111-4111-8111-111111111111', 'CIUDADANO_COMUN');
 
     -- 4.5 Choferes (gub.uy)
-    id_chof_carlos  := pg_temp.upsert_usuario(50, 'CHOFER', 11223344, 'Carlos Chofer', 'carlos.chofer@transporte.uy', '1990-08-15', 'chofer123', 'GUB', '50505050-5050-4050-8050-505050505050', 'CHOFER');
-    id_chof_juan    := pg_temp.upsert_usuario(51, 'CHOFER', 55667788, 'Juan Chofer', 'juan.chofer@transporte.uy', '1992-04-12', 'chofer123', 'GUB', '51515151-5151-4151-8151-515151515151', 'CHOFER');
-    id_chof_roberto := pg_temp.upsert_usuario(52, 'CHOFER', 34567890, 'Roberto Ruta', 'roberto.ruta@oriental.uy', '1987-10-02', 'chofer123', 'GUB', '52525252-5252-4252-8252-525252525252', 'CHOFER');
-    id_chof_diego   := pg_temp.upsert_usuario(53, 'CHOFER', 33445566, 'Diego Tacuarembó', 'diego.chofer@expreso.uy', '1993-01-18', 'chofer123', 'GUB', '53535353-5353-4353-8353-535353535353', 'CHOFER');
+    id_chof_carlos  := pg_temp.upsert_usuario(50, 'CHOFER', 11223344, 'Carlos Chofer', 'carlos.chofer@transporte.uy', '1990-08-15', '$2a$12$D9uyMi9KzNRTutQxItWvvOMOmXZCc0p8BEdkvVF6/F5.cK9yM9Nim', 'GUB', '50505050-5050-4050-8050-505050505050', 'CHOFER');
+    id_chof_juan    := pg_temp.upsert_usuario(51, 'CHOFER', 55667788, 'Juan Chofer', 'juan.chofer@transporte.uy', '1992-04-12', '$2a$12$D9uyMi9KzNRTutQxItWvvOMOmXZCc0p8BEdkvVF6/F5.cK9yM9Nim', 'GUB', '51515151-5151-4151-8151-515151515151', 'CHOFER');
+    id_chof_roberto := pg_temp.upsert_usuario(52, 'CHOFER', 34567890, 'Roberto Ruta', 'roberto.ruta@oriental.uy', '1987-10-02', '$2a$12$D9uyMi9KzNRTutQxItWvvOMOmXZCc0p8BEdkvVF6/F5.cK9yM9Nim', 'GUB', '52525252-5252-4252-8252-525252525252', 'CHOFER');
+    id_chof_diego   := pg_temp.upsert_usuario(53, 'CHOFER', 33445566, 'Diego Tacuarembó', 'diego.chofer@expreso.uy', '1993-01-18', '$2a$12$D9uyMi9KzNRTutQxItWvvOMOmXZCc0p8BEdkvVF6/F5.cK9yM9Nim', 'GUB', '53535353-5353-4353-8353-535353535353', 'CHOFER');
 
-    -- 5. Empresas
-    INSERT INTO empresas (nro_empresa, razon_social, nombre_publico, direccion, activa, version) VALUES
-    (101, 'Transportes del Plata S.A.', 'TransPlata', 'Ruta 1 km 28, San José', true, 1),
-    (102, 'Logística Oriental S.R.L.', 'LogiOriental', 'Av. Giannattasio km 22, Canelones', true, 1),
-    (103, 'Expreso del Norte S.A.', 'ExpresoNorte', 'Ruta 5 km 390, Tacuarembó', true, 1)
-    ON CONFLICT (nro_empresa) DO UPDATE SET razon_social = EXCLUDED.razon_social, nombre_publico = EXCLUDED.nombre_publico, direccion = EXCLUDED.direccion, activa = true;
+    -- 5. Empresas y Vínculos Iniciales (solo se siembran si la empresa aún no existe; nunca borra vínculos existentes)
+    IF NOT EXISTS (SELECT 1 FROM empresas WHERE nro_empresa = 101) THEN
+        INSERT INTO empresas (nro_empresa, razon_social, nombre_publico, direccion, activa, version)
+        VALUES (101, 'Transportes del Plata S.A.', 'TransPlata', 'Ruta 1 km 28, San José', true, 1);
 
-    -- Relaciones Empresa <-> Rubros
-    DELETE FROM empresa_rubros WHERE nro_empresa IN (101, 102, 103);
-    INSERT INTO empresa_rubros (nro_empresa, rubro_codigo) VALUES
-    (101, 1), (101, 2),
-    (102, 2), (102, 3),
-    (103, 1), (103, 4);
+        INSERT INTO empresa_rubros (nro_empresa, rubro_codigo) VALUES (101, 1), (101, 2);
+        INSERT INTO empresa_ciudadanos (nro_empresa, ciudadano_id) VALUES (101, id_emp_pedro);
+        INSERT INTO empresa_choferes (nro_empresa, chofer_id) VALUES (101, id_chof_carlos), (101, id_chof_juan);
+        INSERT INTO vinculos_empresa (clave, nro_empresa, usuario_id, responsable, chofer, version) VALUES
+        ('101:' || id_emp_pedro,   101, id_emp_pedro,   true,  false, 1),
+        ('101:' || id_chof_carlos, 101, id_chof_carlos, false, true,  1),
+        ('101:' || id_chof_juan,   101, id_chof_juan,   false, true,  1)
+        ON CONFLICT (clave) DO NOTHING;
+    END IF;
 
-    -- Relaciones Empresa <-> Ciudadanos
-    DELETE FROM empresa_ciudadanos WHERE nro_empresa IN (101, 102, 103);
-    INSERT INTO empresa_ciudadanos (nro_empresa, ciudadano_id) VALUES
-    (101, id_emp_pedro),
-    (102, id_emp_mariana),
-    (103, id_emp_gonzalo);
+    IF NOT EXISTS (SELECT 1 FROM empresas WHERE nro_empresa = 102) THEN
+        INSERT INTO empresas (nro_empresa, razon_social, nombre_publico, direccion, activa, version)
+        VALUES (102, 'Logística Oriental S.R.L.', 'LogiOriental', 'Av. Giannattasio km 22, Canelones', true, 1);
 
-    -- Relaciones Empresa <-> Choferes
-    DELETE FROM empresa_choferes WHERE nro_empresa IN (101, 102, 103);
-    INSERT INTO empresa_choferes (nro_empresa, chofer_id) VALUES
-    (101, id_chof_carlos), (101, id_chof_juan),
-    (102, id_chof_carlos), (102, id_chof_roberto),
-    (103, id_chof_diego);
+        INSERT INTO empresa_rubros (nro_empresa, rubro_codigo) VALUES (102, 2), (102, 3);
+        INSERT INTO empresa_ciudadanos (nro_empresa, ciudadano_id) VALUES (102, id_emp_mariana);
+        INSERT INTO empresa_choferes (nro_empresa, chofer_id) VALUES (102, id_chof_carlos), (102, id_chof_roberto);
+        INSERT INTO vinculos_empresa (clave, nro_empresa, usuario_id, responsable, chofer, version) VALUES
+        ('102:' || id_emp_mariana, 102, id_emp_mariana, true,  false, 1),
+        ('102:' || id_chof_carlos, 102, id_chof_carlos, false, true,  1),
+        ('102:' || id_chof_roberto,102, id_chof_roberto,false, true,  1)
+        ON CONFLICT (clave) DO NOTHING;
+    END IF;
 
-    -- Vínculos formales en vinculos_empresa
-    DELETE FROM vinculos_empresa WHERE nro_empresa IN (101, 102, 103);
-    INSERT INTO vinculos_empresa (clave, nro_empresa, usuario_id, responsable, chofer, version) VALUES
-    ('101:' || id_emp_pedro,   101, id_emp_pedro,   true,  false, 1),
-    ('101:' || id_chof_carlos, 101, id_chof_carlos, false, true,  1),
-    ('101:' || id_chof_juan,   101, id_chof_juan,   false, true,  1),
-    ('102:' || id_emp_mariana, 102, id_emp_mariana, true,  false, 1),
-    ('102:' || id_chof_carlos, 102, id_chof_carlos, false, true,  1),
-    ('102:' || id_chof_roberto,102, id_chof_roberto,false, true,  1),
-    ('103:' || id_emp_gonzalo, 103, id_emp_gonzalo, true,  false, 1),
-    ('103:' || id_chof_diego,  103, id_chof_diego,  false, true,  1);
+    IF NOT EXISTS (SELECT 1 FROM empresas WHERE nro_empresa = 103) THEN
+        INSERT INTO empresas (nro_empresa, razon_social, nombre_publico, direccion, activa, version)
+        VALUES (103, 'Expreso del Norte S.A.', 'ExpresoNorte', 'Ruta 5 km 390, Tacuarembó', true, 1);
+
+        INSERT INTO empresa_rubros (nro_empresa, rubro_codigo) VALUES (103, 1), (103, 4);
+        INSERT INTO empresa_ciudadanos (nro_empresa, ciudadano_id) VALUES (103, id_emp_gonzalo);
+        INSERT INTO empresa_choferes (nro_empresa, chofer_id) VALUES (103, id_chof_diego);
+        INSERT INTO vinculos_empresa (clave, nro_empresa, usuario_id, responsable, chofer, version) VALUES
+        ('103:' || id_emp_gonzalo, 103, id_emp_gonzalo, true,  false, 1),
+        ('103:' || id_chof_diego,  103, id_chof_diego,  false, true,  1)
+        ON CONFLICT (clave) DO NOTHING;
+    END IF;
 
     -- 6. Vehículos y Certificados (ITV / PNC)
     INSERT INTO vehiculos (matricula, marca, modelo, peso, capacidad_carga, estado_habilitacion, nro_empresa) VALUES
@@ -221,7 +217,7 @@ BEGIN
     ('LOR 2024', 'Iveco', 'Stralis 460', 8000, 32000, true, 102),
     ('LOR 9999', 'Volkswagen', 'Constellation 19.320', 7500, 24000, true, 102),
     ('EXP 1111', 'Scania', 'G410', 9500, 35000, true, 103)
-    ON CONFLICT (matricula) DO UPDATE SET marca = EXCLUDED.marca, modelo = EXCLUDED.modelo, peso = EXCLUDED.peso, capacidad_carga = EXCLUDED.capacidad_carga, estado_habilitacion = EXCLUDED.estado_habilitacion, nro_empresa = EXCLUDED.nro_empresa;
+    ON CONFLICT (matricula) DO NOTHING;
 
     -- 6.2 ITVs (Inspección Técnica Vehicular)
     INSERT INTO itvs (nrocertificado, fecha_vencimiento, vehiculo_matricula) VALUES
@@ -231,74 +227,67 @@ BEGIN
     (1004, CURRENT_DATE + INTERVAL '240 days', 'LOR 2024'),
     (1005, CURRENT_DATE + INTERVAL '150 days', 'LOR 9999'),
     (1006, CURRENT_DATE + INTERVAL '300 days', 'EXP 1111')
-    ON CONFLICT (nrocertificado) DO UPDATE SET fecha_vencimiento = EXCLUDED.fecha_vencimiento, vehiculo_matricula = EXCLUDED.vehiculo_matricula;
+    ON CONFLICT (nrocertificado) DO NOTHING;
 
     -- 6.3 PNCs (Permiso Nacional de Circulación)
-    INSERT INTO pncs (nro, fecha_vencimiento, vehiculo_matricula) VALUES
-    (2001, CURRENT_DATE + INTERVAL '365 days', 'STP 1234'),
-    (2002, CURRENT_DATE - INTERVAL '60 days',  'ABC 9876'),
-    (2003, CURRENT_DATE - INTERVAL '30 days',  'STP 5678'),
-    (2004, CURRENT_DATE + INTERVAL '240 days', 'LOR 2024'),
-    (2005, CURRENT_DATE + INTERVAL '180 days', 'LOR 9999'),
-    (2006, CURRENT_DATE + INTERVAL '300 days', 'EXP 1111')
-    ON CONFLICT (nro) DO UPDATE SET fecha_vencimiento = EXCLUDED.fecha_vencimiento, vehiculo_matricula = EXCLUDED.vehiculo_matricula;
+    INSERT INTO pncs (nro, fecha_vencimiento, numero_permiso, vehiculo_matricula) VALUES
+    (2001, CURRENT_DATE + INTERVAL '365 days', 'PNC-2026-2001', 'STP 1234'),
+    (2002, CURRENT_DATE - INTERVAL '60 days',  'PNC-2025-2002', 'ABC 9876'),
+    (2003, CURRENT_DATE - INTERVAL '30 days',  'PNC-2025-2003', 'STP 5678'),
+    (2004, CURRENT_DATE + INTERVAL '240 days', 'PNC-2026-2004', 'LOR 2024'),
+    (2005, CURRENT_DATE + INTERVAL '180 days', 'PNC-2026-2005', 'LOR 9999'),
+    (2006, CURRENT_DATE + INTERVAL '300 days', 'PNC-2026-2006', 'EXP 1111')
+    ON CONFLICT (nro) DO NOTHING;
 
     -- 7. Guías de Viaje con Pesos Reales en Kilogramos y Rubros / Tipos de Carga del Catálogo
     -- 7.1 Guía 1001: EN_CURSO (con eventos, tracking, pesadas con sobrepeso e infracción DETECTADA)
-    INSERT INTO guias_de_viaje (id, fecha, origen, destino, rubro_cliente, volumen_carga, estado, chofer_id, nro_empresa, vehiculo_matricula, version)
-    VALUES (1001, CURRENT_DATE, 'Puerto de Montevideo', 'Rivera (Frontera)', 'Forestal', 30000.0, 'EN_CURSO', id_chof_carlos, 101, 'STP 1234', 1)
-    ON CONFLICT (id) DO UPDATE SET estado = EXCLUDED.estado, origen = EXCLUDED.origen, destino = EXCLUDED.destino, rubro_cliente = EXCLUDED.rubro_cliente, volumen_carga = EXCLUDED.volumen_carga, chofer_id = EXCLUDED.chofer_id;
-
-    DELETE FROM guia_tipos_carga WHERE guia_id = 1001;
-    INSERT INTO guia_tipos_carga (guia_id, tipo_carga_codigo) VALUES (1001, 2) ON CONFLICT DO NOTHING;
+    IF NOT EXISTS (SELECT 1 FROM guias_de_viaje WHERE id = 1001) THEN
+        INSERT INTO guias_de_viaje (id, fecha, origen, destino, rubro_cliente, volumen_carga, estado, chofer_id, nro_empresa, vehiculo_matricula, version)
+        VALUES (1001, CURRENT_DATE, 'Puerto de Montevideo', 'Rivera (Frontera)', 'Forestal', 30000.0, 'EN_CURSO', id_chof_carlos, 101, 'STP 1234', 1);
+        INSERT INTO guia_tipos_carga (guia_id, tipo_carga_codigo) VALUES (1001, 2);
+    END IF;
 
     -- 7.2 Guía 1002: SIN_INICIAR (lista para iniciar)
-    INSERT INTO guias_de_viaje (id, fecha, origen, destino, rubro_cliente, volumen_carga, estado, chofer_id, nro_empresa, vehiculo_matricula, version)
-    VALUES (1002, CURRENT_DATE, 'Colonia del Sacramento', 'Puerto de Montevideo', 'Forestal', 28000.0, 'SIN_INICIAR', id_chof_juan, 101, 'STP 1234', 1)
-    ON CONFLICT (id) DO UPDATE SET estado = EXCLUDED.estado, origen = EXCLUDED.origen, destino = EXCLUDED.destino, rubro_cliente = EXCLUDED.rubro_cliente, volumen_carga = EXCLUDED.volumen_carga, chofer_id = EXCLUDED.chofer_id;
-
-    DELETE FROM guia_tipos_carga WHERE guia_id = 1002;
-    INSERT INTO guia_tipos_carga (guia_id, tipo_carga_codigo) VALUES (1002, 1) ON CONFLICT DO NOTHING;
+    IF NOT EXISTS (SELECT 1 FROM guias_de_viaje WHERE id = 1002) THEN
+        INSERT INTO guias_de_viaje (id, fecha, origen, destino, rubro_cliente, volumen_carga, estado, chofer_id, nro_empresa, vehiculo_matricula, version)
+        VALUES (1002, CURRENT_DATE, 'Colonia del Sacramento', 'Puerto de Montevideo', 'Forestal', 28000.0, 'SIN_INICIAR', id_chof_juan, 101, 'STP 1234', 1);
+        INSERT INTO guia_tipos_carga (guia_id, tipo_carga_codigo) VALUES (1002, 1);
+    END IF;
 
     -- 7.3 Guía 1003: SIN_INICIAR con vehículo inhabilitado (para probar fiscalización preventiva)
-    INSERT INTO guias_de_viaje (id, fecha, origen, destino, rubro_cliente, volumen_carga, estado, chofer_id, nro_empresa, vehiculo_matricula, version)
-    VALUES (1003, CURRENT_DATE, 'Nueva Palmira (Puerto)', 'Puerto de Montevideo', 'Granos y Cereales', 29500.0, 'SIN_INICIAR', id_chof_carlos, 101, 'ABC 9876', 1)
-    ON CONFLICT (id) DO UPDATE SET estado = EXCLUDED.estado, origen = EXCLUDED.origen, destino = EXCLUDED.destino, rubro_cliente = EXCLUDED.rubro_cliente, volumen_carga = EXCLUDED.volumen_carga, chofer_id = EXCLUDED.chofer_id;
-
-    DELETE FROM guia_tipos_carga WHERE guia_id = 1003;
-    INSERT INTO guia_tipos_carga (guia_id, tipo_carga_codigo) VALUES (1003, 4) ON CONFLICT DO NOTHING;
+    IF NOT EXISTS (SELECT 1 FROM guias_de_viaje WHERE id = 1003) THEN
+        INSERT INTO guias_de_viaje (id, fecha, origen, destino, rubro_cliente, volumen_carga, estado, chofer_id, nro_empresa, vehiculo_matricula, version)
+        VALUES (1003, CURRENT_DATE, 'Nueva Palmira (Puerto)', 'Puerto de Montevideo', 'Granos y Cereales', 29500.0, 'SIN_INICIAR', id_chof_carlos, 101, 'ABC 9876', 1);
+        INSERT INTO guia_tipos_carga (guia_id, tipo_carga_codigo) VALUES (1003, 4);
+    END IF;
 
     -- 7.4 Guía 1004: FINALIZADO con Infracción CONFIRMADA, Descargo y Registro de Auditoría
-    INSERT INTO guias_de_viaje (id, fecha, origen, destino, rubro_cliente, volumen_carga, estado, chofer_id, nro_empresa, vehiculo_matricula, version)
-    VALUES (1004, CURRENT_DATE - INTERVAL '3 days', 'Salto', 'Puerto de Montevideo', 'Granos y Cereales', 31000.0, 'FINALIZADO', id_chof_carlos, 101, 'STP 1234', 1)
-    ON CONFLICT (id) DO UPDATE SET estado = EXCLUDED.estado, origen = EXCLUDED.origen, destino = EXCLUDED.destino, rubro_cliente = EXCLUDED.rubro_cliente, volumen_carga = EXCLUDED.volumen_carga, chofer_id = EXCLUDED.chofer_id;
-
-    DELETE FROM guia_tipos_carga WHERE guia_id = 1004;
-    INSERT INTO guia_tipos_carga (guia_id, tipo_carga_codigo) VALUES (1004, 4) ON CONFLICT DO NOTHING;
+    IF NOT EXISTS (SELECT 1 FROM guias_de_viaje WHERE id = 1004) THEN
+        INSERT INTO guias_de_viaje (id, fecha, origen, destino, rubro_cliente, volumen_carga, estado, chofer_id, nro_empresa, vehiculo_matricula, version)
+        VALUES (1004, CURRENT_DATE - INTERVAL '3 days', 'Salto', 'Puerto de Montevideo', 'Granos y Cereales', 31000.0, 'FINALIZADO', id_chof_carlos, 101, 'STP 1234', 1);
+        INSERT INTO guia_tipos_carga (guia_id, tipo_carga_codigo) VALUES (1004, 4);
+    END IF;
 
     -- 7.5 Guía 1005: EN_CURSO en Empresa 102 (Viaje normal sin excesos)
-    INSERT INTO guias_de_viaje (id, fecha, origen, destino, rubro_cliente, volumen_carga, estado, chofer_id, nro_empresa, vehiculo_matricula, version)
-    VALUES (1005, CURRENT_DATE, 'Canelones', 'Fray Bentos (UPM)', 'Granos y Cereales', 30000.0, 'EN_CURSO', id_chof_roberto, 102, 'LOR 2024', 1)
-    ON CONFLICT (id) DO UPDATE SET estado = EXCLUDED.estado, origen = EXCLUDED.origen, destino = EXCLUDED.destino, rubro_cliente = EXCLUDED.rubro_cliente, volumen_carga = EXCLUDED.volumen_carga, chofer_id = EXCLUDED.chofer_id;
-
-    DELETE FROM guia_tipos_carga WHERE guia_id = 1005;
-    INSERT INTO guia_tipos_carga (guia_id, tipo_carga_codigo) VALUES (1005, 5) ON CONFLICT DO NOTHING;
+    IF NOT EXISTS (SELECT 1 FROM guias_de_viaje WHERE id = 1005) THEN
+        INSERT INTO guias_de_viaje (id, fecha, origen, destino, rubro_cliente, volumen_carga, estado, chofer_id, nro_empresa, vehiculo_matricula, version)
+        VALUES (1005, CURRENT_DATE, 'Canelones', 'Fray Bentos (UPM)', 'Granos y Cereales', 30000.0, 'EN_CURSO', id_chof_roberto, 102, 'LOR 2024', 1);
+        INSERT INTO guia_tipos_carga (guia_id, tipo_carga_codigo) VALUES (1005, 5);
+    END IF;
 
     -- 7.6 Guía 1006: FINALIZADO en Empresa 102 (Viaje limpio exitoso)
-    INSERT INTO guias_de_viaje (id, fecha, origen, destino, rubro_cliente, volumen_carga, estado, chofer_id, nro_empresa, vehiculo_matricula, version)
-    VALUES (1006, CURRENT_DATE - INTERVAL '1 day', 'Maldonado', 'Puerto de Montevideo', 'Ganadería', 22000.0, 'FINALIZADO', id_chof_roberto, 102, 'LOR 9999', 1)
-    ON CONFLICT (id) DO UPDATE SET estado = EXCLUDED.estado, origen = EXCLUDED.origen, destino = EXCLUDED.destino, rubro_cliente = EXCLUDED.rubro_cliente, volumen_carga = EXCLUDED.volumen_carga, chofer_id = EXCLUDED.chofer_id;
-
-    DELETE FROM guia_tipos_carga WHERE guia_id = 1006;
-    INSERT INTO guia_tipos_carga (guia_id, tipo_carga_codigo) VALUES (1006, 6) ON CONFLICT DO NOTHING;
+    IF NOT EXISTS (SELECT 1 FROM guias_de_viaje WHERE id = 1006) THEN
+        INSERT INTO guias_de_viaje (id, fecha, origen, destino, rubro_cliente, volumen_carga, estado, chofer_id, nro_empresa, vehiculo_matricula, version)
+        VALUES (1006, CURRENT_DATE - INTERVAL '1 day', 'Maldonado', 'Puerto de Montevideo', 'Ganadería', 22000.0, 'FINALIZADO', id_chof_roberto, 102, 'LOR 9999', 1);
+        INSERT INTO guia_tipos_carga (guia_id, tipo_carga_codigo) VALUES (1006, 6);
+    END IF;
 
     -- 7.7 Guía 1007: SIN_INICIAR en Empresa 103 (Expreso del Norte)
-    INSERT INTO guias_de_viaje (id, fecha, origen, destino, rubro_cliente, volumen_carga, estado, chofer_id, nro_empresa, vehiculo_matricula, version)
-    VALUES (1007, CURRENT_DATE, 'Tacuarembó', 'Punta Pereira (Montes del Plata)', 'Forestal', 33000.0, 'SIN_INICIAR', id_chof_diego, 103, 'EXP 1111', 1)
-    ON CONFLICT (id) DO UPDATE SET estado = EXCLUDED.estado, origen = EXCLUDED.origen, destino = EXCLUDED.destino, rubro_cliente = EXCLUDED.rubro_cliente, volumen_carga = EXCLUDED.volumen_carga, chofer_id = EXCLUDED.chofer_id;
-
-    DELETE FROM guia_tipos_carga WHERE guia_id = 1007;
-    INSERT INTO guia_tipos_carga (guia_id, tipo_carga_codigo) VALUES (1007, 3) ON CONFLICT DO NOTHING;
+    IF NOT EXISTS (SELECT 1 FROM guias_de_viaje WHERE id = 1007) THEN
+        INSERT INTO guias_de_viaje (id, fecha, origen, destino, rubro_cliente, volumen_carga, estado, chofer_id, nro_empresa, vehiculo_matricula, version)
+        VALUES (1007, CURRENT_DATE, 'Tacuarembó', 'Punta Pereira (Montes del Plata)', 'Forestal', 33000.0, 'SIN_INICIAR', id_chof_diego, 103, 'EXP 1111', 1);
+        INSERT INTO guia_tipos_carga (guia_id, tipo_carga_codigo) VALUES (1007, 3);
+    END IF;
 END $$;
 
 -- 8. Eventos de Viaje e Incidentes (con imagen Base64 de ejemplo para previsualización en clic)
@@ -307,21 +296,21 @@ INSERT INTO eventos_viaje (id, uuid, tiempo, tipo, latitud, longitud, guia_id, d
 (2002, 'a1111111-1111-4111-8111-111111111002', CURRENT_TIMESTAMP - INTERVAL '3 hours', 'CARGA',     -34.8500, -56.1500, 1001, 0.2, 30000, 'Eucaliptus', 'TransPlata'),
 (2003, 'a1111111-1111-4111-8111-111111111003', CURRENT_TIMESTAMP - INTERVAL '2 hours', 'POSICION',  -33.8000, -56.0500, 1001, 0.4, 30000, 'Eucaliptus', 'TransPlata'),
 (2004, 'a1111111-1111-4111-8111-111111111004', CURRENT_TIMESTAMP - INTERVAL '1 hour',  'INCIDENTE', -33.2500, -56.0200, 1001, 0.5, 30000, 'Eucaliptus', 'TransPlata')
-ON CONFLICT (id) DO UPDATE SET cantidad_kg = EXCLUDED.cantidad_kg, mercaderia = EXCLUDED.mercaderia, empresa_carga = EXCLUDED.empresa_carga;
+ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO incidentes_ruta (id, descripcion, foto, evento_id) VALUES
 (3001, 'Pinchadura de neumático trasero derecho en Ruta 5 km 98', 'pinchadura_rueda.jpg', 2004)
-ON CONFLICT (id) DO UPDATE SET descripcion = EXCLUDED.descripcion, foto = EXCLUDED.foto;
+ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO eventos_viaje (id, uuid, tiempo, tipo, latitud, longitud, guia_id, distancia_desvio_km, cantidad_kg, mercaderia, empresa_carga) VALUES
 (2005, 'a1111111-1111-4111-8111-111111111005', CURRENT_TIMESTAMP - INTERVAL '3 days', 'INICIO', -31.3833, -57.9667, 1004, 0.0, 31000, 'Soja', 'TransPlata'),
 (2006, 'a1111111-1111-4111-8111-111111111006', CURRENT_TIMESTAMP - INTERVAL '2 days', 'FIN',    -34.9011, -56.1645, 1004, 0.0, 31000, 'Soja', 'TransPlata')
-ON CONFLICT (id) DO UPDATE SET cantidad_kg = EXCLUDED.cantidad_kg, mercaderia = EXCLUDED.mercaderia;
+ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO eventos_viaje (id, uuid, tiempo, tipo, latitud, longitud, guia_id, distancia_desvio_km, cantidad_kg, mercaderia, empresa_carga) VALUES
 (2007, 'a1111111-1111-4111-8111-111111111007', CURRENT_TIMESTAMP - INTERVAL '2 hours', 'INICIO',   -34.5228, -56.2778, 1005, 0.0, 30000, 'Trigo', 'LogiOriental'),
 (2008, 'a1111111-1111-4111-8111-111111111008', CURRENT_TIMESTAMP - INTERVAL '1 hour',  'POSICION', -34.1000, -56.8000, 1005, 0.1, 30000, 'Trigo', 'LogiOriental')
-ON CONFLICT (id) DO UPDATE SET cantidad_kg = EXCLUDED.cantidad_kg, mercaderia = EXCLUDED.mercaderia;
+ON CONFLICT (id) DO NOTHING;
 
 -- 9. Puntos de Tracking
 INSERT INTO puntos_tracking (id, latitud, longitud, tiempo, distancia_desvio_km, guia_id) VALUES
@@ -346,7 +335,7 @@ INSERT INTO infracciones (id_caso, tipo, estado, fecha, evidencia, guia_id, vehi
 (501, 'EXCESO_DE_CARGA', 'NOTIFICADA', CURRENT_DATE,
  'Pesada registrada de 43.500 kg supera el peso máximo permitido de 40.000 kg (tolerancia 500 kg).',
  1001, 'STP 1234')
-ON CONFLICT (id_caso) DO UPDATE SET estado = EXCLUDED.estado, evidencia = EXCLUDED.evidencia;
+ON CONFLICT (id_caso) DO NOTHING;
 
 INSERT INTO infracciones (id_caso, tipo, estado, fecha, evidencia, fecha_resolucion, resolucion, fundamento, guia_id, vehiculo_matricula) VALUES
 (502, 'EXCESO_DE_CARGA', 'CONFIRMADA', CURRENT_DATE - INTERVAL '3 days',
@@ -354,17 +343,17 @@ INSERT INTO infracciones (id_caso, tipo, estado, fecha, evidencia, fecha_resoluc
  CURRENT_DATE - INTERVAL '1 day', 'CONFIRMADA',
  'Se desestima el descargo presentado. La balanza oficial contaba con calibración metrológica al día.',
  1004, 'STP 1234')
-ON CONFLICT (id_caso) DO UPDATE SET estado = EXCLUDED.estado, resolucion = EXCLUDED.resolucion, fundamento = EXCLUDED.fundamento, evidencia = EXCLUDED.evidencia;
+ON CONFLICT (id_caso) DO NOTHING;
 
 INSERT INTO descargos (id, fecha, descargo, infraccion_id) VALUES
 (6001, CURRENT_DATE - INTERVAL '2 days', 'Se solicita la anulación del acta debido a ráfagas de viento y oscilaciones mecánicas en la plataforma.', 502)
-ON CONFLICT (id) DO UPDATE SET descargo = EXCLUDED.descargo;
+ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO infracciones (id_caso, tipo, estado, fecha, evidencia, guia_id, vehiculo_matricula) VALUES
 (503, 'VIAJE_SIN_GUIA', 'DETECTADA', CURRENT_DATE,
  'Vehículo detectado en balanza fiscalizadora transportando carga sin guía de viaje registrada ni activa.',
  NULL, 'ABC 9876')
-ON CONFLICT (id_caso) DO UPDATE SET estado = EXCLUDED.estado, evidencia = EXCLUDED.evidencia;
+ON CONFLICT (id_caso) DO NOTHING;
 
 -- Trazabilidad de Auditoría Inmutable (sin hacer UPDATE ni DELETE para respetar trigger append-only)
 INSERT INTO registro_auditoria (id, infraccion_id, resolucion, fecha, usuario, accion, fundamento, timestamp_creacion) VALUES

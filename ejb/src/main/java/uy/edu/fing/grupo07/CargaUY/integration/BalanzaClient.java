@@ -150,10 +150,20 @@ public class BalanzaClient {
      * fecha opcional y número de empresa opcional (?matricula=...&fecha=...&nroEmpresa=...).
      */
     public List<PesadaBalanzaDTO> consultarPesadasVehiculo(String matricula, LocalDate fecha, Integer nroEmpresa, String correlacion) {
+        return consultarPesadasVehiculoEnEndpoint(null, matricula, fecha, nroEmpresa, correlacion);
+    }
+
+    public List<PesadaBalanzaDTO> consultarPesadasVehiculoEnEndpoint(
+            String baseUrlOverride,
+            String matricula,
+            LocalDate fecha,
+            Integer nroEmpresa,
+            String correlacion
+    ) {
         if (matricula == null || matricula.isBlank()) {
             throw new BusinessException("La matrícula es obligatoria para consultar pesadas de vehículo.");
         }
-        String pesadasBase = resolverPesadasUrl();
+        String pesadasBase = resolverPesadasUrl(baseUrlOverride);
         String sep = pesadasBase.contains("?") ? "&" : "?";
         StringBuilder sb = new StringBuilder(pesadasBase)
                 .append(sep)
@@ -178,10 +188,21 @@ public class BalanzaClient {
             Integer nroEmpresa,
             String correlacion
     ) {
+        return consultarPesadasVehiculoEnEndpoint(null, matricula, fechaDesde, fechaHasta, nroEmpresa, correlacion);
+    }
+
+    public List<PesadaBalanzaDTO> consultarPesadasVehiculoEnEndpoint(
+            String baseUrlOverride,
+            String matricula,
+            LocalDate fechaDesde,
+            LocalDate fechaHasta,
+            Integer nroEmpresa,
+            String correlacion
+    ) {
         if (matricula == null || matricula.isBlank()) {
             throw new BusinessException("La matrícula es obligatoria para consultar pesadas de vehículo.");
         }
-        String pesadasBase = resolverPesadasUrl();
+        String pesadasBase = resolverPesadasUrl(baseUrlOverride);
         String sep = pesadasBase.contains("?") ? "&" : "?";
         StringBuilder sb = new StringBuilder(pesadasBase)
                 .append(sep)
@@ -199,10 +220,36 @@ public class BalanzaClient {
     }
 
     /**
+     * Consulta todas las pesadas registradas en una fecha dada en el endpoint indicado (?fecha=YYYY-MM-DD),
+     * utilizado por el sondeo periódico para detectar lecturas nuevas (incluyendo vehículos sin guía).
+     */
+    public List<PesadaBalanzaDTO> consultarPesadasPorFechaEnEndpoint(
+            String baseUrlOverride,
+            LocalDate fecha,
+            String correlacion
+    ) {
+        LocalDate fechaEfectiva = fecha != null ? fecha : LocalDate.now();
+        String pesadasBase = resolverPesadasUrl(baseUrlOverride);
+        String sep = pesadasBase.contains("?") ? "&" : "?";
+        String url = pesadasBase + sep + "fecha=" + URLEncoder.encode(fechaEfectiva.toString(), StandardCharsets.UTF_8);
+        return ejecutarConsultaResiliente(url, correlacion);
+    }
+
+    /**
      * Registra una nueva pesada en el nodo periférico de balanzas (POST /pesadas) aplicando
      * Bulkhead, Circuit Breaker y propagación de X-Correlation-ID.
      */
     public PesadaBalanzaDTO registrarPesadaEnPeriferico(PesadaBalanzaDTO dto, Integer nroEmpresa, String peaje, String correlacion) {
+        return registrarPesadaEnPerifericoEnEndpoint(null, dto, nroEmpresa, peaje, correlacion);
+    }
+
+    public PesadaBalanzaDTO registrarPesadaEnPerifericoEnEndpoint(
+            String baseUrlOverride,
+            PesadaBalanzaDTO dto,
+            Integer nroEmpresa,
+            String peaje,
+            String correlacion
+    ) {
         if (dto == null || dto.matricula() == null || dto.matricula().isBlank()) {
             throw new BusinessException("La matrícula es obligatoria para registrar una pesada en balanza.");
         }
@@ -238,9 +285,10 @@ public class BalanzaClient {
             String jsonBody = payloadBuilder.build().toString();
 
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(resolverPesadasUrl()))
+                    .uri(URI.create(resolverPesadasUrl(baseUrlOverride)))
                     .timeout(TIMEOUT)
-                    .header("X-Correlation-ID", corr)
+                    .header(TraceContext.HEADER_CORRELACION, corr)
+                    .header(TraceContext.HEADER_TRACEPARENT, TraceContext.siguienteTraceparentHijo(null, corr))
                     .header("Content-Type", "application/json")
                     .header("Accept", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
@@ -284,22 +332,37 @@ public class BalanzaClient {
     }
 
     private String baseUrl() {
-        String url = endpointUrl == null ? "http://localhost:8082" : endpointUrl.trim();
+        return normalizarBaseUrl(endpointUrl);
+    }
+
+    private String normalizarBaseUrl(String rawOverride) {
+        String raw = (rawOverride != null && !rawOverride.isBlank()) ? rawOverride : endpointUrl;
+        String url = raw == null ? "http://localhost:8082" : raw.trim();
         while (url.endsWith("/")) {
             url = url.substring(0, url.length() - 1);
         }
         if (url.endsWith("/pesadas")) {
             url = url.substring(0, url.length() - "/pesadas".length());
+        } else if (url.endsWith("/health")) {
+            url = url.substring(0, url.length() - "/health".length());
         }
         return url;
     }
 
     private String resolverPesadasUrl() {
-        return baseUrl() + "/pesadas";
+        return resolverPesadasUrl(null);
+    }
+
+    private String resolverPesadasUrl(String baseUrlOverride) {
+        return normalizarBaseUrl(baseUrlOverride) + "/pesadas";
     }
 
     private String resolverHealthUrl() {
-        return baseUrl() + "/health";
+        return resolverHealthUrl(null);
+    }
+
+    private String resolverHealthUrl(String baseUrlOverride) {
+        return normalizarBaseUrl(baseUrlOverride) + "/health";
     }
 
     private List<PesadaBalanzaDTO> ejecutarConsultaResiliente(String url, String correlacion) {
@@ -323,7 +386,8 @@ public class BalanzaClient {
                     HttpRequest request = HttpRequest.newBuilder()
                             .uri(URI.create(url))
                             .timeout(TIMEOUT)
-                            .header("X-Correlation-ID", corr)
+                            .header(TraceContext.HEADER_CORRELACION, corr)
+                            .header(TraceContext.HEADER_TRACEPARENT, TraceContext.siguienteTraceparentHijo(null, corr))
                             .header("Accept", "application/json")
                             .GET()
                             .build();
@@ -418,14 +482,20 @@ public class BalanzaClient {
      * Sondeo rápido de salud (timeout 2s) contra /health que retorna true si el nodo responde HTTP 200 y el circuito está cerrado.
      */
     public boolean verificarSalud() {
+        return verificarSaludEnEndpoint(null);
+    }
+
+    public boolean verificarSaludEnEndpoint(String baseUrlOverride) {
         if (estaCircuitoAbierto()) {
             return false;
         }
         try {
+            String corr = TraceContext.normalizarCorrelacion(null);
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(resolverHealthUrl()))
+                    .uri(URI.create(resolverHealthUrl(baseUrlOverride)))
                     .timeout(HEALTH_TIMEOUT)
-                    .header("X-Correlation-ID", UUID.randomUUID().toString())
+                    .header(TraceContext.HEADER_CORRELACION, corr)
+                    .header(TraceContext.HEADER_TRACEPARENT, TraceContext.siguienteTraceparentHijo(null, corr))
                     .GET()
                     .build();
             HttpResponse<Void> response = httpClient.send(request, HttpResponse.BodyHandlers.discarding());
@@ -479,14 +549,7 @@ public class BalanzaClient {
     }
 
     private static String normalizarCorrelacion(String correlacion) {
-        if (correlacion == null || correlacion.isBlank()) {
-            return UUID.randomUUID().toString();
-        }
-        try {
-            return UUID.fromString(correlacion.trim()).toString();
-        } catch (Exception e) {
-            return UUID.randomUUID().toString();
-        }
+        return TraceContext.normalizarCorrelacion(correlacion);
     }
 
     public String getEndpointUrl() {

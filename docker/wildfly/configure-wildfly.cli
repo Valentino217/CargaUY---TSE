@@ -48,10 +48,40 @@ if (outcome != success) of /subsystem=messaging-activemq/server=default/jms-queu
         --entries=[java:/jms/queue/DLQ.TrackingQueue]
 end-if
 
-echo Configurando politica de cola llena y DLQ de TrackingQueue (SAD 5.1)...
+if (outcome != success) of /subsystem=messaging-activemq/server=default/jms-queue=DLQ.FiscalizacionQueue:read-resource
+    jms-queue add --queue-address=DLQ.FiscalizacionQueue \
+        --entries=[java:/jms/queue/DLQ.FiscalizacionQueue]
+end-if
+
+if (outcome != success) of /subsystem=messaging-activemq/server=default/jms-queue=DLQ.NotificacionQueue:read-resource
+    jms-queue add --queue-address=DLQ.NotificacionQueue \
+        --entries=[java:/jms/queue/DLQ.NotificacionQueue]
+end-if
+
+echo Configurando politica de cola llena y DLQ de colas JMS (SAD 5.1)...
 if (outcome != success) of /subsystem=messaging-activemq/server=default/address-setting=TrackingQueue:read-resource
     /subsystem=messaging-activemq/server=default/address-setting=TrackingQueue:add( \
         dead-letter-address=DLQ.TrackingQueue, \
+        max-delivery-attempts=5, \
+        redelivery-delay=2000, \
+        max-size-bytes=10485760, \
+        page-size-bytes=2097152, \
+        address-full-policy=PAGE)
+end-if
+
+if (outcome != success) of /subsystem=messaging-activemq/server=default/address-setting=FiscalizacionQueue:read-resource
+    /subsystem=messaging-activemq/server=default/address-setting=FiscalizacionQueue:add( \
+        dead-letter-address=DLQ.FiscalizacionQueue, \
+        max-delivery-attempts=5, \
+        redelivery-delay=2000, \
+        max-size-bytes=10485760, \
+        page-size-bytes=2097152, \
+        address-full-policy=PAGE)
+end-if
+
+if (outcome != success) of /subsystem=messaging-activemq/server=default/address-setting=NotificacionQueue:read-resource
+    /subsystem=messaging-activemq/server=default/address-setting=NotificacionQueue:add( \
+        dead-letter-address=DLQ.NotificacionQueue, \
         max-delivery-attempts=5, \
         redelivery-delay=2000, \
         max-size-bytes=10485760, \

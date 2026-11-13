@@ -331,7 +331,7 @@ public class PosicionNoSqlRepository implements PosicionNoSqlRepositoryLocal {
 
     @Override
     public String obtenerDescriptorEndpoint() {
-        return mongoUri + "/" + databaseName + "." + collectionName + " (Time-Series)";
+        return mongoUri + "/" + databaseName + "." + collectionName;
     }
 
     private MongoCollection<Document> obtenerColeccion() {

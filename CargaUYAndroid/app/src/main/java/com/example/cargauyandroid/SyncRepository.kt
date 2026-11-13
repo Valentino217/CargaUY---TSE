@@ -154,6 +154,10 @@ class SyncRepository(context: Context) {
     }
 
     private suspend fun asegurarTokenLocal(cedula: Int, forzarRenovacion: Boolean = false) {
+        if (SesionMovil.esSesionOidc && SesionMovil.token.isNotBlank()) {
+            // Preservar sesión OIDC autenticada: no reemplazar por /api/auth/dev-token
+            return
+        }
         if (!forzarRenovacion && SesionMovil.token.isNotBlank() && (SesionMovil.cedulaAsociada == null || SesionMovil.cedulaAsociada == cedula)) {
             return
         }
@@ -165,6 +169,7 @@ class SyncRepository(context: Context) {
             if (!tk.isNullOrBlank()) {
                 SesionMovil.token = tk
                 SesionMovil.cedulaAsociada = cedula
+                SesionMovil.esSesionOidc = false
                 Log.d("CARGAUY", "Token dev obtenido automaticamente para CI=$cedula")
             }
         } catch (e: Exception) {
@@ -190,7 +195,7 @@ class SyncRepository(context: Context) {
             val remotas = try {
                 RetrofitClient.executeWithFallback { api -> api.obtenerViajes(cedula) }
             } catch (e: retrofit2.HttpException) {
-                if (e.code() == 401 || e.code() == 403) {
+                if ((e.code() == 401 || e.code() == 403) && !SesionMovil.esSesionOidc) {
                     asegurarTokenLocal(cedula, forzarRenovacion = true)
                     RetrofitClient.executeWithFallback { api -> api.obtenerViajes(cedula) }
                 } else throw e
@@ -415,12 +420,57 @@ class SyncRepository(context: Context) {
         return@withContext try {
             Log.d("CARGAUY", "Sincronizando lote de ${pendientes.size} eventos pendientes...")
             asegurarTokenLocal(cedulaChofer)
-            val eventosPorUuid = pendientes.associateBy { it.uuid }
-            val dtos = pendientes.map { ev ->
-                val mat = dbHelper.obtenerGuiaPorId(ev.guiaId)?.vehiculoMatricula
+
+            val guiasPrevias = dbHelper.obtenerGuiasCache(cedulaChofer)
+            var rutaActualizada = false
+            var pendientesAEnviar = pendientes
+            var mapaGuiasServidor: Map<Long, Viaje> = emptyMap()
+
+            val guiasServidor: List<Viaje>? = try {
+                RetrofitClient.executeWithFallback { api -> api.obtenerViajes(cedulaChofer) }
+            } catch (e: retrofit2.HttpException) {
+                if ((e.code() == 401 || e.code() == 403) && !SesionMovil.esSesionOidc) {
+                    asegurarTokenLocal(cedulaChofer, forzarRenovacion = true)
+                    try {
+                        RetrofitClient.executeWithFallback { api -> api.obtenerViajes(cedulaChofer) }
+                    } catch (_: Exception) {
+                        null
+                    }
+                } else {
+                    throw e
+                }
+            } catch (_: Exception) {
+                null
+            }
+
+            if (guiasServidor != null) {
+                servidorAlcanzable = true
+                mapaGuiasServidor = guiasServidor.associateBy { it.id }
+                val resultadoFiltro = SyncConflictResolver.filtrarPendientesContraGuias(
+                    pendientes = pendientes,
+                    guiasPrevias = guiasPrevias,
+                    guiasServidor = guiasServidor
+                )
+                rutaActualizada = resultadoFiltro.rutaActualizada
+                for (conflicto in resultadoFiltro.enConflicto) {
+                    errores++
+                    dbHelper.actualizarEstadoEvento(
+                        conflicto.uuid,
+                        EstadoSyncLocal.ERROR,
+                        SyncConflictResolver.mensajeConflictoGuia(conflicto.guiaId)
+                    )
+                }
+                pendientesAEnviar = resultadoFiltro.enviables
+                dbHelper.guardarGuiasCache(cedulaChofer, guiasServidor)
+            }
+
+            val eventosPorUuid = pendientesAEnviar.associateBy { it.uuid }
+            val dtos = pendientesAEnviar.map { ev ->
+                val mat = mapaGuiasServidor[ev.guiaId]?.vehiculoMatricula
+                    ?: dbHelper.obtenerGuiaPorId(ev.guiaId)?.vehiculoMatricula
                 ev.toDto(mat)
             }
-            val subLotes = SyncBatchChunker.particionarLotes(dtos)
+            val subLotes = if (dtos.isEmpty()) emptyList() else SyncBatchChunker.particionarLotes(dtos)
 
             for (subLote in subLotes) {
                 val respuestas = RetrofitClient.executeWithFallback { api ->
@@ -466,23 +516,6 @@ class SyncRepository(context: Context) {
                         }
                     }
                 }
-            }
-
-            // 4.B: Verificar si el viaje/ruta fue modificado desde el frontoffice y actualizar las guías locales
-            val guiasPrevias = dbHelper.obtenerGuiasCache(cedulaChofer).associateBy { it.id }
-            var rutaActualizada = false
-            try {
-                val guiasServidor = RetrofitClient.executeWithFallback { api ->
-                    api.obtenerViajes(cedulaChofer)
-                }
-                for (gNueva in guiasServidor) {
-                    val gAnt = guiasPrevias[gNueva.id]
-                    if (gAnt != null && (gAnt.version != gNueva.version || gAnt.destino != gNueva.destino || gAnt.origen != gNueva.origen)) {
-                        rutaActualizada = true
-                    }
-                }
-                dbHelper.guardarGuiasCache(cedulaChofer, guiasServidor)
-            } catch (_: Exception) {
             }
 
             val partesMensaje = mutableListOf<String>()

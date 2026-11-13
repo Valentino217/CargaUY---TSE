@@ -246,3 +246,85 @@ body .cuy-modal-expediente .ui-dialog-content {
 .cuy-modal-expediente .cuy-aud-col-fixed {
     white-space: nowrap !important;
 }
+
+/* Barra alineada de controles operativos en Nodos Perifericos */
+body .cuy-tabla-nodos thead th.cuy-col-control {
+    text-align: center !important;
+}
+body .cuy-tabla-nodos tbody td.cuy-col-control {
+    text-align: center !important;
+}
+body .cuy-tabla-nodos .cuy-node-controls {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+    min-width: 356px;
+    margin: 0 auto;
+    text-align: left;
+}
+body .cuy-tabla-nodos .cuy-node-controls .ui-button {
+    margin: 0 !important;
+    min-height: 32px !important;
+    height: 32px !important;
+    font-size: 0.78rem !important;
+    white-space: nowrap !important;
+    box-sizing: border-box !important;
+}
+body .cuy-tabla-nodos .cuy-node-controls .ui-button.ui-button-text-only .ui-button-text {
+    padding: 0 0.55rem !important;
+    line-height: 30px !important;
+}
+body .cuy-tabla-nodos .cuy-node-controls .ui-button.ui-button-text-icon-left .ui-button-text {
+    padding: 0 0.65rem 0 1.85rem !important;
+    line-height: 30px !important;
+}
+body .cuy-tabla-nodos .cuy-node-controls .ui-button.ui-button-text-icon-left .ui-icon {
+    left: 0.55rem !important;
+}
+body .cuy-tabla-nodos .cuy-node-controls .cuy-node-power-btn {
+    flex: 0 0 104px !important;
+    width: 104px !important;
+    min-width: 104px !important;
+}
+body .cuy-tabla-nodos .cuy-node-mode-group {
+    display: inline-flex;
+    align-items: stretch;
+    flex: 0 0 200px;
+    width: 200px;
+}
+body .cuy-tabla-nodos .cuy-node-mode-group .cuy-node-mode-btn {
+    flex: 1 1 50% !important;
+    min-width: 0 !important;
+    position: relative;
+}
+body .cuy-tabla-nodos .cuy-node-mode-group .cuy-node-mode-btn:first-child {
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+}
+body .cuy-tabla-nodos .cuy-node-mode-group .cuy-node-mode-btn:last-child {
+    border-top-left-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
+    margin-left: -1px !important;
+}
+body .cuy-tabla-nodos .cuy-node-mode-group .cuy-mode-active,
+body .cuy-tabla-nodos .cuy-node-mode-group .ui-button:hover,
+body .cuy-tabla-nodos .cuy-node-mode-group .ui-button:focus-visible {
+    z-index: 2;
+}
+body .cuy-tabla-nodos .cuy-node-extra-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex: 0 0 auto;
+}
+body .cuy-tabla-nodos .cuy-node-controls .ui-button.ui-button-icon-only {
+    width: 32px !important;
+    min-width: 32px !important;
+    padding: 0 !important;
+}
+body .cuy-tabla-nodos .cuy-node-controls .ui-button.ui-button-icon-only .ui-button-text {
+    padding: 0 !important;
+    line-height: 30px !important;
+}

@@ -495,7 +495,7 @@
         }
     </style>
     <ui:insert name="head" />
-    <link rel="stylesheet" href="#{request.contextPath}/css/ajustes-ui.css?v=20261105-datepicker-fix"/>
+    <link rel="stylesheet" href="#{request.contextPath}/css/ajustes-ui.css?v=20261113-nodos-ui-v2"/>
     <link rel="stylesheet" href="#{request.contextPath}/css/calendarios.css"/>
 </h:head>
 
@@ -548,13 +548,6 @@
                                     <li><h:link outcome="/empresa/fiscalizacion-vehiculos.xhtml" styleClass="gub-dropdown-link" value="Documentación de Vehículos" /></li>
                                     <li><h:link outcome="/empresa/monitoreo.xhtml" styleClass="gub-dropdown-link" value="Monitoreo de Viajes" /></li>
                                 </ul>
-                            </li>
-                        </ui:fragment>
-
-                        <!-- 2.5 CHOFER -->
-                        <ui:fragment rendered="#{authBean.esChofer()}">
-                            <li class="gub-nav-item">
-                                <h:link outcome="/chofer/mis-viajes.xhtml" styleClass="gub-nav-link" value="Mis Viajes" />
                             </li>
                         </ui:fragment>
 

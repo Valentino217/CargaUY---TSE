@@ -1,23 +1,31 @@
 package uy.edu.fing.grupo07.CargaUY.service;
 
+import jakarta.ejb.EJB;
 import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
+import uy.edu.fing.grupo07.CargaUY.domain.entity.Empresa;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.GuiaDeViaje;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.Infraccion;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.PesadaBalanza;
+import uy.edu.fing.grupo07.CargaUY.domain.entity.Rubro;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.TipoCarga;
+import uy.edu.fing.grupo07.CargaUY.domain.entity.Vehiculo;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.EstadoInfraccion;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoInfraccion;
 import uy.edu.fing.grupo07.CargaUY.dto.DashboardResumenDTO;
+import uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario;
+import uy.edu.fing.grupo07.CargaUY.security.ControlAcceso;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -32,11 +40,89 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
     @PersistenceContext(unitName = "CargaUYPersistenceUnit")
     private EntityManager em;
 
+    @EJB
+    private ControlAcceso control;
+
     public DashboardServiceImpl() {
     }
 
     public DashboardServiceImpl(EntityManager em) {
         this.em = em;
+    }
+
+    private void verificarControl() {
+        if (control == null) {
+            throw new IllegalStateException("ControlAcceso no disponible");
+        }
+    }
+
+    @Override
+    public DashboardResumenDTO obtenerResumenPublico() {
+        Map<TipoEstado, Long> guiasPorEstado = inicializarMapaGuias();
+        cargarMetricasGuias(guiasPorEstado);
+        long totalPesadas = consultarConteo("SELECT COUNT(p) FROM PesadaBalanza p");
+        long totalEmpresasHabilitadas = consultarConteo("SELECT COUNT(e) FROM Empresa e WHERE e.activa = true");
+        long totalVehiculosHabilitados = consultarConteo("SELECT COUNT(v) FROM Vehiculo v WHERE v.estadoHabilitacion = true");
+        return new DashboardResumenDTO(
+                guiasPorEstado,
+                Map.of(),
+                Map.of(),
+                totalPesadas,
+                totalEmpresasHabilitadas,
+                totalVehiculosHabilitados,
+                Map.of(),
+                Map.of(),
+                0.0
+        );
+    }
+
+    @Override
+    public DashboardResumenDTO obtenerResumenPortal(String token) {
+        verificarControl();
+        control.exigir(token);
+        return obtenerResumen();
+    }
+
+    @Override
+    public DashboardResumenDTO obtenerResumen(String token) {
+        verificarControl();
+        control.exigir(token, TipoUsuario.ADMINISTRADOR, TipoUsuario.AUTORIDAD, TipoUsuario.FUNCIONARIO);
+        return obtenerResumen();
+    }
+
+    @Override
+    public List<String> listarRubrosDisponibles(String token) {
+        verificarControl();
+        control.exigir(token, TipoUsuario.ADMINISTRADOR, TipoUsuario.AUTORIDAD, TipoUsuario.FUNCIONARIO);
+        return listarRubrosDisponibles();
+    }
+
+    @Override
+    public List<String> listarTiposCargaDisponibles(String token) {
+        verificarControl();
+        control.exigir(token, TipoUsuario.ADMINISTRADOR, TipoUsuario.AUTORIDAD, TipoUsuario.FUNCIONARIO);
+        return listarTiposCargaDisponibles();
+    }
+
+    @Override
+    public List<String> listarUbicacionesDisponibles(String token) {
+        verificarControl();
+        control.exigir(token, TipoUsuario.ADMINISTRADOR, TipoUsuario.AUTORIDAD, TipoUsuario.FUNCIONARIO);
+        return listarUbicacionesDisponibles();
+    }
+
+    @Override
+    public DashboardResumenDTO obtenerResumenFiltrado(
+            String token,
+            String rubro,
+            String tipoCarga,
+            String ubicacion,
+            LocalDate fechaDesde,
+            LocalDate fechaHasta
+    ) {
+        verificarControl();
+        control.exigir(token, TipoUsuario.ADMINISTRADOR, TipoUsuario.AUTORIDAD, TipoUsuario.FUNCIONARIO);
+        return obtenerResumenFiltrado(rubro, tipoCarga, ubicacion, fechaDesde, fechaHasta);
     }
 
     @Override
@@ -84,6 +170,8 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
                     "SELECT DISTINCT g.origen FROM GuiaDeViaje g WHERE g.origen IS NOT NULL", String.class).getResultList());
             agregarUbicaciones(ubicaciones, em.createQuery(
                     "SELECT DISTINCT g.destino FROM GuiaDeViaje g WHERE g.destino IS NOT NULL", String.class).getResultList());
+            agregarUbicaciones(ubicaciones, em.createQuery(
+                    "SELECT DISTINCT g.corredorVial FROM GuiaDeViaje g WHERE g.corredorVial IS NOT NULL", String.class).getResultList());
             return new ArrayList<>(ubicaciones);
         } catch (Exception e) {
             return List.of();
@@ -117,7 +205,7 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
 
         Map<String, Long> viajesPorPeriodo = new TreeMap<>();
         Map<String, Double> volumenPorRubro = new LinkedHashMap<>();
-        cargarViajesYVolumenDesdeGuias(null, null, null, null, null, viajesPorPeriodo, volumenPorRubro, null);
+        cargarViajesYVolumenDesdeGuias(null, null, null, null, null, viajesPorPeriodo, volumenPorRubro, null, null, null);
 
         double tasaConfirmadasSobreDetectadas = calcularTasaConfirmadas(infraccionesPorEstado);
 
@@ -166,6 +254,8 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
         Map<TipoInfraccion, Long> infraccionesPorTipo = inicializarMapaInfraccionesPorTipo();
         Map<String, Long> viajesPorPeriodo = new TreeMap<>();
         Map<String, Double> volumenPorRubro = new LinkedHashMap<>();
+        Set<Integer> empresasActivasFiltradas = new HashSet<>();
+        Set<String> vehiculosHabilitadosFiltrados = new HashSet<>();
 
         cargarViajesYVolumenDesdeGuias(
                 rubro,
@@ -175,7 +265,9 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
                 fechaHasta,
                 viajesPorPeriodo,
                 volumenPorRubro,
-                guiasPorEstado
+                guiasPorEstado,
+                empresasActivasFiltradas,
+                vehiculosHabilitadosFiltrados
         );
 
         cargarInfraccionesFiltradas(
@@ -185,12 +277,31 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
                 fechaDesde,
                 fechaHasta,
                 infraccionesPorEstado,
-                infraccionesPorTipo
+                infraccionesPorTipo,
+                empresasActivasFiltradas,
+                vehiculosHabilitadosFiltrados
         );
 
-        long totalPesadas = contarPesadasFiltradas(rubro, tipoCarga, ubicacion, fechaDesde, fechaHasta);
-        long totalEmpresasHabilitadas = consultarConteo("SELECT COUNT(e) FROM Empresa e WHERE e.activa = true");
-        long totalVehiculosHabilitados = consultarConteo("SELECT COUNT(v) FROM Vehiculo v WHERE v.estadoHabilitacion = true");
+        long totalPesadas = contarPesadasFiltradas(
+                rubro,
+                tipoCarga,
+                ubicacion,
+                fechaDesde,
+                fechaHasta,
+                empresasActivasFiltradas,
+                vehiculosHabilitadosFiltrados
+        );
+        agregarCatalogoEmpresasYVehiculosFiltrados(
+                rubro,
+                tipoCarga,
+                ubicacion,
+                fechaDesde,
+                fechaHasta,
+                empresasActivasFiltradas,
+                vehiculosHabilitadosFiltrados
+        );
+        long totalEmpresasHabilitadas = empresasActivasFiltradas.size();
+        long totalVehiculosHabilitados = vehiculosHabilitadosFiltrados.size();
         double tasaConfirmadasSobreDetectadas = calcularTasaConfirmadas(infraccionesPorEstado);
 
         return new DashboardResumenDTO(
@@ -237,7 +348,9 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
             LocalDate fechaHasta,
             Map<String, Long> viajesPorPeriodo,
             Map<String, Double> volumenPorRubro,
-            Map<TipoEstado, Long> guiasPorEstadoFiltrado
+            Map<TipoEstado, Long> guiasPorEstadoFiltrado,
+            Set<Integer> empresasActivasFiltradas,
+            Set<String> vehiculosHabilitadosFiltrados
     ) {
         TypedQuery<GuiaDeViaje> queryGuias = em.createQuery(
                 "SELECT g FROM GuiaDeViaje g ORDER BY g.fecha ASC",
@@ -257,14 +370,22 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
             if (guiasPorEstadoFiltrado != null && g.getEstado() != null) {
                 guiasPorEstadoFiltrado.merge(g.getEstado(), 1L, Long::sum);
             }
-            if (g.getFecha() != null) {
+            if (viajesPorPeriodo != null && g.getFecha() != null) {
                 String periodo = YearMonth.from(g.getFecha()).toString();
                 viajesPorPeriodo.merge(periodo, 1L, Long::sum);
             }
-            String rubroGuia = (g.getRubroCliente() != null && !g.getRubroCliente().isBlank())
-                    ? g.getRubroCliente().trim()
-                    : "Sin clasificar";
-            volumenPorRubro.merge(rubroGuia, (double) g.getVolumenCarga(), Double::sum);
+            if (volumenPorRubro != null) {
+                String rubroGuia = (g.getRubroCliente() != null && !g.getRubroCliente().isBlank())
+                        ? g.getRubroCliente().trim()
+                        : "Sin clasificar";
+                volumenPorRubro.merge(rubroGuia, (double) g.getVolumenCarga(), Double::sum);
+            }
+            registrarEmpresaYVehiculoActivos(
+                    g.getEmpresa(),
+                    g.getVehiculo(),
+                    empresasActivasFiltradas,
+                    vehiculosHabilitadosFiltrados
+            );
         }
     }
 
@@ -275,7 +396,9 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
             LocalDate fechaDesde,
             LocalDate fechaHasta,
             Map<EstadoInfraccion, Long> infraccionesPorEstado,
-            Map<TipoInfraccion, Long> infraccionesPorTipo
+            Map<TipoInfraccion, Long> infraccionesPorTipo,
+            Set<Integer> empresasActivasFiltradas,
+            Set<String> vehiculosHabilitadosFiltrados
     ) {
         TypedQuery<Infraccion> queryInf = em.createQuery(
                 "SELECT i FROM Infraccion i",
@@ -301,9 +424,19 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
             if (fechaHasta != null && (i.getFecha() == null || i.getFecha().isAfter(fechaHasta))) {
                 continue;
             }
+            GuiaDeViaje g = i.getGuia();
             if (filtraGuia) {
-                GuiaDeViaje g = i.getGuia();
-                if (g == null || !cumpleFiltroGuia(g, rubro, tipoCarga, ubicacion, null, null)) {
+                if (g != null) {
+                    if (!cumpleFiltroGuia(g, rubro, tipoCarga, ubicacion, null, null)) {
+                        continue;
+                    }
+                } else if (!cumpleFiltroSinGuia(
+                        i.resolverVehiculo(),
+                        i.resolverEmpresa(),
+                        rubro,
+                        tipoCarga,
+                        ubicacion
+                )) {
                     continue;
                 }
             }
@@ -313,6 +446,12 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
             if (i.getTipo() != null) {
                 infraccionesPorTipo.merge(i.getTipo(), 1L, Long::sum);
             }
+            registrarEmpresaYVehiculoActivos(
+                    i.resolverEmpresa(),
+                    i.resolverVehiculo(),
+                    empresasActivasFiltradas,
+                    vehiculosHabilitadosFiltrados
+            );
         }
     }
 
@@ -321,7 +460,9 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
             String tipoCarga,
             String ubicacion,
             LocalDate fechaDesde,
-            LocalDate fechaHasta
+            LocalDate fechaHasta,
+            Set<Integer> empresasActivasFiltradas,
+            Set<String> vehiculosHabilitadosFiltrados
     ) {
         TypedQuery<PesadaBalanza> queryPesadas = em.createQuery(
                 "SELECT p FROM PesadaBalanza p",
@@ -342,7 +483,13 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
             GuiaDeViaje g = p.getGuia();
             if (g != null && cumpleFiltroGuia(g, rubro, tipoCarga, ubicacion, fechaDesde, fechaHasta)) {
                 conteo++;
-            } else if (g == null && (rubro == null || rubro.isBlank()) && (tipoCarga == null || tipoCarga.isBlank()) && (ubicacion == null || ubicacion.isBlank())) {
+                registrarEmpresaYVehiculoActivos(
+                        g.getEmpresa(),
+                        g.getVehiculo(),
+                        empresasActivasFiltradas,
+                        vehiculosHabilitadosFiltrados
+                );
+            } else if (g == null) {
                 LocalDate fechaPesada = p.getFecha();
                 if (fechaDesde != null && (fechaPesada == null || fechaPesada.isBefore(fechaDesde))) {
                     continue;
@@ -350,10 +497,124 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
                 if (fechaHasta != null && (fechaPesada == null || fechaPesada.isAfter(fechaHasta))) {
                     continue;
                 }
+                Vehiculo vehiculo = p.getVehiculo();
+                Empresa empresa = vehiculo != null ? vehiculo.getEmpresa() : null;
+                if (!cumpleFiltroSinGuia(vehiculo, empresa, rubro, tipoCarga, ubicacion)) {
+                    continue;
+                }
                 conteo++;
+                registrarEmpresaYVehiculoActivos(
+                        empresa,
+                        vehiculo,
+                        empresasActivasFiltradas,
+                        vehiculosHabilitadosFiltrados
+                );
             }
         }
         return conteo;
+    }
+
+    private void agregarCatalogoEmpresasYVehiculosFiltrados(
+            String rubro,
+            String tipoCarga,
+            String ubicacion,
+            LocalDate fechaDesde,
+            LocalDate fechaHasta,
+            Set<Integer> empresasActivasFiltradas,
+            Set<String> vehiculosHabilitadosFiltrados
+    ) {
+        if (fechaDesde != null || fechaHasta != null || (tipoCarga != null && !tipoCarga.isBlank())) {
+            return;
+        }
+        TypedQuery<Empresa> queryEmp = em.createQuery("SELECT e FROM Empresa e WHERE e.activa = true", Empresa.class);
+        if (queryEmp != null) {
+            List<Empresa> empresas = queryEmp.getResultList();
+            if (empresas != null) {
+                for (Empresa e : empresas) {
+                    if (e != null && cumpleFiltroSinGuia(null, e, rubro, null, ubicacion)) {
+                        empresasActivasFiltradas.add(e.getNroEmpresa());
+                    }
+                }
+            }
+        }
+        TypedQuery<Vehiculo> queryVeh = em.createQuery("SELECT v FROM Vehiculo v WHERE v.estadoHabilitacion = true", Vehiculo.class);
+        if (queryVeh != null) {
+            List<Vehiculo> vehiculos = queryVeh.getResultList();
+            if (vehiculos != null) {
+                for (Vehiculo v : vehiculos) {
+                    Empresa emp = v != null ? v.getEmpresa() : null;
+                    if (v != null && cumpleFiltroSinGuia(v, emp, rubro, null, ubicacion)) {
+                        if (v.getMatricula() != null) {
+                            vehiculosHabilitadosFiltrados.add(v.getMatricula());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private boolean cumpleFiltroSinGuia(
+            Vehiculo vehiculo,
+            Empresa empresa,
+            String rubro,
+            String tipoCarga,
+            String ubicacion
+    ) {
+        if (tipoCarga != null && !tipoCarga.isBlank()) {
+            return false;
+        }
+        Empresa emp = empresa != null ? empresa : (vehiculo != null ? vehiculo.getEmpresa() : null);
+        if (rubro != null && !rubro.isBlank()) {
+            if (emp == null || !empresaTieneRubro(emp, rubro.trim().toLowerCase(Locale.ROOT))) {
+                return false;
+            }
+        }
+        if (ubicacion != null && !ubicacion.isBlank()) {
+            String uFiltro = ubicacion.trim().toLowerCase(Locale.ROOT);
+            String dir = (emp != null && emp.getDireccion() != null) ? emp.getDireccion().toLowerCase(Locale.ROOT) : "";
+            if (!dir.contains(uFiltro)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean empresaTieneRubro(Empresa emp, String rubroFiltroLower) {
+        try {
+            List<Rubro> rubros = emp.getRubros();
+            if (rubros == null) {
+                return false;
+            }
+            for (Rubro r : rubros) {
+                if (r == null) {
+                    continue;
+                }
+                if (r.getNombre() != null && r.getNombre().toLowerCase(Locale.ROOT).contains(rubroFiltroLower)) {
+                    return true;
+                }
+                if (r.getDesc() != null && r.getDesc().toLowerCase(Locale.ROOT).contains(rubroFiltroLower)) {
+                    return true;
+                }
+            }
+        } catch (RuntimeException ignored) {
+            // En caso de relación perezosa no inicializada fuera de sesión
+        }
+        return false;
+    }
+
+    private void registrarEmpresaYVehiculoActivos(
+            Empresa empresa,
+            Vehiculo vehiculo,
+            Set<Integer> empresasActivasFiltradas,
+            Set<String> vehiculosHabilitadosFiltrados
+    ) {
+        if (empresasActivasFiltradas != null && empresa != null && empresa.isActiva()) {
+            empresasActivasFiltradas.add(empresa.getNroEmpresa());
+        }
+        if (vehiculosHabilitadosFiltrados != null && vehiculo != null && vehiculo.isEstadoHabilitacion()
+                && vehiculo.getMatricula() != null) {
+            vehiculosHabilitadosFiltrados.add(vehiculo.getMatricula());
+        }
     }
 
     private boolean cumpleFiltroGuia(
@@ -365,18 +626,18 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
             LocalDate fechaHasta
     ) {
         if (rubro != null && !rubro.isBlank()) {
-            String rFiltro = rubro.trim().toLowerCase();
-            String rGuia = g.getRubroCliente() != null ? g.getRubroCliente().trim().toLowerCase() : "";
+            String rFiltro = rubro.trim().toLowerCase(Locale.ROOT);
+            String rGuia = g.getRubroCliente() != null ? g.getRubroCliente().trim().toLowerCase(Locale.ROOT) : "";
             if (!rGuia.contains(rFiltro)) {
                 return false;
             }
         }
         if (tipoCarga != null && !tipoCarga.isBlank()) {
-            String tFiltro = tipoCarga.trim().toLowerCase();
+            String tFiltro = tipoCarga.trim().toLowerCase(Locale.ROOT);
             boolean match = false;
             if (g.getTiposCarga() != null) {
                 for (TipoCarga tc : g.getTiposCarga()) {
-                    if (tc != null && tc.getDesc() != null && tc.getDesc().trim().toLowerCase().contains(tFiltro)) {
+                    if (tc != null && tc.getDesc() != null && tc.getDesc().trim().toLowerCase(Locale.ROOT).contains(tFiltro)) {
                         match = true;
                         break;
                     }
@@ -387,10 +648,11 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
             }
         }
         if (ubicacion != null && !ubicacion.isBlank()) {
-            String uFiltro = ubicacion.trim().toLowerCase();
-            String origen = g.getOrigen() != null ? g.getOrigen().toLowerCase() : "";
-            String destino = g.getDestino() != null ? g.getDestino().toLowerCase() : "";
-            if (!origen.contains(uFiltro) && !destino.contains(uFiltro)) {
+            String uFiltro = ubicacion.trim().toLowerCase(Locale.ROOT);
+            String origen = g.getOrigen() != null ? g.getOrigen().toLowerCase(Locale.ROOT) : "";
+            String destino = g.getDestino() != null ? g.getDestino().toLowerCase(Locale.ROOT) : "";
+            String corredor = g.getCorredorVial() != null ? g.getCorredorVial().toLowerCase(Locale.ROOT) : "";
+            if (!origen.contains(uFiltro) && !destino.contains(uFiltro) && !corredor.contains(uFiltro)) {
                 return false;
             }
         }

@@ -45,7 +45,23 @@ public class NotificacionMDB implements MessageListener {
             return;
         }
 
+        uy.edu.fing.grupo07.CargaUY.integration.TraceContext.Estado previo =
+                uy.edu.fing.grupo07.CargaUY.integration.TraceContext.capturar();
+        String correlacion = null;
+        String traceparent = null;
         try {
+            try {
+                correlacion = textMsg.getJMSCorrelationID();
+                if (correlacion == null || correlacion.isBlank()) {
+                    correlacion = textMsg.getStringProperty("X_Correlation_ID");
+                }
+                traceparent = textMsg.getStringProperty("traceparent");
+            } catch (Exception ignored) {
+            }
+            correlacion = uy.edu.fing.grupo07.CargaUY.integration.TraceContext.normalizarCorrelacion(correlacion);
+            traceparent = uy.edu.fing.grupo07.CargaUY.integration.TraceContext.normalizarTraceparent(traceparent, correlacion);
+            uy.edu.fing.grupo07.CargaUY.integration.TraceContext.fijar(correlacion, traceparent);
+
             String cuerpo = textMsg.getText();
             if (cuerpo == null || cuerpo.isBlank()) {
                 LOGGER.log(Level.WARNING, "Mensaje vacío recibido en NotificacionQueue.");
@@ -64,12 +80,14 @@ public class NotificacionMDB implements MessageListener {
             if (notificada != null) {
                 LOGGER.log(
                         Level.INFO,
-                        "Empresa transportista \"{0}\" notificada exitosamente sobre el caso #{1} ({2}, vehículo {3}).",
+                        "Empresa transportista \"{0}\" notificada exitosamente sobre el caso #{1} ({2}, vehículo {3}) [correlacion={4}, traceparent={5}].",
                         new Object[]{
                                 notificada.nombreEmpresa() != null ? notificada.nombreEmpresa() : "Sin empresa registrada",
                                 notificada.idCaso(),
                                 notificada.tipo(),
-                                notificada.matricula() != null ? notificada.matricula() : "N/D"
+                                notificada.matricula() != null ? notificada.matricula() : "N/D",
+                                correlacion,
+                                traceparent
                         }
                 );
             }
@@ -78,6 +96,8 @@ public class NotificacionMDB implements MessageListener {
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Fallo técnico imprevisto en NotificacionMDB al procesar mensaje", e);
             throw new RuntimeException("Error técnico en NotificacionMDB", e);
+        } finally {
+            uy.edu.fing.grupo07.CargaUY.integration.TraceContext.restaurar(previo);
         }
     }
 }

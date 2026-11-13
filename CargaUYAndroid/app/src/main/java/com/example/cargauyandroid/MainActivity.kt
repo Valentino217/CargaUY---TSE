@@ -640,6 +640,7 @@ fun MainScreen(
                             onValueChange = {
                                 tokenTexto = it.trim()
                                 SesionMovil.token = tokenTexto
+                                SesionMovil.esSesionOidc = false
                             },
                             label = { Text("Token Bearer manual") },
                             visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
@@ -660,6 +661,7 @@ fun MainScreen(
                                         SesionMovil.token = tok
                                         SesionMovil.cedulaAsociada = ci
                                         SesionMovil.nombreChofer = (res["nombre"] as? String) ?: "Chofer Dev #$ci"
+                                        SesionMovil.esSesionOidc = false
                                         tokenTexto = tok
                                         cargandoDevToken = false
                                         onMensajeGlobal("Token Dev obtenido para CI $ci")

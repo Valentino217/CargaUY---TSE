@@ -69,8 +69,10 @@ services:
 
   wildfly:
     env_file:
-      - .env
-      - ./.local-p1/gub-real.env
+      - path: .env
+        required: false
+      - path: ./.local-p1/gub-real.env
+        required: false
     build:
       context: .
       dockerfile: docker/wildfly/Dockerfile
@@ -102,6 +104,9 @@ services:
       TRACKING_TIMEOUT_SECONDS: ${TRACKING_TIMEOUT_SECONDS:-15}
       MONGO_URI: mongodb://mongodb:27017
       LDAP_URL: ldap://ldap:1389
+      LDAP_ROOT_PASSWORD: ${LDAP_ROOT_PASSWORD:-vQUP53jJO6NyQD9V8hXK7oFQ-NmPjD9VS1NLoC-INkE}
+      FAAS_TRACKING_URL: ${FAAS_TRACKING_URL:-}
+      FAAS_SHARED_SECRET: ${FAAS_SHARED_SECRET:-}
       GUB_PROVEEDOR: iduruguay
       GUB_ISSUER: https://auth-testing.iduruguay.gub.uy/oidc/v1
       GUB_JWKS: https://auth-testing.iduruguay.gub.uy/oidc/v2/jwks
@@ -116,13 +121,20 @@ services:
     ports:
       - "8080:8080"
       - "9990:9990"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET /CargaUY-web/api/public/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && head -n 1 <&3 | grep -q '200'"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
 
   seed:
-    profiles: ["seed"]
     image: postgres:16-alpine
     restart: "no"
     depends_on:
       postgres:
+        condition: service_healthy
+      wildfly:
         condition: service_healthy
     environment:
       PGPASSWORD: ${DB_PASSWORD:-cargauy123}

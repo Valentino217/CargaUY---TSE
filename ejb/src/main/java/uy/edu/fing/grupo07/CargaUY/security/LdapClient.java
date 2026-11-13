@@ -1,7 +1,12 @@
 package uy.edu.fing.grupo07.CargaUY.security;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Hashtable;
 import java.util.List;
 import javax.naming.*;
@@ -52,9 +57,10 @@ public class LdapClient {
         }
         String url = Config.valor("ldap.url", "ldap://127.0.0.1:1389");
         String rootDn = Config.valor("ldap.root.dn", "cn=manager,dc=cargauy,dc=local");
-        String rootPw = Config.valor("ldap.root.password", "vQUP53jJO6NyQD9V8hXK7oFQ-NmPjD9VS1NLoC-INkE");
+        String rootPw = Config.requerido("ldap.root.password");
         String peopleDn = Config.valor("ldap.people.dn", "ou=people,dc=cargauy,dc=local");
         String userDn = "uid=" + uid + "," + peopleDn;
+        String passwordSsha = codificarSsha(password);
 
         DirContext contexto = null;
         try {
@@ -92,11 +98,11 @@ public class LdapClient {
                 if (mail != null && !mail.isBlank()) {
                     nueva.put("mail", mail.trim());
                 }
-                nueva.put("userPassword", password);
+                nueva.put("userPassword", passwordSsha);
                 contexto.createSubcontext(userDn, nueva);
             } else {
                 List<ModificationItem> mods = new ArrayList<>();
-                mods.add(new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute("userPassword", password)));
+                mods.add(new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute("userPassword", passwordSsha)));
                 if (nombre != null && !nombre.isBlank()) {
                     mods.add(new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute("cn", cn)));
                     mods.add(new ModificationItem(DirContext.REPLACE_ATTRIBUTE, new BasicAttribute("sn", sn)));
@@ -110,6 +116,27 @@ public class LdapClient {
             throw new ErrorAcceso(503, "No se pudo sincronizar el usuario en LDAP: " + e.getMessage());
         } finally {
             if (contexto != null) try { contexto.close(); } catch (NamingException ignored) {}
+        }
+    }
+
+    /** Codifica una contraseña en formato RFC 2307 {@code {SSHA}} usando un salt aleatorio de 8 bytes. */
+    static String codificarSsha(String password) {
+        if (password == null || password.isBlank()) {
+            throw new ErrorAcceso(400, "Contraseña inválida para LDAP");
+        }
+        try {
+            byte[] salt = new byte[8];
+            new SecureRandom().nextBytes(salt);
+            MessageDigest sha1 = MessageDigest.getInstance("SHA-1");
+            sha1.update(password.getBytes(StandardCharsets.UTF_8));
+            sha1.update(salt);
+            byte[] digest = sha1.digest();
+            byte[] combined = new byte[digest.length + salt.length];
+            System.arraycopy(digest, 0, combined, 0, digest.length);
+            System.arraycopy(salt, 0, combined, digest.length, salt.length);
+            return "{SSHA}" + Base64.getEncoder().encodeToString(combined);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-1 no disponible en el entorno", e);
         }
     }
 }

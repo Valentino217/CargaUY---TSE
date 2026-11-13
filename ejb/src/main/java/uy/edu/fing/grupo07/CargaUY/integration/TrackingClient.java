@@ -85,7 +85,7 @@ public class TrackingClient implements Serializable {
 
     private transient final HttpClient httpClient;
     private volatile String endpointUrl;
-    private final boolean endpointExplicito;
+    private volatile boolean endpointExplicito;
     private final Semaphore capacidad = new Semaphore(8);
     private final AtomicLong llamadas = new AtomicLong();
     private final AtomicLong fallas = new AtomicLong();
@@ -186,10 +186,12 @@ public class TrackingClient implements Serializable {
         }
         for (String base : candidatosBaseUrl()) {
             try {
+                String corr = TraceContext.normalizarCorrelacion(null);
                 HttpRequest request = HttpRequest.newBuilder()
                         .uri(URI.create(base + "/health"))
                         .timeout(HEALTH_TIMEOUT)
-                        .header("X-Correlation-ID", UUID.randomUUID().toString())
+                        .header(TraceContext.HEADER_CORRELACION, corr)
+                        .header(TraceContext.HEADER_TRACEPARENT, TraceContext.siguienteTraceparentHijo(null, corr))
                         .GET()
                         .build();
                 HttpResponse<Void> response = httpClient.send(request, HttpResponse.BodyHandlers.discarding());
@@ -227,7 +229,8 @@ public class TrackingClient implements Serializable {
                     HttpRequest request = HttpRequest.newBuilder()
                             .uri(URI.create(base + path))
                             .timeout(TIMEOUT)
-                            .header("X-Correlation-ID", corr)
+                            .header(TraceContext.HEADER_CORRELACION, corr)
+                            .header(TraceContext.HEADER_TRACEPARENT, TraceContext.siguienteTraceparentHijo(null, corr))
                             .header("Accept", "application/json")
                             .GET()
                             .build();
@@ -259,9 +262,14 @@ public class TrackingClient implements Serializable {
                 registrarResultado(exito);
             }
             capacidad.release();
-            long duracionMs = (System.nanoTime() - inicio) / 1_000_000;
-            LOGGER.log(Level.FINE, "{\"evento\":\"tracking.periferico.get\",\"correlacion\":\"{0}\",\"ok\":{1},\"duracionMs\":{2}}",
-                    new Object[]{corr, exito, duracionMs});
+            final long duracionFinalMs = (System.nanoTime() - inicio) / 1_000_000;
+            final boolean exitoFinal = exito;
+            LOGGER.log(Level.FINE, () -> Json.createObjectBuilder()
+                    .add("evento", "tracking.periferico.get")
+                    .add("correlacion", corr)
+                    .add("ok", exitoFinal)
+                    .add("duracionMs", duracionFinalMs)
+                    .build().toString());
         }
     }
 
@@ -286,7 +294,8 @@ public class TrackingClient implements Serializable {
                     HttpRequest request = HttpRequest.newBuilder()
                             .uri(URI.create(base + path))
                             .timeout(TIMEOUT)
-                            .header("X-Correlation-ID", corr)
+                            .header(TraceContext.HEADER_CORRELACION, corr)
+                            .header(TraceContext.HEADER_TRACEPARENT, TraceContext.siguienteTraceparentHijo(null, corr))
                             .header("Content-Type", "application/json")
                             .header("Accept", "application/json")
                             .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
@@ -319,9 +328,16 @@ public class TrackingClient implements Serializable {
                 registrarResultado(exito);
             }
             capacidad.release();
-            long duracionMs = (System.nanoTime() - inicio) / 1_000_000;
-            LOGGER.log(Level.FINE, "{\"evento\":\"tracking.periferico.post\",\"path\":\"{0}\",\"correlacion\":\"{1}\",\"ok\":{2},\"duracionMs\":{3}}",
-                    new Object[]{path, corr, exito, duracionMs});
+            final long duracionFinalMs = (System.nanoTime() - inicio) / 1_000_000;
+            final boolean exitoFinal = exito;
+            final String pathFinal = path != null ? path : "";
+            LOGGER.log(Level.FINE, () -> Json.createObjectBuilder()
+                    .add("evento", "tracking.periferico.post")
+                    .add("path", pathFinal)
+                    .add("correlacion", corr)
+                    .add("ok", exitoFinal)
+                    .add("duracionMs", duracionFinalMs)
+                    .build().toString());
         }
     }
 
@@ -512,14 +528,7 @@ public class TrackingClient implements Serializable {
     }
 
     private static String normalizarCorrelacion(String correlacion) {
-        if (correlacion == null || correlacion.isBlank()) {
-            return UUID.randomUUID().toString();
-        }
-        try {
-            return UUID.fromString(correlacion.trim()).toString();
-        } catch (Exception e) {
-            return UUID.randomUUID().toString();
-        }
+        return TraceContext.normalizarCorrelacion(correlacion);
     }
 
     public String getEndpointUrl() {
@@ -529,6 +538,7 @@ public class TrackingClient implements Serializable {
     public void setEndpointUrl(String endpointUrl) {
         if (endpointUrl != null && !endpointUrl.isBlank()) {
             this.endpointUrl = endpointUrl.trim();
+            this.endpointExplicito = true;
         }
     }
 }

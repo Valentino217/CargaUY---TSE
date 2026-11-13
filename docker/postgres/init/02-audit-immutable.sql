@@ -3,12 +3,12 @@
 CREATE OR REPLACE FUNCTION trg_prevent_audit_modification()
 RETURNS TRIGGER AS $$
 BEGIN
-    RAISE EXCEPTION 'Operación denegada: La tabla registro_auditoria es estrictamente inmutable (append-only). No se permiten sentencias UPDATE ni DELETE.';
+    RAISE EXCEPTION 'Operación denegada: La tabla registro_auditoria es estrictamente inmutable (append-only). No se permiten sentencias UPDATE, DELETE ni TRUNCATE.';
     RETURN NULL;
 END;
 $$ LANGUAGE plpgsql;
 
--- Crear el trigger condicionalmente tras la creación de la tabla
+-- Crear los triggers condicionalmente tras la creación de la tabla
 DO $$
 BEGIN
     IF EXISTS (
@@ -18,6 +18,12 @@ BEGIN
         CREATE TRIGGER trg_audit_immutable
         BEFORE UPDATE OR DELETE ON registro_auditoria
         FOR EACH ROW
+        EXECUTE FUNCTION trg_prevent_audit_modification();
+
+        DROP TRIGGER IF EXISTS trg_audit_no_truncate ON registro_auditoria;
+        CREATE TRIGGER trg_audit_no_truncate
+        BEFORE TRUNCATE ON registro_auditoria
+        FOR EACH STATEMENT
         EXECUTE FUNCTION trg_prevent_audit_modification();
     END IF;
 END $$;

@@ -20,10 +20,16 @@ object RetrofitClient {
             .readTimeout(8000, TimeUnit.MILLISECONDS)
             .writeTimeout(8000, TimeUnit.MILLISECONDS)
             .addInterceptor { chain ->
-                val request = chain.request().newBuilder()
-                // Propagación de trazabilidad distribuida (X-Correlation-ID) hacia el backend y colas JMS
-                if (chain.request().header("X-Correlation-ID").isNullOrBlank()) {
-                    request.header("X-Correlation-ID", UUID.randomUUID().toString())
+                val original = chain.request()
+                val request = original.newBuilder()
+                // Propagación de trazabilidad distribuida (X-Correlation-ID + W3C traceparent)
+                val correlacion = original.header("X-Correlation-ID")?.takeIf { it.isNotBlank() }
+                    ?: TraceHeaderHelper.generarCorrelacion()
+                if (original.header("X-Correlation-ID").isNullOrBlank()) {
+                    request.header("X-Correlation-ID", correlacion)
+                }
+                if (original.header("traceparent").isNullOrBlank()) {
+                    request.header("traceparent", TraceHeaderHelper.generarTraceparent(correlacion))
                 }
                 SesionMovil.token.takeIf { it.isNotBlank() }?.let {
                     request.header("Authorization", "Bearer $it")
@@ -154,6 +160,7 @@ object SesionMovil {
     var token: String by mutableStateOf("")
     var cedulaAsociada: Int? by mutableStateOf(null)
     var nombreChofer: String? by mutableStateOf(null)
+    var esSesionOidc: Boolean by mutableStateOf(false)
 
     val estaAutenticado: Boolean
         get() = token.isNotBlank()
@@ -162,6 +169,7 @@ object SesionMovil {
         token = ""
         cedulaAsociada = null
         nombreChofer = null
+        esSesionOidc = false
     }
 }
 

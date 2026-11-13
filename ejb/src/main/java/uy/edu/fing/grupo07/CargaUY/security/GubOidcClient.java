@@ -187,6 +187,9 @@ public class GubOidcClient {
                     || nacimiento!=null && nacimiento.isAfter(LocalDate.now())
                     || !info.getBoolean("email_verified",false))
                 throw new ErrorAcceso(409,"Perfil externo incompleto o correo sin verificar");
+            if (nacimiento != null && nacimiento.isAfter(LocalDate.now().minusYears(18))) {
+                throw new ErrorAcceso(403, "El usuario debe ser mayor de edad (18 años o más)");
+            }
             // Separa los identificadores de proveedores aunque dos emitan el mismo sub.
             String subject = real(movil)?Cripto.hash(issuer(movil)+"\n"+claims.getString("sub")):claims.getString("sub");
             return new IdentidadVerificada(new Identidad(subject,ci,nombre,mail,nacimiento), idToken);

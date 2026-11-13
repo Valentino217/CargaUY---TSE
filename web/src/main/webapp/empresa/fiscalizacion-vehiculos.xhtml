@@ -123,6 +123,7 @@
                             </p:selectOneMenu>
                         </f:facet>
                         <ui:param name="vencPnc" value="#{VehiculoBean.obtenerVencimientoPnc(veh.matricula)}" />
+                        <ui:param name="nroPnc" value="#{VehiculoBean.obtenerNumeroPermisoPnc(veh.matricula)}" />
                         <p:tag value="#{VehiculoBean.obtenerEstadoVigencia(vencPnc)}"
                                severity="#{VehiculoBean.obtenerSeveridadVigencia(vencPnc)}"
                                icon="#{VehiculoBean.obtenerSeveridadVigencia(vencPnc) eq 'success' ? 'pi pi-check-circle' : 'pi pi-exclamation-triangle'}"
@@ -130,6 +131,11 @@
                         <div style="font-size: 0.76rem; color: #475569; margin-top: 0.2rem;">
                             #{vencPnc != null ? 'Vence: '.concat(vencPnc.toString()) : 'Sin registro PNC'}
                         </div>
+                        <ui:fragment rendered="#{not empty nroPnc}">
+                            <div style="font-size: 0.74rem; color: #0f2942; font-weight: 600;">
+                                Nro: #{nroPnc}
+                            </div>
+                        </ui:fragment>
                     </p:column>
 
                     <p:column headerText="Apto para circular" filterBy="#{VehiculoBean.tieneDocumentacionEnRegla(veh) ? 'APTO RUTA' : 'BLOQUEADO'}" filterMatchMode="exact" style="width: 165px; text-align: center;">

@@ -37,11 +37,11 @@ public class ClientePdi {
             throw new IllegalStateException("PDI requiere HTTPS fuera del entorno local");
         http=HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(1)).build();
     }
-    public ResultadoPdi consultar(int ci){return consultar(ci,UUID.randomUUID().toString());}
+    public ResultadoPdi consultar(int ci){return consultar(ci,TraceContext.normalizarCorrelacion(TraceContext.obtenerCorrelacion()));}
     public ResultadoPdi consultar(int ci,String correlacion){
         if(ci<=0) throw new IllegalArgumentException("CI inválida");
-        try{correlacion=UUID.fromString(correlacion).toString();}
-        catch(Exception e){correlacion=UUID.randomUUID().toString();}
+        correlacion=TraceContext.normalizarCorrelacion(correlacion);
+        String traceparent=TraceContext.siguienteTraceparentHijo(null,correlacion);
         if(!capacidad.tryAcquire()){rechazadas.incrementAndGet();return ResultadoPdi.indisponible();}
         boolean admitida=false, exito=false;
         long inicio=System.nanoTime();
@@ -60,7 +60,9 @@ public class ClientePdi {
                     llamadas.incrementAndGet();
                     HttpResponse<String> r=http.send(HttpRequest.newBuilder(endpoint)
                         .timeout(Duration.ofSeconds(2)).header("Content-Type","text/xml;charset=UTF-8")
-                        .header("SOAPAction","\""+ACTION+"\"").header("X-Correlation-ID",correlacion)
+                        .header("SOAPAction","\""+ACTION+"\"")
+                        .header(TraceContext.HEADER_CORRELACION,correlacion)
+                        .header(TraceContext.HEADER_TRACEPARENT,traceparent)
                         .POST(HttpRequest.BodyPublishers.ofString(xml)).build(),
                         HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
                     if(r.statusCode()!=200&&r.statusCode()!=500) throw new IOException("HTTP");
@@ -78,6 +80,7 @@ public class ClientePdi {
             if(admitida) terminar(exito);
             capacidad.release();
             LOG.info("{\"evento\":\"pdi.consulta\",\"correlacion\":\""+escJson(correlacion)
+                +"\",\"traceparent\":\""+escJson(traceparent)
                 +"\",\"ok\":"+exito+",\"duracionMs\":"+((System.nanoTime()-inicio)/1000000)+"}");
         }
     }

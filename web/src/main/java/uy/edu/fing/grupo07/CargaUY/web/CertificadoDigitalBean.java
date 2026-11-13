@@ -50,7 +50,7 @@ public class CertificadoDigitalBean implements Serializable {
         cargarCertificados();
     }
 
-    private Acceso resolverUsuarioAutenticado() {
+    private String resolverToken() {
         String token = null;
         try {
             token = SesionActual.token();
@@ -62,6 +62,11 @@ public class CertificadoDigitalBean implements Serializable {
                     .getSessionMap()
                     .get("token");
         }
+        return token;
+    }
+
+    private Acceso resolverUsuarioAutenticado() {
+        String token = resolverToken();
         if (token == null || auth == null) {
             return null;
         }
@@ -70,12 +75,13 @@ public class CertificadoDigitalBean implements Serializable {
 
     public void cargarCertificados() {
         try {
+            String token = resolverToken();
             Acceso actor = resolverUsuarioAutenticado();
             if (actor == null) {
                 certificados = new ArrayList<>();
                 return;
             }
-            certificados = certificadoDigitalEJB.listarCertificadosPorUsuario(actor.id());
+            certificados = certificadoDigitalEJB.listarCertificadosPorUsuario(token, actor.id());
         } catch (Exception e) {
             certificados = new ArrayList<>();
             mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error", "No se pudieron cargar sus certificados: " + e.getMessage());
@@ -84,6 +90,7 @@ public class CertificadoDigitalBean implements Serializable {
 
     public void registrarMiCertificado() {
         try {
+            String token = resolverToken();
             Acceso actor = resolverUsuarioAutenticado();
             if (actor == null) {
                 throw new IllegalStateException("Debe iniciar sesión nuevamente para registrar un certificado.");
@@ -96,6 +103,7 @@ public class CertificadoDigitalBean implements Serializable {
             byte[] archivo = certificado.getContent();
 
             CredencialesFirma credenciales = certificadoDigitalEJB.abrirCredenciales(
+                    token,
                     archivo,
                     passwordCertificado
             );
@@ -104,6 +112,7 @@ public class CertificadoDigitalBean implements Serializable {
             LocalDateTime vencimiento = certificadoDigitalEJB.obtenerFechaVencimiento(x509);
 
             certificadoDigitalEJB.registrarCertificado(
+                    token,
                     actor.ci(),
                     archivo,
                     certificado.getFileName(),
@@ -150,12 +159,13 @@ public class CertificadoDigitalBean implements Serializable {
 
     public void revocarCertificado(int idCertificado, String motivo) {
         try {
+            String token = resolverToken();
             Acceso actor = resolverUsuarioAutenticado();
             if (actor == null) {
                 throw new IllegalStateException("Debe iniciar sesión nuevamente.");
             }
 
-            certificadoDigitalEJB.revocarCertificadoDeUsuario(idCertificado, actor.id(), motivo);
+            certificadoDigitalEJB.revocarCertificadoDeUsuario(token, idCertificado, actor.id(), motivo);
             cargarCertificados();
 
             mostrarMensaje(

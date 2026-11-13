@@ -33,7 +33,7 @@ public class AuditoriaTriggerInstaller {
             + "RETURNS TRIGGER AS $$ "
             + "BEGIN "
             + "  RAISE EXCEPTION 'Operación denegada: la tabla registro_auditoria es inmutable (append-only). "
-            + "No se permiten UPDATE ni DELETE.'; "
+            + "No se permiten UPDATE, DELETE ni TRUNCATE.'; "
             + "  RETURN NULL; "
             + "END; "
             + "$$ LANGUAGE plpgsql";
@@ -45,6 +45,14 @@ public class AuditoriaTriggerInstaller {
             "CREATE TRIGGER trg_audit_immutable "
             + "BEFORE UPDATE OR DELETE ON registro_auditoria "
             + "FOR EACH ROW EXECUTE FUNCTION trg_prevent_audit_modification()";
+
+    static final String SQL_DROP_TRUNCATE_TRIGGER =
+            "DROP TRIGGER IF EXISTS trg_audit_no_truncate ON registro_auditoria";
+
+    static final String SQL_CREATE_TRUNCATE_TRIGGER =
+            "CREATE TRIGGER trg_audit_no_truncate "
+            + "BEFORE TRUNCATE ON registro_auditoria "
+            + "FOR EACH STATEMENT EXECUTE FUNCTION trg_prevent_audit_modification()";
 
     @PersistenceContext(unitName = "CargaUYPersistenceUnit")
     private EntityManager em;
@@ -64,7 +72,9 @@ public class AuditoriaTriggerInstaller {
             em.createNativeQuery(SQL_FUNCION).executeUpdate();
             em.createNativeQuery(SQL_DROP_TRIGGER).executeUpdate();
             em.createNativeQuery(SQL_CREATE_TRIGGER).executeUpdate();
-            LOG.info("Trigger de inmutabilidad instalado en registro_auditoria");
+            em.createNativeQuery(SQL_DROP_TRUNCATE_TRIGGER).executeUpdate();
+            em.createNativeQuery(SQL_CREATE_TRUNCATE_TRIGGER).executeUpdate();
+            LOG.info("Triggers de inmutabilidad (UPDATE/DELETE/TRUNCATE) instalados en registro_auditoria");
         } catch (RuntimeException e) {
             // No se bloquea el despliegue (p. ej. si la BD no es PostgreSQL), pero se deja registro.
             LOG.log(Level.SEVERE, "No se pudo instalar el trigger de inmutabilidad de registro_auditoria", e);

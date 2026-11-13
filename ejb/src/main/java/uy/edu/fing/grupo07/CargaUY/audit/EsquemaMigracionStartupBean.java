@@ -68,7 +68,18 @@ public class EsquemaMigracionStartupBean {
                     + "END IF; END $$",
             "ALTER TABLE IF EXISTS usuario_roles DROP CONSTRAINT IF EXISTS usuario_roles_rol_check",
             "ALTER TABLE IF EXISTS usuario_roles ADD CONSTRAINT usuario_roles_rol_check "
-                    + "CHECK ((rol)::text = ANY (ARRAY['CIUDADANO_COMUN', 'CIUDADANO', 'CHOFER', 'FUNCIONARIO', 'AUTORIDAD', 'ADMINISTRADOR']::text[]))"
+                    + "CHECK ((rol)::text = ANY (ARRAY['CIUDADANO_COMUN', 'CIUDADANO', 'CHOFER', 'FUNCIONARIO', 'AUTORIDAD', 'ADMINISTRADOR']::text[]))",
+            "ALTER TABLE IF EXISTS pncs ADD COLUMN IF NOT EXISTS numero_permiso VARCHAR(100)",
+            "CREATE TABLE IF NOT EXISTS nodos_perifericos ("
+                    + "codigo VARCHAR(64) PRIMARY KEY, "
+                    + "nombre VARCHAR(160) NOT NULL, "
+                    + "categoria VARCHAR(32) NOT NULL, "
+                    + "endpoint_url VARCHAR(500) NOT NULL, "
+                    + "estacion_peaje VARCHAR(160), "
+                    + "habilitado BOOLEAN NOT NULL DEFAULT FALSE, "
+                    + "modo_operacion VARCHAR(32) NOT NULL, "
+                    + "watermark_id INTEGER NOT NULL DEFAULT 0, "
+                    + "watermark_inicializado BOOLEAN NOT NULL DEFAULT FALSE)"
     );
 
     @PersistenceContext(unitName = "CargaUYPersistenceUnit")

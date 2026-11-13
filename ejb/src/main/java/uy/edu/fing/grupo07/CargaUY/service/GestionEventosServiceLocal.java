@@ -20,6 +20,10 @@ public interface GestionEventosServiceLocal {
      */
     EventoViaje guardarEvento(EventoViajeDTO dto);
 
+    default EventoViaje guardarEvento(String token, EventoViajeDTO dto) {
+        return guardarEvento(dto);
+    }
+
     /**
      * Valida las precondiciones de negocio y estado de guía antes de encolar asíncronamente en TrackingQueue,
      * derivando a fiscalización VIAJE_SIN_GUIA si corresponde y lanzando BusinessException ante rechazos.
@@ -37,6 +41,10 @@ public interface GestionEventosServiceLocal {
      * Retorna los eventos asociados a una guía ordenados cronológicamente por tiempo ASC (AC013).
      */
     List<EventoViajeDTO> listarEventosPorGuia(Long guiaId);
+
+    default List<EventoViajeDTO> listarEventosPorGuia(String token, Long guiaId) {
+        return listarEventosPorGuia(guiaId);
+    }
 
     /**
      * Obtiene la guía activa (EN_CURSO o SIN_INICIAR) asignada a un chofer identificado por ID o CI.
@@ -56,4 +64,11 @@ public interface GestionEventosServiceLocal {
      * Registra un incidente en ruta asociado a un evento de tipo INCIDENTE.
      */
     EventoViajeDTO reportarIncidente(uy.edu.fing.grupo07.CargaUY.dto.ReportarIncidenteDTO dto);
+
+    default EventoViajeDTO reportarIncidente(
+            String token,
+            uy.edu.fing.grupo07.CargaUY.dto.ReportarIncidenteDTO dto
+    ) {
+        return reportarIncidente(dto);
+    }
 }

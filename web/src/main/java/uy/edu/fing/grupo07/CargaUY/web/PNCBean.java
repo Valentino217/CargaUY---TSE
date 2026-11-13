@@ -46,7 +46,7 @@ public class PNCBean implements Serializable {
     private void cargarPncsAutorizados() {
         Set<String> mats = vehiculos == null ? Set.of()
                 : vehiculos.stream().map(Vehiculo::getMatricula).filter(Objects::nonNull).collect(Collectors.toSet());
-        pncs = pncEJB.listarPNCs().stream()
+        pncs = pncEJB.listarPNCs(SesionActual.token()).stream()
                 .filter(p -> p.getVehiculo() != null && mats.contains(p.getVehiculo().getMatricula()))
                 .toList();
     }
@@ -78,10 +78,10 @@ public class PNCBean implements Serializable {
             pnc.setVehiculo(vehiculoSeleccionado);
 
             if (editando) {
-                pncEJB.modificar(pnc);
+                pncEJB.modificar(SesionActual.token(), pnc);
                 mostrarMensaje(FacesMessage.SEVERITY_INFO, "Éxito", "PNC modificado correctamente");
             } else {
-                pncEJB.crear(pnc);
+                pncEJB.crear(SesionActual.token(), pnc);
                 mostrarMensaje(FacesMessage.SEVERITY_INFO, "Éxito", "PNC registrado correctamente");
             }
 
@@ -114,7 +114,7 @@ public class PNCBean implements Serializable {
                     || vehiculos.stream().noneMatch(v -> Objects.equals(v.getMatricula(), pncEliminar.getVehiculo().getMatricula()))) {
                 throw new SecurityException("No tiene permisos para eliminar el PNC seleccionado.");
             }
-            pncEJB.eliminar(pncEliminar);
+            pncEJB.eliminar(SesionActual.token(), pncEliminar);
             cargarPncsAutorizados();
 
             mostrarMensaje(

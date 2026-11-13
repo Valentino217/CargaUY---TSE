@@ -4,6 +4,7 @@ import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -23,13 +24,14 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Pruebas Unitarias - DetalleViajeServlet")
 class DetalleViajeServletTest {
+
+    private static final String TOKEN_SERVLET = "tok-servlet";
 
     @Mock
     private GestionEventosServiceLocal eventosService;
@@ -44,6 +46,9 @@ class DetalleViajeServletTest {
     private HttpServletResponse response;
 
     @Mock
+    private HttpSession session;
+
+    @Mock
     private RequestDispatcher dispatcher;
 
     private DetalleViajeServlet servlet;
@@ -52,6 +57,8 @@ class DetalleViajeServletTest {
     void setUp() {
         servlet = new DetalleViajeServlet(eventosService, balanzaService);
         when(request.getRequestDispatcher("/WEB-INF/viaje-consulta.xhtml")).thenReturn(dispatcher);
+        lenient().when(request.getSession(false)).thenReturn(session);
+        lenient().when(session.getAttribute("token")).thenReturn(TOKEN_SERVLET);
     }
 
     @Test
@@ -74,13 +81,13 @@ class DetalleViajeServletTest {
         EventoViajeDTO ev = new EventoViajeDTO("u1", LocalDateTime.now(), TipoEvento.CARGA, -34.0, -56.0, 5L, null);
         PesadaBalanzaDTO pb = new PesadaBalanzaDTO(1, LocalDate.now(), LocalTime.now(), 32000, "123", 5L);
 
-        when(eventosService.listarEventosPorGuia(5L)).thenReturn(List.of(ev));
-        when(balanzaService.listarPesadasPorGuia(5L)).thenReturn(List.of(pb));
+        when(eventosService.listarEventosPorGuia(TOKEN_SERVLET, 5L)).thenReturn(List.of(ev));
+        when(balanzaService.listarPesadasPorGuia(TOKEN_SERVLET, 5L)).thenReturn(List.of(pb));
 
         servlet.doGet(request, response);
 
-        verify(eventosService).listarEventosPorGuia(5L);
-        verify(balanzaService).listarPesadasPorGuia(5L);
+        verify(eventosService).listarEventosPorGuia(TOKEN_SERVLET, 5L);
+        verify(balanzaService).listarPesadasPorGuia(TOKEN_SERVLET, 5L);
         verify(request).setAttribute(eq("guiaId"), eq(5L));
         verify(request).setAttribute(eq("eventos"), eq(List.of(ev)));
         verify(request).setAttribute(eq("pesadas"), eq(List.of(pb)));
@@ -102,7 +109,7 @@ class DetalleViajeServletTest {
     @DisplayName("doGet cuando el servicio lanza excepción captura el error y setea atributo")
     void testDoGetConErrorEnServicio() throws ServletException, IOException {
         when(request.getParameter("guiaId")).thenReturn("99");
-        when(eventosService.listarEventosPorGuia(99L)).thenThrow(new BusinessException("Guía no encontrada"));
+        when(eventosService.listarEventosPorGuia(TOKEN_SERVLET, 99L)).thenThrow(new BusinessException("Guía no encontrada"));
 
         servlet.doGet(request, response);
 
