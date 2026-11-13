@@ -7,6 +7,7 @@ import jakarta.servlet.http.*;
 import uy.edu.fing.grupo07.CargaUY.security.*;
 
 public final class WebSeguridad {
+    static final String GUB_ID_TOKEN = "gubIdToken";
     private WebSeguridad() {}
     public static void preparar(HttpServletRequest r, HttpServletResponse s) {
         s.setHeader("Cache-Control","no-store");
@@ -27,13 +28,23 @@ public final class WebSeguridad {
     }
     public static void iniciar(HttpServletRequest r, SesionesService.Login login) {
         r.getSession(); r.changeSessionId();
+        r.getSession().removeAttribute(GUB_ID_TOKEN);
         r.getSession().setAttribute("token",login.token());
         r.getSession().setAttribute("csrf",Cripto.aleatorio());
         r.getSession().setMaxInactiveInterval(15*60);
     }
+
+    static String destinoLogout(HttpServletRequest r) {
+        HttpSession sesion = r.getSession(false);
+        String idToken = sesion == null ? null : (String) sesion.getAttribute(GUB_ID_TOKEN);
+        String destino = GubOidcClient.logoutUrl(idToken);
+        return destino == null ? r.getContextPath() + "/login" : destino;
+    }
     public static boolean transporte(HttpServletRequest r) throws IOException {
         if (r.isSecure()) return true;
-        if (!Boolean.parseBoolean(Config.valor("p1.entorno.local","false"))) return false;
+        String proto = r.getHeader("X-Forwarded-Proto");
+        if ("https".equalsIgnoreCase(proto)) return true;
+        if (Boolean.parseBoolean(Config.valor("p1.entorno.local", "false"))) return true;
         InetAddress addr = InetAddress.getByName(r.getRemoteAddr());
         return addr.isLoopbackAddress() || addr.isSiteLocalAddress();
     }

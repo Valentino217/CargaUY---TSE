@@ -36,8 +36,23 @@ public class IntegracionSesionFilter implements Filter {
 
         String p = r.getServletPath();
 
+        Acceso actor;
         try {
-            Acceso actor = auth.validarToken(WebSeguridad.token(r));
+            actor = auth.validarToken(WebSeguridad.token(r));
+        } catch (ErrorAcceso e) {
+            if (e.getEstado() == 401) {
+                if ("/portal/inicio.xhtml".equals(p) && ("GET".equals(r.getMethod()) || "HEAD".equals(r.getMethod()))) {
+                    chain.doFilter(r, s);
+                } else {
+                    s.sendRedirect(r.getContextPath() + "/login");
+                }
+            } else {
+                WebSeguridad.error(r, s, e.getEstado(), e.getMessage());
+            }
+            return;
+        }
+
+        try {
             boolean permitido = evaluarPermisoRuta(p, r.getMethod(), actor);
             if (!permitido) {
                 throw new ErrorAcceso(403, "Sin permisos para esta pantalla");

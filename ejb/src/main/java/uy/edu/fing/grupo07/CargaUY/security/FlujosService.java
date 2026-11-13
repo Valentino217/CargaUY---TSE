@@ -1,4 +1,5 @@
 package uy.edu.fing.grupo07.CargaUY.security;
+import java.net.URI;
 import java.time.*;
 import jakarta.ejb.*;
 import jakarta.persistence.*;
@@ -21,7 +22,8 @@ public class FlujosService {
 		 em.persist(new FlujoIdentidad(Cripto.hash(state),challenge,nonce,Instant.now().plusSeconds(180)));
 		 String url;
 		 if (GubOidcClient.real()) {
-			 url = "http://localhost:8080/CargaUY-web/gub/iniciar?movil_state=" + GubOidcClient.url(state);
+			 url = URI.create(redirect()).resolve("/CargaUY-web/gub/iniciar")
+				 + "?movil_state=" + GubOidcClient.url(state);
 		 } else {
 			 url = GubOidcClient.autorizacion()+"?response_type=code&scope="+GubOidcClient.url(GubOidcClient.scopes())
 				 +"&client_id="+GubOidcClient.url(GubOidcClient.clientId())+"&redirect_uri="+GubOidcClient.url(redirect())

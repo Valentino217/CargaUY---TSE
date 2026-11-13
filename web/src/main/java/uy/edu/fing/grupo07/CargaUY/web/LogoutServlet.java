@@ -10,7 +10,9 @@ public class LogoutServlet extends HttpServlet {
     @EJB private AutenticacionService auth;
     @Override protected void doPost(HttpServletRequest r,HttpServletResponse s) throws IOException {
         if(!WebSeguridad.transporte(r)||!WebSeguridad.csrf(r)) { s.sendError(403); return; }
+        String destino = WebSeguridad.destinoLogout(r);
         auth.logout(WebSeguridad.token(r)); r.getSession().invalidate();
-        s.sendRedirect(r.getContextPath()+"/login");
+        s.setHeader("Cache-Control", "no-store");
+        s.sendRedirect(destino);
     }
 }

@@ -17,6 +17,10 @@ import jakarta.json.*;
 public class GubOidcClient {
     public record Identidad(String subject, int ci, String nombre, String mail, LocalDate nacimiento) {
     }
+
+    public record IdentidadVerificada(Identidad identidad, String idToken) {
+        @Override public String toString() { return "IdentidadVerificada"; }
+    }
     
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build();
     public static String issuer() {
@@ -53,6 +57,13 @@ public class GubOidcClient {
     
     public static String redirect() { 
     	return Config.requerido("gub.redirect"); 
+    }
+
+    public static String logoutUrl(String idToken) {
+        String destino = Config.valor("gub.logout.redirect", "");
+        if (!real() || idToken == null || idToken.isBlank() || destino.isBlank()) return null;
+        return issuer() + "/logout?id_token_hint=" + url(idToken)
+                + "&post_logout_redirect_uri=" + url(destino);
     }
     
     public static String url(String s) { 
@@ -121,6 +132,10 @@ public class GubOidcClient {
     }
     
     public Identidad validar(String code, String verifier, String nonce, boolean movil) {
+        return validarConToken(code, verifier, nonce, movil).identidad();
+    }
+
+    public IdentidadVerificada validarConToken(String code, String verifier, String nonce, boolean movil) {
         try {
             if (code == null || code.length() > 4096 || verifier == null || nonce == null)
                 throw new ErrorAcceso(401,"Respuesta de identidad inválida");
@@ -133,7 +148,8 @@ public class GubOidcClient {
                 .header("Authorization","Basic "+basic)
                 .header("Content-Type","application/x-www-form-urlencoded")
                 .POST(HttpRequest.BodyPublishers.ofString(datos)));
-            JsonObject claims = movil ? validarIdToken(token.getString("id_token"), nonce, true) : validarIdToken(token.getString("id_token"), nonce);
+            String idToken = token.getString("id_token");
+            JsonObject claims = movil ? validarIdToken(idToken, nonce, true) : validarIdToken(idToken, nonce);
             String acceso = token.getString("access_token");
             JsonObject info = obtenerUserInfo(acceso, claims, movil);
             if (!claims.getString("sub").equals(info.getString("sub")))
@@ -173,7 +189,7 @@ public class GubOidcClient {
                 throw new ErrorAcceso(409,"Perfil externo incompleto o correo sin verificar");
             // Separa los identificadores de proveedores aunque dos emitan el mismo sub.
             String subject = real(movil)?Cripto.hash(issuer(movil)+"\n"+claims.getString("sub")):claims.getString("sub");
-            return new Identidad(subject,ci,nombre,mail,nacimiento);
+            return new IdentidadVerificada(new Identidad(subject,ci,nombre,mail,nacimiento), idToken);
         } catch (ErrorAcceso e) { throw e; }
         catch (InterruptedException e) {
             Thread.currentThread().interrupt(); throw new ErrorAcceso(503,"Proveedor interrumpido");
