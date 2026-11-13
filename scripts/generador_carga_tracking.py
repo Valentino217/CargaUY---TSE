@@ -8,7 +8,7 @@ sin requerir paquetes externos (`pip`).
 
 Escenarios evaluados (Secciones 3.7.3 y 4.1.4 de la letra):
   1. Carga Normal Sostenida: Camiones concurrentes reportando eventos GPS (`POSICION`)
-     hacia `POST /CargaUY-web/api/chofer/eventos/sync` con `X-Correlation-ID`.
+     hacia `POST /CargaUY-web/api/chofer/eventos/sync` con `X-Correlation-ID` y `traceparent`.
   2. Pico de Ráfaga (3x): Simulación de camiones que recuperan cobertura móvil
      simultáneamente y descargan lotes acumulados en ráfaga (3x tasa nominal).
   3. Idempotencia por UUID (AC012): Reenvío deliberado de lotes con UUIDs duplicados
@@ -17,7 +17,8 @@ Escenarios evaluados (Secciones 3.7.3 y 4.1.4 de la letra):
      no monotónicas (`t-10m`, `t`, `t-5m`) verificando ordenamiento temporal en consultas.
   5. Consultas Concurrentes de Frontoffice bajo Carga: Medición de tiempos de respuesta
      (p50, p95, p99, promedio, tasa de error) en `GET /CargaUY-web/api/chofer/eventos/{guiaId}`
-     y `/CargaUY-web/api/ops/health`, validando la meta arquitectónica p95 < 500 ms.
+     y `/CargaUY-web/api/public/ready` (u `/api/ops/health` si se pasa `--admin-token`),
+     validando la meta arquitectónica p95 < 500 ms.
 """
 
 import argparse
@@ -46,13 +47,16 @@ def http_json(
     payload: Optional[object] = None,
     token: Optional[str] = None,
     correlation_id: Optional[str] = None,
+    traceparent: Optional[str] = None,
     timeout: float = 8.0,
 ) -> Tuple[int, float, object, str]:
     """Ejecuta una petición HTTP JSON y retorna (status_code, latencia_ms, body_parsed, corr_header)."""
     corr = correlation_id or str(uuid.uuid4())
+    tp = traceparent or f"00-{uuid.uuid4().hex}-{uuid.uuid4().hex[:16]}-01"
     headers = {
         "Accept": "application/json",
         "X-Correlation-ID": corr,
+        "traceparent": tp,
     }
     data_bytes = None
     if payload is not None:
@@ -161,6 +165,7 @@ def ejecutar_escenarios(
     eventos_por_lote: int,
     guia_id: int,
     cedula: int,
+    admin_token: Optional[str] = None,
 ) -> int:
     print("=" * 78)
     print(" CARGA.UY - GENERADOR DE CARGA DE TRACKING Y PRUEBA DE SATURACION (TSE 2026)")
@@ -170,15 +175,19 @@ def ejecutar_escenarios(
     print(f"Eventos por Lote : {eventos_por_lote} eventos GPS POSICION")
     print(f"Guía de Viaje ID : {guia_id}")
 
-    health_url = f"{base_url.rstrip('/')}/api/ops/health"
-    h_status, h_lat, h_body, h_corr = http_json("GET", health_url)
-    print(f"\n[0] Health Check Inicial (/api/ops/health): HTTP {h_status} ({h_lat:.1f} ms) | X-Correlation-ID={h_corr}")
+    ready_url = f"{base_url.rstrip('/')}/api/public/ready"
+    ops_health_url = f"{base_url.rstrip('/')}/api/ops/health"
+    h_status, h_lat, h_body, h_corr = http_json("GET", ready_url)
+    print(f"\n[0] Health Check Inicial (/api/public/ready): HTTP {h_status} ({h_lat:.1f} ms) | X-Correlation-ID={h_corr}")
     if h_status == 0:
         print("    [!] El servidor no se encuentra accesible en la URL indicada.")
         print("    [!] Asegúrese de tener levantado el entorno (`docker compose up -d`) antes de ejecutar.")
         return 1
     if isinstance(h_body, dict):
-        print(f"    Estado componentes: {json.dumps(h_body)}")
+        print(f"    Estado público: {json.dumps(h_body)}")
+    if admin_token:
+        oh_status, oh_lat, oh_body, _ = http_json("GET", ops_health_url, token=admin_token)
+        print(f"    [Ops Admin] (/api/ops/health): HTTP {oh_status} ({oh_lat:.1f} ms) -> {oh_body}")
 
     token = obtener_token_chofer(base_url, cedula)
     if token:
@@ -226,7 +235,13 @@ def ejecutar_escenarios(
     with concurrent.futures.ThreadPoolExecutor(max_workers=min(64, max(8, rafagas_pico + 8))) as pool:
         fut_ingesta = [pool.submit(http_json, "POST", sync_url, lote, token) for lote in lotes_pico]
         fut_consulta = [
-            pool.submit(http_json, "GET", consulta_url if idx % 2 == 0 else health_url, None, token)
+            pool.submit(
+                http_json,
+                "GET",
+                consulta_url if idx % 2 == 0 else (ops_health_url if admin_token else ready_url),
+                None,
+                token if idx % 2 == 0 else admin_token,
+            )
             for idx in range(num_consultas)
         ]
         for fut in concurrent.futures.as_completed(fut_ingesta):
@@ -264,14 +279,27 @@ def ejecutar_escenarios(
     print(f"    Envío lote desordenado [t+10m, t+0m, t+5m]: HTTP {c_oo} ({l_oo:.1f} ms) -> {b_oo}")
 
     # Health final
-    h_status_f, h_lat_f, h_body_f, _ = http_json("GET", health_url)
-    print(f"\n[5] Health Check Final (/api/ops/health): HTTP {h_status_f} ({h_lat_f:.1f} ms) -> {h_body_f}")
+    h_status_f, h_lat_f, h_body_f, _ = http_json("GET", ready_url)
+    print(f"\n[5] Health Check Final (/api/public/ready): HTTP {h_status_f} ({h_lat_f:.1f} ms) -> {h_body_f}")
+    if admin_token:
+        oh_status_f, oh_lat_f, oh_body_f, _ = http_json("GET", ops_health_url, token=admin_token)
+        print(f"    [Ops Admin Final] (/api/ops/health): HTTP {oh_status_f} ({oh_lat_f:.1f} ms) -> {oh_body_f}")
 
-    cumple_meta = stats_consulta["p95_ms"] < 500.0 and stats_pico["p95_ms"] < 500.0
+    sin_errores = (
+        stats_normal["errores"] == 0
+        and stats_pico["errores"] == 0
+        and stats_consulta["errores"] == 0
+        and 200 <= h_status < 300
+        and 200 <= h_status_f < 300
+        and 200 <= c1 < 300
+        and 200 <= c2 < 300
+        and 200 <= c_oo < 300
+    )
+    cumple_meta = sin_errores and stats_consulta["p95_ms"] < 500.0 and stats_pico["p95_ms"] < 500.0
     print("\n" + "=" * 78)
-    print(f" RESULTADO GLOBAL: {'APROBADO (p95 < 500 ms)' if cumple_meta else 'REVISAR LATENCIAS'}")
+    print(f" RESULTADO GLOBAL: {'APROBADO (sin errores y p95 < 500 ms)' if cumple_meta else 'REVISAR LATENCIAS O ERRORES'}")
     print("=" * 78)
-    return 0
+    return 0 if cumple_meta else 1
 
 
 def main() -> None:
@@ -307,8 +335,13 @@ def main() -> None:
         default=DEFAULT_CEDULA_CHOFER,
         help=f"Cédula del chofer para obtener token de prueba (default: {DEFAULT_CEDULA_CHOFER})",
     )
+    parser.add_argument(
+        "--admin-token",
+        default=None,
+        help="JWT opcional con rol ADMIN/AUTORIDAD para consultar también /api/ops/health",
+    )
     args = parser.parse_args()
-    sys.exit(ejecutar_escenarios(args.url, args.camiones, args.lote, args.guia, args.ci))
+    sys.exit(ejecutar_escenarios(args.url, args.camiones, args.lote, args.guia, args.ci, args.admin_token))
 
 
 if __name__ == "__main__":

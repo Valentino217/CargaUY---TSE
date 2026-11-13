@@ -39,7 +39,7 @@ sonarqube-job:
   stage: quality
   image: maven:3.9-eclipse-temurin-17
   script:
-    - mvn $MAVEN_CLI_OPTS sonar:sonar
+    - mvn $MAVEN_CLI_OPTS test-compile sonar:sonar
         -Dsonar.host.url=${SONAR_HOST_URL:-https://sonarqube.fing.edu.uy}
         -Dsonar.login=${SONAR_TOKEN}
         -Dsonar.projectKey=uy.edu.fing.grupo07:CargaUY
@@ -58,4 +58,5 @@ package-job:
     name: "CargaUY-EAR-$CI_COMMIT_SHORT_SHA"
     paths:
       - ear/target/CargaUY.ear
+      - gub-callback-root/target/gub-callback-root.war
     expire_in: 30 days

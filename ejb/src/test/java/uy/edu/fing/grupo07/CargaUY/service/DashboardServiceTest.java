@@ -204,6 +204,25 @@ class DashboardServiceTest {
         assertEquals(0, publico.infraccionesPorEstado().size());
         assertEquals(0, publico.volumenPorRubro().size());
 
+        // Umbral k=3 en obtenerResumenPublico(): valores < 3 se suprimen a 0
+        filasGuias.clear();
+        filasGuias.add(new Object[]{TipoEstado.EN_CURSO, 2L});
+        when(queryTotalPesadas.getSingleResult()).thenReturn(2L);
+        when(qEmp.getSingleResult()).thenReturn(1L);
+        when(qVeh.getSingleResult()).thenReturn(2L);
+        DashboardResumenDTO publicoSuprimido = service.obtenerResumenPublico();
+        assertEquals(0L, publicoSuprimido.guiasPorEstado().get(TipoEstado.EN_CURSO));
+        assertEquals(0L, publicoSuprimido.totalPesadas());
+        assertEquals(0L, publicoSuprimido.totalEmpresasHabilitadas());
+        assertEquals(0L, publicoSuprimido.totalVehiculosHabilitados());
+
+        // Restaurar expectativas para el resto de la prueba
+        filasGuias.clear();
+        filasGuias.add(new Object[]{TipoEstado.EN_CURSO, 4L});
+        when(queryTotalPesadas.getSingleResult()).thenReturn(9L);
+        when(qEmp.getSingleResult()).thenReturn(3L);
+        when(qVeh.getSingleResult()).thenReturn(7L);
+
         org.junit.jupiter.api.Assertions.assertThrows(
                 IllegalStateException.class,
                 () -> service.obtenerResumenPortal("tok")

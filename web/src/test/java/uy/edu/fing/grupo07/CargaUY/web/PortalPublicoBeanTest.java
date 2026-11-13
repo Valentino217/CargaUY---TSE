@@ -180,4 +180,37 @@ class PortalPublicoBeanTest {
         assertEquals(3L, flota.get(0).getCantidadUnidades());
         assertEquals(1L, flota.get(0).getUnidadesHabilitadas());
     }
+
+    @Test
+    @DisplayName("KPIs públicos generales suprimen conteos menores a k = 3")
+    void testKpisPublicosAplicanUmbralMinimoTres() throws Exception {
+        DashboardServiceLocal dashboard = mock(DashboardServiceLocal.class);
+        VehiculoEJBLocal vehiculoEJB = mock(VehiculoEJBLocal.class);
+        GuiaDeViajeEJBLocal guiaEJB = mock(GuiaDeViajeEJBLocal.class);
+
+        DashboardResumenDTO resumenChico = new DashboardResumenDTO(
+                Map.of(TipoEstado.EN_CURSO, 2L, TipoEstado.FINALIZADO, 1L),
+                Map.of(),
+                Map.of(),
+                2L,
+                2L,
+                1L,
+                Map.of(),
+                Map.of(),
+                0.0
+        );
+        when(dashboard.obtenerResumenPublico()).thenReturn(resumenChico);
+
+        PortalPublicoBean bean = crearBean(dashboard, vehiculoEJB, guiaEJB);
+        try (MockedStatic<SesionActual> sesion = Mockito.mockStatic(SesionActual.class)) {
+            sesion.when(SesionActual::token).thenReturn(null);
+            bean.cargarDatosPublicos();
+        }
+
+        assertEquals(0, bean.getTotalEmpresasActivas());
+        assertEquals(0, bean.getTotalVehiculosRegistrados());
+        assertEquals(0L, bean.getTotalViajesEnCurso());
+        assertEquals(0L, bean.getTotalPesadas());
+        assertEquals(3, bean.getTotalViajesRegistrados());
+    }
 }

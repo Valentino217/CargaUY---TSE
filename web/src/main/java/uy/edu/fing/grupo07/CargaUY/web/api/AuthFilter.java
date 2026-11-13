@@ -107,14 +107,9 @@ public class AuthFilter implements ContainerRequestFilter {
                 && !evento.getString("matricula").isBlank();
         boolean esOperadorFiscalizacion = actor.tiene(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.ADMINISTRADOR)
                 || actor.tiene(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.FUNCIONARIO);
-        if (admiteSinGuiaPorMatricula && id == null && tieneMatricula) {
-            if (esOperadorFiscalizacion) {
-                return;
-            }
-            if (actor.tiene(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.CHOFER)) {
-                control.vehiculoChofer(token, evento.getString("matricula"));
-                return;
-            }
+        if (admiteSinGuiaPorMatricula && id == null && tieneMatricula
+                && validarVehiculoSinGuia(token, actor, esOperadorFiscalizacion, evento)) {
+            return;
         }
         if (esOperadorFiscalizacion && id != null) {
             id.longValueExact();
@@ -123,10 +118,27 @@ public class AuthFilter implements ContainerRequestFilter {
         try {
             control.guiaChofer(token, id == null ? null : id.longValueExact());
         } catch (ErrorAcceso e) {
-            if (e.getEstado() == 404 && admiteSinGuiaPorMatricula && tieneMatricula) {
+            if (e.getEstado() == 404 && admiteSinGuiaPorMatricula && tieneMatricula
+                    && validarVehiculoSinGuia(token, actor, esOperadorFiscalizacion, evento)) {
                 return;
             }
             throw e;
         }
+    }
+
+    private boolean validarVehiculoSinGuia(
+            String token,
+            Acceso actor,
+            boolean esOperadorFiscalizacion,
+            jakarta.json.JsonObject evento
+    ) {
+        if (esOperadorFiscalizacion) {
+            return true;
+        }
+        if (actor.tiene(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.CHOFER)) {
+            control.vehiculoChofer(token, evento.getString("matricula"));
+            return true;
+        }
+        return false;
     }
 }

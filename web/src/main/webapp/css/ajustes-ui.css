@@ -29,7 +29,7 @@ body .card-btn:hover {
 }
 
 body :is(button, a, input, select, textarea):focus-visible {
-    outline: 3px solid #38bdf8;
+    outline: 3px solid var(--cuy-accent, #38bdf8);
     outline-offset: 3px;
 }
 
@@ -49,8 +49,8 @@ body input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]):not([
 
 body .ui-inputfield:not(.ui-state-error):focus,
 body .ui-selectonemenu.ui-state-focus {
-    border-color: var(--cuy-focus);
-    box-shadow: 0 0 0 3px rgb(2 132 199 / 12%);
+    border-color: var(--cuy-accent, var(--cuy-focus));
+    box-shadow: 0 0 0 3px var(--cuy-focus-ring, rgb(2 132 199 / 12%));
 }
 
 /* Agrupación horizontal limpia para PrimeFaces DatePicker / Calendar */
@@ -149,7 +149,7 @@ body .ui-datatable tbody td {
     vertical-align: middle;
 }
 body .ui-datatable tbody tr:not(.ui-state-highlight):hover {
-    background: #f0f7fc;
+    background: var(--cuy-table-hover, #f0f7fc);
 }
 body .ui-paginator {
     border-color: #e2e8f0;
@@ -327,4 +327,80 @@ body .cuy-tabla-nodos .cuy-node-controls .ui-button.ui-button-icon-only {
 body .cuy-tabla-nodos .cuy-node-controls .ui-button.ui-button-icon-only .ui-button-text {
     padding: 0 !important;
     line-height: 30px !important;
+}
+
+/* Identidad visual y paleta de acento por rol (Nivel Medio sobre base institucional) */
+body.cuy-rol-ciudadano {
+    --cuy-primary: #0f2942;
+    --cuy-secondary: #1e4976;
+    --cuy-accent: #0284c7;
+    --cuy-focus: #0284c7;
+    --cuy-header-bg: #0e2843;
+    --cuy-header-hover: #071526;
+    --cuy-nav-line: #c88a2b;
+    --cuy-role-pill-bg: rgba(2, 132, 199, 0.25);
+    --cuy-role-pill-border: rgba(125, 211, 252, 0.6);
+    --cuy-role-pill-text: #e0f2fe;
+    --cuy-focus-ring: rgba(2, 132, 199, 0.16);
+    --cuy-table-hover: #f0f7fc;
+}
+
+body.cuy-rol-empresa {
+    --cuy-primary: #0f3b3c;
+    --cuy-secondary: #115e59;
+    --cuy-accent: #0d9488;
+    --cuy-focus: #0d9488;
+    --cuy-header-bg: #0d2f36;
+    --cuy-header-hover: #071d22;
+    --cuy-nav-line: #2dd4bf;
+    --cuy-role-pill-bg: rgba(20, 184, 166, 0.24);
+    --cuy-role-pill-border: rgba(94, 234, 212, 0.6);
+    --cuy-role-pill-text: #ccfbf1;
+    --cuy-focus-ring: rgba(13, 148, 136, 0.16);
+    --cuy-table-hover: #f0fdfa;
+}
+
+body.cuy-rol-funcionario {
+    --cuy-primary: #1c2d42;
+    --cuy-secondary: #2b4463;
+    --cuy-accent: #d97706;
+    --cuy-focus: #d97706;
+    --cuy-header-bg: #1b2638;
+    --cuy-header-hover: #101724;
+    --cuy-nav-line: #f59e0b;
+    --cuy-role-pill-bg: rgba(245, 158, 11, 0.22);
+    --cuy-role-pill-border: rgba(252, 211, 77, 0.65);
+    --cuy-role-pill-text: #fef3c7;
+    --cuy-focus-ring: rgba(217, 119, 6, 0.16);
+    --cuy-table-hover: #fffbeb;
+}
+
+body.cuy-rol-autoridad {
+    --cuy-primary: #143d29;
+    --cuy-secondary: #1e563b;
+    --cuy-accent: #15803d;
+    --cuy-focus: #15803d;
+    --cuy-header-bg: #123022;
+    --cuy-header-hover: #091c13;
+    --cuy-nav-line: #22c55e;
+    --cuy-role-pill-bg: rgba(34, 197, 94, 0.22);
+    --cuy-role-pill-border: rgba(134, 239, 172, 0.6);
+    --cuy-role-pill-text: #dcfce7;
+    --cuy-focus-ring: rgba(21, 128, 61, 0.16);
+    --cuy-table-hover: #f0fdf4;
+}
+
+body.cuy-rol-admin {
+    --cuy-primary: #1e293b;
+    --cuy-secondary: #334155;
+    --cuy-accent: #ea580c;
+    --cuy-focus: #ea580c;
+    --cuy-header-bg: #111827;
+    --cuy-header-hover: #070a12;
+    --cuy-nav-line: #fb923c;
+    --cuy-role-pill-bg: rgba(234, 88, 12, 0.26);
+    --cuy-role-pill-border: rgba(253, 186, 116, 0.65);
+    --cuy-role-pill-text: #ffedd5;
+    --cuy-focus-ring: rgba(234, 88, 12, 0.16);
+    --cuy-table-hover: #fff7ed;
 }

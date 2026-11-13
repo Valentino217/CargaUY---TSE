@@ -200,4 +200,87 @@ class AuthFilterTest {
             else System.setProperty("p1.entorno.local", prevLocal);
         }
     }
+
+    @Test
+    @DisplayName("CHOFER en sync con guiaId inexistente (404) valida vehiculoChofer y rechaza matrícula ajena con 403")
+    void testChoferSyncGuia404ValidaVehiculoChofer() throws Exception {
+        String prevLocal = System.getProperty("p1.entorno.local");
+        try {
+            System.setProperty("p1.entorno.local", "true");
+            HttpServletRequest http = mock(HttpServletRequest.class);
+            when(http.getRemoteAddr()).thenReturn("127.0.0.1");
+
+            AutenticacionService auth = mock(AutenticacionService.class);
+            Acceso chofer = new Acceso(7, 45678901, "Chofer", Set.of(TipoUsuario.CHOFER));
+            when(auth.validarToken("tok-chofer")).thenReturn(chofer);
+
+            ControlAcceso control = mock(ControlAcceso.class);
+            doThrow(new ErrorAcceso(404, "Guía inexistente"))
+                    .when(control).guiaChofer("tok-chofer", 99999L);
+            doThrow(new ErrorAcceso(403, "El vehículo no pertenece a una empresa vinculada al chofer autenticado"))
+                    .when(control).vehiculoChofer("tok-chofer", "AJENA99");
+
+            ContainerRequestContext req = mock(ContainerRequestContext.class);
+            UriInfo uri = mock(UriInfo.class);
+            when(req.getUriInfo()).thenReturn(uri);
+            when(uri.getPath()).thenReturn("chofer/eventos/sync");
+            when(uri.getQueryParameters()).thenReturn(new MultivaluedHashMap<>());
+            when(req.getMethod()).thenReturn("POST");
+            when(req.getHeaderString("Authorization")).thenReturn("Bearer tok-chofer");
+            String body = "[{\"uuid\":\"u-3\",\"guiaId\":99999,\"matricula\":\"AJENA99\"}]";
+            when(req.getEntityStream()).thenReturn(new ByteArrayInputStream(body.getBytes(StandardCharsets.UTF_8)));
+
+            AuthFilter filtro = crearFiltro(auth, control, http);
+            filtro.filter(req);
+
+            verify(control).guiaChofer("tok-chofer", 99999L);
+            verify(control).vehiculoChofer("tok-chofer", "AJENA99");
+            ArgumentCaptor<Response> captor = ArgumentCaptor.forClass(Response.class);
+            verify(req).abortWith(captor.capture());
+            assertEquals(403, captor.getValue().getStatus());
+        } finally {
+            if (prevLocal == null) System.clearProperty("p1.entorno.local");
+            else System.setProperty("p1.entorno.local", prevLocal);
+        }
+    }
+
+    @Test
+    @DisplayName("CHOFER en sync con guiaId inexistente (404) y vehículo propio pasa")
+    void testChoferSyncGuia404VehiculoPropioPasa() throws Exception {
+        String prevLocal = System.getProperty("p1.entorno.local");
+        try {
+            System.setProperty("p1.entorno.local", "true");
+            HttpServletRequest http = mock(HttpServletRequest.class);
+            when(http.getRemoteAddr()).thenReturn("127.0.0.1");
+
+            AutenticacionService auth = mock(AutenticacionService.class);
+            Acceso chofer = new Acceso(7, 45678901, "Chofer", Set.of(TipoUsuario.CHOFER));
+            when(auth.validarToken("tok-chofer")).thenReturn(chofer);
+
+            ControlAcceso control = mock(ControlAcceso.class);
+            doThrow(new ErrorAcceso(404, "Guía inexistente"))
+                    .when(control).guiaChofer("tok-chofer", 99999L);
+            doNothing().when(control).vehiculoChofer("tok-chofer", "PROPIA1");
+
+            ContainerRequestContext req = mock(ContainerRequestContext.class);
+            UriInfo uri = mock(UriInfo.class);
+            when(req.getUriInfo()).thenReturn(uri);
+            when(uri.getPath()).thenReturn("chofer/eventos/sync");
+            when(uri.getQueryParameters()).thenReturn(new MultivaluedHashMap<>());
+            when(req.getMethod()).thenReturn("POST");
+            when(req.getHeaderString("Authorization")).thenReturn("Bearer tok-chofer");
+            String body = "[{\"uuid\":\"u-4\",\"guiaId\":99999,\"matricula\":\"PROPIA1\"}]";
+            when(req.getEntityStream()).thenReturn(new ByteArrayInputStream(body.getBytes(StandardCharsets.UTF_8)));
+
+            AuthFilter filtro = crearFiltro(auth, control, http);
+            filtro.filter(req);
+
+            verify(control).guiaChofer("tok-chofer", 99999L);
+            verify(control).vehiculoChofer("tok-chofer", "PROPIA1");
+            verify(req, never()).abortWith(any());
+        } finally {
+            if (prevLocal == null) System.clearProperty("p1.entorno.local");
+            else System.setProperty("p1.entorno.local", prevLocal);
+        }
+    }
 }

@@ -7,14 +7,7 @@ import uy.edu.fing.grupo07.CargaUY.domain.entity.CredencialesFirma;
 
 @Local
 public interface ActaServiceEJBLocal {
-	 public byte[] emitirYFirmarActa(int idCaso, String empresa, String matricula, String fecha, String tipo, String evidencia);
-	 default byte[] emitirYFirmarActa(String token, int idCaso, String empresa, String matricula, String fecha, String tipo, String evidencia) {
-	     return emitirYFirmarActa(idCaso, empresa, matricula, fecha, tipo, evidencia);
-	 }
-	 default CredencialesFirma abrirCredenciales(String token, byte[] archivo, String password) {
-	     return null;
-	 }
-	 default byte[] firmarPdf(String token, byte[] pdfOriginal, PrivateKey clavePrivada, X509Certificate certificado) {
-	     return null;
-	 }
+	byte[] emitirYFirmarActa(String token, int idCaso, String empresa, String matricula, String fecha, String tipo, String evidencia);
+	CredencialesFirma abrirCredenciales(String token, byte[] archivo, String password);
+	byte[] firmarPdf(String token, byte[] pdfOriginal, PrivateKey clavePrivada, X509Certificate certificado);
 }

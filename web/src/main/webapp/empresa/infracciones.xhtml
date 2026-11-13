@@ -87,7 +87,7 @@
                         <f:facet name="filter">
                             <p:selectOneMenu onchange="PF('dtInfEmp').filter()" styleClass="ui-custom-filter" style="width: 100%;">
                                 <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
-                                <f:selectItems value="#{bandejaFiscalizacionBean.tiposInfraccion}" />
+                                <f:selectItems value="#{empresaInfraccionesBean.tiposInfraccion}" />
                             </p:selectOneMenu>
                         </f:facet>
                         <p:tag value="#{inf.tipo()}"
@@ -113,7 +113,7 @@
                         <f:facet name="filter">
                             <p:selectOneMenu onchange="PF('dtInfEmp').filter()" styleClass="ui-custom-filter" style="width: 100%;">
                                 <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
-                                <f:selectItems value="#{bandejaFiscalizacionBean.estadosInfraccion}" />
+                                <f:selectItems value="#{empresaInfraccionesBean.estadosInfraccion}" />
                             </p:selectOneMenu>
                         </f:facet>
                         <p:tag value="#{inf.estado()}"
@@ -229,7 +229,7 @@
                                          icon="pi pi-send"
                                          rendered="#{empresaInfraccionesBean.puedePresentarDescargo(empresaInfraccionesBean.seleccionada)}"
                                          actionListener="#{empresaInfraccionesBean.presentarDescargo}"
-                                         update=":infraccionesForm:tablaInfracciones :kpiInfGroup :growl"
+                                         update=":infraccionesForm:tablaInfracciones :kpiInfGroup :dlgDescargoForm :growl"
                                          oncomplete="if (!args.validationFailed) PF('dlgDescargoWidget').hide()"
                                          styleClass="ui-button-primary">
                             <p:confirm header="Confirmar Descargo"

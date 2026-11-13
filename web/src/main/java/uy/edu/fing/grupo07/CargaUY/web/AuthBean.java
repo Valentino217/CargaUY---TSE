@@ -14,6 +14,8 @@ import uy.edu.fing.grupo07.CargaUY.security.AutenticacionService;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -142,30 +144,53 @@ public class AuthBean implements Serializable {
         return new UsuarioActivoVista(actor);
     }
 
-    public String getRolPrincipalLabel() {
+    private record RolVisual(String etiqueta, String temaCss, String iconoCss) {
+    }
+
+    private static final List<TipoUsuario> PRIORIDAD_ROLES = List.of(
+            TipoUsuario.ADMINISTRADOR,
+            TipoUsuario.AUTORIDAD,
+            TipoUsuario.FUNCIONARIO,
+            TipoUsuario.CIUDADANO,
+            TipoUsuario.CIUDADANO_COMUN,
+            TipoUsuario.CHOFER
+    );
+
+    private static final Map<TipoUsuario, RolVisual> ESTILOS_ROL = Map.of(
+            TipoUsuario.ADMINISTRADOR, new RolVisual("Administrador", "cuy-rol-admin", "pi pi-cog"),
+            TipoUsuario.AUTORIDAD, new RolVisual("Autoridad", "cuy-rol-autoridad", "pi pi-briefcase"),
+            TipoUsuario.FUNCIONARIO, new RolVisual("Funcionario", "cuy-rol-funcionario", "pi pi-verified"),
+            TipoUsuario.CIUDADANO, new RolVisual("Ciudadano Empresa", "cuy-rol-empresa", "pi pi-building"),
+            TipoUsuario.CIUDADANO_COMUN, new RolVisual("Ciudadano", "cuy-rol-ciudadano", "pi pi-user"),
+            TipoUsuario.CHOFER, new RolVisual("Chofer", "cuy-rol-ciudadano", "pi pi-car")
+    );
+
+    private static final RolVisual ROL_PUBLICO = new RolVisual("Público", "cuy-rol-ciudadano", "pi pi-globe");
+    private static final RolVisual ROL_USUARIO = new RolVisual("Usuario", "cuy-rol-ciudadano", "pi pi-user");
+
+    private RolVisual resolverRolVisual() {
         Acceso actor = resolverAcceso();
         if (actor == null) {
-            return "Público";
+            return ROL_PUBLICO;
         }
-        if (actor.tiene(TipoUsuario.ADMINISTRADOR)) {
-            return "Administrador";
+        for (TipoUsuario rol : PRIORIDAD_ROLES) {
+            if (actor.tiene(rol)) {
+                return ESTILOS_ROL.get(rol);
+            }
         }
-        if (actor.tiene(TipoUsuario.AUTORIDAD)) {
-            return "Autoridad";
-        }
-        if (actor.tiene(TipoUsuario.FUNCIONARIO)) {
-            return "Funcionario";
-        }
-        if (actor.tiene(TipoUsuario.CIUDADANO)) {
-            return "Ciudadano Empresa";
-        }
-        if (actor.tiene(TipoUsuario.CIUDADANO_COMUN)) {
-            return "Ciudadano";
-        }
-        if (actor.tiene(TipoUsuario.CHOFER)) {
-            return "Chofer";
-        }
-        return "Usuario";
+        return ROL_USUARIO;
+    }
+
+    public String getRolPrincipalLabel() {
+        return resolverRolVisual().etiqueta();
+    }
+
+    public String getRolThemeClass() {
+        return resolverRolVisual().temaCss();
+    }
+
+    public String getRolIconClass() {
+        return resolverRolVisual().iconoCss();
     }
 
     public void verificarAutenticacion() throws IOException {

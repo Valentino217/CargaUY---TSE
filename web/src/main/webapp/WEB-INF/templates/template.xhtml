@@ -16,6 +16,14 @@
             --cuy-primary: #0f2942;
             --cuy-secondary: #1e4976;
             --cuy-accent: #0284c7;
+            --cuy-header-bg: #0e2843;
+            --cuy-header-hover: #071526;
+            --cuy-nav-line: #c88a2b;
+            --cuy-role-pill-bg: rgba(2, 132, 199, 0.25);
+            --cuy-role-pill-border: rgba(125, 211, 252, 0.6);
+            --cuy-role-pill-text: #e0f2fe;
+            --cuy-focus-ring: rgba(2, 132, 199, 0.15);
+            --cuy-table-hover: #f0f7fc;
             --cuy-bg: #f8fafc;
             --cuy-surface: #ffffff;
             --cuy-text: #0f172a;
@@ -38,7 +46,7 @@
         }
         /* Header estilo gub.uy */
         .gub-header {
-            background-color: #0e2843;
+            background-color: var(--cuy-header-bg);
             color: #ffffff;
             box-shadow: 0 2px 10px rgba(9, 29, 62, 0.22);
             position: relative;
@@ -80,7 +88,7 @@
             margin: 0;
             padding: 0;
             height: 100%;
-            border-bottom: 2px solid #c88a2b;
+            border-bottom: 2px solid var(--cuy-nav-line);
         }
         .gub-nav-item {
             position: relative;
@@ -103,14 +111,14 @@
         }
         .gub-nav-item:hover > .gub-nav-link,
         .gub-nav-item.is-open > .gub-nav-link {
-            background-color: #071526;
+            background-color: var(--cuy-header-hover);
         }
         .gub-dropdown {
             position: absolute;
             top: calc(100% + 2px);
             left: 0;
             min-width: 235px;
-            background-color: #071526;
+            background-color: var(--cuy-header-hover);
             padding: 0.65rem 0;
             margin: 0;
             list-style: none;
@@ -184,11 +192,22 @@
             display: block;
             color: #ffffff;
         }
-        .cuy-user-role {
-            font-size: 0.7rem;
-            color: #bfdbfe;
+        .cuy-user-role,
+        .cuy-role-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.32rem;
+            margin-top: 0.22rem;
+            padding: 0.14rem 0.58rem;
+            border-radius: 999px;
+            background-color: var(--cuy-role-pill-bg);
+            border: 1px solid var(--cuy-role-pill-border);
+            color: var(--cuy-role-pill-text);
+            font-size: 0.69rem;
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.4px;
+            letter-spacing: 0.45px;
+            line-height: 1.3;
         }
         .gub-logout-btn {
             background: transparent !important;
@@ -370,7 +389,7 @@
         }
         .ui-inputfield:focus, .ui-selectonemenu.ui-state-focus {
             border-color: var(--cuy-accent) !important;
-            box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
+            box-shadow: 0 0 0 3px var(--cuy-focus-ring) !important;
         }
         .ui-datatable thead th {
             background: #f8fafc !important;
@@ -495,11 +514,11 @@
         }
     </style>
     <ui:insert name="head" />
-    <link rel="stylesheet" href="#{request.contextPath}/css/ajustes-ui.css?v=20261113-nodos-ui-v2"/>
+    <link rel="stylesheet" href="#{request.contextPath}/css/ajustes-ui.css?v=20261113-roles-v2"/>
     <link rel="stylesheet" href="#{request.contextPath}/css/calendarios.css"/>
 </h:head>
 
-<h:body>
+<h:body styleClass="#{authBean.rolThemeClass}">
     <p:ajaxStatus onstart="document.getElementById('cuy-ajax-progress-bar').style.display='block'"
                   oncomplete="document.getElementById('cuy-ajax-progress-bar').style.display='none'" />
     <div id="cuy-ajax-progress-bar" style="display: none;" />
@@ -513,7 +532,7 @@
     <header class="gub-header">
         <div class="gub-main-bar">
             <h:link outcome="/portal/info-publica.xhtml" styleClass="cuy-brand">
-                <img src="#{request.contextPath}/img/logo-cargauy.png?v=20261110b" alt="CargaUY" class="cuy-brand-logo" />
+                <img src="#{request.contextPath}/img/logo-cargauy.png?v=20261113c" alt="CargaUY" class="cuy-brand-logo" />
             </h:link>
 
             <div class="gub-right-zone">
@@ -601,7 +620,7 @@
                         <div class="gub-user-trigger">
                             <div class="cuy-user-info">
                                 <span class="cuy-user-name">#{authBean.usuarioActivo.nombre}</span>
-                                <span class="cuy-user-role">#{authBean.rolPrincipalLabel}</span>
+                                <span class="cuy-role-pill">#{authBean.rolPrincipalLabel}</span>
                             </div>
                         </div>
                         <p:commandButton value="Salir"

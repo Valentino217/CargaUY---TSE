@@ -8,14 +8,14 @@
     <ui:define name="title">Dashboard</ui:define>
 
     <ui:define name="content">
-        <div class="cuy-page-header">
-            <div>
-                <h1 class="cuy-page-title">
-                    Dashboard
-                </h1>
-            </div>
-            <div>
-                <h:form id="dashRefreshForm" style="margin: 0; display: flex; gap: 0.6rem;">
+        <h:form id="dashFiltrosForm" style="margin: 0;">
+            <div class="cuy-page-header">
+                <div>
+                    <h1 class="cuy-page-title">
+                        Dashboard
+                    </h1>
+                </div>
+                <div style="display: flex; gap: 0.6rem;">
                     <p:commandButton value="Exportar CSV"
                                      icon="pi pi-file-excel"
                                      ajax="false"
@@ -31,12 +31,10 @@
                                      actionListener="#{dashboardBean.inicializar}"
                                      update=":kpiDashGroup :dashTablasForm"
                                      styleClass="ui-button-primary" />
-                </h:form>
+                </div>
             </div>
-        </div>
 
-        <!-- Barra de Filtros Analíticos (Sección 3.6.2: Rubro, Tipo de Carga, Ubicación Geográfica, Rango de Fechas) -->
-        <h:form id="dashFiltrosForm">
+            <!-- Barra de Filtros Analíticos (Sección 3.6.2: Rubro, Tipo de Carga, Ubicación Geográfica, Rango de Fechas) -->
             <div class="cuy-card" style="margin-bottom: 1.25rem;">
                 <h3 class="cuy-card-title" style="margin-bottom: 0.75rem;">
                     Filtros

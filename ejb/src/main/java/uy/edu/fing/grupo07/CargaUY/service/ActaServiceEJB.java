@@ -27,6 +27,8 @@ import java.security.PrivateKey;
 import java.security.Security;
 import java.security.cert.X509Certificate;
 import java.util.Calendar;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import jakarta.ejb.EJB;
 import jakarta.ejb.LocalBean;
@@ -41,6 +43,8 @@ import uy.edu.fing.grupo07.CargaUY.security.ControlAcceso;
 @Stateless
 @LocalBean
 public class ActaServiceEJB implements ActaServiceEJBLocal {
+
+    private static final Logger LOGGER = Logger.getLogger(ActaServiceEJB.class.getName());
 
     @EJB
     private ControlAcceso control;
@@ -69,24 +73,25 @@ public class ActaServiceEJB implements ActaServiceEJBLocal {
             String evidencia
     ) {
         verificarControl();
-        control.exigir(token, TipoUsuario.ADMINISTRADOR, TipoUsuario.FUNCIONARIO, TipoUsuario.AUTORIDAD, TipoUsuario.CIUDADANO);
+        control.exigir(token, TipoUsuario.ADMINISTRADOR, TipoUsuario.FUNCIONARIO, TipoUsuario.AUTORIDAD);
         return emitirYFirmarActa(idCaso, empresa, matricula, fecha, tipo, evidencia);
     }
 
     @Override
     public CredencialesFirma abrirCredenciales(String token, byte[] archivo, String password) {
         verificarControl();
-        control.exigir(token, TipoUsuario.ADMINISTRADOR, TipoUsuario.FUNCIONARIO, TipoUsuario.AUTORIDAD, TipoUsuario.CIUDADANO);
+        control.exigir(token, TipoUsuario.ADMINISTRADOR, TipoUsuario.FUNCIONARIO, TipoUsuario.AUTORIDAD);
         return abrirCredenciales(archivo, password);
     }
 
     @Override
     public byte[] firmarPdf(String token, byte[] pdfOriginal, PrivateKey clavePrivada, X509Certificate certificado) {
         verificarControl();
-        control.exigir(token, TipoUsuario.ADMINISTRADOR, TipoUsuario.FUNCIONARIO, TipoUsuario.AUTORIDAD, TipoUsuario.CIUDADANO);
+        control.exigir(token, TipoUsuario.ADMINISTRADOR, TipoUsuario.FUNCIONARIO, TipoUsuario.AUTORIDAD);
         return firmarPdf(pdfOriginal, clavePrivada, certificado);
     }
-    public byte[] emitirYFirmarActa(int idCaso, String empresa, String matricula, String fecha, String tipo, String evidencia) {
+
+    byte[] emitirYFirmarActa(int idCaso, String empresa, String matricula, String fecha, String tipo, String evidencia) {
         try (PDDocument doc = new PDDocument();
              ByteArrayOutputStream out = new ByteArrayOutputStream()) {
 
@@ -164,12 +169,12 @@ public class ActaServiceEJB implements ActaServiceEJBLocal {
             return out.toByteArray();
 
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.log(Level.SEVERE, "Error al emitir PDF del acta oficial #" + idCaso, e);
             return null; // Si algo falla, devuelve null en vez de romper la aplicación
         }
     }
-    
-    public CredencialesFirma abrirCredenciales (byte[] archivo, String password) {
+
+    CredencialesFirma abrirCredenciales(byte[] archivo, String password) {
     	//este metodo abrira el certificado que se subio y obtendra la clave privada y los datos
     	
     	try {
@@ -197,14 +202,12 @@ public class ActaServiceEJB implements ActaServiceEJBLocal {
     		//Si está vigente, continúa normalmente.
     		//Esta comprobación no verifica la confianza del emisor ni la revocación del certificado
 
-    	    System.out.println("Certificado abierto correctamente");
-    	    System.out.println("Titular: " + certificado.getSubjectX500Principal());
-    	    
+    	    LOGGER.log(Level.FINE, "Certificado abierto correctamente. Titular: {0}", certificado.getSubjectX500Principal());
+
     	    return new CredencialesFirma(clavePrivada,certificado);
     	}
     	catch(Exception e) {
-    		 e.printStackTrace();
-    		 //muestra el error detallado en consola
+    		 LOGGER.log(Level.WARNING, "No se pudo abrir o validar el certificado PKCS#12", e);
     		 return null;
     	}
     	
@@ -213,7 +216,7 @@ public class ActaServiceEJB implements ActaServiceEJBLocal {
     }
     
     //firmar el pdf ////////////////////////////////////////////
-    public byte[] firmarPdf(byte[] pdfOriginal, PrivateKey clavePrivada,X509Certificate certificado) {
+    byte[] firmarPdf(byte[] pdfOriginal, PrivateKey clavePrivada, X509Certificate certificado) {
     	try {
     	
     		if (Security.getProvider("BC") == null) {

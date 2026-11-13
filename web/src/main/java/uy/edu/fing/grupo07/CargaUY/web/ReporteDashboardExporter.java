@@ -131,12 +131,12 @@ public final class ReporteDashboardExporter {
 
     private static PdfPTable construirEncabezado(String fechaGenerado) {
         Image logo = cargarLogoCamion();
-        PdfPTable header = logo != null ? new PdfPTable(new float[]{1.05f, 4.95f}) : new PdfPTable(1);
+        PdfPTable header = logo != null ? new PdfPTable(new float[]{1.85f, 4.15f}) : new PdfPTable(1);
         header.setWidthPercentage(100);
         header.setSpacingAfter(12);
 
         if (logo != null) {
-            logo.scaleToFit(54f, 54f);
+            logo.scaleToFit(132f, 36f);
             PdfPCell lc = new PdfPCell(logo, false);
             lc.setBackgroundColor(AZUL);
             lc.setBorder(Rectangle.NO_BORDER);

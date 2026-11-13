@@ -102,6 +102,7 @@ public class FuncionarioEmpresasBean implements Serializable {
             }
             cargarEmpresas();
         } catch (Exception e) {
+            marcarValidacionFallida();
             mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error al guardar empresa", e.getMessage());
         }
     }
@@ -242,6 +243,13 @@ public class FuncionarioEmpresasBean implements Serializable {
         FacesContext fc = FacesContext.getCurrentInstance();
         if (fc != null) {
             fc.addMessage(null, new FacesMessage(sev, res, det));
+        }
+    }
+
+    private void marcarValidacionFallida() {
+        FacesContext fc = FacesContext.getCurrentInstance();
+        if (fc != null) {
+            fc.validationFailed();
         }
     }
 

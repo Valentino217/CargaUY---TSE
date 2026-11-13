@@ -112,6 +112,19 @@ class EmpresaInfraccionesBeanTest {
 
             assertEquals(EstadoInfraccion.EN_DESCARGO, bean.getSeleccionada().estado());
             assertEquals(1, bean.getTotalEnDescargo());
+            assertTrue(bean.getTiposInfraccion().length > 0);
+            assertTrue(bean.getEstadosInfraccion().length > 0);
+
+            // Ante error de negocio al presentar descargo, recarga la bandeja sin romper
+            when(infraccionesService.presentarDescargo(
+                    eq("tok-empresa-logisur"),
+                    eq(25),
+                    any()
+            )).thenThrow(new IllegalStateException("Conflicto de estado"));
+            bean.setTextoDescargo("Nuevo intento");
+            bean.enviarDescargo();
+            verify(infraccionesService, org.mockito.Mockito.times(4))
+                    .listarInfraccionesParaEmpresa("tok-empresa-logisur");
         }
     }
 }

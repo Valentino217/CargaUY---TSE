@@ -105,4 +105,31 @@ class ActaServiceEJBTest {
         assertThrows(RuntimeException.class,
                 () -> service.firmarPdf("no-es-pdf".getBytes(StandardCharsets.UTF_8), creds.getClavePrivada(), creds.getCertificado()));
     }
+
+    @Test
+    @DisplayName("Sobrecargas autenticadas exigen ControlAcceso para ADMINISTRADOR, FUNCIONARIO o AUTORIDAD y sin CIUDADANO")
+    void metodosAutenticadosExigenControlSinCiudadano() throws Exception {
+        assertThrows(IllegalStateException.class,
+                () -> service.emitirYFirmarActa("tok", 1, "Emp", "MAT", "2026-11-13", "EXCESO", "Evidencia"));
+
+        uy.edu.fing.grupo07.CargaUY.security.ControlAcceso control =
+                org.mockito.Mockito.mock(uy.edu.fing.grupo07.CargaUY.security.ControlAcceso.class);
+        ActaServiceEJB autenticado = new ActaServiceEJB();
+        java.lang.reflect.Field fCtrl = ActaServiceEJB.class.getDeclaredField("control");
+        fCtrl.setAccessible(true);
+        fCtrl.set(autenticado, control);
+
+        byte[] p12 = generarPkcs12Prueba("clave123");
+        byte[] pdf = autenticado.emitirYFirmarActa("tok-func", 10, "Emp", "MAT-1", "2026-11-13", "EXCESO", "Evidencia");
+        CredencialesFirma creds = autenticado.abrirCredenciales("tok-func", p12, "clave123");
+        byte[] firmado = autenticado.firmarPdf("tok-func", pdf, creds.getClavePrivada(), creds.getCertificado());
+
+        assertNotNull(firmado);
+        org.mockito.Mockito.verify(control, org.mockito.Mockito.times(3)).exigir(
+                "tok-func",
+                uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.ADMINISTRADOR,
+                uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.FUNCIONARIO,
+                uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.AUTORIDAD
+        );
+    }
 }

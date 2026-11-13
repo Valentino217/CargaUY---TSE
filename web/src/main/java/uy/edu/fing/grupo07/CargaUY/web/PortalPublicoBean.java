@@ -338,45 +338,55 @@ public class PortalPublicoBean implements Serializable {
         return getTotalViajesRegistrados();
     }
 
+    private static long suprimirSiMenorAK(long valor) {
+        return valor >= UMBRAL_MINIMO_AGREGACION_K ? valor : 0L;
+    }
+
     public int getTotalEmpresasActivas() {
+        long total;
         if (empresasPublicas != null && !empresasPublicas.isEmpty()) {
-            return (int) empresasPublicas.stream().filter(Empresa::isActiva).count();
+            total = empresasPublicas.stream().filter(Empresa::isActiva).count();
+        } else {
+            total = resumen != null ? resumen.totalEmpresasHabilitadas() : 0L;
         }
-        return resumen != null ? (int) resumen.totalEmpresasHabilitadas() : 0;
+        return (int) suprimirSiMenorAK(total);
     }
 
     public int getTotalVehiculosRegistrados() {
+        long total;
         if (vehiculosPublicos != null && !vehiculosPublicos.isEmpty()) {
-            return vehiculosPublicos.size();
+            total = vehiculosPublicos.size();
+        } else {
+            total = resumen != null ? resumen.totalVehiculosHabilitados() : 0L;
         }
-        return resumen != null ? (int) resumen.totalVehiculosHabilitados() : 0;
+        return (int) suprimirSiMenorAK(total);
     }
 
     public int getTotalViajesRegistrados() {
+        long total = 0L;
         if (guiasPublicas != null && !guiasPublicas.isEmpty()) {
-            return guiasPublicas.size();
-        }
-        if (resumen != null && resumen.guiasPorEstado() != null) {
-            return (int) resumen.guiasPorEstado().values().stream()
+            total = guiasPublicas.size();
+        } else if (resumen != null && resumen.guiasPorEstado() != null) {
+            total = resumen.guiasPorEstado().values().stream()
                     .filter(v -> v != null)
                     .mapToLong(Long::longValue)
                     .sum();
         }
-        return 0;
+        return (int) suprimirSiMenorAK(total);
     }
 
     public long getTotalViajesEnCurso() {
+        long total = 0L;
         if (guiasPublicas != null && !guiasPublicas.isEmpty()) {
-            return guiasPublicas.stream().filter(g -> g.getEstado() == TipoEstado.EN_CURSO).count();
+            total = guiasPublicas.stream().filter(g -> g.getEstado() == TipoEstado.EN_CURSO).count();
+        } else if (resumen != null && resumen.guiasPorEstado() != null) {
+            total = resumen.guiasPorEstado().getOrDefault(TipoEstado.EN_CURSO, 0L);
         }
-        if (resumen != null && resumen.guiasPorEstado() != null) {
-            return resumen.guiasPorEstado().getOrDefault(TipoEstado.EN_CURSO, 0L);
-        }
-        return 0L;
+        return suprimirSiMenorAK(total);
     }
 
     public long getTotalPesadas() {
-        return resumen != null ? resumen.totalPesadas() : 0L;
+        return resumen != null ? suprimirSiMenorAK(resumen.totalPesadas()) : 0L;
     }
 
     public List<Map.Entry<TipoEstado, Long>> getGuiasPorEstadoEntries() {

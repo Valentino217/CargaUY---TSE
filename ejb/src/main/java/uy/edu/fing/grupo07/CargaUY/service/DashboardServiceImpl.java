@@ -37,6 +37,8 @@ import java.util.TreeSet;
 @Stateless
 public class DashboardServiceImpl implements DashboardServiceLocal {
 
+    public static final int UMBRAL_MINIMO_AGREGACION_K = 3;
+
     @PersistenceContext(unitName = "CargaUYPersistenceUnit")
     private EntityManager em;
 
@@ -56,13 +58,18 @@ public class DashboardServiceImpl implements DashboardServiceLocal {
         }
     }
 
+    private static long suprimirSiMenorAK(long valor) {
+        return valor >= UMBRAL_MINIMO_AGREGACION_K ? valor : 0L;
+    }
+
     @Override
     public DashboardResumenDTO obtenerResumenPublico() {
         Map<TipoEstado, Long> guiasPorEstado = inicializarMapaGuias();
         cargarMetricasGuias(guiasPorEstado);
-        long totalPesadas = consultarConteo("SELECT COUNT(p) FROM PesadaBalanza p");
-        long totalEmpresasHabilitadas = consultarConteo("SELECT COUNT(e) FROM Empresa e WHERE e.activa = true");
-        long totalVehiculosHabilitados = consultarConteo("SELECT COUNT(v) FROM Vehiculo v WHERE v.estadoHabilitacion = true");
+        guiasPorEstado.replaceAll((estado, cantidad) -> suprimirSiMenorAK(cantidad == null ? 0L : cantidad));
+        long totalPesadas = suprimirSiMenorAK(consultarConteo("SELECT COUNT(p) FROM PesadaBalanza p"));
+        long totalEmpresasHabilitadas = suprimirSiMenorAK(consultarConteo("SELECT COUNT(e) FROM Empresa e WHERE e.activa = true"));
+        long totalVehiculosHabilitados = suprimirSiMenorAK(consultarConteo("SELECT COUNT(v) FROM Vehiculo v WHERE v.estadoHabilitacion = true"));
         return new DashboardResumenDTO(
                 guiasPorEstado,
                 Map.of(),

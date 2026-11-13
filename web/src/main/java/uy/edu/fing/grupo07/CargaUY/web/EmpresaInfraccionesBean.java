@@ -127,6 +127,7 @@ public class EmpresaInfraccionesBean implements Serializable {
                             ? "Su descargo para el expediente #" + seleccionada.idCaso() + " fue actualizado exitosamente."
                             : "Su descargo para el expediente #" + seleccionada.idCaso() + " fue registrado exitosamente.");
         } catch (Exception e) {
+            cargarInfracciones();
             mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error al presentar descargo", e.getMessage());
             marcarValidacionFallida();
         }
