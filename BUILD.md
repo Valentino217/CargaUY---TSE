@@ -122,10 +122,10 @@ Parámetros opcionales: `--camiones 15 --lote 5 --guia 1001 --ci 11223344`.
 cd CargaUYAndroid
 ./gradlew assembleDebug
 ```
-Consultar `CargaUYAndroid/GUIA_CONEXION.md` para configurar la URL del backend según emulador (`10.0.2.2:8080`) o dispositivo físico.
+Configurar la URL del backend en la app según el entorno (emulador Android: `10.0.2.2:8080`, o IP local de la máquina en red LAN).
 
 ### 6.2 Función FaaS de Desvío de Ruta (`faas/tracking-desvio-lambda`)
-Consultar `faas/tracking-desvio-lambda/README-DEPLOY-FAAS.md` para el empaquetado y despliegue en AWS Lambda.
+Contiene `lambda_function.py` con la función de cálculo geométrico de desvío sobre el corredor vial para despliegue en AWS Lambda.
 
 ---
 
