@@ -158,12 +158,12 @@ public final class ReporteDashboardExporter {
         hc.setPaddingRight(16);
         hc.setVerticalAlignment(Element.ALIGN_MIDDLE);
 
-        Paragraph titulo = new Paragraph("CargaUY — Reporte de Fiscalización",
+        Paragraph titulo = new Paragraph("CargaUY - Reporte",
                 new Font(Font.HELVETICA, 16, Font.BOLD, Color.WHITE));
         titulo.setSpacingAfter(3);
         hc.addElement(titulo);
 
-        Paragraph subtitulo = new Paragraph("Dashboard de Autoridades · MTOP   |   Generado el " + fechaGenerado,
+        Paragraph subtitulo = new Paragraph("Generado el " + fechaGenerado,
                 new Font(Font.HELVETICA, 9, Font.NORMAL, new Color(0xcb, 0xd5, 0xe1)));
         hc.addElement(subtitulo);
         header.addCell(hc);
