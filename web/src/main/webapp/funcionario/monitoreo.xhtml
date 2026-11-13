@@ -24,8 +24,10 @@
                                      styleClass="ui-button-outlined ui-button-help" />
                     <p:commandButton value="Simular Tracking"
                                      icon="pi pi-send"
-                                     type="button"
-                                     onclick="PF('dlgTrackingWidget').show()"
+                                     actionListener="#{detalleViajeBean.prepararModalMockTracking}"
+                                     process="@this"
+                                     update=":dlgTrackingForm"
+                                     oncomplete="PF('dlgTrackingWidget').show()"
                                      styleClass="ui-button-outlined ui-button-success" />
                     <p:commandButton value="Consultar Balanzas"
                                      icon="pi pi-refresh"

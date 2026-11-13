@@ -120,7 +120,6 @@ public class DetalleViajeBean implements Serializable {
             this.faasEndpointUrl = faasTrackingClient.getEndpointUrl();
         }
         if (trackingMockService != null) {
-            trackingMockService.sincronizarConNodoPeriferico();
             this.mockEventosPorMinuto = trackingMockService.getEventosPorMinuto();
             this.mockCantidadDesvios = trackingMockService.getCantidadDesvios();
         }
@@ -145,6 +144,17 @@ public class DetalleViajeBean implements Serializable {
         } else if (!this.guiasDisponibles.isEmpty()) {
             seleccionarGuiaPorDefecto();
             consultarViaje();
+        }
+    }
+
+    /**
+     * Sincroniza el estado con el nodo periférico de tracking bajo demanda al abrir el modal.
+     */
+    public void prepararModalMockTracking() {
+        if (trackingMockService != null) {
+            trackingMockService.sincronizarConNodoPeriferico();
+            this.mockEventosPorMinuto = trackingMockService.getEventosPorMinuto();
+            this.mockCantidadDesvios = trackingMockService.getCantidadDesvios();
         }
     }
 
