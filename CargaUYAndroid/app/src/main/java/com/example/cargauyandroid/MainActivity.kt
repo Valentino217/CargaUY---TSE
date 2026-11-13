@@ -2,8 +2,10 @@ package com.example.cargauyandroid
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import androidx.core.content.ContextCompat
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -185,7 +187,27 @@ fun NavegationComponent(
         }
     }
 
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { _ -> }
+
     LaunchedEffect(Unit) {
+        val tieneFine = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        val tieneCoarse = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!tieneFine && !tieneCoarse) {
+            permissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
+        }
         refrescarEstadoLocal()
         if (syncRepository.baseDatosReiniciadaPorNuevaCompilacion) {
         } else if (enLinea && pendientesCount > 0) {
@@ -205,7 +227,7 @@ fun NavegationComponent(
                         sincronizando = true
                         val resumen = syncRepository.sincronizarPendientes(cedulaActual)
                         sincronizando = false
-                        pendientesCount = syncRepository.dbHelper.contarEventosPendientes()
+                        refrescarEstadoLocal()
                         if (resumen != null) {
                             mensajeGlobalSync = "Señal recuperada: ${resumen.mensaje}"
                             syncTick++

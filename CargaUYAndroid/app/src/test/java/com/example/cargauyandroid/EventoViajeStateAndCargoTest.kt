@@ -223,4 +223,27 @@ class EventoViajeStateAndCargoTest {
         assertTrue(res.rutaActualizada)
         assertTrue(SyncConflictResolver.mensajeConflictoGuia(20L).contains("#20"))
     }
+
+    @Test
+    fun `SyncAuthErrorHelper distingue sesion OIDC expirada de sin senal`() {
+        assertTrue(SyncAuthErrorHelper.esErrorAutenticacion(401))
+        assertTrue(SyncAuthErrorHelper.esErrorAutenticacion(403))
+
+        val msgSyncOidc = SyncAuthErrorHelper.mensajeSyncHttpError(
+            httpCode = 401,
+            esSesionOidc = true,
+            aceptados = 0,
+            restantes = 2
+        )
+        assertTrue(msgSyncOidc.contains("OIDC", ignoreCase = true))
+        assertTrue(msgSyncOidc.contains("2"))
+        org.junit.Assert.assertFalse(msgSyncOidc.contains("Sin señal", ignoreCase = true))
+
+        val msgConsultaOidc = SyncAuthErrorHelper.mensajeConsultaHttpError(403, esSesionOidc = true)
+        assertTrue(msgConsultaOidc.contains("OIDC", ignoreCase = true))
+
+        val msgRegistroOidc = SyncAuthErrorHelper.mensajeRegistroHttpError(401, esSesionOidc = true, etiquetaTipo = "Inicio de viaje")
+        assertTrue(msgRegistroOidc.contains("OIDC", ignoreCase = true))
+        assertTrue(msgRegistroOidc.contains("Inicio de viaje"))
+    }
 }
