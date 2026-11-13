@@ -16,10 +16,15 @@
             </div>
             <div>
                 <h:form id="sondarNodosForm" style="margin: 0;">
+                    <p:remoteCommand name="sondearNodosAuto"
+                                     autoRun="true"
+                                     actionListener="#{adminNodosBean.sondearNodosInicial}"
+                                     update=":nodosForm" />
                     <p:commandButton value="Sondear Nodos"
                                      icon="pi pi-sync"
-                                     actionListener="#{adminNodosBean.sondarNodos}"
-                                     update=":nodosForm :growl"
+                                     actionListener="#{adminNodosBean.cargarEsqueletoNodos}"
+                                     oncomplete="sondearNodosAuto()"
+                                     update=":nodosForm"
                                      styleClass="ui-button-primary" />
                 </h:form>
             </div>
@@ -50,7 +55,7 @@
                         <span class="cuy-mono" style="font-size: 0.78rem;">#{nodo.endpoint()}</span>
                     </p:column>
 
-                    <p:column headerText="Estado" filterBy="#{nodo.online() ? 'ONLINE' : 'OFFLINE'}" filterMatchMode="exact" style="width: 155px; text-align: center;">
+                    <p:column headerText="Estado" filterBy="#{nodo.estado()}" filterMatchMode="exact" style="width: 175px; text-align: center;">
                         <f:facet name="filter">
                             <p:selectOneMenu onchange="PF('dtNodos').filter()" styleClass="ui-custom-filter" style="width: 100%;">
                                 <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
@@ -58,9 +63,9 @@
                                 <f:selectItem itemLabel="OFFLINE" itemValue="OFFLINE" />
                             </p:selectOneMenu>
                         </f:facet>
-                        <p:tag value="#{nodo.online() ? 'ONLINE' : 'OFFLINE'}"
-                               severity="#{nodo.online() ? 'success' : 'danger'}"
-                               icon="#{nodo.online() ? 'pi pi-check-circle' : 'pi pi-times-circle'}"
+                        <p:tag value="#{nodo.consultando ? 'CONSULTANDO...' : (nodo.online() ? 'ONLINE' : 'OFFLINE')}"
+                               severity="#{nodo.consultando ? 'warning' : (nodo.online() ? 'success' : 'danger')}"
+                               icon="#{nodo.consultando ? 'pi pi-spin pi-spinner' : (nodo.online() ? 'pi pi-check-circle' : 'pi pi-times-circle')}"
                                rounded="true" />
                     </p:column>
                 </p:dataTable>
