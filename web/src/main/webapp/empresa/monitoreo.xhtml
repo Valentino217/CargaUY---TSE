@@ -31,7 +31,13 @@
                 <div class="cuy-grid-3" style="align-items: center;">
                     <div class="cuy-field ui-fluid">
                         <p:outputLabel for="selGuiaMon" value="Seleccionar Guía de Viaje a Monitorear" />
-                        <p:selectOneMenu id="selGuiaMon" label="Seleccionar Guía de Viaje a Monitorear" value="#{detalleViajeBean.guiaIdSeleccionada}">
+                        <p:selectOneMenu id="selGuiaMon"
+                                         label="Seleccionar Guía de Viaje a Monitorear"
+                                         value="#{detalleViajeBean.guiaIdSeleccionada}"
+                                         filter="true"
+                                         filterMatchMode="contains"
+                                         filterNormalize="true"
+                                         filterPlaceholder="Buscar por ID, ruta o matrícula...">
                             <f:selectItem itemLabel="-- Seleccione una Guía --" itemValue="#{null}" noSelectionOption="true" />
                             <f:selectItems value="#{detalleViajeBean.guiasDisponibles}"
                                            var="g"
