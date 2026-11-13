@@ -30,5 +30,7 @@ docker-compose.p1.override.yml
 Thumbs.db
 
 # Configuración privada y credenciales locales
+.env
+*.p12
 .local-p1/
 /.local-p1/gub-real.env

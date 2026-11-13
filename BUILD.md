@@ -44,7 +44,10 @@ mvn -B package -DskipTests
 
 ### 3.1 Configuración previa de secretos locales
 El archivo `docker-compose.yml` referencia:
-1. `.env`: variables no sensibles de entorno local y URLs de nodos externos (`BALANZA_ENDPOINT`, `TRACKING_ENDPOINT`, timeouts).
+1. `.env` *(no versionado en Git; copiar desde `.env.example`)*: variables de entorno local y URLs de nodos externos (`BALANZA_ENDPOINT`, `TRACKING_ENDPOINT`, timeouts, claves locales).
+   ```bash
+   cp .env.example .env
+   ```
 2. `.local-p1/gub-real.env` *(no versionado en Git)*: debe contener el secreto OIDC real para Usuario gub.uy:
    ```env
    GUB_CLIENT_SECRET=<secreto-oidc>
