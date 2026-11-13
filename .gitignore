@@ -3,10 +3,25 @@ target/
 **/target/
 *.class
 
-# Eclipse
+# Eclipse / IDE
 .apt_generated
 .apt_generated_tests
 .factorypath
+.project
+.classpath
+.settings/
+**/.project
+**/.classpath
+**/.settings/
+**/.externalToolBuilders/
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+**/__pycache__/
+*.pyc
+
 # Archivos temporales locales
 docker-compose.p1.override.yml
 
@@ -14,5 +29,6 @@ docker-compose.p1.override.yml
 .DS_Store
 Thumbs.db
 
-# Configuración privada de Usuario gub.uy para Docker
+# Configuración privada y credenciales locales
+.local-p1/
 /.local-p1/gub-real.env

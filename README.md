@@ -1,143 +1,47 @@
-# carga.uy (Grupo 07 - TSE 2026)
+# carga.uy — Plataforma de Gestión y Fiscalización de Transporte de Carga
 
-Plataforma de gestión, fiscalización y seguimiento de transporte de carga terrestre para el Ministerio de Transporte y Obras Públicas (MTOP - Uruguay).
+**Grupo 07 — Taller de Sistemas Empresariales (TSE 2026) · Facultad de Ingeniería, UdelaR**
 
-Arquitectura empresarial **Jakarta EE 10** (`ejb` + `web` + `ear`) sobre **WildFly 41**, **PostgreSQL**, mensajería asíncrona **JMS (ActiveMQ Artemis)**, **MongoDB** (tracking NoSQL), **OpenLDAP** y **Keycloak** (simulador Usuario gub.uy con OIDC/PKCE).
-
----
-
-## 🚀 Guía de Inicio Rápido (Paso a Paso)
-
-### ⚠️ Requisitos previos y advertencias importantes
-
-Antes de levantar el proyecto, verificá estos 3 puntos para evitar conflictos de puertos o bloqueos:
-
-1. **Docker Desktop corriendo:** Debe estar abierto y en verde (*Engine running*).
-2. **PostgreSQL local detenido:** Si tenés PostgreSQL instalado como servicio de Windows en tu máquina, **debés detenerlo** (desde `services.msc` → botón derecho en el servicio de PostgreSQL → *Detener*). De lo contrario, ocupará el puerto `5432` y Docker no podrá iniciarse.
-3. **No duplicar WildFly:** Si vas a correr WildFly localmente en Eclipse o consola, no levantes el perfil `app` de Docker para que no choquen en el puerto `8080`.
+Plataforma empresarial **Jakarta EE 10** (`ejb` + `web` + `ear`) desplegada sobre **WildFly 41** con **PostgreSQL 16**, **MongoDB 7**, **OpenLDAP**, **ActiveMQ Artemis (JMS)** y nodos periféricos externos, destinada al registro de empresas/vehículos, seguimiento GPS de viajes y fiscalización automática para el MTOP.
 
 ---
 
-### Paso 1: Levantar toda la plataforma con Docker (Todo en uno)
+## Inicio Rápido (Docker Compose)
 
-En la raíz del proyecto, ejecutá:
+1. **Requisitos previos:** Docker Desktop en ejecución, puerto `5432` libre (detener PostgreSQL local si estuviera corriendo) y archivo privado `.local-p1/gub-real.env` con las credenciales OIDC de Usuario gub.uy (`GUB_CLIENT_SECRET`, etc.).
+2. **Levantar la plataforma:**
+   ```bash
+   docker compose up -d --build
+   ```
+   *(Para usar Keycloak como simulador local de gub.uy en lugar del proveedor testing real, agregar `--profile mock-gub`.)*
+3. **Cargar datos iniciales de prueba (idempotente):**
+   ```powershell
+   ./scripts/cargar-datos-prueba.ps1
+   ```
+4. **Acceso Web:** [`http://localhost:8080/CargaUY-web/`](http://localhost:8080/CargaUY-web/)
 
-```bash
-docker compose up -d
-```
-*(Si modificaste código Java y querés que Docker recompile la imagen de WildFly, usá `docker compose up --build -d`).*
+---
 
-Este comando levanta automáticamente toda la plataforma con sus puertos mapeados:
+## Servicios y Parámetros Principales
 
-| Servicio | URL / Puerto | Descripción |
+| Servicio / Nodo | Endpoint por defecto | Notas |
 |---|---|---|
-| **WildFly (CargaUY)** | `http://localhost:8080/CargaUY-web/` | Servidor de aplicaciones Jakarta EE con el EAR desplegado. |
-| **PostgreSQL** | `localhost:5432` | Base de datos relacional principal (`cargauy` / `cargauy123`). |
-| **OpenLDAP** | `localhost:1389` | Directorio de identidades para funcionarios y administradores. |
-| **Keycloak (gub.uy)** | `http://localhost:8083` | Proveedor OIDC simulador de Usuario gub.uy (Realm `cargauy-test`). |
-| **MongoDB** | `localhost:27017` | Almacén de series temporales para posiciones de tracking. |
-| **Mock PDI (SOAP)** | `http://localhost:8081` | Web Service SOAP simulador de DNIC / Dirección Nacional de Identificación Civil. |
-| **Mock Balanza (REST)** | `http://localhost:8082` | API REST simuladora de balanzas y pesajes en ruta. |
+| **CargaUY Web / REST** | `http://localhost:8080/CargaUY-web/` | WildFly 41 (`standalone-full.xml`), puerto admin `9990`. |
+| **PostgreSQL 16** | `localhost:5432` (`cargauy`) | BD relacional principal; trigger inmutable en `registro_auditoria`. |
+| **MongoDB 7** | `localhost:27017` | Series temporales para posiciones GPS (`eventos_posicion`). |
+| **OpenLDAP** | `localhost:1389` | Autenticación interna de `FUNCIONARIO`, `AUTORIDAD` y `ADMINISTRADOR`. |
+| **Mock PDI (SOAP)** | `http://localhost:8081/pdi/ws` | Simulador DNIC/PDI en contenedor local. |
+| **Nodo Balanzas (REST)** | `${BALANZA_ENDPOINT}` | Configurado en `.env` (Render: `cargauy-mock-balanza-latest.onrender.com`, timeout `15s`). |
+| **Nodo Tracking (REST)** | `${TRACKING_ENDPOINT}` | Configurado en `.env` (Render: `cargauy-mock-tracking-latest.onrender.com`, timeout `15s`). |
+| **FaaS Desvío de Ruta** | AWS Lambda (`faas/tracking-desvio-lambda`) | Cálculo geométrico de desvío sobre corredor vial; fallback local ante fallo. |
 
-> 💡 **¿Preferís programar y debuggear en Eclipse / Windows con tu WildFly local?**
-> Si querés usar tu propio WildFly en Windows (para debuggear con breakpoints o deploy instantáneo desde el IDE), simplemente apagá el contenedor de WildFly con:
-> ```bash
-> docker compose stop wildfly
-> ```
-> y levantás tu WildFly en Windows (`standalone.bat -c standalone-full.xml`) sin que choquen en el puerto 8080.
+Variables clave en `.env` / `docker-compose.yml`:
+- `P1_ENTORNO_LOCAL=true` y `P1_BOOTSTRAP=true`: habilitan el usuario administrador inicial (`BOOTSTRAP_ADMIN_UID`) y endpoints de prueba/dev para el componente móvil (`/api/auth/dev-chofer`). En producción deben deshabilitarse.
+- `GUB_PROVEEDOR=iduruguay`: configura OIDC contra `auth-testing.iduruguay.gub.uy` (sobreescribible por perfil local).
 
 ---
 
-### Paso 2: Cargar datos de prueba (Seed Data)
+## Documentación Principal
 
-Una vez que la aplicación arrancó y creó las tablas en PostgreSQL, cargá los datos iniciales de prueba (catálogo de rubros y tipos de carga, empresas transportistas, vehículos con habilitaciones ITV/PNC, guías de viaje con pesos reales e incidentes de fiscalización). Podés hacerlo con el script helper o con el comando directo:
-
-* **Opción fácil (Script en PowerShell):**
-  ```powershell
-  ./scripts/cargar-datos-prueba.ps1
-  ```
-* **Comando directo (PowerShell):**
-  ```powershell
-  Get-Content scripts/seed-datos-prueba.sql -Raw -Encoding UTF8 | docker exec -i cargauy-p1-postgres-1 psql -U cargauy -d cargauy
-  ```
-* **Comando directo (Bash / Linux / Mac / CMD):**
-  ```bash
-  docker exec -i cargauy-p1-postgres-1 psql -U cargauy -d cargauy < scripts/seed-datos-prueba.sql
-  ```
-
-> 💡 **Nota sobre el script mejorado:**
-> El script `seed-datos-prueba.sql` es totalmente **idempotente y seguro**:
-> - Resuelve automáticamente los IDs reales de los usuarios (evitando cualquier conflicto con `martin.admin` o bootstrap previo).
-> - Se ejecuta con codificación **UTF-8** para acentos y tildes.
-> - Actualiza de forma automática las secuencias de PostgreSQL (`rubros`, `tipos_carga`, `itvs`, `pncs`, etc.) para que cuando des de alta nuevos registros desde la web no colisionen los IDs.
-> - Detecta el nombre del contenedor de PostgreSQL automáticamente en los `.ps1`.
-
----
-
-### Paso 3: Ingresar a la plataforma
-
-Accedé en tu navegador a:
-👉 **`http://localhost:8080/CargaUY-web/`**
-
-#### Usuarios de prueba listos para usar:
-
-| Rol / Tipo | Usuario | Contraseña | Vía de Ingreso |
-|---|---|---|---|
-| **Administrador Central** | `admin.central` | `admin123` | Formulario interno (LDAP) |
-| **Administrador de pruebas** | `martin.admin` | `admin123` | Formulario interno (LDAP) |
-| **Autoridad MTOP** | `alberto.autoridad` | `autoridad123` | Formulario interno (LDAP) |
-| **Ciudadano / Chofer** | `ciudadano.prueba` | Consultar `.local-p1/cuentas-locales.txt` | Botón *Ingresar con Usuario gub.uy* |
-| **Consola Keycloak** | `gestor-idp` | Consultar `.local-p1/cuentas-locales.txt` | Consola http://localhost:8083 |
-
-> [!TIP]
-> **¿Dice "Credenciales incorrectas" al ingresar por LDAP?**
-> 1. Asegurate de haber ejecutado el **Paso 2** (`./scripts/cargar-datos-prueba.ps1`), ya que el usuario debe existir tanto en PostgreSQL como en OpenLDAP.
-> 2. Si tu contenedor de LDAP se creó previamente antes de actualizar, podés sincronizar los usuarios de prueba al instante ejecutando:
->    - En PowerShell: `./scripts/reparar-ldap.ps1`
->    - En Linux / Mac / Bash: `./scripts/reparar-ldap.sh`
->    - O recreando el volumen limpio de LDAP: `docker compose down && docker volume rm cargauy-p1_ldap_p1 && docker compose up --build -d`
-
----
-
-## 🛠️ Comandos de utilidad
-
-* **Ver el estado de los contenedores:**
-  ```bash
-  docker compose ps
-  ```
-* **Ver los logs de un servicio (ej. postgres o wildfly):**
-  ```bash
-  docker compose logs -f postgres
-  docker compose logs -f wildfly
-  ```
-* **Detener los servicios sin perder datos:**
-  ```bash
-  docker compose stop
-  ```
-* **Resetear y recargar datos de prueba limpios (en 2 segundos, sin apagar Docker):**
-  ```powershell
-  ./scripts/reset-datos.ps1
-  ```
-* **Reiniciar todo desde cero (Base de datos limpia):**
-  ```bash
-  docker compose down -v
-  ```
-
----
-
-## 🧪 Pruebas y cobertura de código (JaCoCo)
-
-Para compilar, ejecutar todos los tests unitarios y de integración, y generar el reporte de cobertura:
-
-```bash
-mvn clean verify
-```
-
-* **Reporte HTML de cobertura:** Abrir `ejb/target/site/jacoco/index.html` en el navegador.
-* El pipeline de integración continua (`.gitlab-ci.yml`) verifica automáticamente las fases de `build` → `test` → `quality` (Sonar) → `package`.
-
----
-
-## 🔒 Auditoría inmutable
-
-La tabla `registro_auditoria` es inmutable (*append-only*): al desplegar el backend, el EJB `@Startup` `AuditoriaTriggerInstaller` instala a nivel de PostgreSQL un trigger que bloquea y rechaza cualquier operación de `UPDATE` o `DELETE`. Se reinstala automáticamente en cada inicialización para garantizar trazabilidad legal inalterable.
+- **[BUILD.md](BUILD.md)** — Compilación Maven, pruebas unitarias/cobertura JaCoCo, despliegue Docker/WildFly, scripts de datos y compilación de la app Android y FaaS.
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** — Arquitectura Jakarta EE, modelo de datos híbrido (PostgreSQL + MongoDB), mensajería JMS + DLQ, integraciones, seguridad, resiliencia y observabilidad.
