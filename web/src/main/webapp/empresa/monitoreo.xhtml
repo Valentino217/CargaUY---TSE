@@ -16,11 +16,6 @@
             </div>
             <div style="display: flex; gap: 0.6rem;">
                 <h:form id="monitoreoTopForm" style="margin: 0; display: flex; gap: 0.6rem;">
-                    <p:commandButton value="Simular Tracking"
-                                     icon="pi pi-send"
-                                     type="button"
-                                     onclick="PF('dlgTrackingWidget').show()"
-                                     styleClass="ui-button-outlined ui-button-success" />
                     <p:commandButton value="Actualizar"
                                      icon="pi pi-refresh"
                                      actionListener="#{detalleViajeBean.consultarViaje}"
@@ -147,97 +142,6 @@
                 </p:dataTable>
             </div>
         </h:form>
-
-        <!-- Modal Simulador de Tracking (Nodo Periférico) -->
-        <p:dialog header="Nodo Periférico de Tracking (Mock)"
-                  widgetVar="dlgTrackingWidget"
-                  modal="true"
-                  responsive="true"
-                  width="560"
-                  closeOnEscape="true">
-            <h:form id="dlgTrackingForm" styleClass="ui-fluid">
-                <h:panelGroup id="trackingEstado" layout="block" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 1rem;">
-                    <div style="display: flex; align-items: center; gap: 0.6rem;">
-                        <p:tag value="#{detalleViajeBean.mockTrackingActivo ? 'ACTIVO' : 'DETENIDO'}"
-                               severity="#{detalleViajeBean.mockTrackingActivo ? 'success' : 'secondary'}"
-                               icon="#{detalleViajeBean.mockTrackingActivo ? 'pi pi-spin pi-spinner' : 'pi pi-pause'}"
-                               rounded="true" />
-                        <span style="font-size: 0.85rem; color: #0f2942; font-weight: 600;">
-                            Puntos emitidos: #{detalleViajeBean.mockTotalEventosEmitidos} | Desvíos: #{detalleViajeBean.mockTotalDesviosEmitidos}
-                        </span>
-                    </div>
-                    <span class="cuy-mono" style="font-size: 0.75rem;" title="Endpoint del contenedor periférico mock-tracking">
-                        #{detalleViajeBean.nodoTrackingEndpoint}
-                    </span>
-                </h:panelGroup>
-
-                <div class="cuy-field" style="margin-bottom: 1rem;">
-                    <p:outputLabel for="inputMockEvMin" value="Eventos por minuto" />
-                    <p:inputNumber id="inputMockEvMin"
-                                   label="Eventos por minuto"
-                                   value="#{detalleViajeBean.mockEventosPorMinuto}"
-                                   decimalPlaces="0"
-                                   minValue="1"
-                                   maxValue="120"
-                                   suffix=" ev/min" />
-                </div>
-
-                <div class="cuy-field" style="margin-bottom: 1rem;">
-                    <p:outputLabel for="inputMockDesvios" value="Cantidad de desvíos" />
-                    <p:inputNumber id="inputMockDesvios"
-                                   label="Cantidad de desvíos"
-                                   value="#{detalleViajeBean.mockCantidadDesvios}"
-                                   decimalPlaces="0"
-                                   minValue="0"
-                                   maxValue="50"
-                                   suffix=" desvíos" />
-                </div>
-
-                <h:panelGroup rendered="#{not empty detalleViajeBean.mockUltimoResultado}">
-                    <div style="margin-bottom: 1rem; padding: 0.55rem 0.8rem; background: #e0f2fe; border-left: 3px solid #0284c7; border-radius: 4px; font-size: 0.82rem; color: #0c4a6e;">
-                        <h:outputText value="#{detalleViajeBean.mockUltimoResultado}" />
-                    </div>
-                </h:panelGroup>
-
-                <div style="display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.25rem;">
-                    <p:commandButton value="Cerrar"
-                                     type="button"
-                                     icon="pi pi-times"
-                                     onclick="PF('dlgTrackingWidget').hide()"
-                                     styleClass="ui-button-outlined ui-button-secondary"
-                                     style="width: auto;" />
-                    <p:commandButton value="Reiniciar ruta"
-                                     icon="pi pi-refresh"
-                                     actionListener="#{detalleViajeBean.reiniciarRecorridoMock}"
-                                     process="@this"
-                                     update=":dlgTrackingForm :monitoreoForm :growl"
-                                     styleClass="ui-button-secondary ui-button-outlined"
-                                     style="width: auto;" />
-                    <p:commandButton value="Paso ahora"
-                                     icon="pi pi-step-forward"
-                                     actionListener="#{detalleViajeBean.emitirPasoMockAhora}"
-                                     process="@this inputMockEvMin inputMockDesvios"
-                                     update=":dlgTrackingForm :monitoreoForm :growl"
-                                     styleClass="ui-button-info ui-button-outlined"
-                                     style="width: auto;" />
-                    <p:commandButton value="Detener"
-                                     icon="pi pi-stop"
-                                     actionListener="#{detalleViajeBean.detenerMockTracking}"
-                                     process="@this"
-                                     update=":dlgTrackingForm :monitoreoForm :growl"
-                                     disabled="#{not detalleViajeBean.mockTrackingActivo}"
-                                     styleClass="ui-button-danger ui-button-outlined"
-                                     style="width: auto;" />
-                    <p:commandButton value="#{detalleViajeBean.mockTrackingActivo ? 'Actualizar' : 'Iniciar'}"
-                                     icon="pi pi-play"
-                                     actionListener="#{detalleViajeBean.iniciarMockTracking}"
-                                     process="@this inputMockEvMin inputMockDesvios"
-                                     update=":dlgTrackingForm :monitoreoForm :growl"
-                                     styleClass="ui-button-success"
-                                     style="width: auto;" />
-                </div>
-            </h:form>
-        </p:dialog>
 
         <!-- Modal Vista Previa de Foto de Incidente -->
         <p:dialog header="Evidencia Fotográfica del Incidente"
