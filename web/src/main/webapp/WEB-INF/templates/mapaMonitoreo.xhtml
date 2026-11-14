@@ -1,0 +1,53 @@
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:ui="jakarta.faces.facelets">
+    <!-- Tarjeta persistente del mapa Leaflet + OpenStreetMap (no reemplazada por p:poll para evitar parpadeo y pérdida de zoom) -->
+    <div id="mapaMonitoreoCard"
+         class="cuy-card cuy-map-card"
+         style="#{detalleViajeBean.guiaActual == null ? 'display: none;' : ''}">
+        <div class="cuy-map-header">
+            <div class="cuy-map-title-group">
+                <h3 class="cuy-card-title" style="margin-bottom: 0;">
+                    <i class="pi pi-map-marker" style="color: #059669;" />
+                    Mapa de Ruta Planificada y Recorrido GPS
+                </h3>
+                <div id="mapaSubtituloGuia" class="cuy-map-subtitle"></div>
+            </div>
+            <div class="cuy-map-meta">
+                <span id="mapaCorredorBadge" class="cuy-map-pill"></span>
+                <span id="mapaContadorPuntosBadge" class="cuy-map-pill"></span>
+                <button type="button"
+                        class="cuy-map-center-btn"
+                        onclick="centrarMapaMonitoreo()">
+                    <i class="pi pi-compass" /> Centrar recorrido
+                </button>
+            </div>
+        </div>
+
+        <div class="cuy-map-legend">
+            <span class="cuy-map-legend-item">
+                <span class="cuy-map-line-planned"></span> Ruta planificada (MTOP)
+            </span>
+            <span class="cuy-map-legend-item">
+                <span class="cuy-map-line-gps"></span> Recorrido real del camión
+            </span>
+            <span class="cuy-map-legend-item">
+                <span class="cuy-map-dot cuy-map-dot-start"></span> Inicio
+            </span>
+            <span class="cuy-map-legend-item">
+                <span class="cuy-map-dot cuy-map-dot-point"></span> Posición GPS
+            </span>
+            <span class="cuy-map-legend-item">
+                <span class="cuy-map-dot cuy-map-dot-cargo"></span> Carga / Descarga
+            </span>
+            <span class="cuy-map-legend-item">
+                <span class="cuy-map-dot cuy-map-dot-alert"></span> Desvío (&gt; 5 km) / Incidente
+            </span>
+            <span class="cuy-map-legend-item">
+                <span class="cuy-map-dot cuy-map-dot-end"></span> Fin
+            </span>
+        </div>
+
+        <div id="mapaEstadoAviso" class="cuy-map-notice" style="display: none;"></div>
+        <div id="mapaMonitoreoCanvas" class="cuy-map-canvas"></div>
+    </div>
+</ui:composition>

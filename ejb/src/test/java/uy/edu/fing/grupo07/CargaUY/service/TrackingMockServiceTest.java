@@ -8,6 +8,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.GuiaDeViaje;
@@ -15,6 +16,7 @@ import uy.edu.fing.grupo07.CargaUY.domain.entity.Vehiculo;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEvento;
 import uy.edu.fing.grupo07.CargaUY.dto.EventoViajeDTO;
+import uy.edu.fing.grupo07.CargaUY.dto.IncidenteDTO;
 import uy.edu.fing.grupo07.CargaUY.fiscalizacion.MotorFiscalizacionLocal;
 import uy.edu.fing.grupo07.CargaUY.integration.FaasTrackingClient;
 import uy.edu.fing.grupo07.CargaUY.integration.RedVialUruguay;
@@ -367,6 +369,121 @@ class TrackingMockServiceTest {
             verify(controlMock, times(5)).exigir(eq("tok-admin"), any(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario[].class));
         } finally {
             svc.cerrar();
+        }
+    }
+
+    @Test
+    @DisplayName("Retoma desde el último evento sembrado y reinicia el nodo periférico si la BD no tiene eventos mock")
+    void deberiaContinuarDesdeUltimoEventoSembradoYReiniciarNodoPerifericoSiNoHayEventosMockEnDb() {
+        GuiaDeViaje guia = crearGuiaActiva(1001L, "Puerto de Montevideo", "Rivera (Frontera)", "STP 1234");
+        when(em.createQuery(anyString(), eq(GuiaDeViaje.class))).thenReturn(queryGuias);
+        when(queryGuias.setParameter("enCurso", TipoEstado.EN_CURSO)).thenReturn(queryGuias);
+        when(queryGuias.getResultList()).thenReturn(List.of(guia));
+
+        EventoViajeDTO evInicio = new EventoViajeDTO(
+                "seed-inicio",
+                LocalDateTime.now().minusHours(4),
+                TipoEvento.INICIO,
+                -34.9011,
+                -56.1645,
+                1001L,
+                null,
+                0.0,
+                30000.0,
+                "Eucaliptus",
+                "TransPlata",
+                "STP 1234"
+        );
+        EventoViajeDTO evFlorida = new EventoViajeDTO(
+                "seed-florida",
+                LocalDateTime.now().minusHours(1),
+                TipoEvento.INCIDENTE,
+                -34.0956,
+                -56.2088,
+                1001L,
+                new IncidenteDTO("pinchadura.jpg", "Pinchadura de neumático"),
+                0.5,
+                30000.0,
+                "Eucaliptus",
+                "TransPlata",
+                "STP 1234"
+        );
+        EventoViajeDTO evMock = new EventoViajeDTO(
+                "mock-1",
+                LocalDateTime.now(),
+                TipoEvento.POSICION,
+                -33.74,
+                -56.24,
+                1001L,
+                new IncidenteDTO(null, "Mock Tracking GPS - En ruta tramo 1/9"),
+                0.0,
+                null,
+                null,
+                null,
+                "STP 1234"
+        );
+
+        // 1. Modo local: sin eventos Mock en BD debe avanzar hacia el norte desde Florida (sin volver a Montevideo ni saltar a Rivera)
+        when(eventosService.listarEventosPorGuia(1001L)).thenReturn(List.of(evInicio, evFlorida));
+        assertEquals(1, trackingMockService.emitirPasoGuiasActivas());
+
+        ArgumentCaptor<EventoViajeDTO> captorLocal = ArgumentCaptor.forClass(EventoViajeDTO.class);
+        verify(eventosService).guardarEvento(captorLocal.capture());
+        EventoViajeDTO primerPaso = captorLocal.getValue();
+        assertTrue(primerPaso.latitud() > -34.0956 && primerPaso.latitud() < -30.95,
+                "El primer paso debe ubicarse al norte de Florida sin saltar a Rivera, lat=" + primerPaso.latitud());
+        assertTrue(primerPaso.distanciaDesvioKm() <= 0.05,
+                "La polilínea recortada debe mantenerse sobre el corredor original, desvío=" + primerPaso.distanciaDesvioKm());
+        assertTrue(primerPaso.incidente().descripcion().contains("tramo 1/9"));
+
+        // 2. Nodo periférico remoto: reinicia antes de emitir cuando no hay eventos mock,
+        //    no reinicia en ticks siguientes mientras existan eventos mock, y vuelve a reiniciar si se limpia la BD.
+        TrackingClient trackingClientMock = mock(TrackingClient.class);
+        lenient().when(trackingClientMock.getEndpointUrl()).thenReturn("http://mock-tracking:8080");
+        when(trackingClientMock.reiniciar(anyList(), anyString())).thenReturn(
+                new TrackingClient.EstadoNodoTracking(false, 12, 0, 0L, 0L, "Reiniciado", List.of())
+        );
+        when(trackingClientMock.emitirPaso(eq(12), eq(0), anyList(), anyString(), anyString())).thenReturn(
+                new TrackingClient.EstadoNodoTracking(true, 12, 0, 1L, 0L, "Paso emitido", List.of(evMock))
+        );
+        when(eventosService.existeEvento("mock-1")).thenReturn(false);
+
+        when(eventosService.listarEventosPorGuia(1001L))
+                .thenReturn(List.of(evInicio, evFlorida))
+                .thenReturn(List.of(evInicio, evFlorida))
+                .thenReturn(List.of(evInicio, evFlorida, evMock))
+                .thenReturn(List.of(evInicio, evFlorida, evMock))
+                .thenReturn(List.of(evInicio, evFlorida))
+                .thenReturn(List.of(evInicio, evFlorida));
+
+        TrackingMockServiceImpl serviceConPeriferico = new TrackingMockServiceImpl(
+                em,
+                eventosService,
+                motorFiscalizacion,
+                new FaasTrackingClient(),
+                trackingClientMock
+        );
+        try {
+            serviceConPeriferico.emitirPasoGuiasActivas();
+            serviceConPeriferico.emitirPasoGuiasActivas();
+            serviceConPeriferico.emitirPasoGuiasActivas();
+
+            @SuppressWarnings("unchecked")
+            ArgumentCaptor<List<TrackingClient.GuiaActivaPayload>> payloadCaptor = ArgumentCaptor.forClass(List.class);
+            InOrder orden = inOrder(trackingClientMock);
+            orden.verify(trackingClientMock, calls(1)).reiniciar(payloadCaptor.capture(), anyString());
+            orden.verify(trackingClientMock, calls(2)).emitirPaso(eq(12), eq(0), anyList(), anyString(), anyString());
+            orden.verify(trackingClientMock, calls(1)).reiniciar(anyList(), anyString());
+            orden.verify(trackingClientMock, calls(1)).emitirPaso(eq(12), eq(0), anyList(), anyString(), anyString());
+            verify(trackingClientMock, times(2)).reiniciar(anyList(), anyString());
+
+            List<double[]> polilineaEnviada = RedVialUruguay.deserializarPolilinea(
+                    payloadCaptor.getValue().get(0).polilineaRuta());
+            assertFalse(polilineaEnviada.isEmpty());
+            assertTrue(polilineaEnviada.get(0)[0] > -34.0956 && polilineaEnviada.get(0)[0] < -30.95,
+                    "La polilínea enviada tras reiniciar debe comenzar adelante de Florida, lat=" + polilineaEnviada.get(0)[0]);
+        } finally {
+            serviceConPeriferico.cerrar();
         }
     }
 }

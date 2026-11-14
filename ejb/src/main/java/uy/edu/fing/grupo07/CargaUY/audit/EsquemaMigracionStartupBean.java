@@ -9,6 +9,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 
 import java.util.List;
+import java.util.TimeZone;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -23,6 +24,10 @@ import java.util.logging.Logger;
 @Singleton
 @Startup
 public class EsquemaMigracionStartupBean {
+
+    static {
+        TimeZone.setDefault(TimeZone.getTimeZone("America/Montevideo"));
+    }
 
     private static final Logger LOG = Logger.getLogger(EsquemaMigracionStartupBean.class.getName());
 
@@ -95,6 +100,7 @@ public class EsquemaMigracionStartupBean {
     @PostConstruct
     @TransactionAttribute(TransactionAttributeType.REQUIRED)
     public void migrarEsquema() {
+        TimeZone.setDefault(TimeZone.getTimeZone("America/Montevideo"));
         try {
             for (String sql : SENTENCIAS_DDL) {
                 em.createNativeQuery(sql).executeUpdate();

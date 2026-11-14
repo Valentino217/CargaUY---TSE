@@ -148,12 +148,12 @@ public class PosicionNoSqlRepository implements PosicionNoSqlRepositoryLocal {
                 matriculaEfectiva
         );
 
-        respaldoMemoria.put(uuid, normalizado);
-
         if (soloMemoria) {
+            respaldoMemoria.put(uuid, normalizado);
             return normalizado;
         }
 
+        boolean persistidoEnMongo = false;
         try {
             MongoCollection<Document> col = obtenerColeccion();
             if (col != null) {
@@ -167,6 +167,8 @@ public class PosicionNoSqlRepository implements PosicionNoSqlRepositoryLocal {
                             new Object[]{databaseName, collectionName, uuid, idGuiaEfectivo, normalizado.distanciaDesvioKm()}
                     );
                 }
+                persistidoEnMongo = true;
+                respaldoMemoria.remove(uuid);
             }
         } catch (Exception e) {
             LOGGER.log(
@@ -174,6 +176,10 @@ public class PosicionNoSqlRepository implements PosicionNoSqlRepositoryLocal {
                     "No se pudo persistir el evento de posición {0} en MongoDB ({1}); se mantiene en almacenamiento de respaldo.",
                     new Object[]{uuid, e.getMessage()}
             );
+        }
+
+        if (!persistidoEnMongo) {
+            respaldoMemoria.put(uuid, normalizado);
         }
 
         return normalizado;
@@ -226,7 +232,6 @@ public class PosicionNoSqlRepository implements PosicionNoSqlRepositoryLocal {
                         EventoViajeDTO dto = mapearDesdeDocumentoBson(doc);
                         if (dto != null && dto.uuid() != null) {
                             porUuid.put(dto.uuid(), dto);
-                            respaldoMemoria.putIfAbsent(dto.uuid(), dto);
                         }
                     }
                 }

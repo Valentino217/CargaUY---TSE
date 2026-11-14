@@ -712,15 +712,17 @@ fun MainScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        if (SesionMovil.estaAutenticado) {
+            Spacer(modifier = Modifier.height(20.dp))
 
-        Button(
-            onClick = { navController.navigate("viajes") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp)
-        ) {
-            Text("Mis Viajes", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            Button(
+                onClick = { navController.navigate("viajes") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+            ) {
+                Text("Mis Viajes", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            }
         }
 
         if (pendientesCount > 0) {

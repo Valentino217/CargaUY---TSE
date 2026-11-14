@@ -58,8 +58,16 @@ public final class RedVialUruguay implements Serializable {
             String nodoOrigenId,
             String nodoDestinoId,
             String nombreRuta,
-            double distanciaKm
+            double distanciaKm,
+            List<double[]> puntosIntermedios
     ) implements Serializable {
+        public TramoVial {
+            puntosIntermedios = puntosIntermedios == null ? List.of() : List.copyOf(puntosIntermedios);
+        }
+
+        public TramoVial(String nodoOrigenId, String nodoDestinoId, String nombreRuta, double distanciaKm) {
+            this(nodoOrigenId, nodoDestinoId, nombreRuta, distanciaKm, List.of());
+        }
     }
 
     /**
@@ -165,72 +173,127 @@ public final class RedVialUruguay implements Serializable {
         registrarNodo("chuy", "Chuy - Frontera Brasil (Rocha)", "Rocha", -33.6978, -53.4616, true,
                 "chuy");
 
-        // 2. Tramos Reales de Rutas Nacionales del MTOP
+        // 2. Tramos Reales de Rutas Nacionales del MTOP (con vértices intermedios sobre trazado vial)
         // Corredor Ruta 5 (Montevideo - Rivera)
-        registrarTramo("montevideo", "las_piedras", "Ruta 5");
-        registrarTramo("las_piedras", "canelones", "Ruta 5");
-        registrarTramo("canelones", "florida", "Ruta 5");
-        registrarTramo("florida", "durazno", "Ruta 5");
-        registrarTramo("durazno", "paso_de_los_toros", "Ruta 5");
-        registrarTramo("paso_de_los_toros", "tacuarembo", "Ruta 5");
-        registrarTramo("tacuarembo", "rivera", "Ruta 5");
+        registrarTramo("montevideo", "las_piedras", "Ruta 5",
+                new double[]{-34.8650, -56.2280}, new double[]{-34.8050, -56.2250}, new double[]{-34.7620, -56.2250});
+        registrarTramo("las_piedras", "canelones", "Ruta 5",
+                new double[]{-34.6880, -56.2230}, new double[]{-34.6250, -56.2450});
+        registrarTramo("canelones", "florida", "Ruta 5",
+                new double[]{-34.4360, -56.2648}, new double[]{-34.3092, -56.2460}, new double[]{-34.1890, -56.2280});
+        registrarTramo("florida", "durazno", "Ruta 5",
+                new double[]{-33.9400, -56.2650}, new double[]{-33.7333, -56.3333}, new double[]{-33.5350, -56.4120});
+        registrarTramo("durazno", "paso_de_los_toros", "Ruta 5",
+                new double[]{-33.1850, -56.5050}, new double[]{-33.0550, -56.4820}, new double[]{-32.9200, -56.4980});
+        registrarTramo("paso_de_los_toros", "tacuarembo", "Ruta 5",
+                new double[]{-32.6425, -56.4536}, new double[]{-32.4250, -56.3150},
+                new double[]{-32.2389, -56.1917}, new double[]{-32.0439, -56.1139}, new double[]{-31.8650, -56.0420});
+        registrarTramo("tacuarembo", "rivera", "Ruta 5",
+                new double[]{-31.5450, -55.9120}, new double[]{-31.3850, -55.8250},
+                new double[]{-31.1833, -55.7611}, new double[]{-31.0180, -55.6230});
 
         // Corredor Ruta 1 (Montevideo - Colonia)
-        registrarTramo("montevideo", "libertad", "Ruta 1");
-        registrarTramo("libertad", "rosario", "Ruta 1");
-        registrarTramo("rosario", "colonia", "Ruta 1");
+        registrarTramo("montevideo", "libertad", "Ruta 1",
+                new double[]{-34.8420, -56.2850}, new double[]{-34.7750, -56.3980}, new double[]{-34.6820, -56.5120});
+        registrarTramo("libertad", "rosario", "Ruta 1",
+                new double[]{-34.5320, -56.7850}, new double[]{-34.4150, -56.9800}, new double[]{-34.3380, -57.1850});
+        registrarTramo("rosario", "colonia", "Ruta 1",
+                new double[]{-34.3650, -57.5200}, new double[]{-34.4180, -57.6850});
 
         // Corredor Ruta 2 (Rosario - Fray Bentos)
-        registrarTramo("rosario", "cardona", "Ruta 2");
-        registrarTramo("cardona", "mercedes", "Ruta 2");
-        registrarTramo("mercedes", "fray_bentos", "Ruta 2");
+        registrarTramo("rosario", "cardona", "Ruta 2",
+                new double[]{-34.1450, -57.3750}, new double[]{-33.9850, -57.3950});
+        registrarTramo("cardona", "mercedes", "Ruta 2",
+                new double[]{-33.7450, -57.5850}, new double[]{-33.5950, -57.7250},
+                new double[]{-33.5086, -57.8008}, new double[]{-33.3850, -57.9150});
+        registrarTramo("mercedes", "fray_bentos", "Ruta 2",
+                new double[]{-33.1950, -58.0150}, new double[]{-33.1280, -58.0050}, new double[]{-33.1220, -58.1550});
 
         // Corredor Ruta 21 (Colonia - Nueva Palmira - Mercedes)
-        registrarTramo("colonia", "carmelo", "Ruta 21");
-        registrarTramo("carmelo", "nueva_palmira", "Ruta 21");
-        registrarTramo("nueva_palmira", "dolores", "Ruta 21");
-        registrarTramo("dolores", "mercedes", "Ruta 21");
+        registrarTramo("colonia", "carmelo", "Ruta 21",
+                new double[]{-34.3050, -57.9550}, new double[]{-34.1550, -58.0650});
+        registrarTramo("carmelo", "nueva_palmira", "Ruta 21",
+                new double[]{-33.9350, -58.3520});
+        registrarTramo("nueva_palmira", "dolores", "Ruta 21",
+                new double[]{-33.7350, -58.3250}, new double[]{-33.6250, -58.2550});
+        registrarTramo("dolores", "mercedes", "Ruta 21",
+                new double[]{-33.4250, -58.1450}, new double[]{-33.3350, -58.0850});
 
         // Corredor Ruta 3 (Libertad - San José - Trinidad - Young - Paysandú - Salto - Bella Unión)
-        registrarTramo("libertad", "san_jose", "Ruta 3");
-        registrarTramo("san_jose", "trinidad", "Ruta 3");
-        registrarTramo("trinidad", "young", "Ruta 3");
-        registrarTramo("young", "paysandu", "Ruta 3");
-        registrarTramo("paysandu", "salto", "Ruta 3");
-        registrarTramo("salto", "bella_union", "Ruta 3");
+        registrarTramo("libertad", "san_jose", "Ruta 3",
+                new double[]{-34.5150, -56.6620}, new double[]{-34.4220, -56.6950}, new double[]{-34.3550, -56.7145});
+        registrarTramo("san_jose", "trinidad", "Ruta 3",
+                new double[]{-34.1650, -56.7580}, new double[]{-33.9450, -56.8320}, new double[]{-33.7250, -56.8780});
+        registrarTramo("trinidad", "young", "Ruta 3",
+                new double[]{-33.2450, -57.0950}, new double[]{-33.0120, -57.2850}, new double[]{-32.8450, -57.4850});
+        registrarTramo("young", "paysandu", "Ruta 3",
+                new double[]{-32.5150, -57.7650}, new double[]{-32.3950, -57.9650});
+        registrarTramo("paysandu", "salto", "Ruta 3",
+                new double[]{-32.0450, -57.9250}, new double[]{-31.7850, -57.8850}, new double[]{-31.5650, -57.9150});
+        registrarTramo("salto", "bella_union", "Ruta 3",
+                new double[]{-31.0850, -57.7850}, new double[]{-30.7250, -57.6450}, new double[]{-30.4850, -57.6150});
 
         // Corredor Ruta 24 (Fray Bentos - Young - Paysandú)
-        registrarTramo("fray_bentos", "young", "Ruta 24");
-        registrarTramo("mercedes", "young", "Ruta 2 / Ruta 24");
+        registrarTramo("fray_bentos", "young", "Ruta 24",
+                new double[]{-33.1220, -58.1550}, new double[]{-33.1280, -58.0050},
+                new double[]{-32.9850, -57.8850}, new double[]{-32.8150, -57.7450});
+        registrarTramo("mercedes", "young", "Ruta 2 / Ruta 24",
+                new double[]{-33.1950, -58.0150}, new double[]{-33.1280, -58.0050},
+                new double[]{-32.9850, -57.8850}, new double[]{-32.8150, -57.7450});
 
         // Corredor Ruta 8 y 18 (Montevideo - Pando - Minas - Treinta y Tres - Melo - Río Branco)
-        registrarTramo("montevideo", "pando", "Ruta 8");
-        registrarTramo("pando", "minas", "Ruta 8");
-        registrarTramo("minas", "treinta_y_tres", "Ruta 8");
-        registrarTramo("treinta_y_tres", "melo", "Ruta 8");
-        registrarTramo("treinta_y_tres", "rio_branco", "Ruta 18");
-        registrarTramo("melo", "rio_branco", "Ruta 26");
+        registrarTramo("montevideo", "pando", "Ruta 8",
+                new double[]{-34.8350, -56.0750}, new double[]{-34.7750, -56.0050});
+        registrarTramo("pando", "minas", "Ruta 8",
+                new double[]{-34.6450, -55.6850}, new double[]{-34.5150, -55.4350});
+        registrarTramo("minas", "treinta_y_tres", "Ruta 8",
+                new double[]{-34.0850, -54.9650}, new double[]{-33.7650, -54.7250}, new double[]{-33.4850, -54.5450});
+        registrarTramo("treinta_y_tres", "melo", "Ruta 8",
+                new double[]{-32.9850, -54.3450}, new double[]{-32.6850, -54.2450});
+        registrarTramo("treinta_y_tres", "rio_branco", "Ruta 18",
+                new double[]{-33.0150, -54.0150}, new double[]{-32.7850, -53.6850});
+        registrarTramo("melo", "rio_branco", "Ruta 26",
+                new double[]{-32.4850, -53.7850});
 
         // Corredor Ruta 9 / Interbalnearia (Montevideo - Pando - Maldonado - Rocha - Chuy)
-        registrarTramo("pando", "maldonado", "Ruta Interbalnearia / Ruta 9");
-        registrarTramo("maldonado", "rocha", "Ruta 9");
-        registrarTramo("rocha", "chuy", "Ruta 9");
+        registrarTramo("pando", "maldonado", "Ruta Interbalnearia / Ruta 9",
+                new double[]{-34.7650, -55.6550}, new double[]{-34.7950, -55.3850}, new double[]{-34.8250, -55.1250});
+        registrarTramo("maldonado", "rocha", "Ruta 9",
+                new double[]{-34.7850, -54.9150}, new double[]{-34.6350, -54.6150});
+        registrarTramo("rocha", "chuy", "Ruta 9",
+                new double[]{-34.2550, -54.0550}, new double[]{-33.9950, -53.6850});
 
         // Corredores Transversales (Rutas 11, 12, 14, 26, 30, 31, 57, 60)
-        registrarTramo("san_jose", "canelones", "Ruta 11");
-        registrarTramo("canelones", "pando", "Ruta 11");
-        registrarTramo("cardona", "nueva_palmira", "Ruta 12");
-        registrarTramo("cardona", "trinidad", "Ruta 57");
-        registrarTramo("mercedes", "trinidad", "Ruta 14");
-        registrarTramo("trinidad", "durazno", "Ruta 14");
-        registrarTramo("florida", "minas", "Ruta 12");
-        registrarTramo("maldonado", "minas", "Ruta 60");
-        registrarTramo("rocha", "treinta_y_tres", "Ruta 15 / Ruta 19");
-        registrarTramo("paysandu", "tacuarembo", "Ruta 26");
-        registrarTramo("tacuarembo", "melo", "Ruta 26");
-        registrarTramo("salto", "tacuarembo", "Ruta 31");
-        registrarTramo("bella_union", "artigas", "Ruta 30");
-        registrarTramo("artigas", "rivera", "Ruta 30 / Ruta 5");
+        registrarTramo("san_jose", "canelones", "Ruta 11",
+                new double[]{-34.3550, -56.7145}, new double[]{-34.3830, -56.5440}, new double[]{-34.4530, -56.3910});
+        registrarTramo("canelones", "pando", "Ruta 11",
+                new double[]{-34.5850, -56.1150}, new double[]{-34.6450, -55.9850});
+        registrarTramo("cardona", "nueva_palmira", "Ruta 12",
+                new double[]{-33.8850, -57.6850}, new double[]{-33.9150, -58.0250});
+        registrarTramo("cardona", "trinidad", "Ruta 57",
+                new double[]{-33.7150, -57.1550});
+        registrarTramo("mercedes", "trinidad", "Ruta 14",
+                new double[]{-33.3850, -57.9150}, new double[]{-33.5086, -57.8008},
+                new double[]{-33.5180, -57.5250}, new double[]{-33.5250, -57.2250});
+        registrarTramo("trinidad", "durazno", "Ruta 14",
+                new double[]{-33.4550, -56.7150});
+        registrarTramo("florida", "minas", "Ruta 12",
+                new double[]{-34.2150, -55.8250}, new double[]{-34.2950, -55.5450});
+        registrarTramo("maldonado", "minas", "Ruta 60",
+                new double[]{-34.7250, -54.9950}, new double[]{-34.5650, -55.1250});
+        registrarTramo("rocha", "treinta_y_tres", "Ruta 15 / Ruta 19",
+                new double[]{-34.0450, -54.2250}, new double[]{-33.6250, -54.3450});
+        registrarTramo("paysandu", "tacuarembo", "Ruta 26",
+                new double[]{-32.2250, -57.3250}, new double[]{-32.0450, -56.7450}, new double[]{-31.8650, -56.2850});
+        registrarTramo("tacuarembo", "melo", "Ruta 26",
+                new double[]{-31.9250, -55.3850}, new double[]{-32.1450, -54.7850});
+        registrarTramo("salto", "tacuarembo", "Ruta 31",
+                new double[]{-31.4850, -57.1250}, new double[]{-31.5850, -56.4850});
+        registrarTramo("bella_union", "artigas", "Ruta 30",
+                new double[]{-30.4150, -57.1250}, new double[]{-30.4350, -56.7850});
+        registrarTramo("artigas", "rivera", "Ruta 30 / Ruta 5",
+                new double[]{-30.7250, -56.2150}, new double[]{-31.0250, -55.9250},
+                new double[]{-31.1833, -55.7611}, new double[]{-31.0180, -55.6230});
     }
 
     private static void registrarNodo(
@@ -253,7 +316,7 @@ public final class RedVialUruguay implements Serializable {
         }
     }
 
-    private static void registrarTramo(String idA, String idB, String nombreRuta) {
+    private static void registrarTramo(String idA, String idB, String nombreRuta, double[]... puntosIntermedios) {
         NodoVial a = NODOS_POR_ID.get(idA);
         NodoVial b = NODOS_POR_ID.get(idB);
         if (a == null || b == null) {
@@ -261,8 +324,17 @@ public final class RedVialUruguay implements Serializable {
         }
         // Factor de sinuosidad vial de 1.12 sobre distancia geodésica entre vértices consecutivos
         double distKm = Math.round(distanciaHaversineKm(a.latitud(), a.longitud(), b.latitud(), b.longitud()) * 112.0) / 100.0;
-        ADYACENCIA.get(idA).add(new TramoVial(idA, idB, nombreRuta, distKm));
-        ADYACENCIA.get(idB).add(new TramoVial(idB, idA, nombreRuta, distKm));
+        List<double[]> ida = new ArrayList<>(puntosIntermedios.length);
+        for (double[] p : puntosIntermedios) {
+            ida.add(new double[]{p[0], p[1]});
+        }
+        List<double[]> vuelta = new ArrayList<>(puntosIntermedios.length);
+        for (int i = puntosIntermedios.length - 1; i >= 0; i--) {
+            double[] p = puntosIntermedios[i];
+            vuelta.add(new double[]{p[0], p[1]});
+        }
+        ADYACENCIA.get(idA).add(new TramoVial(idA, idB, nombreRuta, distKm, ida));
+        ADYACENCIA.get(idB).add(new TramoVial(idB, idA, nombreRuta, distKm, vuelta));
     }
 
     public static List<String> listarNombresLocalidadesOficiales() {
@@ -354,6 +426,7 @@ public final class RedVialUruguay implements Serializable {
         Map<String, Double> dist = new HashMap<>();
         Map<String, String> previoNodo = new HashMap<>();
         Map<String, String> previoRuta = new HashMap<>();
+        Map<String, TramoVial> previoTramo = new HashMap<>();
         for (String id : NODOS_POR_ID.keySet()) {
             dist.put(id, Double.POSITIVE_INFINITY);
         }
@@ -377,6 +450,7 @@ public final class RedVialUruguay implements Serializable {
                     dist.put(tramo.nodoDestinoId(), nuevaDist);
                     previoNodo.put(tramo.nodoDestinoId(), actual.nodoId());
                     previoRuta.put(tramo.nodoDestinoId(), tramo.nombreRuta());
+                    previoTramo.put(tramo.nodoDestinoId(), tramo);
                     pq.add(new EstadoDijkstra(tramo.nodoDestinoId(), nuevaDist));
                 }
             }
@@ -400,8 +474,18 @@ public final class RedVialUruguay implements Serializable {
         rutasUsadas.addAll(rutasInvertidas);
 
         List<double[]> polilinea = new ArrayList<>(caminoNodos.size());
-        for (NodoVial n : caminoNodos) {
-            polilinea.add(n.coordenadas());
+        if (!caminoNodos.isEmpty()) {
+            polilinea.add(caminoNodos.get(0).coordenadas());
+            for (int i = 0; i < caminoNodos.size() - 1; i++) {
+                NodoVial siguiente = caminoNodos.get(i + 1);
+                TramoVial tramo = previoTramo.get(siguiente.id());
+                if (tramo != null && tramo.puntosIntermedios() != null) {
+                    for (double[] punto : tramo.puntosIntermedios()) {
+                        polilinea.add(new double[]{punto[0], punto[1]});
+                    }
+                }
+                polilinea.add(siguiente.coordenadas());
+            }
         }
 
         String corredor = rutasUsadas.isEmpty() ? "Red Vial Nacional" : String.join(" -> ", rutasUsadas);
@@ -595,6 +679,105 @@ public final class RedVialUruguay implements Serializable {
             recorrido.add(new double[]{lat, lon});
         }
         return recorrido;
+    }
+
+    /**
+     * Recorta la polilínea planificada para que comience un paso adelante de la última posición
+     * conocida (latP, lonP) sobre la ruta hacia el destino, evitando que rutas EN_CURSO que ya
+     * tienen eventos registrados retrocedan al origen al iniciar la simulación GPS.
+     */
+    public static List<double[]> recortarPolilineaDesdePosicion(
+            List<double[]> polilinea,
+            double latP,
+            double lonP,
+            int cantidadPasos
+    ) {
+        if (polilinea == null || polilinea.size() < 2) {
+            return polilinea;
+        }
+        int numSegmentos = polilinea.size() - 1;
+        double[] longitudes = new double[numSegmentos];
+        double longitudTotal = 0.0;
+        int mejorSeg = 0;
+        double mejorT = 0.0;
+        double minDistKm = Double.POSITIVE_INFINITY;
+
+        for (int i = 0; i < numSegmentos; i++) {
+            double[] a = polilinea.get(i);
+            double[] b = polilinea.get(i + 1);
+            longitudes[i] = distanciaHaversineKm(a[0], a[1], b[0], b[1]);
+            longitudTotal += longitudes[i];
+
+            double t = proyectarEnSegmento(latP, lonP, a, b);
+            double latC = a[0] + (t * (b[0] - a[0]));
+            double lonC = a[1] + (t * (b[1] - a[1]));
+            double dist = distanciaHaversineKm(latP, lonP, latC, lonC);
+            if (dist < minDistKm) {
+                minDistKm = dist;
+                mejorSeg = i;
+                mejorT = t;
+            }
+        }
+
+        if (longitudTotal < 1e-6 || minDistKm > 15.0) {
+            return polilinea;
+        }
+
+        double distanciaRecorridaKm = mejorT * longitudes[mejorSeg];
+        for (int i = 0; i < mejorSeg; i++) {
+            distanciaRecorridaKm += longitudes[i];
+        }
+        if (distanciaRecorridaKm <= 1.0) {
+            return polilinea;
+        }
+
+        double restanteKm = longitudTotal - distanciaRecorridaKm;
+        int pasos = Math.max(2, cantidadPasos);
+        double avancePrimerPasoKm = Math.min(restanteKm * 0.85, restanteKm / pasos);
+        double objetivoInicioKm = Math.min(longitudTotal, distanciaRecorridaKm + avancePrimerPasoKm);
+
+        double acumulado = 0.0;
+        int segInicio = numSegmentos - 1;
+        double fracInicio = 1.0;
+        for (int i = 0; i < numSegmentos; i++) {
+            double segLen = longitudes[i];
+            if (acumulado + segLen >= objetivoInicioKm || i == numSegmentos - 1) {
+                segInicio = i;
+                fracInicio = segLen > 1e-9 ? Math.max(0.0, Math.min(1.0, (objetivoInicioKm - acumulado) / segLen)) : 0.0;
+                break;
+            }
+            acumulado += segLen;
+        }
+
+        double[] a = polilinea.get(segInicio);
+        double[] b = polilinea.get(segInicio + 1);
+        double latInicio = Math.round((a[0] + fracInicio * (b[0] - a[0])) * 10000.0) / 10000.0;
+        double lonInicio = Math.round((a[1] + fracInicio * (b[1] - a[1])) * 10000.0) / 10000.0;
+
+        List<double[]> recortada = new ArrayList<>();
+        recortada.add(new double[]{latInicio, lonInicio});
+        for (int i = segInicio + 1; i <= numSegmentos; i++) {
+            double[] v = polilinea.get(i);
+            if (recortada.size() == 1 && distanciaHaversineKm(latInicio, lonInicio, v[0], v[1]) < 0.05 && i < numSegmentos) {
+                continue;
+            }
+            recortada.add(new double[]{v[0], v[1]});
+        }
+        return recortada;
+    }
+
+    private static double proyectarEnSegmento(double latP, double lonP, double[] a, double[] b) {
+        double latMediaRad = Math.toRadians((a[0] + b[0] + latP) / 3.0);
+        double escalaLon = Math.cos(latMediaRad);
+        double dx = (b[1] - a[1]) * escalaLon;
+        double dy = b[0] - a[0];
+        double normaCuadrada = (dx * dx) + (dy * dy);
+        if (normaCuadrada < 1e-12) {
+            return 0.0;
+        }
+        double px = (lonP - a[1]) * escalaLon;
+        double py = latP - a[0];
+        return Math.max(0.0, Math.min(1.0, ((px * dx) + (py * dy)) / normaCuadrada));
     }
 
     public static String serializarPolilinea(List<double[]> polilinea) {

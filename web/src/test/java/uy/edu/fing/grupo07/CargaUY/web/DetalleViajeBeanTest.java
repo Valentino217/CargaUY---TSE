@@ -4,12 +4,18 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+import java.io.StringReader;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import jakarta.json.Json;
+import jakarta.json.JsonArray;
+import jakarta.json.JsonObject;
+import jakarta.json.JsonReader;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -403,5 +409,105 @@ class DetalleViajeBeanTest {
         guia.setEstado(TipoEstado.FINALIZADO);
         bean.refrescarPorPollMock();
         assertFalse(bean.isPollAutomaticoActivo());
+    }
+
+    @Test
+    @DisplayName("getDatosMapaJson sin guía seleccionada retorna guiaSeleccionada false y arreglos vacíos")
+    void getDatosMapaJsonSinGuiaSeleccionadaRetornaFalse() {
+        bean.setGuiaActual(null);
+        bean.setEventos(Collections.emptyList());
+
+        assertEquals("", bean.getCorredorVialResuelto());
+
+        try (JsonReader reader = Json.createReader(new StringReader(bean.getDatosMapaJson()))) {
+            JsonObject json = reader.readObject();
+            assertFalse(json.getBoolean("guiaSeleccionada"));
+            assertTrue(json.getJsonArray("rutaPlanificada").isEmpty());
+            assertTrue(json.getJsonArray("eventos").isEmpty());
+        }
+    }
+
+    @Test
+    @DisplayName("getDatosMapaJson con guía y eventos serializa ruta MTOP y trayectoria GPS filtrando coordenadas nulas")
+    void getDatosMapaJsonConGuiaYEventosSerializaRutaYEventosFiltrandoCeros() {
+        GuiaDeViaje guia = new GuiaDeViaje();
+        guia.setId(1001L);
+        guia.setOrigen("Puerto de Montevideo");
+        guia.setDestino("Rivera (Frontera)");
+        guia.setEstado(TipoEstado.EN_CURSO);
+
+        Vehiculo vehiculo = new Vehiculo();
+        vehiculo.setMatricula("STP 1001");
+        guia.setVehiculo(vehiculo);
+
+        EventoViajeDTO sinGps = new EventoViajeDTO(
+                "u-0",
+                LocalDateTime.of(2026, 11, 13, 8, 0),
+                TipoEvento.INICIO,
+                0.0,
+                0.0,
+                1001L,
+                null
+        );
+        EventoViajeDTO evNormal = new EventoViajeDTO(
+                "u-1",
+                LocalDateTime.of(2026, 11, 13, 9, 15),
+                TipoEvento.POSICION,
+                -33.5200,
+                -56.2000,
+                1001L,
+                null,
+                1.25,
+                24500.0,
+                "Granos",
+                "AgroSur",
+                "STP 1001"
+        );
+        EventoViajeDTO evDesvio = new EventoViajeDTO(
+                "u-2",
+                LocalDateTime.of(2026, 11, 13, 10, 30),
+                TipoEvento.INCIDENTE,
+                -32.7500,
+                -55.1000,
+                1001L,
+                new IncidenteDTO(null, "Desvío detectado en ruta"),
+                18.4,
+                null,
+                null,
+                null,
+                "STP 1001"
+        );
+
+        bean.setGuiaActual(guia);
+        bean.setEventos(List.of(sinGps, evNormal, evDesvio));
+
+        String jsonStr = bean.getDatosMapaJson();
+        try (JsonReader reader = Json.createReader(new StringReader(jsonStr))) {
+            JsonObject json = reader.readObject();
+            assertTrue(json.getBoolean("guiaSeleccionada"));
+            assertEquals(1001L, json.getJsonNumber("guiaId").longValue());
+            assertEquals("STP 1001", json.getString("matricula"));
+            assertFalse(json.getString("corredorVial").isBlank());
+
+            JsonArray ruta = json.getJsonArray("rutaPlanificada");
+            assertTrue(ruta.size() >= 2, "Debe resolver la polilínea MTOP entre Montevideo y Rivera");
+
+            JsonArray eventos = json.getJsonArray("eventos");
+            assertEquals(2, eventos.size(), "El evento (0.0, 0.0) debe filtrarse del mapa");
+
+            JsonObject primero = eventos.getJsonObject(0);
+            assertEquals("u-1", primero.getString("uuid"));
+            assertFalse(primero.getBoolean("desviado"));
+            assertEquals(24500.0, primero.getJsonNumber("cantidadKg").doubleValue(), 0.01);
+            assertEquals("Granos", primero.getString("mercaderia"));
+            assertEquals("AgroSur", primero.getString("empresaCarga"));
+
+            JsonObject segundo = eventos.getJsonObject(1);
+            assertEquals("u-2", segundo.getString("uuid"));
+            assertEquals("INCIDENTE", segundo.getString("tipo"));
+            assertTrue(segundo.getBoolean("desviado"));
+            assertEquals(18.4, segundo.getJsonNumber("desvioKm").doubleValue(), 0.01);
+            assertEquals("Desvío detectado en ruta", segundo.getString("incidente"));
+        }
     }
 }

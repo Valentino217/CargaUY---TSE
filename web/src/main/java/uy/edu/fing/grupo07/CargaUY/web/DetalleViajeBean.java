@@ -7,6 +7,10 @@ import jakarta.faces.context.FacesContext;
 import jakarta.faces.view.ViewScoped;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
+import jakarta.json.Json;
+import jakarta.json.JsonArrayBuilder;
+import jakarta.json.JsonObjectBuilder;
+import jakarta.json.JsonValue;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.GuiaDeViaje;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEvento;
@@ -17,6 +21,7 @@ import uy.edu.fing.grupo07.CargaUY.dto.PesadaBalanzaDTO;
 import uy.edu.fing.grupo07.CargaUY.dto.ReportarIncidenteDTO;
 import uy.edu.fing.grupo07.CargaUY.fiscalizacion.MotorFiscalizacionLocal;
 import uy.edu.fing.grupo07.CargaUY.integration.FaasTrackingClient;
+import uy.edu.fing.grupo07.CargaUY.integration.RedVialUruguay;
 import uy.edu.fing.grupo07.CargaUY.jms.TrackingProducerLocal;
 import uy.edu.fing.grupo07.CargaUY.nosql.PosicionNoSqlRepositoryLocal;
 import uy.edu.fing.grupo07.CargaUY.service.GestionBalanzaServiceLocal;
@@ -1038,6 +1043,139 @@ public class DetalleViajeBean implements Serializable {
 
     public boolean isPollAutomaticoActivo() {
         return guiaActual != null && guiaActual.getEstado() == TipoEstado.EN_CURSO;
+    }
+
+    /**
+     * Resuelve el nombre del corredor vial de la guía actual, calculándolo desde la red MTOP si no fue persistido.
+     */
+    public String getCorredorVialResuelto() {
+        if (guiaActual == null) {
+            return "";
+        }
+        String corredor = guiaActual.getCorredorVial();
+        if (corredor != null && !corredor.isBlank()) {
+            return corredor;
+        }
+        if (guiaActual.getOrigen() != null && guiaActual.getDestino() != null) {
+            try {
+                RedVialUruguay.RutaPlanificada ruta = RedVialUruguay.calcularRuta(
+                        guiaActual.getOrigen(),
+                        guiaActual.getDestino()
+                );
+                if (ruta != null && ruta.corredorVial() != null && !ruta.corredorVial().isBlank()) {
+                    return ruta.corredorVial();
+                }
+            } catch (Exception ignored) {
+                LOGGER.log(Level.FINE, "No se pudo resolver corredor vial para {0} -> {1}",
+                        new Object[]{guiaActual.getOrigen(), guiaActual.getDestino()});
+            }
+        }
+        return "Corredor nacional MTOP";
+    }
+
+    /**
+     * Serializa en formato JSON la ruta planificada (MTOP) y la trayectoria GPS real reportada para el mapa Leaflet.
+     */
+    public String getDatosMapaJson() {
+        if (guiaActual == null) {
+            return Json.createObjectBuilder()
+                    .add("guiaSeleccionada", false)
+                    .add("rutaPlanificada", Json.createArrayBuilder())
+                    .add("eventos", Json.createArrayBuilder())
+                    .build()
+                    .toString();
+        }
+
+        List<double[]> puntosRuta = new ArrayList<>();
+        try {
+            List<double[]> deserializada = RedVialUruguay.deserializarPolilinea(guiaActual.getPolilineaRuta());
+            if (deserializada != null && !deserializada.isEmpty()) {
+                puntosRuta.addAll(deserializada);
+            }
+        } catch (Exception ignored) {
+            LOGGER.log(Level.FINE, "Polilínea almacenada inválida para guía {0}", guiaActual.getId());
+        }
+
+        if (guiaActual.getOrigen() != null && guiaActual.getDestino() != null) {
+            try {
+                RedVialUruguay.RutaPlanificada ruta = RedVialUruguay.calcularRuta(
+                        guiaActual.getOrigen(),
+                        guiaActual.getDestino()
+                );
+                if (ruta != null && ruta.polilinea() != null
+                        && (puntosRuta.isEmpty() || ruta.polilinea().size() > puntosRuta.size())) {
+                    puntosRuta.clear();
+                    puntosRuta.addAll(ruta.polilinea());
+                }
+            } catch (Exception ignored) {
+                LOGGER.log(Level.FINE, "No se pudo calcular polilínea MTOP para guía {0}", guiaActual.getId());
+            }
+        }
+
+        JsonArrayBuilder rutaArray = Json.createArrayBuilder();
+        for (double[] punto : puntosRuta) {
+            if (punto != null && punto.length >= 2 && Double.isFinite(punto[0]) && Double.isFinite(punto[1])) {
+                rutaArray.add(Json.createArrayBuilder().add(punto[0]).add(punto[1]));
+            }
+        }
+
+        JsonArrayBuilder eventosArray = Json.createArrayBuilder();
+        if (this.eventos != null) {
+            for (EventoViajeDTO ev : this.eventos) {
+                if (ev == null || !Double.isFinite(ev.latitud()) || !Double.isFinite(ev.longitud())) {
+                    continue;
+                }
+                if (Math.abs(ev.latitud()) <= 1e-6 && Math.abs(ev.longitud()) <= 1e-6) {
+                    continue;
+                }
+
+                JsonObjectBuilder evObj = Json.createObjectBuilder()
+                        .add("uuid", ev.uuid() != null ? ev.uuid() : "")
+                        .add("tiempo", ev.tiempo() != null ? ev.tiempo().toString() : "")
+                        .add("tipo", ev.tipo() != null ? ev.tipo().name() : TipoEvento.POSICION.name())
+                        .add("lat", ev.latitud())
+                        .add("lng", ev.longitud());
+
+                if (ev.distanciaDesvioKm() != null && Double.isFinite(ev.distanciaDesvioKm())) {
+                    double desvioRedondeado = Math.round(ev.distanciaDesvioKm() * 100.0) / 100.0;
+                    evObj.add("desvioKm", desvioRedondeado);
+                    evObj.add("desviado", ev.distanciaDesvioKm() > 5.0);
+                } else {
+                    evObj.add("desvioKm", JsonValue.NULL);
+                    evObj.add("desviado", false);
+                }
+
+                if (ev.cantidadKg() != null) {
+                    evObj.add("cantidadKg", ev.cantidadKg());
+                } else {
+                    evObj.add("cantidadKg", JsonValue.NULL);
+                }
+
+                evObj.add("mercaderia", ev.mercaderia() != null ? ev.mercaderia() : "");
+                evObj.add("empresaCarga", ev.empresaCarga() != null ? ev.empresaCarga() : "");
+
+                String incidenteDesc = (ev.incidente() != null && ev.incidente().descripcion() != null)
+                        ? ev.incidente().descripcion()
+                        : "";
+                evObj.add("incidente", incidenteDesc);
+
+                eventosArray.add(evObj);
+            }
+        }
+
+        return Json.createObjectBuilder()
+                .add("guiaSeleccionada", true)
+                .add("guiaId", guiaActual.getId() != null ? guiaActual.getId() : 0L)
+                .add("origen", guiaActual.getOrigen() != null ? guiaActual.getOrigen() : "")
+                .add("destino", guiaActual.getDestino() != null ? guiaActual.getDestino() : "")
+                .add("estado", guiaActual.getEstado() != null ? guiaActual.getEstado().name() : "")
+                .add("matricula", getVehiculoMatricula())
+                .add("chofer", getChoferNombreCompleto())
+                .add("corredorVial", getCorredorVialResuelto())
+                .add("rutaPlanificada", rutaArray)
+                .add("eventos", eventosArray)
+                .build()
+                .toString();
     }
 
     public boolean isNodoTrackingActivoSistema() {

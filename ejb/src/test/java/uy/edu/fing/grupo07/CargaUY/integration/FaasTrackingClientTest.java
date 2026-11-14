@@ -187,4 +187,59 @@ class FaasTrackingClientTest {
         List<double[]> puntos = RedVialUruguay.deserializarPolilinea(guia.getPolilineaRuta());
         assertTrue(puntos.size() >= 4);
     }
+
+    @Test
+    public void testCoordenadasSeedCoincidenConDesviosDeclaradosEnRedVial() {
+        RedVialUruguay.RutaPlanificada ruta1001 = RedVialUruguay.calcularRuta(
+                "Puerto de Montevideo", "Rivera (Frontera)");
+        assertNotNull(ruta1001);
+        double[][] muestras1001 = {
+                {-34.9011, -56.1645, 0.0},
+                {-34.7303, -56.2170, 0.2},
+                {-34.3092, -56.2416, 0.4},
+                {-34.0956, -56.2088, 0.5}
+        };
+        assertMuestrasSobreRuta(ruta1001.polilinea(), muestras1001);
+
+        RedVialUruguay.RutaPlanificada ruta1005 = RedVialUruguay.calcularRuta(
+                "Canelones", "Fray Bentos (UPM)");
+        assertNotNull(ruta1005);
+        double[][] muestras1005 = {
+                {-34.5228, -56.2778, 0.0},
+                {-34.3375, -56.7125, 0.1}
+        };
+        assertMuestrasSobreRuta(ruta1005.polilinea(), muestras1005);
+    }
+
+    @Test
+    @DisplayName("La polilínea planificada debe seguir vértices intermedios de rutas nacionales reales")
+    void testPolilineaDetalladaSigueCurvasVialesReales() {
+        RedVialUruguay.RutaPlanificada ruta1001 = RedVialUruguay.calcularRuta(
+                "Puerto de Montevideo", "Rivera (Frontera)");
+        assertNotNull(ruta1001);
+        assertEquals("Ruta 5", ruta1001.corredorVial());
+        assertTrue(ruta1001.polilinea().size() >= 20,
+                "Ruta 5 debe incluir vértices intermedios reales entre ciudades nodo");
+        assertTrue(RedVialUruguay.calcularDesvioPolilineaKm(-32.2389, -56.1917, ruta1001.polilinea()) < 1.0,
+                "La polilínea de Ruta 5 debe pasar cerca de Peralta");
+        assertTrue(RedVialUruguay.calcularDesvioPolilineaKm(-31.1833, -55.7611, ruta1001.polilinea()) < 1.0,
+                "La polilínea de Ruta 5 debe pasar cerca de Tranqueras / Empalme Ruta 30");
+
+        RedVialUruguay.RutaPlanificada ruta1005 = RedVialUruguay.calcularRuta(
+                "Canelones", "Fray Bentos (UPM)");
+        assertNotNull(ruta1005);
+        assertEquals("Ruta 11 -> Ruta 3 -> Ruta 14 -> Ruta 2", ruta1005.corredorVial());
+        assertTrue(ruta1005.polilinea().size() >= 14,
+                "Ruta Canelones -> Fray Bentos debe incluir curvas reales de Ruta 11, 3, 14 y 2");
+        assertTrue(RedVialUruguay.calcularDesvioPolilineaKm(-33.5086, -57.8008, ruta1005.polilinea()) < 1.0,
+                "La polilínea de Ruta 14 -> Ruta 2 debe pasar cerca del empalme en Palmitas");
+    }
+
+    private void assertMuestrasSobreRuta(List<double[]> polilinea, double[][] muestras) {
+        assertNotNull(polilinea);
+        for (double[] m : muestras) {
+            double desvioRealKm = RedVialUruguay.calcularDesvioPolilineaKm(m[0], m[1], polilinea);
+            assertTrue(Math.abs(desvioRealKm - m[2]) <= 0.05);
+        }
+    }
 }

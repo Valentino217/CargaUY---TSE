@@ -7,6 +7,13 @@
 
     <ui:define name="title">Monitoreo de Viajes</ui:define>
 
+    <ui:define name="head">
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+        <link rel="stylesheet" href="#{request.contextPath}/css/mapa-monitoreo.css?v=20261113" />
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <script src="#{request.contextPath}/js/mapa-monitoreo.js?v=20261113"></script>
+    </ui:define>
+
     <ui:define name="content">
         <div class="cuy-page-header">
             <div>
@@ -19,7 +26,7 @@
                     <p:commandButton value="Actualizar"
                                      icon="pi pi-refresh"
                                      actionListener="#{detalleViajeBean.consultarViaje}"
-                                     update=":monitoreoForm :growl"
+                                     update=":monitoreoForm:monitoreoResumenPanel :monitoreoForm:monitoreoEstadoPanel :monitoreoForm:monitoreoTablasPanel :monitoreoForm:pollMonitoreo :monitoreoForm:datosMapaJson :monitoreoForm:mapaScriptTrigger :growl"
                                      styleClass="ui-button-outlined ui-button-secondary" />
                 </h:form>
             </div>
@@ -43,43 +50,52 @@
                                            var="g"
                                            itemLabel="#{detalleViajeBean.obtenerEtiquetaGuia(g)}"
                                            itemValue="#{g.id}" />
-                            <p:ajax listener="#{detalleViajeBean.onGuiaChange}" update=":monitoreoForm :monitoreoTopForm" />
+                            <p:ajax listener="#{detalleViajeBean.onGuiaChange}"
+                                    update=":monitoreoForm:monitoreoResumenPanel :monitoreoForm:monitoreoEstadoPanel :monitoreoForm:monitoreoTablasPanel :monitoreoForm:pollMonitoreo :monitoreoForm:datosMapaJson :monitoreoForm:mapaScriptTrigger :monitoreoTopForm" />
                         </p:selectOneMenu>
                     </div>
 
-                    <h:panelGroup rendered="#{detalleViajeBean.guiaActual != null}">
-                        <div style="font-size: 0.78rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Ruta y Unidad Asignada</div>
-                        <div style="font-size: 1.05rem; font-weight: 700; color: #0f2942; margin-top: 0.25rem;">
-                            #{detalleViajeBean.guiaActual.origen} &#8594; #{detalleViajeBean.guiaActual.destino}
-                        </div>
-                        <h:panelGroup rendered="#{not empty detalleViajeBean.guiaActual.corredorVial}">
-                            <div style="font-size: 0.82rem; color: #1d4ed8; font-weight: 600; margin-top: 0.15rem;">
-                                <i class="pi pi-directions" style="font-size: 0.8rem;" /> Corredor Planificado: #{detalleViajeBean.guiaActual.corredorVial}
+                    <h:panelGroup id="monitoreoResumenPanel">
+                        <h:panelGroup rendered="#{detalleViajeBean.guiaActual != null}">
+                            <div style="font-size: 0.78rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Ruta y Unidad Asignada</div>
+                            <div style="font-size: 1.05rem; font-weight: 700; color: #0f2942; margin-top: 0.25rem;">
+                                #{detalleViajeBean.guiaActual.origen} &#8594; #{detalleViajeBean.guiaActual.destino}
+                            </div>
+                            <h:panelGroup rendered="#{not empty detalleViajeBean.corredorVialResuelto}">
+                                <div style="font-size: 0.82rem; color: #1d4ed8; font-weight: 600; margin-top: 0.15rem;">
+                                    <i class="pi pi-directions" style="font-size: 0.8rem;" /> Corredor Planificado: #{detalleViajeBean.corredorVialResuelto}
+                                </div>
+                            </h:panelGroup>
+                            <div style="font-size: 0.85rem; color: #475569; margin-top: 0.2rem;">
+                                Matrícula: <span class="cuy-mono">#{detalleViajeBean.vehiculoMatricula}</span> | Chofer: <strong>#{detalleViajeBean.choferNombreCompleto}</strong>
                             </div>
                         </h:panelGroup>
-                        <div style="font-size: 0.85rem; color: #475569; margin-top: 0.2rem;">
-                            Matrícula: <span class="cuy-mono">#{detalleViajeBean.vehiculoMatricula}</span> | Chofer: <strong>#{detalleViajeBean.choferNombreCompleto}</strong>
-                        </div>
                     </h:panelGroup>
 
-                    <h:panelGroup rendered="#{detalleViajeBean.guiaActual != null}" style="text-align: right;">
-                        <p:tag value="#{detalleViajeBean.guiaActual.estado}"
-                                severity="#{detalleViajeBean.guiaActual.estado.name() eq 'EN_CURSO' ? 'info' : (detalleViajeBean.guiaActual.estado.name() eq 'FINALIZADO' ? 'success' : 'warning')}"
-                                rounded="true" />
-                        <div style="font-size: 0.9rem; color: #0f2942; font-weight: 700; margin-top: 0.4rem;">
-                            Peso de la carga: <h:outputText value="#{detalleViajeBean.guiaActual.volumenCarga}"><f:convertNumber pattern="#,##0" /></h:outputText> kg
-                        </div>
+                    <h:panelGroup id="monitoreoEstadoPanel" style="text-align: right;">
+                        <h:panelGroup rendered="#{detalleViajeBean.guiaActual != null}">
+                            <p:tag value="#{detalleViajeBean.guiaActual.estado}"
+                                    severity="#{detalleViajeBean.guiaActual.estado.name() eq 'EN_CURSO' ? 'info' : (detalleViajeBean.guiaActual.estado.name() eq 'FINALIZADO' ? 'success' : 'warning')}"
+                                    rounded="true" />
+                            <div style="font-size: 0.9rem; color: #0f2942; font-weight: 700; margin-top: 0.4rem;">
+                                Peso de la carga: <h:outputText value="#{detalleViajeBean.guiaActual.volumenCarga}"><f:convertNumber pattern="#,##0" /></h:outputText> kg
+                            </div>
+                        </h:panelGroup>
                     </h:panelGroup>
                 </div>
             </div>
 
-            <p:poll interval="4"
+            <p:poll id="pollMonitoreo"
+                    interval="4"
                     listener="#{detalleViajeBean.refrescarPorPollMock}"
-                    update=":monitoreoForm"
+                    update=":monitoreoForm:monitoreoResumenPanel :monitoreoForm:monitoreoEstadoPanel :monitoreoForm:monitoreoTablasPanel :monitoreoForm:pollMonitoreo :monitoreoForm:datosMapaJson :monitoreoForm:mapaScriptTrigger"
                     stop="#{not detalleViajeBean.pollAutomaticoActivo}" />
 
+            <ui:include src="/WEB-INF/templates/mapaMonitoreo.xhtml" />
+
             <!-- Línea Temporal de Eventos de Ruta -->
-            <div class="cuy-card" style="margin-bottom: 0;">
+            <h:panelGroup id="monitoreoTablasPanel" layout="block">
+                <div class="cuy-card" style="margin-bottom: 0;">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.65rem;">
                     <h3 class="cuy-card-title" style="margin-bottom: 0;">
                         <i class="pi pi-compass" style="color: #2563eb;" />
@@ -146,7 +162,17 @@
                         </h:panelGroup>
                     </p:column>
                 </p:dataTable>
-            </div>
+                </div>
+            </h:panelGroup>
+
+            <h:outputText id="datosMapaJson" value="#{detalleViajeBean.datosMapaJson}" style="display:none;" />
+            <h:panelGroup id="mapaScriptTrigger">
+                <script type="text/javascript">
+                    if (window.actualizarMapaMonitoreo) {
+                        setTimeout(function() { window.actualizarMapaMonitoreo(false); }, 50);
+                    }
+                </script>
+            </h:panelGroup>
         </h:form>
 
         <!-- Modal Vista Previa de Foto de Incidente -->

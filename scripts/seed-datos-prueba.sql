@@ -3,6 +3,7 @@
 -- Idempotente y no destructivo (preserva vínculos, roles y cambios en runtime)
 -- ============================================================================
 SET client_encoding = 'UTF8';
+SET TIME ZONE 'America/Montevideo';
 
 BEGIN;
 
@@ -293,9 +294,9 @@ END $$;
 -- 8. Eventos de Viaje e Incidentes (con imagen Base64 de ejemplo para previsualización en clic)
 INSERT INTO eventos_viaje (id, uuid, tiempo, tipo, latitud, longitud, guia_id, distancia_desvio_km, cantidad_kg, mercaderia, empresa_carga) VALUES
 (2001, 'a1111111-1111-4111-8111-111111111001', CURRENT_TIMESTAMP - INTERVAL '4 hours', 'INICIO',    -34.9011, -56.1645, 1001, 0.0, 30000, 'Eucaliptus', 'TransPlata'),
-(2002, 'a1111111-1111-4111-8111-111111111002', CURRENT_TIMESTAMP - INTERVAL '3 hours', 'CARGA',     -34.8500, -56.1500, 1001, 0.2, 30000, 'Eucaliptus', 'TransPlata'),
-(2003, 'a1111111-1111-4111-8111-111111111003', CURRENT_TIMESTAMP - INTERVAL '2 hours', 'POSICION',  -33.8000, -56.0500, 1001, 0.4, 30000, 'Eucaliptus', 'TransPlata'),
-(2004, 'a1111111-1111-4111-8111-111111111004', CURRENT_TIMESTAMP - INTERVAL '1 hour',  'INCIDENTE', -33.2500, -56.0200, 1001, 0.5, 30000, 'Eucaliptus', 'TransPlata')
+(2002, 'a1111111-1111-4111-8111-111111111002', CURRENT_TIMESTAMP - INTERVAL '3 hours', 'CARGA',     -34.7303, -56.2170, 1001, 0.2, 30000, 'Eucaliptus', 'TransPlata'),
+(2003, 'a1111111-1111-4111-8111-111111111003', CURRENT_TIMESTAMP - INTERVAL '2 hours', 'POSICION',  -34.3092, -56.2416, 1001, 0.4, 30000, 'Eucaliptus', 'TransPlata'),
+(2004, 'a1111111-1111-4111-8111-111111111004', CURRENT_TIMESTAMP - INTERVAL '1 hour',  'INCIDENTE', -34.0956, -56.2088, 1001, 0.5, 30000, 'Eucaliptus', 'TransPlata')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO incidentes_ruta (id, descripcion, foto, evento_id) VALUES
@@ -309,15 +310,15 @@ ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO eventos_viaje (id, uuid, tiempo, tipo, latitud, longitud, guia_id, distancia_desvio_km, cantidad_kg, mercaderia, empresa_carga) VALUES
 (2007, 'a1111111-1111-4111-8111-111111111007', CURRENT_TIMESTAMP - INTERVAL '2 hours', 'INICIO',   -34.5228, -56.2778, 1005, 0.0, 30000, 'Trigo', 'LogiOriental'),
-(2008, 'a1111111-1111-4111-8111-111111111008', CURRENT_TIMESTAMP - INTERVAL '1 hour',  'POSICION', -34.1000, -56.8000, 1005, 0.1, 30000, 'Trigo', 'LogiOriental')
+(2008, 'a1111111-1111-4111-8111-111111111008', CURRENT_TIMESTAMP - INTERVAL '1 hour',  'POSICION', -34.3375, -56.7125, 1005, 0.1, 30000, 'Trigo', 'LogiOriental')
 ON CONFLICT (id) DO NOTHING;
 
 -- 9. Puntos de Tracking
 INSERT INTO puntos_tracking (id, latitud, longitud, tiempo, distancia_desvio_km, guia_id) VALUES
 (4001, -34.9011, -56.1645, CURRENT_TIMESTAMP - INTERVAL '4 hours', 0.0, 1001),
-(4002, -34.6000, -56.1000, CURRENT_TIMESTAMP - INTERVAL '3 hours', 0.2, 1001),
-(4003, -33.8000, -56.0500, CURRENT_TIMESTAMP - INTERVAL '2 hours', 0.4, 1001),
-(4004, -33.2500, -56.0200, CURRENT_TIMESTAMP - INTERVAL '1 hour',  0.5, 1001)
+(4002, -34.7303, -56.2170, CURRENT_TIMESTAMP - INTERVAL '3 hours', 0.2, 1001),
+(4003, -34.3092, -56.2416, CURRENT_TIMESTAMP - INTERVAL '2 hours', 0.4, 1001),
+(4004, -34.0956, -56.2088, CURRENT_TIMESTAMP - INTERVAL '1 hour',  0.5, 1001)
 ON CONFLICT (id) DO NOTHING;
 
 -- 10. Pesadas en Balanza

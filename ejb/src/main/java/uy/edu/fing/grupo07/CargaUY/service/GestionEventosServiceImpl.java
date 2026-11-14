@@ -601,8 +601,23 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
         }
 
         List<EventoViajeDTO> dtos = new ArrayList<>(porUuid.values());
-        dtos.sort(Comparator.comparing(ev -> ev.tiempo() != null ? ev.tiempo() : LocalDateTime.MIN));
+        dtos.sort(Comparator
+                .comparingInt((EventoViajeDTO ev) -> prioridadOrdenEvento(ev.tipo()))
+                .thenComparing(ev -> ev.tiempo() != null ? ev.tiempo() : LocalDateTime.MIN));
         return dtos;
+    }
+
+    /**
+     * Garantiza orden semántico INICIO -> eventos intermedios -> FIN antes de desempatar por marca temporal.
+     */
+    private static int prioridadOrdenEvento(uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEvento tipo) {
+        if (tipo == uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEvento.INICIO) {
+            return 0;
+        }
+        if (tipo == uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEvento.FIN) {
+            return 2;
+        }
+        return 1;
     }
 
     @Override

@@ -8,6 +8,7 @@ services:
       POSTGRES_DB: cargauy
       POSTGRES_USER: cargauy
       POSTGRES_PASSWORD: cargauy123
+      TZ: America/Montevideo
     ports:
       - "5432:5432"
     volumes:
@@ -85,6 +86,7 @@ services:
       ldap:
         condition: service_started
     environment:
+      TZ: America/Montevideo
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: cargauy
@@ -138,6 +140,7 @@ services:
         condition: service_healthy
     environment:
       PGPASSWORD: ${DB_PASSWORD:-cargauy123}
+      TZ: America/Montevideo
     volumes:
       - ./scripts:/scripts:ro
     entrypoint:
@@ -178,6 +181,7 @@ services:
         condition: service_completed_successfully
     environment:
       PGPASSWORD: ${DB_PASSWORD:-cargauy123}
+      TZ: America/Montevideo
     volumes:
       - ./scripts:/scripts:ro
     entrypoint:
