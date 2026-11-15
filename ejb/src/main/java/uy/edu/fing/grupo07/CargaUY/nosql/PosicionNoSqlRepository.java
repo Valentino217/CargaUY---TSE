@@ -339,6 +339,25 @@ public class PosicionNoSqlRepository implements PosicionNoSqlRepositoryLocal {
         return mongoUri + "/" + databaseName + "." + collectionName;
     }
 
+    @Override
+    public long limpiarAlmacenamiento() {
+        long eliminados = respaldoMemoria.size();
+        respaldoMemoria.clear();
+        if (!soloMemoria) {
+            try {
+                MongoCollection<Document> col = obtenerColeccion();
+                if (col != null) {
+                    eliminados += col.deleteMany(new Document()).getDeletedCount();
+                }
+            } catch (Exception e) {
+                LOGGER.log(Level.WARNING, "No se pudo limpiar la colección MongoDB {0}.{1}: {2}",
+                        new Object[]{databaseName, collectionName, e.getMessage()});
+            }
+        }
+        LOGGER.log(Level.INFO, "Almacenamiento de posiciones NoSQL limpiado ({0} registros eliminados).", eliminados);
+        return eliminados;
+    }
+
     private MongoCollection<Document> obtenerColeccion() {
         if (soloMemoria) {
             return null;

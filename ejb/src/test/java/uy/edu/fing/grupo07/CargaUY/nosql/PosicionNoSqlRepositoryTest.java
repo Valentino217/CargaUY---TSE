@@ -124,6 +124,12 @@ class PosicionNoSqlRepositoryTest {
         assertEquals(3L, repository.contarTotalEventos());
         assertTrue(repository.estaOperativo());
         assertEquals("mongodb://localhost:27017/cargauy_tracking.eventos_posicion", repository.obtenerDescriptorEndpoint());
+
+        long eliminados = repository.limpiarAlmacenamiento();
+        assertEquals(3L, eliminados);
+        assertEquals(0L, repository.contarTotalEventos());
+        assertFalse(repository.existeEvento("pos-1"));
+        assertTrue(repository.listarEventosPorGuia(5L).isEmpty());
     }
 
     @Test

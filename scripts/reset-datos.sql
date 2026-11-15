@@ -34,8 +34,22 @@ TRUNCATE TABLE
   usuarios,
   tipos_carga,
   rubros,
-  reglas_fiscalizacion
+  reglas_fiscalizacion,
+  certificados_digitales
 RESTART IDENTITY CASCADE;
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = 'nodos_perifericos'
+    ) THEN
+        UPDATE nodos_perifericos
+        SET habilitado = false,
+            watermark_id = 0,
+            watermark_inicializado = false;
+    END IF;
+END $$;
 
 CREATE OR REPLACE FUNCTION trg_prevent_audit_modification()
 RETURNS TRIGGER AS $$

@@ -89,10 +89,11 @@ Una vez que WildFly inicializó el esquema en PostgreSQL (`EsquemaMigracionStart
   ```bash
   docker compose run --rm seed
   ```
-- **Resetear y recargar datos limpios** (vacía MongoDB Time-Series y PostgreSQL reinstalando los triggers `append-only` de auditoría, y vuelve a ejecutar el seed sin reiniciar Docker):
-  ```bash
-  docker compose --profile reset run --rm reset
+- **Resetear y recargar datos limpios (todo en uno)** (detiene/reinicia el nodo periférico de Tracking, vacía MongoDB Time-Series `cargauy_tracking.eventos_posicion`, vacía PostgreSQL reinstalando los triggers `append-only` de auditoría, vuelve a ejecutar el seed y recarga la memoria de WildFly):
+  ```powershell
+  ./scripts/reset-datos.ps1
   ```
+  *(En Linux/macOS: `./scripts/reset-datos.sh` — o mediante Docker Compose: `docker compose --profile reset run --rm reset`, tras lo cual podés recargar WildFly si ya estaba levantado)*
 - **Sincronizar usuarios de prueba en OpenLDAP** (si el volumen `ldap_p1` quedó desfasado):
   ```powershell
   ./scripts/reparar-ldap.ps1
@@ -103,12 +104,12 @@ Una vez que WildFly inicializó el esquema en PostgreSQL (`EsquemaMigracionStart
 
 ## 5. Prueba de Performance y Saturación (Tracking)
 
-Con el stack levantado y los datos de prueba cargados (chofer CI `11223344` y guía `EN_CURSO` `1001`), el script autónomo de Python 3 (sin dependencias externas) valida 5 escenarios: carga normal sostenida, ráfaga pico `3x`, idempotencia por UUID (AC012), ordenamiento ante eventos desordenados (*out-of-order*) y consultas concurrentes bajo meta `p95 < 500 ms`:
+Con el stack levantado y los datos de prueba cargados (chofer CI `11223344` y guía `EN_CURSO` `1001`), el script autónomo de Python 3 (sin dependencias externas) valida de punta a punta la sonda FaaS en vivo, la carga nominal (`1x = 50 ev/s`), la ráfaga pico (`3x = 150 ev/s`) con consultas concurrentes de Frontoffice bajo meta `p95 < 500 ms`, idempotencia por UUID (AC012), ordenamiento ante eventos desordenados (*out-of-order*) y métricas de drenaje (`/api/ops/metrics`):
 
 ```bash
 python scripts/generador_carga_tracking.py --url http://localhost:8080/CargaUY-web
 ```
-Parámetros opcionales: `--camiones 15 --lote 5 --guia 1001 --ci 11223344 --admin-token <JWT_ADMIN>` (si se incluye `--admin-token`, consulta además `/api/ops/health` además de `/api/public/ready`).
+Parámetros opcionales: `--tasa 50 --duracion 4 --lote 5 --guia 1001 --ci 11223344 --modo-carga faas-mixto --escalones-estres 250,500` (el script se autentica automáticamente contra `/api/ops/metrics` y `/api/ops/health`, o podés pasar `--admin-token <JWT_ADMIN>`; ver análisis completo en [docs/CALCULOS-TRYHARD-PERFORMANCE-Y-CAPACIDAD.md](docs/CALCULOS-TRYHARD-PERFORMANCE-Y-CAPACIDAD.md)).
 
 ---
 

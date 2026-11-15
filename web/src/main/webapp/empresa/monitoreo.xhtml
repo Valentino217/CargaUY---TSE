@@ -128,8 +128,8 @@
                         </h:panelGroup>
                         <h:panelGroup rendered="#{ev.distanciaDesvioKm() != null}">
                             <div style="margin-top: 0.2rem;">
-                                <span style="font-size: 0.8rem; font-weight: 700; color: #{ev.distanciaDesvioKm() > 5.0 ? '#dc2626' : '#059669'};">
-                                    <i class="#{ev.distanciaDesvioKm() > 5.0 ? 'pi pi-exclamation-triangle' : 'pi pi-check-circle'}" /> Desvío: #{ev.distanciaDesvioKm()} km
+                                <span style="font-size: 0.8rem; font-weight: 700; color: #{ev.distanciaDesvioKm() > detalleViajeBean.toleranciaDesvioKm ? '#dc2626' : '#059669'};">
+                                    <i class="#{ev.distanciaDesvioKm() > detalleViajeBean.toleranciaDesvioKm ? 'pi pi-exclamation-triangle' : 'pi pi-check-circle'}" /> Desvío: #{ev.distanciaDesvioKm()} km
                                 </span>
                             </div>
                         </h:panelGroup>
@@ -142,8 +142,8 @@
                             </div>
                         </h:panelGroup>
                         <h:panelGroup rendered="#{ev.incidente() != null}">
-                            <div style="font-size: 0.8rem; color: #dc2626; font-weight: 600; margin-top: 0.2rem;">
-                                <i class="pi pi-exclamation-circle" /> #{ev.incidente().descripcion()}
+                            <div style="font-size: 0.8rem; color: #{detalleViajeBean.esEventoAlerta(ev) ? '#dc2626' : '#475569'}; font-weight: #{detalleViajeBean.esEventoAlerta(ev) ? '600' : '500'}; margin-top: 0.2rem;">
+                                <i class="#{detalleViajeBean.esEventoAlerta(ev) ? 'pi pi-exclamation-circle' : 'pi pi-info-circle'}" /> #{ev.incidente().descripcion()}
                             </div>
                             <h:panelGroup rendered="#{not empty ev.incidente().foto() and ev.incidente().foto().startsWith('data:image/')}">
                                 <div style="margin-top: 0.35rem;">

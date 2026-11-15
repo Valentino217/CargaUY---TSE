@@ -163,12 +163,27 @@ services:
     depends_on:
       mongodb:
         condition: service_started
+    environment:
+      MONGO_DB: ${MONGO_DB:-cargauy_tracking}
+      MONGO_COLLECTION: ${MONGO_COLLECTION:-eventos_posicion}
     entrypoint:
       - mongosh
-      - mongodb://mongodb:27017/cargauy_tracking
+      - mongodb://mongodb:27017/${MONGO_DB:-cargauy_tracking}
       - --quiet
       - --eval
-      - db.eventos_posicion.deleteMany({})
+      - |
+        const colName = process.env.MONGO_COLLECTION || 'eventos_posicion';
+        const res = db.getCollection(colName).deleteMany({});
+        db.getCollectionNames().forEach(name => {
+          if (!name.startsWith('system.') && name !== colName) {
+            db.getCollection(name).deleteMany({});
+          }
+        });
+        const legacyDb = db.getSiblingDB('cargauy');
+        if (legacyDb.getCollectionNames().includes('posiciones')) {
+          legacyDb.posiciones.deleteMany({});
+        }
+        print('MongoDB reset (' + db.getName() + '.' + colName + '): deleted=' + res.deletedCount + ', remaining=' + db.getCollection(colName).countDocuments());
 
   reset:
     profiles: ["reset"]
@@ -180,24 +195,17 @@ services:
       reset-mongo:
         condition: service_completed_successfully
     environment:
+      PGHOST: postgres
+      PGUSER: cargauy
+      PGDATABASE: cargauy
       PGPASSWORD: ${DB_PASSWORD:-cargauy123}
+      TRACKING_ENDPOINT: ${TRACKING_ENDPOINT:-https://cargauy-mock-tracking-latest.onrender.com}
       TZ: America/Montevideo
     volumes:
       - ./scripts:/scripts:ro
     entrypoint:
-      - psql
-      - -h
-      - postgres
-      - -U
-      - cargauy
-      - -d
-      - cargauy
-      - -v
-      - ON_ERROR_STOP=1
-      - -f
-      - /scripts/reset-datos.sql
-      - -f
-      - /scripts/seed-datos-prueba.sql
+      - sh
+      - /scripts/docker-reset.sh
 
 volumes:
   pgdata_p1:

@@ -51,4 +51,13 @@ public interface PosicionNoSqlRepositoryLocal {
      * Retorna el descriptor del endpoint/colección configurado en MongoDB.
      */
     String obtenerDescriptorEndpoint();
+
+    /**
+     * Elimina todos los eventos de posición tanto del respaldo en memoria como de la colección en MongoDB.
+     *
+     * @return cantidad de registros eliminados
+     */
+    default long limpiarAlmacenamiento() {
+        return 0L;
+    }
 }
