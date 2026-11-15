@@ -121,8 +121,8 @@ public class AdminUsuariosBean implements Serializable {
                     fechaNacForm,
                     ciForm.intValue(),
                     null,
-                    null,
-                    null,
+                    tipoForm == TipoUsuario.FUNCIONARIO ? nroFuncionarioForm : null,
+                    tipoForm == TipoUsuario.FUNCIONARIO ? departamentoForm : null,
                     tipoForm == TipoUsuario.AUTORIDAD ? cargoForm : null
             );
             if (modoEdicion) {

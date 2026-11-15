@@ -123,7 +123,7 @@ class PosicionNoSqlRepositoryTest {
         assertEquals(2L, repository.contarEventosPorGuia(5L));
         assertEquals(3L, repository.contarTotalEventos());
         assertTrue(repository.estaOperativo());
-        assertTrue(repository.obtenerDescriptorEndpoint().contains("Time-Series"));
+        assertEquals("mongodb://localhost:27017/cargauy_tracking.eventos_posicion", repository.obtenerDescriptorEndpoint());
     }
 
     @Test

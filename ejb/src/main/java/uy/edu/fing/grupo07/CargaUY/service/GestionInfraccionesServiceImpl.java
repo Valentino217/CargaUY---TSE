@@ -4,6 +4,7 @@ import jakarta.ejb.EJB;
 import jakarta.ejb.Schedule;
 import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.Descargo;
@@ -208,11 +209,7 @@ public class GestionInfraccionesServiceImpl implements GestionInfraccionesServic
             LOGGER.log(Level.WARNING, "Notificación automática omitida: no existe caso con ID {0}", idCaso);
             return null;
         }
-        try {
-            em.lock(infraccion, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
-        } catch (Exception ignored) {
-            // En tests unitarios con mocks que no soportan lock no interrumpir
-        }
+        em.lock(infraccion, LockModeType.PESSIMISTIC_WRITE);
         if (infraccion.getEstado() != EstadoInfraccion.DETECTADA) {
             return convertirAInfraccionDTO(infraccion);
         }
@@ -236,12 +233,7 @@ public class GestionInfraccionesServiceImpl implements GestionInfraccionesServic
     }
 
     private InfraccionDTO ejecutarNotificacion(int idCaso, String usuarioAuditado, String fundamentoAuditoria) {
-        Infraccion infraccion = buscarInfraccionPorId(idCaso);
-        try {
-            em.lock(infraccion, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
-        } catch (Exception ignored) {
-            // En tests unitarios con mocks que no soportan lock no interrumpir
-        }
+        Infraccion infraccion = buscarInfraccionConBloqueo(idCaso);
         validarEstadoActual(infraccion, EstadoInfraccion.DETECTADA);
 
         infraccion.setEstado(EstadoInfraccion.NOTIFICADA);
@@ -259,7 +251,7 @@ public class GestionInfraccionesServiceImpl implements GestionInfraccionesServic
     @Override
     public InfraccionDTO presentarDescargo(String token, int idCaso, DescargoRequestDTO descargoRequest) {
         validarDescargoRequest(descargoRequest);
-        Infraccion infraccion = buscarInfraccionPorId(idCaso);
+        Infraccion infraccion = buscarInfraccionConBloqueo(idCaso);
         Empresa empresa = infraccion.resolverEmpresa();
         Acceso actor;
         if (empresa != null) {
@@ -282,7 +274,7 @@ public class GestionInfraccionesServiceImpl implements GestionInfraccionesServic
     @Override
     public InfraccionDTO presentarDescargo(int idCaso, DescargoRequestDTO descargoRequest) {
         validarDescargoRequest(descargoRequest);
-        Infraccion infraccion = buscarInfraccionPorId(idCaso);
+        Infraccion infraccion = buscarInfraccionConBloqueo(idCaso);
         String nombreEmp = resolverNombreEmpresa(infraccion.resolverEmpresa());
         String actorEmpresa = nombreEmp != null
                 ? "Empresa Transportista (" + nombreEmp + ")"
@@ -300,10 +292,31 @@ public class GestionInfraccionesServiceImpl implements GestionInfraccionesServic
                 EstadoInfraccion.NOTIFICADA,
                 EstadoInfraccion.EN_DESCARGO
         );
+        if (infraccion.getEstado() == EstadoInfraccion.NOTIFICADA && infraccion.getDescargo() == null) {
+            LocalDate fechaNotif = resolverFechaNotificacion(infraccion);
+            LocalDate fechaLimite = LocalDate.now().minusDays(PLAZO_DESCARGO_DIAS);
+            if (fechaNotif != null && !fechaNotif.isAfter(fechaLimite)) {
+                aplicarResolucion(
+                        infraccion,
+                        EstadoInfraccion.CONFIRMADA,
+                        "SISTEMA (Cierre Automático)",
+                        "CONFIRMAR_INFRACCION",
+                        FUNDAMENTO_CIERRE_AUTOMATICO
+                );
+                throw new BusinessException(
+                        "El plazo de " + PLAZO_DESCARGO_DIAS
+                                + " días para presentar descargo ha vencido; la infracción fue confirmada automáticamente."
+                );
+            }
+        }
 
         String textoLimpio = descargoRequest.texto().trim();
         Descargo descargoActual = infraccion.getDescargo();
-        if (descargoActual != null) {
+        boolean esEdicion = descargoActual != null;
+        if (esEdicion && textoLimpio.equals(descargoActual.getDescargo())) {
+            return convertirAInfraccionDTO(infraccion);
+        }
+        if (esEdicion) {
             descargoActual.setDescargo(textoLimpio);
             descargoActual.setFecha(LocalDate.now());
         } else {
@@ -320,7 +333,7 @@ public class GestionInfraccionesServiceImpl implements GestionInfraccionesServic
                 infraccion,
                 EstadoInfraccion.EN_DESCARGO.name(),
                 usuarioAuditado,
-                "PRESENTAR_DESCARGO",
+                esEdicion ? "EDITAR_DESCARGO" : "PRESENTAR_DESCARGO",
                 textoLimpio
         );
         return convertirAInfraccionDTO(infraccion);
@@ -334,7 +347,7 @@ public class GestionInfraccionesServiceImpl implements GestionInfraccionesServic
 
     @Override
     public InfraccionDTO confirmarInfraccion(int idCaso, ResolucionInfraccionDTO resolucion) {
-        Infraccion infraccion = buscarInfraccionPorId(idCaso);
+        Infraccion infraccion = buscarInfraccionConBloqueo(idCaso);
         validarEstadoActual(
                 infraccion,
                 EstadoInfraccion.NOTIFICADA,
@@ -357,7 +370,7 @@ public class GestionInfraccionesServiceImpl implements GestionInfraccionesServic
 
     @Override
     public InfraccionDTO desestimarInfraccion(int idCaso, ResolucionInfraccionDTO resolucion) {
-        Infraccion infraccion = buscarInfraccionPorId(idCaso);
+        Infraccion infraccion = buscarInfraccionConBloqueo(idCaso);
         validarEstadoActual(
                 infraccion,
                 EstadoInfraccion.DETECTADA,
@@ -527,6 +540,15 @@ public class GestionInfraccionesServiceImpl implements GestionInfraccionesServic
         if (infraccion == null) {
             throw new BusinessException("No existe el caso de infracción con ID " + idCaso);
         }
+        return infraccion;
+    }
+
+    private Infraccion buscarInfraccionConBloqueo(int idCaso) {
+        Infraccion infraccion = em.find(Infraccion.class, idCaso);
+        if (infraccion == null) {
+            throw new BusinessException("No existe el caso de infracción con ID " + idCaso);
+        }
+        em.lock(infraccion, LockModeType.PESSIMISTIC_WRITE);
         return infraccion;
     }
 

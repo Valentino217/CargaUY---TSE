@@ -53,13 +53,15 @@ public class DashboardBean implements Serializable {
     @PostConstruct
     public void inicializar() {
         try {
+            String token = SesionActual.token();
             if (dashboardService != null) {
-                this.rubrosDisponibles = dashboardService.listarRubrosDisponibles();
-                this.tiposCargaDisponibles = dashboardService.listarTiposCargaDisponibles();
-                this.ubicacionesDisponibles = dashboardService.listarUbicacionesDisponibles();
+                this.rubrosDisponibles = dashboardService.listarRubrosDisponibles(token);
+                this.tiposCargaDisponibles = dashboardService.listarTiposCargaDisponibles(token);
+                this.ubicacionesDisponibles = dashboardService.listarUbicacionesDisponibles(token);
             }
             if (tieneFiltrosActivos()) {
                 this.resumen = dashboardService.obtenerResumenFiltrado(
+                        token,
                         filtroRubro,
                         filtroTipoCarga,
                         filtroUbicacion,
@@ -67,7 +69,7 @@ public class DashboardBean implements Serializable {
                         filtroFechaHasta
                 );
             } else {
-                this.resumen = dashboardService.obtenerResumen();
+                this.resumen = dashboardService.obtenerResumen(token);
             }
         } catch (Exception excepcion) {
             LOGGER.log(Level.SEVERE, "Error al obtener métricas del dashboard", excepcion);
@@ -76,8 +78,10 @@ public class DashboardBean implements Serializable {
 
     public void aplicarFiltros() {
         try {
+            String token = SesionActual.token();
             if (tieneFiltrosActivos()) {
                 this.resumen = dashboardService.obtenerResumenFiltrado(
+                        token,
                         filtroRubro,
                         filtroTipoCarga,
                         filtroUbicacion,
@@ -85,7 +89,7 @@ public class DashboardBean implements Serializable {
                         filtroFechaHasta
                 );
             } else {
-                this.resumen = dashboardService.obtenerResumen();
+                this.resumen = dashboardService.obtenerResumen(token);
             }
         } catch (Exception excepcion) {
             LOGGER.log(Level.SEVERE, "Error al aplicar filtros del dashboard", excepcion);

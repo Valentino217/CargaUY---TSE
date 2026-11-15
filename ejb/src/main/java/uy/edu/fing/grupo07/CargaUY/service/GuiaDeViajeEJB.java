@@ -55,6 +55,25 @@ public class GuiaDeViajeEJB implements GuiaDeViajeEJBLocal {
             +"where v.empresa=g.empresa and v.usuario.id=:id and v.responsable=true) order by g.fecha desc",GuiaDeViaje.class)
             .setParameter("id",actor.id()).getResultList());
     }
+    @Override
+    public List<GuiaDeViaje> listarParaOperador(String token) {
+        if (control == null) {
+            throw new IllegalStateException("ControlAcceso no disponible");
+        }
+        control.exigir(token,
+                uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.ADMINISTRADOR,
+                uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.FUNCIONARIO,
+                uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.AUTORIDAD);
+        return listarGuias();
+    }
+    @Override
+    public List<GuiaDeViaje> listarParaPortal(String token) {
+        if (control == null) {
+            throw new IllegalStateException("ControlAcceso no disponible");
+        }
+        control.exigir(token);
+        return listarGuias();
+    }
     public List<Usuario> listarChoferesPorEmpresa(String token,int empresa) {
         control.empresa(token,empresa,false); return listarChoferesPorEmpresa(empresa);
     }

@@ -24,7 +24,7 @@ public class ValidacionPermisosService {
     private EntityManager em;
 
     public ValidacionEmpresaDTO consultar(String token, int numero) {
-        control.exigir(token, TipoUsuario.CIUDADANO, TipoUsuario.ADMINISTRADOR);
+        control.exigir(token);
         if (numero <= 0) throw new ErrorAcceso(400, "Número de empresa inválido");
 
         Empresa empresa = em.find(Empresa.class, numero);

@@ -16,8 +16,11 @@ public interface GuiaDeViajeEJBLocal {
 	void modificar(GuiaDeViaje guia);
 	void eliminar(GuiaDeViaje guia);
 	GuiaDeViaje buscarGuias(Long id);
+	GuiaDeViaje buscarGuias(String token, Long id);
 	List<GuiaDeViaje> listarGuias();
 	List<GuiaDeViaje> listarParaActor(String token);
+	List<GuiaDeViaje> listarParaOperador(String token);
+	List<GuiaDeViaje> listarParaPortal(String token);
 	List<Usuario> listarChoferesPorEmpresa(int nroEmpresa);
 	List<GuiaDeViaje> listarGuiasPorCiudadano(int ciudadanoId);
 	void avanzarEstadoAdmin(String token, Long guiaId);

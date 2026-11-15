@@ -184,6 +184,10 @@ public class GestionPerfilesService {
             throw new ErrorNegocio("Empresa y ciudadano deben estar activos");
         if (e.getCiudadanos().stream().noneMatch(x -> x.getId()==c.getId())) e.getCiudadanos().add(c);
         if (c.getEmpresas().stream().noneMatch(x -> x.getNroEmpresa()==e.getNroEmpresa())) c.getEmpresas().add(e);
+        if (c.getRoles().contains(TipoUsuario.CIUDADANO_COMUN) && !c.getRoles().contains(CIUDADANO)) {
+            c.getRoles().remove(TipoUsuario.CIUDADANO_COMUN);
+            c.getRoles().add(CIUDADANO);
+        }
         if(!c.getRoles().contains(CIUDADANO)) throw new ErrorAcceso(409,"Falta rol CIUDADANO");
         VinculoEmpresa v=em.find(VinculoEmpresa.class,VinculoEmpresa.clave(numeroEmpresa,idCiudadano));
         if(v==null) { v=new VinculoEmpresa(c,e); em.persist(v); }
@@ -230,6 +234,8 @@ public class GestionPerfilesService {
         if (d.fechaNac() == null && !nacimientoPendiente
                 || d.fechaNac() != null && d.fechaNac().isAfter(LocalDate.now()))
             throw new ErrorNegocio("Fecha de nacimiento inválida");
+        if (d.fechaNac() != null && d.fechaNac().isAfter(LocalDate.now().minusYears(18)))
+            throw new ErrorNegocio("El usuario debe ser mayor de edad (18 años o más)");
         if (d.tipo() == TipoUsuario.FUNCIONARIO) {
             if (d.nroFuncionario() == null) throw new ErrorNegocio("Número obligatorio");
             Validaciones.positivo(d.nroFuncionario(), "Número de funcionario");

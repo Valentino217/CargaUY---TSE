@@ -26,7 +26,13 @@
                 <h:column><f:facet name="header">Coordenadas</f:facet><h:outputText value="#{evento.latitud()}, #{evento.longitud()}"/></h:column>
                 <h:column><f:facet name="header">UUID</f:facet><h:outputText value="#{evento.uuid()}"/></h:column>
                 <h:column><f:facet name="header">Incidente</f:facet>
-                    <ui:fragment rendered="#{evento.incidente() ne null}"><h:outputText value="#{evento.incidente().descripcion()}"/><br/><h:outputText value="#{evento.incidente().foto()}"/></ui:fragment>
+                    <ui:fragment rendered="#{evento.incidente() ne null}">
+                        <h:outputText value="#{evento.incidente().descripcion()}"/>
+                        <ui:fragment rendered="#{not empty evento.incidente().foto()}">
+                            <br/>
+                            <img src="data:image/jpeg;base64,#{evento.incidente().foto()}" alt="Evidencia fotográfica del incidente" style="max-width: 240px; max-height: 180px; border-radius: 6px; margin-top: 6px; border: 1px solid #cbd5e1;"/>
+                        </ui:fragment>
+                    </ui:fragment>
                 </h:column>
             </h:dataTable>
             <ui:fragment rendered="#{empty requestScope.eventos}"><p>No se registran eventos para esta guía.</p></ui:fragment>

@@ -41,7 +41,7 @@ class NacimientoPendienteFilterTest {
     }
     @Test void formularioDirectoConFechaCompletaVuelveAInicio()throws Exception {
         when(req.getServletPath()).thenReturn("/completar-perfil.xhtml");
-        filtro.doFilter(req,res,chain);verify(res).sendRedirect("/CargaUY-web/index.xhtml");
+        filtro.doFilter(req,res,chain);verify(res).sendRedirect("/CargaUY-web/portal/info-publica.xhtml");
     }
     @Test void visitanteSinSesionContinuaHaciaLosFiltrosDeAutenticacion()throws Exception {
         when(req.getServletPath()).thenReturn("/portal/inicio.xhtml");when(req.getSession(false)).thenReturn(null);

@@ -17,6 +17,7 @@ import os
 import unicodedata
 import urllib.error
 import urllib.request
+import uuid
 
 RADIO_TIERRA_KM = 6371.0088
 
@@ -490,28 +491,49 @@ def procesar_evento_individual(item):
 
 def verificar_autenticacion_faas(headers_norm):
     """
-    Si FAAS_SHARED_SECRET está configurado en el entorno de la Lambda, verifica
-    de forma constante (hmac.compare_digest) la cabecera X-FaaS-Secret.
+    Verifica de forma constante (hmac.compare_digest) la cabecera X-FaaS-Secret
+    contra FAAS_SHARED_SECRET. Falla cerrado salvo que FAAS_ALLOW_INSECURE_LOCAL=true
+    esté configurado explícitamente para desarrollo local.
     """
     secreto_esperado = os.environ.get("FAAS_SHARED_SECRET", "").strip()
     if not secreto_esperado:
-        return
+        if os.environ.get("FAAS_ALLOW_INSECURE_LOCAL", "").strip().lower() == "true":
+            return
+        raise PermissionError(
+            "Acceso denegado: FAAS_SHARED_SECRET no está configurado en el entorno."
+        )
     secreto_recibido = str(headers_norm.get("x-faas-secret", "")).strip()
     if not secreto_recibido or not hmac.compare_digest(secreto_esperado, secreto_recibido):
         raise PermissionError("Acceso denegado: cabecera X-FaaS-Secret inválida o ausente.")
 
 
-def enviar_webhook_backend(payload_procesado, auth_header=None):
+def enviar_webhook_backend(
+    payload_procesado,
+    auth_header=None,
+    correlation_id=None,
+    traceparent=None,
+):
     """
     Envía el webhook únicamente a la URL configurada en la variable de entorno
-    CARGAUY_BACKEND_URL (se eliminó backendCallbackUrl del body para prevenir SSRF).
+    CARGAUY_BACKEND_URL (se eliminó backendCallbackUrl del body para prevenir SSRF)
+    propagando X-Correlation-ID y traceparent.
     """
     url_destino = os.environ.get("CARGAUY_BACKEND_URL", "").strip()
     if not url_destino:
         return (False, "CARGAUY_BACKEND_URL no configurada (modo respuesta directa)")
 
+    corr = str(correlation_id).strip() if correlation_id and str(correlation_id).strip() else str(uuid.uuid4())
+    tp = (
+        str(traceparent).strip()
+        if traceparent and str(traceparent).strip()
+        else f"00-{uuid.uuid4().hex}-{uuid.uuid4().hex[:16]}-01"
+    )
     cuerpo_bytes = json.dumps(payload_procesado).encode("utf-8")
-    cabeceras = {"Content-Type": "application/json"}
+    cabeceras = {
+        "Content-Type": "application/json",
+        "X-Correlation-ID": corr,
+        "traceparent": tp,
+    }
 
     secreto = os.environ.get("FAAS_SHARED_SECRET", "").strip()
     if secreto:
@@ -534,10 +556,14 @@ def procesar_payload(cuerpo, headers=None):
     headers_norm = {str(k).lower(): v for k, v in (headers or {}).items()}
     verificar_autenticacion_faas(headers_norm)
     auth_header = headers_norm.get("authorization")
+    corr = headers_norm.get("x-correlation-id")
+    tp = headers_norm.get("traceparent")
 
     if isinstance(cuerpo, list):
         resultados = [procesar_evento_individual(ev) for ev in cuerpo]
-        enviado, detalle = enviar_webhook_backend(resultados, auth_header=auth_header)
+        enviado, detalle = enviar_webhook_backend(
+            resultados, auth_header=auth_header, correlation_id=corr, traceparent=tp
+        )
         for r in resultados:
             r["webhookEnviado"] = enviado
             r["webhookDetalle"] = detalle
@@ -546,14 +572,18 @@ def procesar_payload(cuerpo, headers=None):
     if isinstance(cuerpo, dict):
         if "eventos" in cuerpo and isinstance(cuerpo["eventos"], list):
             resultados = [procesar_evento_individual(ev) for ev in cuerpo["eventos"]]
-            enviado, detalle = enviar_webhook_backend(resultados, auth_header=auth_header)
+            enviado, detalle = enviar_webhook_backend(
+                resultados, auth_header=auth_header, correlation_id=corr, traceparent=tp
+            )
             for r in resultados:
                 r["webhookEnviado"] = enviado
                 r["webhookDetalle"] = detalle
             return resultados
 
         resultado = procesar_evento_individual(cuerpo)
-        enviado, detalle = enviar_webhook_backend(resultado, auth_header=auth_header)
+        enviado, detalle = enviar_webhook_backend(
+            resultado, auth_header=auth_header, correlation_id=corr, traceparent=tp
+        )
         resultado["webhookEnviado"] = enviado
         resultado["webhookDetalle"] = detalle
         return resultado
@@ -569,7 +599,7 @@ def lambda_handler(event, context):
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-FaaS-Secret",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-FaaS-Secret, X-Correlation-ID, traceparent",
     }
 
     metodo = (

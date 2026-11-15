@@ -210,6 +210,7 @@ object OidcAuthManager {
                 SesionMovil.token = respuesta.token
                 SesionMovil.cedulaAsociada = respuesta.ci
                 SesionMovil.nombreChofer = respuesta.nombre
+                SesionMovil.esSesionOidc = true
 
                 lastCompletedState = state
                 lastCompletedResponse = respuesta

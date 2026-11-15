@@ -188,54 +188,70 @@ ALIAS_LOCALIDADES_UY = {
 }
 
 TRAMOS_RUTAS_UY = [
-    ("montevideo", "las_piedras", "Ruta 5"),
-    ("las_piedras", "canelones", "Ruta 5"),
-    ("canelones", "florida", "Ruta 5"),
-    ("florida", "durazno", "Ruta 5"),
-    ("durazno", "paso_de_los_toros", "Ruta 5"),
-    ("paso_de_los_toros", "tacuarembo", "Ruta 5"),
-    ("tacuarembo", "rivera", "Ruta 5"),
-    ("montevideo", "libertad", "Ruta 1"),
-    ("libertad", "rosario", "Ruta 1"),
-    ("rosario", "colonia", "Ruta 1"),
-    ("rosario", "cardona", "Ruta 2"),
-    ("cardona", "mercedes", "Ruta 2"),
-    ("mercedes", "fray_bentos", "Ruta 2"),
-    ("colonia", "carmelo", "Ruta 21"),
-    ("carmelo", "nueva_palmira", "Ruta 21"),
-    ("nueva_palmira", "dolores", "Ruta 21"),
-    ("dolores", "mercedes", "Ruta 21"),
-    ("libertad", "san_jose", "Ruta 3"),
-    ("san_jose", "trinidad", "Ruta 3"),
-    ("trinidad", "young", "Ruta 3"),
-    ("young", "paysandu", "Ruta 3"),
-    ("paysandu", "salto", "Ruta 3"),
-    ("salto", "bella_union", "Ruta 3"),
-    ("fray_bentos", "young", "Ruta 24"),
-    ("mercedes", "young", "Ruta 2 / Ruta 24"),
-    ("montevideo", "pando", "Ruta 8"),
-    ("pando", "minas", "Ruta 8"),
-    ("minas", "treinta_y_tres", "Ruta 8"),
-    ("treinta_y_tres", "melo", "Ruta 8"),
-    ("treinta_y_tres", "rio_branco", "Ruta 18"),
-    ("melo", "rio_branco", "Ruta 26"),
-    ("pando", "maldonado", "Ruta Interbalnearia / Ruta 9"),
-    ("maldonado", "rocha", "Ruta 9"),
-    ("rocha", "chuy", "Ruta 9"),
-    ("san_jose", "canelones", "Ruta 11"),
-    ("canelones", "pando", "Ruta 11"),
-    ("cardona", "nueva_palmira", "Ruta 12"),
-    ("cardona", "trinidad", "Ruta 57"),
-    ("mercedes", "trinidad", "Ruta 14"),
-    ("trinidad", "durazno", "Ruta 14"),
-    ("florida", "minas", "Ruta 12"),
-    ("maldonado", "minas", "Ruta 60"),
-    ("rocha", "treinta_y_tres", "Ruta 15 / Ruta 19"),
-    ("paysandu", "tacuarembo", "Ruta 26"),
-    ("tacuarembo", "melo", "Ruta 26"),
-    ("salto", "tacuarembo", "Ruta 31"),
-    ("bella_union", "artigas", "Ruta 30"),
-    ("artigas", "rivera", "Ruta 30 / Ruta 5"),
+    ("montevideo", "las_piedras", "Ruta 5", ((-34.8650, -56.2280), (-34.8050, -56.2250), (-34.7620, -56.2250))),
+    ("las_piedras", "canelones", "Ruta 5", ((-34.6880, -56.2230), (-34.6250, -56.2450))),
+    ("canelones", "florida", "Ruta 5", ((-34.4360, -56.2648), (-34.3092, -56.2460), (-34.1890, -56.2280))),
+    ("florida", "durazno", "Ruta 5", ((-33.9400, -56.2650), (-33.7333, -56.3333), (-33.5350, -56.4120))),
+    ("durazno", "paso_de_los_toros", "Ruta 5", ((-33.1850, -56.5050), (-33.0550, -56.4820), (-32.9200, -56.4980))),
+    ("paso_de_los_toros", "tacuarembo", "Ruta 5", (
+        (-32.6425, -56.4536), (-32.4250, -56.3150), (-32.2389, -56.1917), (-32.0439, -56.1139), (-31.8650, -56.0420)
+    )),
+    ("tacuarembo", "rivera", "Ruta 5", (
+        (-31.5450, -55.9120), (-31.3850, -55.8250), (-31.1833, -55.7611), (-31.0180, -55.6230)
+    )),
+    ("montevideo", "libertad", "Ruta 1", ((-34.8420, -56.2850), (-34.7750, -56.3980), (-34.6820, -56.5120))),
+    ("libertad", "rosario", "Ruta 1", ((-34.5320, -56.7850), (-34.4150, -56.9800), (-34.3380, -57.1850))),
+    ("rosario", "colonia", "Ruta 1", ((-34.3650, -57.5200), (-34.4180, -57.6850))),
+    ("rosario", "cardona", "Ruta 2", ((-34.1450, -57.3750), (-33.9850, -57.3950))),
+    ("cardona", "mercedes", "Ruta 2", (
+        (-33.7450, -57.5850), (-33.5950, -57.7250), (-33.5086, -57.8008), (-33.3850, -57.9150)
+    )),
+    ("mercedes", "fray_bentos", "Ruta 2", ((-33.1950, -58.0150), (-33.1280, -58.0050), (-33.1220, -58.1550))),
+    ("colonia", "carmelo", "Ruta 21", ((-34.3050, -57.9550), (-34.1550, -58.0650))),
+    ("carmelo", "nueva_palmira", "Ruta 21", ((-33.9350, -58.3520),)),
+    ("nueva_palmira", "dolores", "Ruta 21", ((-33.7350, -58.3250), (-33.6250, -58.2550))),
+    ("dolores", "mercedes", "Ruta 21", ((-33.4250, -58.1450), (-33.3350, -58.0850))),
+    ("libertad", "san_jose", "Ruta 3", ((-34.5150, -56.6620), (-34.4220, -56.6950), (-34.3550, -56.7145))),
+    ("san_jose", "trinidad", "Ruta 3", ((-34.1650, -56.7580), (-33.9450, -56.8320), (-33.7250, -56.8780))),
+    ("trinidad", "young", "Ruta 3", ((-33.2450, -57.0950), (-33.0120, -57.2850), (-32.8450, -57.4850))),
+    ("young", "paysandu", "Ruta 3", ((-32.5150, -57.7650), (-32.3950, -57.9650))),
+    ("paysandu", "salto", "Ruta 3", ((-32.0450, -57.9250), (-31.7850, -57.8850), (-31.5650, -57.9150))),
+    ("salto", "bella_union", "Ruta 3", ((-31.0850, -57.7850), (-30.7250, -57.6450), (-30.4850, -57.6150))),
+    ("fray_bentos", "young", "Ruta 24", (
+        (-33.1220, -58.1550), (-33.1280, -58.0050), (-32.9850, -57.8850), (-32.8150, -57.7450)
+    )),
+    ("mercedes", "young", "Ruta 2 / Ruta 24", (
+        (-33.1950, -58.0150), (-33.1280, -58.0050), (-32.9850, -57.8850), (-32.8150, -57.7450)
+    )),
+    ("montevideo", "pando", "Ruta 8", ((-34.8350, -56.0750), (-34.7750, -56.0050))),
+    ("pando", "minas", "Ruta 8", ((-34.6450, -55.6850), (-34.5150, -55.4350))),
+    ("minas", "treinta_y_tres", "Ruta 8", ((-34.0850, -54.9650), (-33.7650, -54.7250), (-33.4850, -54.5450))),
+    ("treinta_y_tres", "melo", "Ruta 8", ((-32.9850, -54.3450), (-32.6850, -54.2450))),
+    ("treinta_y_tres", "rio_branco", "Ruta 18", ((-33.0150, -54.0150), (-32.7850, -53.6850))),
+    ("melo", "rio_branco", "Ruta 26", ((-32.4850, -53.7850),)),
+    ("pando", "maldonado", "Ruta Interbalnearia / Ruta 9", (
+        (-34.7650, -55.6550), (-34.7950, -55.3850), (-34.8250, -55.1250)
+    )),
+    ("maldonado", "rocha", "Ruta 9", ((-34.7850, -54.9150), (-34.6350, -54.6150))),
+    ("rocha", "chuy", "Ruta 9", ((-34.2550, -54.0550), (-33.9950, -53.6850))),
+    ("san_jose", "canelones", "Ruta 11", ((-34.3550, -56.7145), (-34.3830, -56.5440), (-34.4530, -56.3910))),
+    ("canelones", "pando", "Ruta 11", ((-34.5850, -56.1150), (-34.6450, -55.9850))),
+    ("cardona", "nueva_palmira", "Ruta 12", ((-33.8850, -57.6850), (-33.9150, -58.0250))),
+    ("cardona", "trinidad", "Ruta 57", ((-33.7150, -57.1550),)),
+    ("mercedes", "trinidad", "Ruta 14", (
+        (-33.3850, -57.9150), (-33.5086, -57.8008), (-33.5180, -57.5250), (-33.5250, -57.2250)
+    )),
+    ("trinidad", "durazno", "Ruta 14", ((-33.4550, -56.7150),)),
+    ("florida", "minas", "Ruta 12", ((-34.2150, -55.8250), (-34.2950, -55.5450))),
+    ("maldonado", "minas", "Ruta 60", ((-34.7250, -54.9950), (-34.5650, -55.1250))),
+    ("rocha", "treinta_y_tres", "Ruta 15 / Ruta 19", ((-34.0450, -54.2250), (-33.6250, -54.3450))),
+    ("paysandu", "tacuarembo", "Ruta 26", ((-32.2250, -57.3250), (-32.0450, -56.7450), (-31.8650, -56.2850))),
+    ("tacuarembo", "melo", "Ruta 26", ((-31.9250, -55.3850), (-32.1450, -54.7850))),
+    ("salto", "tacuarembo", "Ruta 31", ((-31.4850, -57.1250), (-31.5850, -56.4850))),
+    ("bella_union", "artigas", "Ruta 30", ((-30.4150, -57.1250), (-30.4350, -56.7850))),
+    ("artigas", "rivera", "Ruta 30 / Ruta 5", (
+        (-30.7250, -56.2150), (-31.0250, -55.9250), (-31.1833, -55.7611), (-31.0180, -55.6230)
+    )),
 ]
 
 
@@ -279,12 +295,14 @@ def distancia_haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -
 
 def _construir_grafo():
     adyacencia = {nodo: [] for nodo in NODOS_VIALES_UY}
-    for orig, dest, ruta in TRAMOS_RUTAS_UY:
+    for tramo in TRAMOS_RUTAS_UY:
+        orig, dest, ruta = tramo[0], tramo[1], tramo[2]
+        intermedios = list(tramo[3]) if len(tramo) > 3 and tramo[3] else []
         lat_o, lon_o = NODOS_VIALES_UY[orig]
         lat_d, lon_d = NODOS_VIALES_UY[dest]
         dist_km = round(distancia_haversine_km(lat_o, lon_o, lat_d, lon_d) * 1.12, 2)
-        adyacencia[orig].append((dest, ruta, dist_km))
-        adyacencia[dest].append((orig, ruta, dist_km))
+        adyacencia[orig].append((dest, ruta, dist_km, intermedios))
+        adyacencia[dest].append((orig, ruta, dist_km, list(reversed(intermedios))))
     return adyacencia
 
 
@@ -325,6 +343,7 @@ def calcular_ruta_uruguay(nombre_origen: str | None, nombre_destino: str | None)
     dist = {k: float("inf") for k in NODOS_VIALES_UY}
     prev_nodo = {}
     prev_ruta = {}
+    prev_intermedios = {}
     dist[orig] = 0.0
     pq = [(0.0, orig)]
 
@@ -334,31 +353,41 @@ def calcular_ruta_uruguay(nombre_origen: str | None, nombre_destino: str | None)
             continue
         if u == dest:
             break
-        for v, ruta, peso in GRAFO_VIAL_UY.get(u, []):
+        for v, ruta, peso, intermedios in GRAFO_VIAL_UY.get(u, []):
             nd = d_act + peso
             if nd < dist[v]:
                 dist[v] = nd
                 prev_nodo[v] = u
                 prev_ruta[v] = ruta
+                prev_intermedios[v] = intermedios
                 heapq.heappush(pq, (nd, v))
 
-    camino = []
+    camino_ids = []
     rutas_inv = []
     cursor = dest
     while cursor is not None:
-        camino.append(NODOS_VIALES_UY[cursor])
+        camino_ids.append(cursor)
         r = prev_ruta.get(cursor)
         if r:
             rutas_inv.append(r)
         cursor = prev_nodo.get(cursor)
-    camino.reverse()
+    camino_ids.reverse()
     rutas_inv.reverse()
     rutas_unicas = []
     for r in rutas_inv:
         if r not in rutas_unicas:
             rutas_unicas.append(r)
 
-    polilinea = [[pt[0], pt[1]] for pt in camino]
+    polilinea = []
+    if camino_ids:
+        pt0 = NODOS_VIALES_UY[camino_ids[0]]
+        polilinea.append([pt0[0], pt0[1]])
+        for i in range(len(camino_ids) - 1):
+            siguiente = camino_ids[i + 1]
+            for lat_p, lon_p in prev_intermedios.get(siguiente, []):
+                polilinea.append([lat_p, lon_p])
+            pt = NODOS_VIALES_UY[siguiente]
+            polilinea.append([pt[0], pt[1]])
     corredor = " -> ".join(rutas_unicas) if rutas_unicas else "Red Vial Nacional"
     return corredor, polilinea
 

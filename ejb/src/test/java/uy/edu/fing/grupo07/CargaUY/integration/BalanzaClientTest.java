@@ -172,4 +172,38 @@ class BalanzaClientTest {
         verify(httpClient, times(2)).send(captor.capture(), any());
         assertEquals("/health", captor.getValue().uri().getPath());
     }
+
+    @Test
+    @DisplayName("Debe soportar endpoints dinámicos por nodo (/pesadas?fecha=... y /health en endpoint personalizado)")
+    void testMetodosEnEndpointDinamico() throws IOException, InterruptedException {
+        String jsonPorFecha = """
+                {
+                    "pesadas": [
+                        {
+                            "idPesada": 99,
+                            "fecha": "2026-11-12",
+                            "hora": "10:30:00",
+                            "pesoRegistrado": 44500,
+                            "matricula": "LOR 2024",
+                            "peaje": "Peaje Queguay"
+                        }
+                    ]
+                }
+                """;
+        when(httpResponse.statusCode()).thenReturn(200);
+        when(httpResponse.body()).thenReturn(jsonPorFecha);
+        doReturn(httpResponse).when(httpClient).send(any(HttpRequest.class), any());
+
+        var lista = client.consultarPesadasPorFechaEnEndpoint("http://balanza-r3:9090/pesadas/", LocalDate.of(2026, 11, 12), "corr-dyn");
+        assertEquals(1, lista.size());
+        assertEquals(99, lista.get(0).idPesada());
+        assertEquals(44500, lista.get(0).pesoRegistrado());
+
+        assertTrue(client.verificarSaludEnEndpoint("http://balanza-r3:9090/"));
+
+        ArgumentCaptor<HttpRequest> captor = ArgumentCaptor.forClass(HttpRequest.class);
+        verify(httpClient, times(2)).send(captor.capture(), any());
+        assertEquals("http://balanza-r3:9090/pesadas?fecha=2026-11-12", captor.getAllValues().get(0).uri().toString());
+        assertEquals("http://balanza-r3:9090/health", captor.getAllValues().get(1).uri().toString());
+    }
 }

@@ -11,4 +11,8 @@ public interface PNCEJBLocal {
 	void modificar(PNC pnc);
 	void eliminar(PNC pnc);
 	List<PNC> listarPNCs();
+	void crear(String token, PNC pnc);
+	void modificar(String token, PNC pnc);
+	void eliminar(String token, PNC pnc);
+	List<PNC> listarPNCs(String token);
 }

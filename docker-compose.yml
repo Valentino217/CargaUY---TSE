@@ -10,6 +10,7 @@ services:
       POSTGRES_DB: cargauy
       POSTGRES_USER: cargauy
       POSTGRES_PASSWORD: cargauy123
+      TZ: America/Montevideo
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
@@ -75,6 +76,7 @@ services:
 
 
     environment:
+      TZ: America/Montevideo
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: cargauy
@@ -94,6 +96,9 @@ services:
       TRACKING_TIMEOUT_SECONDS: ${TRACKING_TIMEOUT_SECONDS:-15}
       MONGO_URI: mongodb://mongodb:27017
       LDAP_URL: ldap://ldap:1389
+      LDAP_ROOT_PASSWORD: ${LDAP_ROOT_PASSWORD:-vQUP53jJO6NyQD9V8hXK7oFQ-NmPjD9VS1NLoC-INkE}
+      FAAS_TRACKING_URL: ${FAAS_TRACKING_URL:-}
+      FAAS_SHARED_SECRET: ${FAAS_SHARED_SECRET:-}
       GUB_PROVEEDOR: iduruguay
       GUB_ISSUER: https://auth-testing.iduruguay.gub.uy/oidc/v1
       GUB_JWKS: https://auth-testing.iduruguay.gub.uy/oidc/v2/jwks
@@ -109,6 +114,74 @@ services:
     ports:
       - "8080:8080"
       - "127.0.0.1:9990:9990"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET /CargaUY-web/api/public/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && head -n 1 <&3 | grep -q '200'"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
+
+  seed:
+    image: postgres:16-alpine
+    restart: "no"
+    depends_on:
+      - postgres
+      - wildfly
+    environment:
+      PGPASSWORD: ${DB_PASSWORD:-cargauy123}
+      TZ: America/Montevideo
+    volumes:
+      - ./scripts:/scripts:ro
+    entrypoint:
+      - psql
+      - -h
+      - postgres
+      - -U
+      - cargauy
+      - -d
+      - cargauy
+      - -v
+      - ON_ERROR_STOP=1
+      - -f
+      - /scripts/seed-datos-prueba.sql
+
+  reset-mongo:
+    image: mongo:7
+    restart: "no"
+    depends_on:
+      - mongodb
+    entrypoint:
+      - mongosh
+      - mongodb://mongodb:27017/cargauy_tracking
+      - --quiet
+      - --eval
+      - db.eventos_posicion.deleteMany({})
+
+  reset:
+    image: postgres:16-alpine
+    restart: "no"
+    depends_on:
+      - postgres
+      - reset-mongo
+    environment:
+      PGPASSWORD: ${DB_PASSWORD:-cargauy123}
+      TZ: America/Montevideo
+    volumes:
+      - ./scripts:/scripts:ro
+    entrypoint:
+      - psql
+      - -h
+      - postgres
+      - -U
+      - cargauy
+      - -d
+      - cargauy
+      - -v
+      - ON_ERROR_STOP=1
+      - -f
+      - /scripts/reset-datos.sql
+      - -f
+      - /scripts/seed-datos-prueba.sql
 
   nginx:
     image: nginx:1.27-alpine

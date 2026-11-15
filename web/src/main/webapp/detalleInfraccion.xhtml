@@ -2,7 +2,8 @@
 <html xmlns="http://www.w3.org/1999/xhtml"
       xmlns:h="jakarta.faces.html"
       xmlns:f="jakarta.faces.core"
-      xmlns:p="primefaces">
+      xmlns:p="primefaces"
+      xmlns:ui="jakarta.faces.facelets">
 
 <f:metadata>
     <f:viewParam name="idCaso" value="#{detalleInfraccionBean.idCaso}"/>
@@ -221,26 +222,10 @@
                             </span>
                         </p>
                     </h:panelGroup>
-                    <p:dataTable var="aud"
-                                 value="#{detalleInfraccionBean.infraccion.historialAuditoria()}"
-                                 emptyMessage="Sin eventos de auditoría registrados."
-                                 stripedRows="true">
-                        <p:column headerText="Acción" style="width: 190px;">
-                            <code>#{aud.accion()}</code>
-                        </p:column>
-                        <p:column headerText="Estado" style="width: 130px;">
-                            <h:outputText value="#{aud.resolucion()}"/>
-                        </p:column>
-                        <p:column headerText="Autor" style="width: 200px;">
-                            <h:outputText value="#{aud.usuario()}"/>
-                        </p:column>
-                        <p:column headerText="Timestamp" style="width: 190px;">
-                            <code><h:outputText value="#{aud.timestampCreacion()}"><f:convertDateTime type="localDateTime" pattern="dd/MM/yyyy HH:mm" /></h:outputText></code>
-                        </p:column>
-                        <p:column headerText="Fundamento / Detalle">
-                            <h:outputText value="#{aud.fundamento()}"/>
-                        </p:column>
-                    </p:dataTable>
+                    <ui:include src="/WEB-INF/templates/historialAuditoria.xhtml">
+                        <ui:param name="caso" value="#{detalleInfraccionBean.infraccion}" />
+                        <ui:param name="soloTabla" value="#{true}" />
+                    </ui:include>
                 </p:panel>
 
             </h:panelGroup>

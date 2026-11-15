@@ -183,7 +183,7 @@
                     <p:commandButton value="Guardar Empresa"
                                      icon="pi pi-check"
                                      actionListener="#{funcionarioEmpresasBean.guardarEmpresa}"
-                                     update=":empresasFuncForm:tablaEmpresas :kpiEmpGroup"
+                                     update=":empresasFuncForm:tablaEmpresas :kpiEmpGroup :growl"
                                      oncomplete="if (!args.validationFailed) PF('dlgEmpresaWidget').hide()"
                                      styleClass="ui-button-primary"
                                      style="width: auto;" />

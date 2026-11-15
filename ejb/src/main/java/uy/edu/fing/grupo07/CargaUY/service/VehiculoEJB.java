@@ -24,6 +24,33 @@ public class VehiculoEJB implements VehiculoEJBLocal {
             +"and exists(select x from VinculoEmpresa x where x.empresa=v.empresa and x.usuario.id=:id and x.responsable=true) "
             +"order by v.matricula",Vehiculo.class).setParameter("id",actor.id()).getResultList());
     }
+    @Override
+    public List<Vehiculo> listarParaFiscalizacion(String token) {
+        if (control == null) {
+            throw new IllegalStateException("ControlAcceso no disponible");
+        }
+        control.exigir(token,
+                uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.ADMINISTRADOR,
+                uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.FUNCIONARIO,
+                uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.AUTORIDAD);
+        return listarVehiculos();
+    }
+    @Override
+    public List<Empresa> listarEmpresasParaPortal(String token) {
+        if (control == null) {
+            throw new IllegalStateException("ControlAcceso no disponible");
+        }
+        control.exigir(token);
+        return listarEmpresas();
+    }
+    @Override
+    public List<Vehiculo> listarParaPortal(String token) {
+        if (control == null) {
+            throw new IllegalStateException("ControlAcceso no disponible");
+        }
+        control.exigir(token);
+        return listarVehiculos();
+    }
     public List<Empresa> listarEmpresasParaActor(String token) {
         var actor=control.exigir(token);
         if(actor.tiene(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.ADMINISTRADOR)) return listarEmpresas();
@@ -62,7 +89,8 @@ public class VehiculoEJB implements VehiculoEJBLocal {
             throw new IllegalStateException("No se puede editar el vehículo " + v.getMatricula() + " porque tiene una guía de viaje EN_CURSO.");
         }
         control.empresa(token,anterior.getEmpresa().getNroEmpresa(),true);
-        control.empresa(token,v.getEmpresa().getNroEmpresa(),true); modificar(v);
+        control.empresa(token,v.getEmpresa().getNroEmpresa(),true);
+        modificar(v);
     }
     public void eliminar(String token,Vehiculo v) {
         Vehiculo actual=buscar(token,v.getMatricula());
@@ -278,6 +306,33 @@ public class VehiculoEJB implements VehiculoEJBLocal {
         }
         Vehiculo v = buscar(matricula);
         return v != null && v.verificarHabilitacionVigenteEn(fechaReferencia);
+    }
+
+    @Override
+    public boolean tieneGuiaEnCurso(String token, String matricula) {
+        if (control == null) {
+            throw new IllegalStateException("ControlAcceso no disponible");
+        }
+        Vehiculo v = buscar(token, matricula);
+        return v != null && tieneGuiaEnCurso(v.getMatricula());
+    }
+
+    @Override
+    public boolean estaAptoParaOperar(String token, String matricula) {
+        if (control == null) {
+            throw new IllegalStateException("ControlAcceso no disponible");
+        }
+        Vehiculo v = buscar(token, matricula);
+        return v != null && v.verificarHabilitacionVigenteEn(java.time.LocalDate.now());
+    }
+
+    @Override
+    public boolean estaAptoParaOperarEnPortal(String token, String matricula) {
+        if (control == null) {
+            throw new IllegalStateException("ControlAcceso no disponible");
+        }
+        control.exigir(token);
+        return estaAptoParaOperar(matricula);
     }
 
     VehiculoEJB(EntityManager em) {

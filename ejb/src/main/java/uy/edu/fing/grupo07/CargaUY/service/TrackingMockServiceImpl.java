@@ -1,12 +1,15 @@
 package uy.edu.fing.grupo07.CargaUY.service;
 
+import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.annotation.Resource;
 import jakarta.ejb.ConcurrencyManagement;
 import jakarta.ejb.ConcurrencyManagementType;
+import jakarta.ejb.DependsOn;
 import jakarta.ejb.EJB;
 import jakarta.ejb.SessionContext;
 import jakarta.ejb.Singleton;
+import jakarta.ejb.Startup;
 import jakarta.ejb.TransactionAttribute;
 import jakarta.ejb.TransactionAttributeType;
 import jakarta.inject.Inject;
@@ -18,10 +21,13 @@ import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEvento;
 import uy.edu.fing.grupo07.CargaUY.dto.EventoViajeDTO;
 import uy.edu.fing.grupo07.CargaUY.dto.IncidenteDTO;
+import uy.edu.fing.grupo07.CargaUY.dto.ModoNodoPeriferico;
+import uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario;
 import uy.edu.fing.grupo07.CargaUY.fiscalizacion.MotorFiscalizacionLocal;
 import uy.edu.fing.grupo07.CargaUY.integration.FaasTrackingClient;
 import uy.edu.fing.grupo07.CargaUY.integration.RedVialUruguay;
 import uy.edu.fing.grupo07.CargaUY.integration.TrackingClient;
+import uy.edu.fing.grupo07.CargaUY.security.ControlAcceso;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -51,6 +57,8 @@ import java.util.logging.Logger;
  * </p>
  */
 @Singleton
+@Startup
+@DependsOn("GestionNodosPerifericosServiceImpl")
 @ConcurrencyManagement(ConcurrencyManagementType.BEAN)
 public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
 
@@ -70,6 +78,70 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
     @EJB
     private MotorFiscalizacionLocal motorFiscalizacion;
 
+    @EJB
+    private GestionNodosPerifericosServiceLocal nodosPerifericosService;
+
+    @EJB
+    private GestionBalanzaServiceLocal balanzaService;
+
+    @EJB
+    private ControlAcceso control;
+
+    private void verificarControl() {
+        if (control == null) {
+            throw new IllegalStateException("ControlAcceso no disponible");
+        }
+    }
+
+    @Override
+    public void iniciar(String token, int eventosPorMinuto, int cantidadDesvios) {
+        verificarControl();
+        control.exigir(token, TipoUsuario.ADMINISTRADOR, TipoUsuario.FUNCIONARIO);
+        iniciar(eventosPorMinuto, cantidadDesvios);
+    }
+
+    @Override
+    public void detener(String token) {
+        verificarControl();
+        control.exigir(token, TipoUsuario.ADMINISTRADOR, TipoUsuario.FUNCIONARIO);
+        detener();
+    }
+
+    @Override
+    public void reiniciarRecorridos(String token) {
+        verificarControl();
+        control.exigir(token, TipoUsuario.ADMINISTRADOR, TipoUsuario.FUNCIONARIO);
+        reiniciarRecorridos();
+    }
+
+    @Override
+    public int emitirPasoGuiasActivas(String token) {
+        verificarControl();
+        control.exigir(token, TipoUsuario.ADMINISTRADOR, TipoUsuario.FUNCIONARIO);
+        return emitirPasoGuiasActivas();
+    }
+
+    @Override
+    public void sincronizarConNodoPeriferico(String token) {
+        verificarControl();
+        control.exigir(token, TipoUsuario.ADMINISTRADOR, TipoUsuario.FUNCIONARIO, TipoUsuario.AUTORIDAD);
+        sincronizarConNodoPeriferico();
+    }
+
+    @Override
+    public void notificarCambioConfiguracionNodos(String token) {
+        verificarControl();
+        control.admin(token);
+        notificarCambioConfiguracionNodos();
+    }
+
+    @Override
+    public void notificarCambioBalanza(String token) {
+        verificarControl();
+        control.admin(token);
+        notificarCambioBalanza();
+    }
+
     @Inject
     private FaasTrackingClient faasTrackingClient;
 
@@ -81,16 +153,22 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
 
     private ScheduledExecutorService scheduler;
     private ScheduledFuture<?> tareaProgramada;
+    private ScheduledFuture<?> tareaAutomatica;
 
     private volatile boolean activo = false;
     private volatile boolean nodoPerifericoOnline = false;
     private volatile int eventosPorMinuto = EVENTOS_POR_MINUTO_DEFECTO;
     private volatile int cantidadDesvios = 0;
     private volatile String ultimoResultado = "Mock detenido.";
+    private final AtomicLong contadorTicksAutomaticos = new AtomicLong(0L);
+    private final java.util.concurrent.atomic.AtomicBoolean ejecutandoCicloAuto = new java.util.concurrent.atomic.AtomicBoolean(false);
+    private final java.util.concurrent.atomic.AtomicBoolean ejecutandoBalanzaAuto = new java.util.concurrent.atomic.AtomicBoolean(false);
 
     private final AtomicLong totalEventosEmitidos = new AtomicLong();
     private final AtomicLong totalDesviosEmitidos = new AtomicLong();
     private final Map<Long, EstadoSimulacionGuia> estadosPorGuia = new ConcurrentHashMap<>();
+    private final Set<Long> guiasInicializadasEnSesion = ConcurrentHashMap.newKeySet();
+    private final Set<Long> guiasConMockPersistido = ConcurrentHashMap.newKeySet();
 
     public record PasoSimulado(
             double latitud,
@@ -159,6 +237,35 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
         this.motorFiscalizacion = motorFiscalizacion;
         this.faasTrackingClient = faasTrackingClient;
         this.trackingClient = trackingClient;
+    }
+
+    void setNodosPerifericosService(GestionNodosPerifericosServiceLocal nodosPerifericosService) {
+        this.nodosPerifericosService = nodosPerifericosService;
+    }
+
+    void setBalanzaService(GestionBalanzaServiceLocal balanzaService) {
+        this.balanzaService = balanzaService;
+    }
+
+    @PostConstruct
+    public void iniciarSchedulerAutomatico() {
+        if (nodosPerifericosService != null) {
+            this.activo = nodosPerifericosService.isTrackingHabilitado();
+            this.cantidadDesvios = (nodosPerifericosService.getModoTrackingActivo() == ModoNodoPeriferico.CON_DESVIO) ? 1 : 0;
+            if (trackingClient != null) {
+                trackingClient.setEndpointUrl(nodosPerifericosService.getEndpointTrackingActivo());
+            }
+        }
+        asegurarScheduler();
+        if (tareaAutomatica == null || tareaAutomatica.isCancelled()) {
+            tareaAutomatica = scheduler.scheduleWithFixedDelay(
+                    this::ejecutarCicloAutomaticoSeguro,
+                    6000L,
+                    5000L,
+                    TimeUnit.MILLISECONDS
+            );
+        }
+        LOGGER.info("Coordinador periódico automático de Nodos Periféricos (Tracking + Balanzas) inicializado.");
     }
 
     @Override
@@ -265,6 +372,8 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
     @TransactionAttribute(TransactionAttributeType.REQUIRED)
     public synchronized void reiniciarRecorridos() {
         estadosPorGuia.clear();
+        guiasInicializadasEnSesion.clear();
+        guiasConMockPersistido.clear();
         if (trackingClient != null) {
             try {
                 List<GuiaDeViaje> guiasActivas = buscarGuiasEnCurso();
@@ -287,30 +396,141 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
     public synchronized void cerrar() {
         this.activo = false;
         cancelarTareaActual();
+        if (tareaAutomatica != null) {
+            tareaAutomatica.cancel(false);
+            tareaAutomatica = null;
+        }
         if (scheduler != null) {
             scheduler.shutdownNow();
             scheduler = null;
         }
     }
 
+    @Override
+    public void notificarCambioConfiguracionNodos() {
+        sincronizarConfigTrackingConRegistro();
+        if (scheduler != null && !scheduler.isShutdown()
+                && (nodosPerifericosService == null || nodosPerifericosService.isTrackingHabilitado())) {
+            scheduler.execute(this::ejecutarPasoTrackingSeguro);
+        }
+    }
+
+    @Override
+    public void notificarCambioBalanza() {
+        if (balanzaService == null) {
+            return;
+        }
+        if (scheduler != null && !scheduler.isShutdown()) {
+            scheduler.execute(this::sondearBalanzasSeguro);
+        } else {
+            sondearBalanzasSeguro();
+        }
+    }
+
+    void ejecutarCicloAutomaticoSeguro() {
+        if (!ejecutandoCicloAuto.compareAndSet(false, true)) {
+            return;
+        }
+        try {
+            long tick = contadorTicksAutomaticos.incrementAndGet();
+            sincronizarConfigTrackingConRegistro();
+
+            // Emitir paso de tracking cada 15 segundos (ticks 1, 4, 7, ... sobre ciclo base de 5s)
+            if ((tick - 1L) % 3L == 0L
+                    && (nodosPerifericosService == null || nodosPerifericosService.isTrackingHabilitado())) {
+                ejecutarPasoTrackingSeguro();
+            }
+
+            // Sondear balanzas habilitadas cada 10 segundos (ticks 1, 3, 5, ...)
+            if ((tick - 1L) % 2L == 0L) {
+                sondearBalanzasSeguro();
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Error durante el ciclo automático de Nodos Periféricos: {0}", e.getMessage());
+        } finally {
+            ejecutandoCicloAuto.set(false);
+        }
+    }
+
+    private void ejecutarPasoTrackingSeguro() {
+        try {
+            TrackingMockServiceLocal proxy = sessionContext != null
+                    ? sessionContext.getBusinessObject(TrackingMockServiceLocal.class)
+                    : this;
+            if (nodosPerifericosService == null || nodosPerifericosService.isTrackingHabilitado()) {
+                proxy.ejecutarPasoAutomaticoTracking();
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Error durante la emisión automática de Tracking: {0}", e.getMessage());
+        }
+    }
+
+    private void sondearBalanzasSeguro() {
+        if (balanzaService == null || !ejecutandoBalanzaAuto.compareAndSet(false, true)) {
+            return;
+        }
+        try {
+            balanzaService.sondearBalanzasPeriodico();
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Error durante el sondeo automático de Balanzas: {0}", e.getMessage());
+        } finally {
+            ejecutandoBalanzaAuto.set(false);
+        }
+    }
+
+    private void sincronizarConfigTrackingConRegistro() {
+        if (nodosPerifericosService == null) {
+            return;
+        }
+
+        String endpointConfig = nodosPerifericosService.getEndpointTrackingActivo();
+        if (trackingClient != null && endpointConfig != null && !endpointConfig.isBlank()) {
+            if (!endpointConfig.equals(trackingClient.getEndpointUrl())) {
+                trackingClient.setEndpointUrl(endpointConfig);
+            }
+        }
+
+        boolean trackingHabilitado = nodosPerifericosService.isTrackingHabilitado();
+        int desviosDeseados = nodosPerifericosService.getModoTrackingActivo() == ModoNodoPeriferico.CON_DESVIO ? 1 : 0;
+
+        if (!trackingHabilitado) {
+            if (this.activo) {
+                this.activo = false;
+                if (trackingClient != null) {
+                    try {
+                        trackingClient.detener(UUID.randomUUID().toString());
+                    } catch (Exception e) {
+                        LOGGER.log(Level.FINE, "No se pudo detener nodo periférico de Tracking remoto: {0}", e.getMessage());
+                    }
+                }
+                this.ultimoResultado = "Nodo de Tracking apagado por el Administrador.";
+            }
+            return;
+        }
+
+        if (this.cantidadDesvios != desviosDeseados) {
+            this.cantidadDesvios = desviosDeseados;
+            this.estadosPorGuia.clear();
+        }
+        this.activo = true;
+    }
+
     private void ejecutarTickSeguro() {
         if (!activo) {
             return;
         }
+        if (nodosPerifericosService != null && !nodosPerifericosService.isTrackingHabilitado()) {
+            this.activo = false;
+            return;
+        }
         try {
-            if (sessionContext != null) {
-                TrackingMockServiceLocal proxy = sessionContext.getBusinessObject(TrackingMockServiceLocal.class);
-                if (trackingClient != null && nodoPerifericoOnline) {
-                    proxy.sincronizarConNodoPeriferico();
-                } else {
-                    proxy.emitirPasoGuiasActivas();
-                }
+            TrackingMockServiceLocal proxy = sessionContext != null
+                    ? sessionContext.getBusinessObject(TrackingMockServiceLocal.class)
+                    : this;
+            if (trackingClient != null && nodoPerifericoOnline) {
+                proxy.sincronizarConNodoPeriferico();
             } else {
-                if (trackingClient != null && nodoPerifericoOnline) {
-                    sincronizarConNodoPeriferico();
-                } else {
-                    emitirPasoGuiasActivas();
-                }
+                proxy.emitirPasoGuiasActivas();
             }
         } catch (Exception e) {
             LOGGER.log(Level.WARNING, "Error durante el ciclo automático del Mock de Tracking: {0}", e.getMessage());
@@ -320,6 +540,11 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
     @Override
     @TransactionAttribute(TransactionAttributeType.REQUIRED)
     public void sincronizarConNodoPeriferico() {
+        if (nodosPerifericosService != null && !nodosPerifericosService.isTrackingHabilitado()) {
+            this.activo = false;
+            this.ultimoResultado = "Nodo de Tracking apagado por el Administrador.";
+            return;
+        }
         if (trackingClient == null) {
             return;
         }
@@ -342,10 +567,30 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
     @Override
     @TransactionAttribute(TransactionAttributeType.REQUIRED)
     public int emitirPasoGuiasActivas() {
+        return ejecutarPasoConRegistro();
+    }
+
+    @Override
+    @TransactionAttribute(TransactionAttributeType.REQUIRED)
+    public int ejecutarPasoAutomaticoTracking() {
+        return ejecutarPasoConRegistro();
+    }
+
+    private int ejecutarPasoConRegistro() {
+        if (nodosPerifericosService != null) {
+            sincronizarConfigTrackingConRegistro();
+            if (!nodosPerifericosService.isTrackingHabilitado()) {
+                this.ultimoResultado = "Nodo de Tracking apagado por el Administrador.";
+                return 0;
+            }
+        }
+
         List<GuiaDeViaje> guiasActivas = buscarGuiasEnCurso();
         if (guiasActivas.isEmpty()) {
             this.ultimoResultado = "No hay guías de viaje en estado EN_CURSO actualmente.";
             estadosPorGuia.clear();
+            guiasInicializadasEnSesion.clear();
+            guiasConMockPersistido.clear();
             if (trackingClient != null) {
                 try {
                     trackingClient.sincronizarGuiasYDrenar(List.of(), true, UUID.randomUUID().toString());
@@ -356,13 +601,33 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
             return 0;
         }
 
+        Set<Long> idsActivos = new HashSet<>();
+        List<GuiaDeViaje> guiasParaEmitir = new ArrayList<>();
+        for (GuiaDeViaje guia : guiasActivas) {
+            if (guia == null || guia.getId() == null) {
+                continue;
+            }
+            idsActivos.add(guia.getId());
+            guiasParaEmitir.add(guia);
+        }
+
+        estadosPorGuia.keySet().retainAll(idsActivos);
+        guiasInicializadasEnSesion.retainAll(idsActivos);
+        guiasConMockPersistido.retainAll(idsActivos);
+
+        boolean reiniciarRemoto = requiereReinicioPorEstadoPersistencia(guiasParaEmitir);
+        List<TrackingClient.GuiaActivaPayload> payloadGuias = construirPayloadGuias(guiasParaEmitir);
+
         if (trackingClient != null) {
             try {
+                if (reiniciarRemoto) {
+                    trackingClient.reiniciar(payloadGuias, UUID.randomUUID().toString());
+                }
                 String faasUrl = faasTrackingClient != null ? faasTrackingClient.getEndpointUrl() : "";
                 TrackingClient.EstadoNodoTracking estadoRemoto = trackingClient.emitirPaso(
                         this.eventosPorMinuto,
                         this.cantidadDesvios,
-                        construirPayloadGuias(guiasActivas),
+                        payloadGuias,
                         faasUrl,
                         UUID.randomUUID().toString()
                 );
@@ -380,24 +645,23 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
             }
         }
 
-        Set<Long> idsActivos = new HashSet<>();
         int emitidosEnPaso = 0;
         String detalleUltimo = null;
         FaasTrackingClient clienteFaas = obtenerClienteFaas();
 
-        for (GuiaDeViaje guia : guiasActivas) {
-            if (guia == null || guia.getId() == null) {
-                continue;
-            }
+        for (GuiaDeViaje guia : guiasParaEmitir) {
             Long guiaId = guia.getId();
-            idsActivos.add(guiaId);
 
-            EstadoSimulacionGuia estadoGuia = estadosPorGuia.compute(guiaId, (id, existente) -> {
-                if (existente == null || existente.getDesviosConfigurados() != this.cantidadDesvios) {
-                    return construirEstadoSimulacion(guia, this.cantidadDesvios);
-                }
-                return existente;
-            });
+            EstadoSimulacionGuia existente = estadosPorGuia.get(guiaId);
+            EstadoSimulacionGuia estadoGuia;
+            if (existente == null || existente.getDesviosConfigurados() != this.cantidadDesvios) {
+                List<double[]> polilineaSim = resolverPolilineaSimulacion(guia);
+                EstadoSimulacionGuia nuevoEstado = construirEstadoSimulacion(guia, this.cantidadDesvios, polilineaSim);
+                estadoGuia = estadosPorGuia.compute(guiaId, (id, curr) ->
+                        (curr == null || curr.getDesviosConfigurados() != this.cantidadDesvios) ? nuevoEstado : curr);
+            } else {
+                estadoGuia = existente;
+            }
 
             PasoSimulado paso = estadoGuia.siguientePaso();
             String matricula = guia.getVehiculo() != null ? guia.getVehiculo().getMatricula() : null;
@@ -476,9 +740,6 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
             }
         }
 
-        // Limpiar el estado de las guías que ya fueron finalizadas por el chofer
-        estadosPorGuia.keySet().removeIf(id -> !idsActivos.contains(id));
-
         if (detalleUltimo != null) {
             this.ultimoResultado = detalleUltimo;
         }
@@ -526,7 +787,96 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
         }
     }
 
-    private static List<TrackingClient.GuiaActivaPayload> construirPayloadGuias(List<GuiaDeViaje> guias) {
+    private boolean requiereReinicioPorEstadoPersistencia(List<GuiaDeViaje> guias) {
+        boolean requiereReinicio = false;
+        for (GuiaDeViaje guia : guias) {
+            Long gid = guia.getId();
+            if (tieneEventosMockEnPersistencia(gid)) {
+                guiasConMockPersistido.add(gid);
+                guiasInicializadasEnSesion.add(gid);
+            } else {
+                if (!guiasInicializadasEnSesion.contains(gid) || guiasConMockPersistido.contains(gid)) {
+                    requiereReinicio = true;
+                    guiasConMockPersistido.remove(gid);
+                    estadosPorGuia.remove(gid);
+                }
+                guiasInicializadasEnSesion.add(gid);
+            }
+        }
+        return requiereReinicio;
+    }
+
+    private boolean tieneEventosMockEnPersistencia(Long guiaId) {
+        if (eventosService == null || guiaId == null) {
+            return false;
+        }
+        List<EventoViajeDTO> eventos = eventosService.listarEventosPorGuia(guiaId);
+        if (eventos == null || eventos.isEmpty()) {
+            return false;
+        }
+        for (EventoViajeDTO ev : eventos) {
+            if (esEventoMockTracking(ev)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean esEventoMockTracking(EventoViajeDTO ev) {
+        return ev != null
+                && ev.incidente() != null
+                && ev.incidente().descripcion() != null
+                && ev.incidente().descripcion().startsWith("Mock Tracking GPS");
+    }
+
+    private static List<double[]> resolverPolilineaBase(GuiaDeViaje guia, String origen, String destino) {
+        List<double[]> polilinea = RedVialUruguay.deserializarPolilinea(guia.getPolilineaRuta());
+        try {
+            List<double[]> calculada = RedVialUruguay.calcularRuta(origen, destino).polilinea();
+            if (calculada != null && (polilinea.isEmpty() || calculada.size() > polilinea.size())) {
+                polilinea = calculada;
+            }
+        } catch (Exception ignored) {
+            LOGGER.log(Level.FINE, "No se pudo calcular polilínea detallada para {0} -> {1}",
+                    new Object[]{origen, destino});
+        }
+        if (polilinea.isEmpty()) {
+            polilinea = RedVialUruguay.calcularRuta("Montevideo", "Rivera").polilinea();
+        }
+        return polilinea;
+    }
+
+    private List<double[]> resolverPolilineaSimulacion(GuiaDeViaje guia) {
+        String origen = (guia.getOrigen() != null && !guia.getOrigen().isBlank()) ? guia.getOrigen().trim() : "Montevideo";
+        String destino = (guia.getDestino() != null && !guia.getDestino().isBlank()) ? guia.getDestino().trim() : "Rivera";
+
+        List<double[]> polilinea = resolverPolilineaBase(guia, origen, destino);
+        if (eventosService == null || guia.getId() == null) {
+            return polilinea;
+        }
+        List<EventoViajeDTO> eventos = eventosService.listarEventosPorGuia(guia.getId());
+        if (eventos == null || eventos.isEmpty()) {
+            return polilinea;
+        }
+        EventoViajeDTO ultimoPreMock = null;
+        for (EventoViajeDTO ev : eventos) {
+            if (ev != null && ev.tipo() != TipoEvento.FIN && !esEventoMockTracking(ev)) {
+                ultimoPreMock = ev;
+            }
+        }
+        if (ultimoPreMock == null) {
+            return polilinea;
+        }
+        int pasos = Math.max(PASOS_RUTA_BASE, this.cantidadDesvios + 4);
+        return RedVialUruguay.recortarPolilineaDesdePosicion(
+                polilinea,
+                ultimoPreMock.latitud(),
+                ultimoPreMock.longitud(),
+                pasos
+        );
+    }
+
+    private List<TrackingClient.GuiaActivaPayload> construirPayloadGuias(List<GuiaDeViaje> guias) {
         if (guias == null || guias.isEmpty()) {
             return List.of();
         }
@@ -538,30 +888,34 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
             String matricula = g.getVehiculo() != null ? g.getVehiculo().getMatricula() : null;
             String origen = (g.getOrigen() != null && !g.getOrigen().isBlank()) ? g.getOrigen().trim() : "Montevideo";
             String destino = (g.getDestino() != null && !g.getDestino().isBlank()) ? g.getDestino().trim() : "Rivera";
+            String polilineaSerializada = RedVialUruguay.serializarPolilinea(resolverPolilineaSimulacion(g));
             resultado.add(new TrackingClient.GuiaActivaPayload(
                     g.getId(),
                     origen,
                     destino,
                     matricula,
                     g.getCorredorVial(),
-                    g.getPolilineaRuta()
+                    polilineaSerializada
             ));
         }
         return resultado;
     }
 
     static EstadoSimulacionGuia construirEstadoSimulacion(GuiaDeViaje guia, int desviosDeseados) {
+        return construirEstadoSimulacion(guia, desviosDeseados, null);
+    }
+
+    static EstadoSimulacionGuia construirEstadoSimulacion(
+            GuiaDeViaje guia,
+            int desviosDeseados,
+            List<double[]> polilineaPersonalizada
+    ) {
         String origen = (guia.getOrigen() != null && !guia.getOrigen().isBlank()) ? guia.getOrigen().trim() : "Montevideo";
         String destino = (guia.getDestino() != null && !guia.getDestino().isBlank()) ? guia.getDestino().trim() : "Rivera";
 
-        List<double[]> polilinea = RedVialUruguay.deserializarPolilinea(guia.getPolilineaRuta());
-        if (polilinea.isEmpty()) {
-            try {
-                polilinea = RedVialUruguay.calcularRuta(origen, destino).polilinea();
-            } catch (Exception e) {
-                polilinea = RedVialUruguay.calcularRuta("Montevideo", "Rivera").polilinea();
-            }
-        }
+        List<double[]> polilinea = (polilineaPersonalizada != null && !polilineaPersonalizada.isEmpty())
+                ? polilineaPersonalizada
+                : resolverPolilineaBase(guia, origen, destino);
 
         int numDesvios = Math.max(0, desviosDeseados);
         int cantidadPuntosRuta = Math.max(PASOS_RUTA_BASE, numDesvios + 4);

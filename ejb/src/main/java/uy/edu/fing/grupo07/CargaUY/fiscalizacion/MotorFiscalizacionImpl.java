@@ -234,6 +234,13 @@ public class MotorFiscalizacionImpl implements MotorFiscalizacionLocal {
             return;
         }
 
+        // Inicializar colecciones perezosas dentro de la transacción JTA activa antes de verificar vigencia
+        if (vehiculo.getItv() != null) {
+            vehiculo.getItv().size();
+        }
+        if (vehiculo.getPncs() != null) {
+            vehiculo.getPncs().size();
+        }
         LocalDate fechaViaje = guia.getFecha() != null ? guia.getFecha() : LocalDate.now();
         boolean habilitacionVigente = vehiculo.verificarHabilitacionVigenteEn(fechaViaje);
         if (habilitacionVigente) {

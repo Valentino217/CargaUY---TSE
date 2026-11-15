@@ -49,14 +49,18 @@ public class DetalleViajeServlet extends HttpServlet {
 
         try {
             Long guiaId = Long.parseLong(guiaIdParam.trim());
-            List<EventoViajeDTO> eventos = eventosService.listarEventosPorGuia(guiaId);
-            List<PesadaBalanzaDTO> pesadas = balanzaService.listarPesadasPorGuia(guiaId);
+            String token = WebSeguridad.token(request);
+            List<EventoViajeDTO> eventos = eventosService.listarEventosPorGuia(token, guiaId);
+            List<PesadaBalanzaDTO> pesadas = balanzaService.listarPesadasPorGuia(token, guiaId);
 
             request.setAttribute("guiaId", guiaId);
             request.setAttribute("eventos", eventos);
             request.setAttribute("pesadas", pesadas);
         } catch (NumberFormatException nfe) {
             request.setAttribute("error", "El identificador de la guía debe ser numérico.");
+        } catch (uy.edu.fing.grupo07.CargaUY.security.ErrorAcceso ea) {
+            response.setStatus(ea.getEstado());
+            request.setAttribute("error", ea.getMessage());
         } catch (Exception e) {
             request.setAttribute("error", "Error al consultar viaje: " + e.getMessage());
         }

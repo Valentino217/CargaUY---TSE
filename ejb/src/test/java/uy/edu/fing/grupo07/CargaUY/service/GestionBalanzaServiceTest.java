@@ -271,4 +271,158 @@ class GestionBalanzaServiceTest {
         verify(em, never()).persist(any(PesadaBalanza.class));
         verify(fiscalizacionProducer, never()).solicitarEvaluacion(anyLong());
     }
+
+    @Test
+    @DisplayName("sondearBalanzasPeriodico omite llamadas cuando todas las balanzas están apagadas por Admin")
+    void testSondearBalanzasPeriodicoApagadas() {
+        GestionNodosPerifericosServiceImpl registro = new GestionNodosPerifericosServiceImpl();
+        registro.init();
+        registro.setHabilitado("NODO-BAL-01", false);
+        service.setNodosPerifericosService(registro);
+
+        int importadas = service.sondearBalanzasPeriodico();
+
+        assertEquals(0, importadas);
+        verifyNoInteractions(balanzaClient);
+    }
+
+    @Test
+    @DisplayName("sondearBalanzasPeriodico registra lectura en modo CALIBRADA vs SOBRECARGA, importa y detecta VIAJE_SIN_GUIA")
+    void testSondearBalanzasPeriodicoCompleto() {
+        GestionNodosPerifericosServiceImpl registro = new GestionNodosPerifericosServiceImpl();
+        registro.init();
+        registro.setHabilitado("NODO-BAL-01", true);
+        service.setNodosPerifericosService(registro);
+
+        Empresa empresa = new Empresa();
+        empresa.setNroEmpresa(101);
+        guiaPrueba.setEmpresa(empresa);
+        guiaPrueba.setEstado(TipoEstado.EN_CURSO);
+        guiaPrueba.setVolumenCarga(30000f);
+        LocalDate hoy = LocalDate.now();
+        guiaPrueba.setFecha(hoy);
+
+        when(em.createQuery(anyString(), eq(GuiaDeViaje.class))).thenReturn(queryGuia);
+        when(queryGuia.setParameter(eq("enCurso"), eq(TipoEstado.EN_CURSO))).thenReturn(queryGuia);
+        when(queryGuia.getResultList()).thenReturn(List.of(guiaPrueba));
+
+        when(em.createQuery(anyString(), eq(PesadaBalanza.class))).thenReturn(queryPesada);
+        when(queryPesada.setParameter(eq("guiaId"), eq(10L))).thenReturn(queryPesada);
+        when(queryPesada.getResultList()).thenReturn(Collections.emptyList());
+
+        Vehiculo sinGuiaVehiculo = new Vehiculo("LOR 2024", "Volvo", "FH", 8000, 32000, true, empresa);
+        when(em.find(Vehiculo.class, "LOR 2024")).thenReturn(sinGuiaVehiculo);
+
+        PesadaBalanzaDTO lecturaSeed = new PesadaBalanzaDTO(5, hoy, LocalTime.of(8, 0), 35000, "OLD 999", null);
+        PesadaBalanzaDTO creadaEnCurso = new PesadaBalanzaDTO(10, hoy, LocalTime.of(12, 0), 39000, "123456", 10L);
+        PesadaBalanzaDTO lecturaSinGuia = new PesadaBalanzaDTO(11, hoy, LocalTime.of(12, 5), 42000, "LOR 2024", null);
+
+        when(balanzaClient.consultarPesadasPorFechaEnEndpoint(anyString(), eq(hoy), anyString()))
+                .thenReturn(List.of(lecturaSeed), List.of(creadaEnCurso, lecturaSinGuia));
+        when(balanzaClient.registrarPesadaEnPerifericoEnEndpoint(
+                anyString(), argThat(d -> d.pesoRegistrado() == 39000), eq(101), anyString(), anyString()
+        )).thenReturn(creadaEnCurso);
+        when(balanzaClient.consultarPesadasVehiculoEnEndpoint(anyString(), eq("123456"), eq(hoy), any(), eq(101), anyString()))
+                .thenReturn(List.of(creadaEnCurso));
+
+        int total = service.sondearBalanzasPeriodico();
+
+        assertEquals(2, total);
+        verify(fiscalizacionProducer, times(1)).solicitarEvaluacion(10L);
+        verify(fiscalizacionProducer, times(1)).solicitarEvaluacionSinGuia(eq("LOR 2024"), contains("#11"));
+        assertTrue(registro.yaEmitioAutoPesada(10L, "NODO-BAL-01", uy.edu.fing.grupo07.CargaUY.dto.ModoNodoPeriferico.CALIBRADA));
+        assertEquals(47500, GestionBalanzaServiceImpl.calcularPesoAutomaticoParaBalanza(
+                guiaPrueba, uy.edu.fing.grupo07.CargaUY.dto.ModoNodoPeriferico.SOBRECARGA));
+    }
+
+    @Test
+    @DisplayName("registrarLecturaExternaEnNodo valida estado encendido/categoría y envía al endpoint del nodo")
+    void testRegistrarLecturaExternaEnNodo() {
+        GestionNodosPerifericosServiceImpl registro = new GestionNodosPerifericosServiceImpl();
+        registro.init();
+        registro.setHabilitado("NODO-BAL-01", true);
+        service.setNodosPerifericosService(registro);
+
+        assertThrows(BusinessException.class, () -> service.registrarLecturaExternaEnNodo("NODO-BAL-02", "STP 1234", 40000));
+        assertThrows(BusinessException.class, () -> service.registrarLecturaExternaEnNodo("NODO-TRK-01", "STP 1234", 40000));
+        assertThrows(BusinessException.class, () -> service.registrarLecturaExternaEnNodo("NODO-BAL-01", " ", 40000));
+        assertThrows(BusinessException.class, () -> service.registrarLecturaExternaEnNodo("NODO-BAL-01", "STP 1234", 0));
+
+        Vehiculo v = new Vehiculo("STP 1234", "Scania", "R450", 9000, 31000, true, null);
+        Empresa emp = new Empresa();
+        emp.setNroEmpresa(55);
+        v.setEmpresa(emp);
+        when(em.find(Vehiculo.class, "STP 1234")).thenReturn(v);
+
+        String peajeBal1 = registro.buscarPorCodigo("NODO-BAL-01").orElseThrow().estacionPeaje();
+        PesadaBalanzaDTO resp = new PesadaBalanzaDTO(70, LocalDate.now(), LocalTime.of(15, 0), 44000, "STP 1234", null);
+        when(balanzaClient.registrarPesadaEnPerifericoEnEndpoint(anyString(), any(PesadaBalanzaDTO.class), eq(55), eq(peajeBal1), anyString()))
+                .thenReturn(resp);
+
+        PesadaBalanzaDTO resultado = service.registrarLecturaExternaEnNodo("NODO-BAL-01", "STP 1234", 44000);
+        assertEquals(70, resultado.idPesada());
+        assertEquals(44000, resultado.pesoRegistrado());
+    }
+
+    @Test
+    @DisplayName("Overloads tokenizados de balanza fallan cerrado sin ControlAcceso y delegan verificación de roles")
+    void testOverloadsTokenizadosYFailClosed() throws Exception {
+        PesadaBalanzaDTO dto = new PesadaBalanzaDTO(null, LocalDate.now(), LocalTime.of(10, 0), 31000, "123456", 10L);
+
+        assertThrows(IllegalStateException.class, () -> service.registrarPesada("tok", dto));
+        assertThrows(IllegalStateException.class, () -> service.registrarPesadaDesdeMock("tok"));
+        assertThrows(IllegalStateException.class, () -> service.registrarPesadaDesdeMock("tok", 10L));
+        assertThrows(IllegalStateException.class, () -> service.sincronizarPesadasDeGuia("tok", 10L, "corr"));
+        assertThrows(IllegalStateException.class, () -> service.registrarPesadaViaPeriferico("tok", dto, "Peaje", "corr"));
+        assertThrows(IllegalStateException.class, () -> service.listarPesadasPorGuia("tok", 10L));
+        assertThrows(IllegalStateException.class, () -> service.registrarLecturaExternaEnNodo("tok", "NODO-BAL-01", "123456", 35000));
+
+        uy.edu.fing.grupo07.CargaUY.security.ControlAcceso controlMock =
+                mock(uy.edu.fing.grupo07.CargaUY.security.ControlAcceso.class);
+        java.lang.reflect.Field field = GestionBalanzaServiceImpl.class.getDeclaredField("control");
+        field.setAccessible(true);
+        field.set(service, controlMock);
+
+        GestionNodosPerifericosServiceImpl registro = new GestionNodosPerifericosServiceImpl();
+        registro.init();
+        registro.setHabilitado("NODO-BAL-01", true);
+        service.setNodosPerifericosService(registro);
+
+        Empresa emp = new Empresa();
+        emp.setNroEmpresa(91);
+        guiaPrueba.setEmpresa(emp);
+        when(em.find(GuiaDeViaje.class, 10L)).thenReturn(guiaPrueba);
+
+        when(em.createQuery(anyString(), eq(PesadaBalanza.class))).thenReturn(queryPesada);
+        when(queryPesada.setParameter(eq("guiaId"), eq(10L))).thenReturn(queryPesada);
+        when(queryPesada.getResultList()).thenReturn(Collections.emptyList());
+
+        PesadaBalanzaDTO remota = new PesadaBalanzaDTO(55, LocalDate.now(), LocalTime.of(10, 0), 31000, "123456", 10L);
+        when(balanzaClient.consultarPesadaMock()).thenReturn(remota);
+        when(balanzaClient.registrarPesadaEnPeriferico(any(PesadaBalanzaDTO.class), eq(91), eq("Peaje"), eq("corr")))
+                .thenReturn(remota);
+        when(balanzaClient.consultarPesadasVehiculoEnEndpoint(anyString(), eq("123456"), any(), any(), eq(91), eq("corr")))
+                .thenReturn(List.of(remota));
+        when(balanzaClient.registrarPesadaEnPerifericoEnEndpoint(anyString(), any(), any(), any(), anyString()))
+                .thenReturn(remota);
+
+        uy.edu.fing.grupo07.CargaUY.security.Acceso accesoAdmin = new uy.edu.fing.grupo07.CargaUY.security.Acceso(
+                1, 10000001, "Admin", java.util.Set.of(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.ADMINISTRADOR)
+        );
+        when(controlMock.exigir(eq("tok-adm"), any(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario[].class))).thenReturn(accesoAdmin);
+
+        assertNotNull(service.registrarPesada("tok-adm", dto));
+        assertNotNull(service.registrarPesadaDesdeMock("tok-adm"));
+        assertNotNull(service.registrarPesadaDesdeMock("tok-adm", 10L));
+        assertNotNull(service.registrarPesadaViaPeriferico("tok-adm", dto, "Peaje", "corr"));
+        vehiculoPrueba.setEmpresa(emp);
+        when(em.find(Vehiculo.class, "123456")).thenReturn(vehiculoPrueba);
+        assertNotNull(service.registrarLecturaExternaEnNodo("tok-adm", "NODO-BAL-01", "123456", 35000));
+        verify(controlMock).admin("tok-adm");
+
+        assertTrue(service.listarPesadasPorGuia("tok-adm", 10L).isEmpty());
+        assertFalse(service.sincronizarPesadasDeGuia("tok-adm", 10L, "corr").isEmpty());
+        assertTrue(service.listarPesadasPorGuia("tok-emp", 10L).isEmpty());
+        verify(controlMock).empresa("tok-emp", 91, false);
+    }
 }

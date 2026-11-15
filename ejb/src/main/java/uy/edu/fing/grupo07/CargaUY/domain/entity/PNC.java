@@ -21,6 +21,9 @@ public class PNC implements Serializable {
     @Column(name = "fecha_vencimiento", nullable = false)
     private LocalDate fechaVencimiento;
 
+    @Column(name = "numero_permiso", length = 100)
+    private String numeroPermiso;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "vehiculo_matricula", nullable = false)
     private Vehiculo vehiculo;
@@ -30,6 +33,12 @@ public class PNC implements Serializable {
 
     public PNC(LocalDate fechaVencimiento, Vehiculo vehiculo) {
         this.fechaVencimiento = fechaVencimiento;
+        this.vehiculo = vehiculo;
+    }
+
+    public PNC(LocalDate fechaVencimiento, String numeroPermiso, Vehiculo vehiculo) {
+        this.fechaVencimiento = fechaVencimiento;
+        this.numeroPermiso = numeroPermiso;
         this.vehiculo = vehiculo;
     }
 
@@ -47,6 +56,14 @@ public class PNC implements Serializable {
 
     public void setFechaVencimiento(LocalDate fechaVencimiento) {
         this.fechaVencimiento = fechaVencimiento;
+    }
+
+    public String getNumeroPermiso() {
+        return numeroPermiso;
+    }
+
+    public void setNumeroPermiso(String numeroPermiso) {
+        this.numeroPermiso = numeroPermiso;
     }
 
     public Vehiculo getVehiculo() {

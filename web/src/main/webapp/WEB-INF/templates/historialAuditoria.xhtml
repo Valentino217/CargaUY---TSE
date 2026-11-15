@@ -1,0 +1,89 @@
+<ui:composition xmlns="http://www.w3.org/1999/xhtml"
+                xmlns:h="jakarta.faces.html"
+                xmlns:f="jakarta.faces.core"
+                xmlns:p="primefaces"
+                xmlns:ui="jakarta.faces.facelets">
+
+    <h:panelGroup rendered="#{not empty caso and (not empty caso.historialAuditoriaConsolidado() or soloTabla)}">
+        <div class="cuy-historial-root"
+             style="#{soloTabla ? '' : 'background: #ecfdf5; border: 1px solid #a7f3d0; border-left: 4px solid #059669; border-radius: 8px; padding: 0.9rem 1rem; margin-bottom: 1rem;'}">
+            <ui:fragment rendered="#{not soloTabla}">
+                <div style="font-weight: 700; color: #065f46; font-size: 0.85rem; margin-bottom: 0.5rem;">
+                    <i class="pi pi-lock" /> Historial
+                </div>
+            </ui:fragment>
+
+            <p:dataTable var="aud"
+                         value="#{caso.historialAuditoriaConsolidado()}"
+                         size="#{soloTabla ? '' : 'small'}"
+                         emptyMessage="Sin eventos de auditoría registrados."
+                         stripedRows="true"
+                         reflow="false">
+                <p:column headerText="Acción"
+                          style="#{soloTabla ? 'width: 190px;' : 'width: 170px; min-width: 140px;'}"
+                          styleClass="#{soloTabla ? '' : 'cuy-aud-col-fixed'}">
+                    <span class="cuy-mono" style="font-size: 0.76rem; font-weight: 700;">#{aud.accion()}</span>
+                    <ui:fragment rendered="#{caso.esDescargoEditado(aud)}">
+                        <div style="margin-top: 0.25rem;">
+                            <span style="display: inline-block; background: #fef3c7; color: #92400e; border: 1px solid #f59e0b; border-radius: 999px; padding: 0.08rem 0.5rem; font-size: 0.68rem; font-weight: 700;">
+                                Editado
+                            </span>
+                        </div>
+                    </ui:fragment>
+                </p:column>
+                <p:column headerText="Estado"
+                          style="#{soloTabla ? 'width: 130px;' : 'width: 120px; min-width: 100px;'}"
+                          styleClass="#{soloTabla ? '' : 'cuy-aud-col-fixed'}">
+                    <h:outputText value="#{aud.resolucion()}" style="font-size: 0.78rem;" />
+                </p:column>
+                <p:column headerText="Autor"
+                          style="#{soloTabla ? 'width: 200px;' : 'width: 180px; min-width: 140px;'}"
+                          styleClass="#{soloTabla ? '' : 'cuy-aud-col-fixed'}">
+                    <h:outputText value="#{aud.usuario()}" style="font-size: 0.78rem;" />
+                </p:column>
+                <p:column headerText="Timestamp"
+                          style="#{soloTabla ? 'width: 190px;' : 'width: 175px; min-width: 150px;'}"
+                          styleClass="#{soloTabla ? '' : 'cuy-aud-col-fixed'}">
+                    <span class="cuy-mono" style="font-size: 0.74rem;"><h:outputText value="#{aud.timestampCreacion()}"><f:convertDateTime type="localDateTime" pattern="dd/MM/yyyy HH:mm" /></h:outputText></span>
+                </p:column>
+                <p:column headerText="Fundamento / Detalle" style="min-width: 250px;">
+                    <h:outputText value="#{aud.fundamento()}" style="font-size: 0.78rem; white-space: normal;" />
+                    <ui:fragment rendered="#{caso.esDescargoEditado(aud)}">
+                        <div style="margin-top: 0.4rem;">
+                            <button type="button"
+                                    onclick="var c=this.closest('.cuy-historial-root'),p=c?c.querySelector('.cuy-descargo-versiones'):null;if(p){p.style.display=(p.style.display==='block')?'none':'block';}"
+                                    style="background: #fffbeb; border: 1px solid #f59e0b; color: #92400e; border-radius: 6px; padding: 0.18rem 0.55rem; font-size: 0.72rem; font-weight: 700; cursor: pointer;">
+                                <i class="pi pi-history" /> Ver versiones anteriores (#{caso.versionesAnterioresDescargo().size()})
+                            </button>
+                        </div>
+                    </ui:fragment>
+                </p:column>
+            </p:dataTable>
+
+            <ui:fragment rendered="#{caso.isDescargoEditado()}">
+                <div class="cuy-descargo-versiones"
+                     style="display: none; margin-top: 0.75rem; background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #f59e0b; border-radius: 6px; padding: 0.75rem 0.9rem;">
+                    <div style="font-weight: 700; color: #92400e; font-size: 0.8rem; margin-bottom: 0.5rem;">
+                        <i class="pi pi-history" /> Versiones anteriores del descargo
+                    </div>
+                    <ui:repeat value="#{caso.versionesAnterioresDescargo()}" var="ver" varStatus="st">
+                        <div style="padding: 0.45rem 0; border-top: 1px solid #fde68a; font-size: 0.78rem; color: #78350f;">
+                            <div style="display: flex; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.2rem;">
+                                <strong>
+                                    <ui:fragment rendered="#{st.index == 0}">Versión original</ui:fragment>
+                                    <ui:fragment rendered="#{st.index gt 0}">Edición anterior ##{st.index}</ui:fragment>
+                                    &#8226; #{ver.usuario()}
+                                </strong>
+                                <span class="cuy-mono" style="font-size: 0.72rem;">
+                                    <h:outputText value="#{ver.timestampCreacion()}"><f:convertDateTime type="localDateTime" pattern="dd/MM/yyyy HH:mm" /></h:outputText>
+                                </span>
+                            </div>
+                            <div style="white-space: pre-wrap;">#{ver.fundamento()}</div>
+                        </div>
+                    </ui:repeat>
+                </div>
+            </ui:fragment>
+        </div>
+    </h:panelGroup>
+
+</ui:composition>

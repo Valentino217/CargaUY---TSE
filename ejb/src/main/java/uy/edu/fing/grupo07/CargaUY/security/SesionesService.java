@@ -6,12 +6,15 @@ import jakarta.ejb.*;
 import jakarta.persistence.*;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.*;
 import uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario;
+import uy.edu.fing.grupo07.CargaUY.integration.ClientePdi;
+import uy.edu.fing.grupo07.CargaUY.integration.ResultadoPdi;
 
 @Stateless
 @LocalBean
 public class SesionesService {
     public record Login(String token, Acceso usuario, Instant vence) {}
     @PersistenceContext(unitName = "CargaUYPersistenceUnit") private EntityManager em;
+    @EJB private ClientePdi clientePdi;
 
     // Solo invocada por AutenticacionService después de validar LDAP.
     public Login emitirLdap(String uid) {
@@ -26,6 +29,9 @@ public class SesionesService {
     }
     // Claims ya verificados criptográficamente por GubOidcClient.
     public Login emitirGub(GubOidcClient.Identidad i) {
+        if (i.nacimiento() != null && i.nacimiento().isAfter(LocalDate.now().minusYears(18))) {
+            throw new ErrorAcceso(403, "El ciudadano debe ser mayor de edad (18 años o más)");
+        }
         Usuario u = em.createQuery(
             "select u from Usuario u where u.origenIdentidad='GUB' and u.uidExterno=:uid",
             Usuario.class).setParameter("uid", i.subject()).getResultStream().findFirst().orElse(null);
@@ -40,6 +46,12 @@ public class SesionesService {
                             && !porCi.getRoles().contains(TipoUsuario.AUTORIDAD)) {
                         porCi.setOrigenIdentidad("GUB");
                         porCi.setUidExterno(i.subject());
+                        if (porCi.getFechaNac() == null) {
+                            LocalDate fechaResuelta = resolverNacimientoConPdi(i);
+                            if (fechaResuelta != null) {
+                                porCi.setFechaNac(fechaResuelta);
+                            }
+                        }
                         if (porCi instanceof Chofer && !porCi.getRoles().contains(TipoUsuario.CHOFER)) {
                             porCi.getRoles().add(TipoUsuario.CHOFER);
                         }
@@ -52,19 +64,44 @@ public class SesionesService {
                         "La CI existe: un administrador debe vincular la identidad verificada. Referencia: "+i.subject());
                 }
             } else {
-                // El proveedor real no entrega nacimiento: se completa luego en Mi perfil.
+                // Si el proveedor no entrega nacimiento, consulta PDI en el primer ingreso; si PDI no responde, se completa en Mi perfil.
                 // La identidad se vincula automáticamente solo al crear una cuenta nueva.
-                Ciudadano c = new Ciudadano(i.nombre(), i.mail(), i.nacimiento(), i.ci(), "{GUB}");
+                LocalDate fechaResuelta = resolverNacimientoConPdi(i);
+                Ciudadano c = new Ciudadano(i.nombre(), i.mail(), fechaResuelta, i.ci(), "{GUB}");
                 c.getRoles().add(TipoUsuario.CIUDADANO_COMUN);
                 c.setOrigenIdentidad("GUB"); c.setUidExterno(i.subject());
                 em.persist(c); em.flush(); u = c;
             }
         }
         if (u.getCi()!=i.ci()) throw new ErrorAcceso(409,"La identidad no corresponde a la CI del perfil vinculado");
+        if (u.getFechaNac() == null) {
+            LocalDate fechaResuelta = resolverNacimientoConPdi(i);
+            if (fechaResuelta != null) {
+                u.setFechaNac(fechaResuelta);
+            }
+        }
         if (u.getRoles().contains(TipoUsuario.ADMINISTRADOR)
                 || u.getRoles().contains(TipoUsuario.AUTORIDAD))
             throw new ErrorAcceso(403, "Las cuentas internas deben utilizar LDAP");
         return emitir(u);
+    }
+
+    private LocalDate resolverNacimientoConPdi(GubOidcClient.Identidad i) {
+        LocalDate fecha = i.nacimiento();
+        if (fecha == null && clientePdi != null && i.ci() > 0) {
+            try {
+                ResultadoPdi resultado = clientePdi.consultar(i.ci());
+                if (resultado != null && resultado.estado() == ResultadoPdi.Estado.DISPONIBLE) {
+                    fecha = resultado.fechaNacimiento();
+                }
+            } catch (RuntimeException ignored) {
+                // Si PDI no está disponible, se permite completar el nacimiento luego desde Mi perfil.
+            }
+        }
+        if (fecha != null && fecha.isAfter(LocalDate.now().minusYears(18))) {
+            throw new ErrorAcceso(403, "El ciudadano debe ser mayor de edad (18 años o más)");
+        }
+        return fecha;
     }
     public Login emitirDevChofer(int ci) {
         if (!Boolean.parseBoolean(Config.valor("p1.entorno.local", "false")))
@@ -111,15 +148,15 @@ public class SesionesService {
         Usuario u = usuarios.stream().filter(usr -> {
             String p = usr.getPassword();
             if (p == null) return false;
-            if (p.startsWith("$2a$") || p.startsWith("$2b$") || p.startsWith("$2y$")) {
-                try {
-                    return at.favre.lib.crypto.bcrypt.BCrypt.verifyer()
-                        .verify(password.toCharArray(), p).verified;
-                } catch (Exception e) {
-                    return false;
-                }
+            if (!p.startsWith("$2a$") && !p.startsWith("$2b$") && !p.startsWith("$2y$")) {
+                return false;
             }
-            return Cripto.igual(password, p);
+            try {
+                return at.favre.lib.crypto.bcrypt.BCrypt.verifyer()
+                    .verify(password.toCharArray(), p).verified;
+            } catch (Exception e) {
+                return false;
+            }
         }).findFirst().orElseThrow(() -> new ErrorAcceso(401, "Credenciales inválidas"));
 
         return emitir(u);
@@ -156,6 +193,8 @@ public class SesionesService {
         Acceso actor = validarToken(token);
         if (fecha == null || fecha.isAfter(LocalDate.now()))
             throw new ErrorAcceso(400, "Ingresá una fecha de nacimiento válida, no futura");
+        if (fecha.isAfter(LocalDate.now().minusYears(18)))
+            throw new ErrorAcceso(403, "Debés ser mayor de edad (18 años o más)");
         Usuario usuario = em.find(Usuario.class, actor.id(), LockModeType.PESSIMISTIC_WRITE);
         if (usuario.getFechaNac() != null)
             throw new ErrorAcceso(409, "La fecha ya fue registrada. Continuá a Inicio");

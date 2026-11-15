@@ -12,4 +12,8 @@ public interface ITVEJBLocal {
 	void modificar(ITV itv);
 	void eliminar(ITV itv);
 	List<ITV> listarITVs();
+	void crear(String token, ITV itv);
+	void modificar(String token, ITV itv);
+	void eliminar(String token, ITV itv);
+	List<ITV> listarITVs(String token);
 }

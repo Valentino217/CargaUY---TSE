@@ -154,9 +154,21 @@ public class Vehiculo implements Serializable {
      */
     public boolean verificarHabilitacionVigenteEn(LocalDate fechaReferencia) {
         LocalDate ref = fechaReferencia != null ? fechaReferencia : LocalDate.now();
-        boolean itvValido = jakarta.persistence.Persistence.getPersistenceUtil().isLoaded(this, "itvs") && itvs != null && itvs.stream().anyMatch(i -> i.isVigenteEn(ref));
-        boolean pncValido = jakarta.persistence.Persistence.getPersistenceUtil().isLoaded(this, "pncs") && pncs != null && pncs.stream().anyMatch(p -> p.isVigenteEn(ref));
+        boolean itvValido = tieneDocumentoVigente(itvs, itv -> itv.isVigenteEn(ref));
+        boolean pncValido = tieneDocumentoVigente(pncs, pnc -> pnc.isVigenteEn(ref));
         return estadoHabilitacion && itvValido && pncValido;
+    }
+
+    private <T> boolean tieneDocumentoVigente(List<T> documentos, java.util.function.Predicate<T> predicado) {
+        if (documentos == null) {
+            return false;
+        }
+        try {
+            return documentos.stream().anyMatch(predicado);
+        } catch (RuntimeException e) {
+            // Colección perezosa no inicializada fuera de sesión Hibernate
+            return false;
+        }
     }
 
     @Override

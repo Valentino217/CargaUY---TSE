@@ -587,4 +587,52 @@ class MotorFiscalizacionTest {
         assertEquals(List.of(TipoInfraccion.DESVIO_DE_RUTA), res);
         verify(em, org.mockito.Mockito.times(1)).persist(any(Infraccion.class));
     }
+
+    @Test
+    @DisplayName("Habilitación del vehículo inicializa colecciones perezosas ITV/PNC y genera SIN_HABILITACION cuando vencen")
+    void testEvaluarHabilitacionInicializaColeccionesPerezosasYGeneraSinHabilitacion() {
+        Long guiaId = 203L;
+        LocalDate fechaViaje = LocalDate.of(2026, 11, 13);
+        GuiaDeViaje guia = new GuiaDeViaje();
+        guia.setId(guiaId);
+        guia.setFecha(fechaViaje);
+
+        Vehiculo vehiculo = new Vehiculo("STP-LAZY", "Scania", "R450", 9000, 28000, true, null);
+        ITV itvVencido = new ITV(fechaViaje.minusDays(5), vehiculo);
+        PNC pncVencido = new PNC(fechaViaje.minusDays(2), vehiculo);
+        List<ITV> itvSpy = org.mockito.Mockito.spy(new java.util.ArrayList<>(List.of(itvVencido)));
+        List<PNC> pncSpy = org.mockito.Mockito.spy(new java.util.ArrayList<>(List.of(pncVencido)));
+        vehiculo.setItv(itvSpy);
+        vehiculo.setPncs(pncSpy);
+        guia.setVehiculo(vehiculo);
+
+        when(em.find(GuiaDeViaje.class, guiaId)).thenReturn(guia);
+        when(em.find(ReglaFiscalizacion.class, 1)).thenReturn(new ReglaFiscalizacion(500, 5.0));
+        when(em.createQuery(anyString(), eq(PesadaBalanza.class))).thenReturn(queryPesada);
+        when(queryPesada.setParameter("guiaId", guiaId)).thenReturn(queryPesada);
+        when(queryPesada.setMaxResults(1)).thenReturn(queryPesada);
+        when(queryPesada.getResultList()).thenReturn(Collections.emptyList());
+
+        when(em.createQuery(anyString(), eq(Long.class))).thenReturn(queryInfraccionesExistentes);
+        when(queryInfraccionesExistentes.setParameter("guiaId", guiaId)).thenReturn(queryInfraccionesExistentes);
+        when(queryInfraccionesExistentes.setParameter("tipo", TipoInfraccion.SIN_HABILITACION))
+                .thenReturn(queryInfraccionesExistentes);
+        when(queryInfraccionesExistentes.getSingleResult()).thenReturn(0L);
+
+        when(em.createQuery(anyString(), eq(EventoViaje.class))).thenReturn(queryEventoDesvio);
+        when(queryEventoDesvio.setParameter("guiaId", guiaId)).thenReturn(queryEventoDesvio);
+        when(queryEventoDesvio.getResultList()).thenReturn(Collections.emptyList());
+
+        List<TipoInfraccion> res = motor.evaluarGuia(guiaId);
+
+        assertEquals(List.of(TipoInfraccion.SIN_HABILITACION), res);
+        verify(itvSpy).size();
+        verify(pncSpy).size();
+        verify(em).persist(org.mockito.ArgumentMatchers.argThat((Infraccion inf) ->
+                inf.getTipo() == TipoInfraccion.SIN_HABILITACION
+                        && inf.getEvidencia() != null
+                        && inf.getEvidencia().contains("ITV")
+                        && inf.getEvidencia().contains("PNC")
+        ));
+    }
 }

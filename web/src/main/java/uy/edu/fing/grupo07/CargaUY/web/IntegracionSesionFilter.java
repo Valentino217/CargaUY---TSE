@@ -30,9 +30,15 @@ public class IntegracionSesionFilter implements Filter {
             return;
         }
         WebSeguridad.preparar(r, s);
-        // PrimeFaces genera scripts y estilos inline para sus componentes JSF.
-        s.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
-            + "style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; form-action 'self'; frame-ancestors 'none'");
+        // PrimeFaces genera scripts y estilos inline para sus componentes JSF; Leaflet y OpenStreetMap requieren orígenes externos.
+        s.setHeader("Content-Security-Policy",
+                "default-src 'self'; "
+                        + "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com; "
+                        + "style-src 'self' 'unsafe-inline' https://unpkg.com; "
+                        + "img-src 'self' data: blob: https://unpkg.com https://*.tile.openstreetmap.org https://tile.openstreetmap.org; "
+                        + "font-src 'self' data:; "
+                        + "connect-src 'self' https://*.tile.openstreetmap.org https://tile.openstreetmap.org; "
+                        + "form-action 'self'; frame-ancestors 'none'");
 
         String p = r.getServletPath();
 
@@ -77,7 +83,7 @@ public class IntegracionSesionFilter implements Filter {
             return actor.tiene(TipoUsuario.ADMINISTRADOR);
         }
         if (p.startsWith("/backoffice/")) {
-            return actor.tiene(TipoUsuario.AUTORIDAD) || actor.tiene(TipoUsuario.FUNCIONARIO);
+            return actor.tiene(TipoUsuario.AUTORIDAD) || actor.tiene(TipoUsuario.ADMINISTRADOR);
         }
         if (p.startsWith("/funcionario/")) {
             return actor.tiene(TipoUsuario.FUNCIONARIO)
@@ -87,7 +93,7 @@ public class IntegracionSesionFilter implements Filter {
             return actor.tiene(TipoUsuario.CIUDADANO);
         }
         if (p.startsWith("/chofer/")) {
-            return actor.tiene(TipoUsuario.CHOFER);
+            return false;
         }
         boolean gestion = p.equals("/GuiaDeViajeJSF.xhtml") || p.equals("/VehiculoJSF.xhtml")
             || p.equals("/ITV.xhtml") || p.equals("/PNC.xhtml");

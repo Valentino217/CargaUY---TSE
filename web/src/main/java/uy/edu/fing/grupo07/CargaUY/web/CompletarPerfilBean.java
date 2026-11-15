@@ -29,7 +29,7 @@ public class CompletarPerfilBean implements Serializable {
             mensaje("No se pudo guardar la fecha. Intentá nuevamente.");return;
         }
         var context=FacesContext.getCurrentInstance();
-        context.getExternalContext().redirect(context.getExternalContext().getRequestContextPath()+"/index.xhtml");
+        context.getExternalContext().redirect(context.getExternalContext().getRequestContextPath()+"/portal/info-publica.xhtml");
     }
     private void mensaje(String texto) {
         FacesContext.getCurrentInstance().addMessage(null,

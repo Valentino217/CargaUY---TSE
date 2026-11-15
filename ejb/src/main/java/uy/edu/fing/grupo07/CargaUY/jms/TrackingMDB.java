@@ -66,13 +66,18 @@ public class TrackingMDB implements MessageListener {
 
         long inicio = System.nanoTime();
         String correlacion = "n/a";
+        String traceparent = null;
+        uy.edu.fing.grupo07.CargaUY.integration.TraceContext.Estado previo =
+                uy.edu.fing.grupo07.CargaUY.integration.TraceContext.capturar();
         try {
             String propCorr = null;
+            String propTraceparent = null;
             try {
                 propCorr = textMsg.getJMSCorrelationID();
                 if (propCorr == null || propCorr.isBlank()) {
                     propCorr = textMsg.getStringProperty("X_Correlation_ID");
                 }
+                propTraceparent = textMsg.getStringProperty("traceparent");
             } catch (Exception ignored) {
             }
 
@@ -85,13 +90,15 @@ public class TrackingMDB implements MessageListener {
             }
 
             correlacion = (propCorr != null && !propCorr.isBlank()) ? propCorr : evento.uuid();
+            traceparent = uy.edu.fing.grupo07.CargaUY.integration.TraceContext.normalizarTraceparent(propTraceparent, correlacion);
+            uy.edu.fing.grupo07.CargaUY.integration.TraceContext.fijar(correlacion, traceparent);
 
             // AC012: Idempotencia estricta por UUID
             if (eventosService.existeEvento(evento.uuid())) {
                 eventosDuplicados.incrementAndGet();
                 LOGGER.log(Level.INFO,
-                        "{\"evento\":\"jms.tracking.duplicado\",\"correlacion\":\"{0}\",\"uuid\":\"{1}\"}",
-                        new Object[]{correlacion, evento.uuid()});
+                        "{\"evento\":\"jms.tracking.duplicado\",\"correlacion\":\"{0}\",\"traceparent\":\"{1}\",\"uuid\":\"{2}\"}",
+                        new Object[]{correlacion, traceparent, evento.uuid()});
                 return;
             }
 
@@ -103,8 +110,8 @@ public class TrackingMDB implements MessageListener {
             latenciaTotalMs.addAndGet(duracionMs);
 
             LOGGER.log(Level.INFO,
-                    "{\"evento\":\"jms.tracking.procesado\",\"correlacion\":\"{0}\",\"uuid\":\"{1}\",\"duracionMs\":{2}}",
-                    new Object[]{correlacion, evento.uuid(), duracionMs});
+                    "{\"evento\":\"jms.tracking.procesado\",\"correlacion\":\"{0}\",\"traceparent\":\"{1}\",\"uuid\":\"{2}\",\"duracionMs\":{3}}",
+                    new Object[]{correlacion, traceparent, evento.uuid(), duracionMs});
 
             if (persistido == null && fiscalizacionProducer != null && evento.guiaId() != null) {
                 fiscalizacionProducer.solicitarEvaluacion(evento.guiaId());
@@ -114,13 +121,15 @@ public class TrackingMDB implements MessageListener {
             // Error de negocio (duplicado en carrera concurrente o validación): descartar sin reintentar
             erroresProcesamiento.incrementAndGet();
             LOGGER.log(Level.WARNING,
-                    "{\"evento\":\"jms.tracking.error_negocio\",\"correlacion\":\"{0}\",\"detalle\":\"{1}\"}",
-                    new Object[]{correlacion, e.getMessage()});
+                    "{\"evento\":\"jms.tracking.error_negocio\",\"correlacion\":\"{0}\",\"traceparent\":\"{1}\",\"detalle\":\"{2}\"}",
+                    new Object[]{correlacion, traceparent, e.getMessage()});
         } catch (Exception e) {
             // Error inesperado de infraestructura (BD caída, etc.): relanzar para activar reintentos y DLQ
             erroresProcesamiento.incrementAndGet();
-            LOGGER.log(Level.SEVERE, "Fallo técnico en TrackingMDB al procesar mensaje [correlacion=" + correlacion + "]", e);
+            LOGGER.log(Level.SEVERE, "Fallo técnico en TrackingMDB al procesar mensaje [correlacion=" + correlacion + ", traceparent=" + traceparent + "]", e);
             throw new RuntimeException("Error técnico en TrackingMDB", e);
+        } finally {
+            uy.edu.fing.grupo07.CargaUY.integration.TraceContext.restaurar(previo);
         }
     }
 }

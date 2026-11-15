@@ -18,15 +18,27 @@ public interface TrackingMockServiceLocal {
      */
     void iniciar(int eventosPorMinuto, int cantidadDesvios);
 
+    default void iniciar(String token, int eventosPorMinuto, int cantidadDesvios) {
+        iniciar(eventosPorMinuto, cantidadDesvios);
+    }
+
     /**
      * Detiene el envío automático periódico de posiciones en el nodo periférico de Tracking.
      */
     void detener();
 
+    default void detener(String token) {
+        detener();
+    }
+
     /**
      * Reinicia el progreso del recorrido simulado de las guías activas en el nodo periférico para comenzar nuevamente desde el origen.
      */
     void reiniciarRecorridos();
+
+    default void reiniciarRecorridos(String token) {
+        reiniciarRecorridos();
+    }
 
     /**
      * Ejecuta un paso inmediato en el nodo periférico emitiendo un punto de posición para cada guía activa (EN_CURSO).
@@ -35,10 +47,18 @@ public interface TrackingMockServiceLocal {
      */
     int emitirPasoGuiasActivas();
 
+    default int emitirPasoGuiasActivas(String token) {
+        return emitirPasoGuiasActivas();
+    }
+
     /**
      * Sincroniza la lista de guías EN_CURSO con el nodo periférico de Tracking y drena los eventos emitidos.
      */
     default void sincronizarConNodoPeriferico() {
+    }
+
+    default void sincronizarConNodoPeriferico(String token) {
+        sincronizarConNodoPeriferico();
     }
 
     default boolean isNodoPerifericoOnline() {
@@ -60,4 +80,34 @@ public interface TrackingMockServiceLocal {
     long getTotalDesviosEmitidos();
 
     String getUltimoResultado();
+
+    /**
+     * Ejecuta un paso automático del scheduler central respetando la configuración
+     * operativa de los nodos periféricos (encendido/apagado y modo normal o con desvío).
+     */
+    default int ejecutarPasoAutomaticoTracking() {
+        return 0;
+    }
+
+    /**
+     * Notifica al coordinador que la configuración del nodo de tracking fue modificada
+     * desde el panel de administración (/admin/nodos.xhtml).
+     */
+    default void notificarCambioConfiguracionNodos() {
+    }
+
+    default void notificarCambioConfiguracionNodos(String token) {
+        notificarCambioConfiguracionNodos();
+    }
+
+    /**
+     * Notifica al coordinador que cambió la configuración o el estado de una balanza
+     * periférica, disparando únicamente el sondeo de balanzas sin emitir pasos GPS.
+     */
+    default void notificarCambioBalanza() {
+    }
+
+    default void notificarCambioBalanza(String token) {
+        notificarCambioBalanza();
+    }
 }

@@ -2,8 +2,10 @@ package com.example.cargauyandroid
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import androidx.core.content.ContextCompat
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -185,7 +187,27 @@ fun NavegationComponent(
         }
     }
 
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { _ -> }
+
     LaunchedEffect(Unit) {
+        val tieneFine = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        val tieneCoarse = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.ACCESS_COARSE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED
+        if (!tieneFine && !tieneCoarse) {
+            permissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
+        }
         refrescarEstadoLocal()
         if (syncRepository.baseDatosReiniciadaPorNuevaCompilacion) {
         } else if (enLinea && pendientesCount > 0) {
@@ -205,7 +227,7 @@ fun NavegationComponent(
                         sincronizando = true
                         val resumen = syncRepository.sincronizarPendientes(cedulaActual)
                         sincronizando = false
-                        pendientesCount = syncRepository.dbHelper.contarEventosPendientes()
+                        refrescarEstadoLocal()
                         if (resumen != null) {
                             mensajeGlobalSync = "Señal recuperada: ${resumen.mensaje}"
                             syncTick++
@@ -640,6 +662,7 @@ fun MainScreen(
                             onValueChange = {
                                 tokenTexto = it.trim()
                                 SesionMovil.token = tokenTexto
+                                SesionMovil.esSesionOidc = false
                             },
                             label = { Text("Token Bearer manual") },
                             visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
@@ -660,6 +683,7 @@ fun MainScreen(
                                         SesionMovil.token = tok
                                         SesionMovil.cedulaAsociada = ci
                                         SesionMovil.nombreChofer = (res["nombre"] as? String) ?: "Chofer Dev #$ci"
+                                        SesionMovil.esSesionOidc = false
                                         tokenTexto = tok
                                         cargandoDevToken = false
                                         onMensajeGlobal("Token Dev obtenido para CI $ci")
@@ -698,15 +722,17 @@ fun MainScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        if (SesionMovil.estaAutenticado) {
+            Spacer(modifier = Modifier.height(20.dp))
 
-        Button(
-            onClick = { navController.navigate("viajes") },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp)
-        ) {
-            Text("Mis Viajes", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            Button(
+                onClick = { navController.navigate("viajes") },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+            ) {
+                Text("Mis Viajes", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            }
         }
 
         if (pendientesCount > 0) {

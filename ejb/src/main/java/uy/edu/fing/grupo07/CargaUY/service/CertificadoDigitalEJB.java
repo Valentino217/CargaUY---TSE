@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
 
+import jakarta.ejb.EJB;
 import jakarta.ejb.LocalBean;
 import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
@@ -20,6 +21,9 @@ import uy.edu.fing.grupo07.CargaUY.domain.entity.CredencialesFirma;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.Usuario;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.EstadoCertificado;
 import uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario;
+import uy.edu.fing.grupo07.CargaUY.security.Acceso;
+import uy.edu.fing.grupo07.CargaUY.security.ControlAcceso;
+import uy.edu.fing.grupo07.CargaUY.security.ErrorAcceso;
 
 /**
  * Session Bean implementation class CertificadoDigitalEJB
@@ -37,6 +41,69 @@ public class CertificadoDigitalEJB {
     
     @PersistenceContext(unitName = "CargaUYPersistenceUnit")
     private EntityManager em;
+
+    @EJB
+    private ControlAcceso control;
+
+    private void verificarControl() {
+        if (control == null) {
+            throw new IllegalStateException("ControlAcceso no disponible");
+        }
+    }
+
+    public CertificadoDigital buscarCertificadoActivoPorCi(String token, int ci) {
+        verificarControl();
+        Acceso actor = control.exigir(token);
+        if (!actor.tiene(TipoUsuario.ADMINISTRADOR) && actor.ci() != ci) {
+            throw new ErrorAcceso(403, "Solo puede consultar su propio certificado digital.");
+        }
+        return buscarCertificadoActivoPorCi(ci);
+    }
+
+    public CertificadoDigital registrarCertificado(
+            String token,
+            int ci,
+            byte[] archivoCertificadoCifrado,
+            String nombreArchivo,
+            LocalDateTime fechaVencimiento
+    ) {
+        verificarControl();
+        Acceso actor = control.exigir(token);
+        if (!actor.tiene(TipoUsuario.ADMINISTRADOR) && actor.ci() != ci) {
+            throw new ErrorAcceso(403, "Solo puede registrar certificados propios.");
+        }
+        return registrarCertificado(ci, archivoCertificadoCifrado, nombreArchivo, fechaVencimiento);
+    }
+
+    public CredencialesFirma abrirCredenciales(String token, byte[] archivoCertificadoCifrado, String password) {
+        verificarControl();
+        control.exigir(token);
+        return abrirCredenciales(archivoCertificadoCifrado, password);
+    }
+
+    public List<CertificadoDigital> listarCertificados(String token) {
+        verificarControl();
+        control.admin(token);
+        return listarCertificados();
+    }
+
+    public List<CertificadoDigital> listarCertificadosPorUsuario(String token, int usuarioId) {
+        verificarControl();
+        Acceso actor = control.exigir(token);
+        if (!actor.tiene(TipoUsuario.ADMINISTRADOR) && actor.id() != usuarioId) {
+            throw new ErrorAcceso(403, "Solo puede consultar sus propios certificados.");
+        }
+        return listarCertificadosPorUsuario(usuarioId);
+    }
+
+    public void revocarCertificadoDeUsuario(String token, int idCertificado, int usuarioId, String motivo) {
+        verificarControl();
+        Acceso actor = control.exigir(token);
+        if (!actor.tiene(TipoUsuario.ADMINISTRADOR) && actor.id() != usuarioId) {
+            throw new ErrorAcceso(403, "Solo puede revocar sus propios certificados.");
+        }
+        revocarCertificadoDeUsuario(idCertificado, usuarioId, motivo);
+    }
 
     public Usuario buscarUsuarioPorCi(int ci) {
 

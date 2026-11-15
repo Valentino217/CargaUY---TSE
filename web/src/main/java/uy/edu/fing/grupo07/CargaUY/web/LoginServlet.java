@@ -24,7 +24,7 @@ public class LoginServlet extends HttpServlet {
         try {
             var login=auth.login(r.getParameter("uid"),r.getParameter("password"));
             WebSeguridad.iniciar(r,login);
-            s.sendRedirect(r.getContextPath()+"/index.xhtml");
+            s.sendRedirect(r.getContextPath()+"/portal/info-publica.xhtml");
         } catch(ErrorAcceso e) {
             r.setAttribute("error",e.getMessage()); s.setStatus(e.getEstado()); doGet(r,s);
         }

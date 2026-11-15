@@ -32,7 +32,7 @@ public class NacimientoPendienteFilter implements Filter {
                 redirigir(r,s,"/completar-perfil.xhtml");return;
             }
             if (!pendiente && formulario && "GET".equals(r.getMethod())) {
-                redirigir(r,s,"/index.xhtml");return;
+                redirigir(r,s,"/portal/info-publica.xhtml");return;
             }
         }
         chain.doFilter(r,s);

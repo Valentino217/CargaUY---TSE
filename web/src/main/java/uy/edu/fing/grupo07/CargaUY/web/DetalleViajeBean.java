@@ -7,6 +7,10 @@ import jakarta.faces.context.FacesContext;
 import jakarta.faces.view.ViewScoped;
 import jakarta.inject.Inject;
 import jakarta.inject.Named;
+import jakarta.json.Json;
+import jakarta.json.JsonArrayBuilder;
+import jakarta.json.JsonObjectBuilder;
+import jakarta.json.JsonValue;
 import uy.edu.fing.grupo07.CargaUY.domain.entity.GuiaDeViaje;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEstado;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoEvento;
@@ -17,10 +21,12 @@ import uy.edu.fing.grupo07.CargaUY.dto.PesadaBalanzaDTO;
 import uy.edu.fing.grupo07.CargaUY.dto.ReportarIncidenteDTO;
 import uy.edu.fing.grupo07.CargaUY.fiscalizacion.MotorFiscalizacionLocal;
 import uy.edu.fing.grupo07.CargaUY.integration.FaasTrackingClient;
+import uy.edu.fing.grupo07.CargaUY.integration.RedVialUruguay;
 import uy.edu.fing.grupo07.CargaUY.jms.TrackingProducerLocal;
 import uy.edu.fing.grupo07.CargaUY.nosql.PosicionNoSqlRepositoryLocal;
 import uy.edu.fing.grupo07.CargaUY.service.GestionBalanzaServiceLocal;
 import uy.edu.fing.grupo07.CargaUY.service.GestionEventosServiceLocal;
+import uy.edu.fing.grupo07.CargaUY.service.GestionNodosPerifericosServiceLocal;
 import uy.edu.fing.grupo07.CargaUY.service.GuiaDeViajeEJBLocal;
 import uy.edu.fing.grupo07.CargaUY.service.TrackingMockServiceLocal;
 
@@ -65,6 +71,9 @@ public class DetalleViajeBean implements Serializable {
 
     @EJB
     private TrackingMockServiceLocal trackingMockService;
+
+    @EJB
+    private GestionNodosPerifericosServiceLocal nodosPerifericosService;
 
     @Inject
     private FaasTrackingClient faasTrackingClient;
@@ -120,7 +129,6 @@ public class DetalleViajeBean implements Serializable {
             this.faasEndpointUrl = faasTrackingClient.getEndpointUrl();
         }
         if (trackingMockService != null) {
-            trackingMockService.sincronizarConNodoPeriferico();
             this.mockEventosPorMinuto = trackingMockService.getEventosPorMinuto();
             this.mockCantidadDesvios = trackingMockService.getCantidadDesvios();
         }
@@ -145,6 +153,17 @@ public class DetalleViajeBean implements Serializable {
         } else if (!this.guiasDisponibles.isEmpty()) {
             seleccionarGuiaPorDefecto();
             consultarViaje();
+        }
+    }
+
+    /**
+     * Sincroniza el estado con el nodo periférico de tracking bajo demanda al abrir el modal.
+     */
+    public void prepararModalMockTracking() {
+        if (trackingMockService != null) {
+            trackingMockService.sincronizarConNodoPeriferico(SesionActual.token());
+            this.mockEventosPorMinuto = trackingMockService.getEventosPorMinuto();
+            this.mockCantidadDesvios = trackingMockService.getCantidadDesvios();
         }
     }
 
@@ -186,15 +205,10 @@ public class DetalleViajeBean implements Serializable {
      */
     public void cargarGuiasDisponibles() {
         try {
-            List<GuiaDeViaje> lista;
-            if (esVistaEmpresa()) {
-                String token = SesionActual.token();
-                lista = (token != null && !token.isBlank())
-                        ? guiaDeViajeEJB.listarParaActor(token)
-                        : new ArrayList<>();
-            } else {
-                lista = guiaDeViajeEJB.listarGuias();
-            }
+            String token = SesionActual.token();
+            List<GuiaDeViaje> lista = esVistaEmpresa()
+                    ? guiaDeViajeEJB.listarParaActor(token)
+                    : guiaDeViajeEJB.listarParaOperador(token);
             if (lista != null) {
                 this.guiasDisponibles = lista;
             } else {
@@ -254,8 +268,9 @@ public class DetalleViajeBean implements Serializable {
             }
         }
 
+        String token = SesionActual.token();
         try {
-            this.guiaActual = guiaDeViajeEJB.buscarGuias(guiaIdSeleccionada);
+            this.guiaActual = guiaDeViajeEJB.buscarGuias(token, guiaIdSeleccionada);
             if (guiaActual == null) {
                 mostrarMensaje(FacesMessage.SEVERITY_WARN, "Guía No Encontrada", "No existe guía de viaje con ID #" + guiaIdSeleccionada);
             }
@@ -265,7 +280,7 @@ public class DetalleViajeBean implements Serializable {
         }
 
         try {
-            List<EventoViajeDTO> evList = eventosService.listarEventosPorGuia(guiaIdSeleccionada);
+            List<EventoViajeDTO> evList = eventosService.listarEventosPorGuia(token, guiaIdSeleccionada);
             if (evList != null) {
                 this.eventos = evList;
             } else {
@@ -277,7 +292,7 @@ public class DetalleViajeBean implements Serializable {
         }
 
         try {
-            List<PesadaBalanzaDTO> pesList = balanzaService.listarPesadasPorGuia(guiaIdSeleccionada);
+            List<PesadaBalanzaDTO> pesList = balanzaService.listarPesadasPorGuia(token, guiaIdSeleccionada);
             if (pesList != null) {
                 this.pesadas = pesList;
             } else {
@@ -297,7 +312,10 @@ public class DetalleViajeBean implements Serializable {
         List<GuiaDeViaje> candidatas = this.guiasDisponibles;
         if (guiaDeViajeEJB != null) {
             try {
-                List<GuiaDeViaje> frescas = guiaDeViajeEJB.listarGuias();
+                String token = SesionActual.token();
+                List<GuiaDeViaje> frescas = esVistaEmpresa()
+                        ? guiaDeViajeEJB.listarParaActor(token)
+                        : guiaDeViajeEJB.listarParaOperador(token);
                 if (frescas != null && !frescas.isEmpty()) {
                     this.guiasDisponibles = frescas;
                     candidatas = frescas;
@@ -452,7 +470,7 @@ public class DetalleViajeBean implements Serializable {
             if (evaluarDesvioInmediato) {
                 uy.edu.fing.grupo07.CargaUY.domain.entity.EventoViaje eventoPersistido;
                 try {
-                    eventoPersistido = eventosService.guardarEvento(eventoEnriquecido);
+                    eventoPersistido = eventosService.guardarEvento(SesionActual.token(), eventoEnriquecido);
                 } catch (uy.edu.fing.grupo07.CargaUY.exception.BusinessException be) {
                     boolean vehiculoInexistente = be.getMessage() != null
                             && be.getMessage().contains("No existe vehículo registrado");
@@ -513,7 +531,7 @@ public class DetalleViajeBean implements Serializable {
                 if (trackingProducer != null) {
                     trackingProducer.enviarEvento(eventoEnriquecido);
                 } else {
-                    uy.edu.fing.grupo07.CargaUY.domain.entity.EventoViaje persistido = eventosService.guardarEvento(eventoEnriquecido);
+                    uy.edu.fing.grupo07.CargaUY.domain.entity.EventoViaje persistido = eventosService.guardarEvento(SesionActual.token(), eventoEnriquecido);
                     if (persistido != null && persistido.getGuia() != null) {
                         this.guiaIdSeleccionada = persistido.getGuia().getId();
                     }
@@ -555,7 +573,8 @@ public class DetalleViajeBean implements Serializable {
         }
         try {
             String correlacion = UUID.randomUUID().toString();
-            List<PesadaBalanzaDTO> importadas = balanzaService.sincronizarPesadasDeGuia(guiaIdSeleccionada, correlacion);
+            List<PesadaBalanzaDTO> importadas = balanzaService.sincronizarPesadasDeGuia(
+                    SesionActual.token(), guiaIdSeleccionada, correlacion);
             consultarViaje();
             if (importadas == null || importadas.isEmpty()) {
                 mostrarMensaje(
@@ -583,7 +602,8 @@ public class DetalleViajeBean implements Serializable {
      */
     public void sincronizarMockBalanza() {
         try {
-            PesadaBalanzaDTO nuevaPesada = balanzaService.registrarPesadaDesdeMock(guiaIdSeleccionada);
+            PesadaBalanzaDTO nuevaPesada = balanzaService.registrarPesadaDesdeMock(
+                    SesionActual.token(), guiaIdSeleccionada);
             if (nuevaPesada != null) {
                 String matricula = "N/A";
                 if (nuevaPesada.matricula() != null) {
@@ -652,7 +672,8 @@ public class DetalleViajeBean implements Serializable {
                     nuevoIncidenteDescripcion
             );
 
-            eventosService.reportarIncidente(dto);
+            String token = SesionActual.token();
+            eventosService.reportarIncidente(token, dto);
             if (motorFiscalizacion != null) {
                 motorFiscalizacion.evaluarGuia(guiaIdSeleccionada);
             }
@@ -669,7 +690,7 @@ public class DetalleViajeBean implements Serializable {
             this.nuevoIncidenteLatitud = null;
             this.nuevoIncidenteLongitud = null;
 
-            this.eventos = eventosService.listarEventosPorGuia(guiaIdSeleccionada);
+            this.eventos = eventosService.listarEventosPorGuia(token, guiaIdSeleccionada);
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Error al reportar incidente", e);
             mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error", e.getMessage());
@@ -958,7 +979,7 @@ public class DetalleViajeBean implements Serializable {
         this.mockEventosPorMinuto = epm;
         this.mockCantidadDesvios = desvios;
 
-        trackingMockService.iniciar(epm, desvios);
+        trackingMockService.iniciar(SesionActual.token(), epm, desvios);
         consultarViaje();
         mostrarMensaje(
                 FacesMessage.SEVERITY_INFO,
@@ -971,7 +992,7 @@ public class DetalleViajeBean implements Serializable {
         if (trackingMockService == null) {
             return;
         }
-        trackingMockService.detener();
+        trackingMockService.detener(SesionActual.token());
         consultarViaje();
         mostrarMensaje(
                 FacesMessage.SEVERITY_INFO,
@@ -985,7 +1006,7 @@ public class DetalleViajeBean implements Serializable {
             mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error", "El servicio Mock de Tracking no está disponible.");
             return;
         }
-        int emitidos = trackingMockService.emitirPasoGuiasActivas();
+        int emitidos = trackingMockService.emitirPasoGuiasActivas(SesionActual.token());
         consultarViaje();
         if (emitidos > 0) {
             mostrarMensaje(
@@ -1006,7 +1027,7 @@ public class DetalleViajeBean implements Serializable {
         if (trackingMockService == null) {
             return;
         }
-        trackingMockService.reiniciarRecorridos();
+        trackingMockService.reiniciarRecorridos(SesionActual.token());
         mostrarMensaje(
                 FacesMessage.SEVERITY_INFO,
                 "Recorrido Reiniciado",
@@ -1015,12 +1036,167 @@ public class DetalleViajeBean implements Serializable {
     }
 
     public void refrescarPorPollMock() {
-        if (trackingMockService != null) {
-            trackingMockService.sincronizarConNodoPeriferico();
-        }
         if (guiaIdSeleccionada != null) {
             consultarViaje();
         }
+    }
+
+    public boolean isPollAutomaticoActivo() {
+        return guiaActual != null && guiaActual.getEstado() == TipoEstado.EN_CURSO;
+    }
+
+    /**
+     * Resuelve el nombre del corredor vial de la guía actual, calculándolo desde la red MTOP si no fue persistido.
+     */
+    public String getCorredorVialResuelto() {
+        if (guiaActual == null) {
+            return "";
+        }
+        String corredor = guiaActual.getCorredorVial();
+        if (corredor != null && !corredor.isBlank()) {
+            return corredor;
+        }
+        if (guiaActual.getOrigen() != null && guiaActual.getDestino() != null) {
+            try {
+                RedVialUruguay.RutaPlanificada ruta = RedVialUruguay.calcularRuta(
+                        guiaActual.getOrigen(),
+                        guiaActual.getDestino()
+                );
+                if (ruta != null && ruta.corredorVial() != null && !ruta.corredorVial().isBlank()) {
+                    return ruta.corredorVial();
+                }
+            } catch (Exception ignored) {
+                LOGGER.log(Level.FINE, "No se pudo resolver corredor vial para {0} -> {1}",
+                        new Object[]{guiaActual.getOrigen(), guiaActual.getDestino()});
+            }
+        }
+        return "Corredor nacional MTOP";
+    }
+
+    /**
+     * Serializa en formato JSON la ruta planificada (MTOP) y la trayectoria GPS real reportada para el mapa Leaflet.
+     */
+    public String getDatosMapaJson() {
+        if (guiaActual == null) {
+            return Json.createObjectBuilder()
+                    .add("guiaSeleccionada", false)
+                    .add("rutaPlanificada", Json.createArrayBuilder())
+                    .add("eventos", Json.createArrayBuilder())
+                    .build()
+                    .toString();
+        }
+
+        List<double[]> puntosRuta = new ArrayList<>();
+        try {
+            List<double[]> deserializada = RedVialUruguay.deserializarPolilinea(guiaActual.getPolilineaRuta());
+            if (deserializada != null && !deserializada.isEmpty()) {
+                puntosRuta.addAll(deserializada);
+            }
+        } catch (Exception ignored) {
+            LOGGER.log(Level.FINE, "Polilínea almacenada inválida para guía {0}", guiaActual.getId());
+        }
+
+        if (guiaActual.getOrigen() != null && guiaActual.getDestino() != null) {
+            try {
+                RedVialUruguay.RutaPlanificada ruta = RedVialUruguay.calcularRuta(
+                        guiaActual.getOrigen(),
+                        guiaActual.getDestino()
+                );
+                if (ruta != null && ruta.polilinea() != null
+                        && (puntosRuta.isEmpty() || ruta.polilinea().size() > puntosRuta.size())) {
+                    puntosRuta.clear();
+                    puntosRuta.addAll(ruta.polilinea());
+                }
+            } catch (Exception ignored) {
+                LOGGER.log(Level.FINE, "No se pudo calcular polilínea MTOP para guía {0}", guiaActual.getId());
+            }
+        }
+
+        JsonArrayBuilder rutaArray = Json.createArrayBuilder();
+        for (double[] punto : puntosRuta) {
+            if (punto != null && punto.length >= 2 && Double.isFinite(punto[0]) && Double.isFinite(punto[1])) {
+                rutaArray.add(Json.createArrayBuilder().add(punto[0]).add(punto[1]));
+            }
+        }
+
+        JsonArrayBuilder eventosArray = Json.createArrayBuilder();
+        if (this.eventos != null) {
+            for (EventoViajeDTO ev : this.eventos) {
+                if (ev == null || !Double.isFinite(ev.latitud()) || !Double.isFinite(ev.longitud())) {
+                    continue;
+                }
+                if (Math.abs(ev.latitud()) <= 1e-6 && Math.abs(ev.longitud()) <= 1e-6) {
+                    continue;
+                }
+
+                JsonObjectBuilder evObj = Json.createObjectBuilder()
+                        .add("uuid", ev.uuid() != null ? ev.uuid() : "")
+                        .add("tiempo", ev.tiempo() != null ? ev.tiempo().toString() : "")
+                        .add("tipo", ev.tipo() != null ? ev.tipo().name() : TipoEvento.POSICION.name())
+                        .add("lat", ev.latitud())
+                        .add("lng", ev.longitud());
+
+                if (ev.distanciaDesvioKm() != null && Double.isFinite(ev.distanciaDesvioKm())) {
+                    double desvioRedondeado = Math.round(ev.distanciaDesvioKm() * 100.0) / 100.0;
+                    evObj.add("desvioKm", desvioRedondeado);
+                    evObj.add("desviado", ev.distanciaDesvioKm() > 5.0);
+                } else {
+                    evObj.add("desvioKm", JsonValue.NULL);
+                    evObj.add("desviado", false);
+                }
+
+                if (ev.cantidadKg() != null) {
+                    evObj.add("cantidadKg", ev.cantidadKg());
+                } else {
+                    evObj.add("cantidadKg", JsonValue.NULL);
+                }
+
+                evObj.add("mercaderia", ev.mercaderia() != null ? ev.mercaderia() : "");
+                evObj.add("empresaCarga", ev.empresaCarga() != null ? ev.empresaCarga() : "");
+
+                String incidenteDesc = (ev.incidente() != null && ev.incidente().descripcion() != null)
+                        ? ev.incidente().descripcion()
+                        : "";
+                evObj.add("incidente", incidenteDesc);
+
+                eventosArray.add(evObj);
+            }
+        }
+
+        return Json.createObjectBuilder()
+                .add("guiaSeleccionada", true)
+                .add("guiaId", guiaActual.getId() != null ? guiaActual.getId() : 0L)
+                .add("origen", guiaActual.getOrigen() != null ? guiaActual.getOrigen() : "")
+                .add("destino", guiaActual.getDestino() != null ? guiaActual.getDestino() : "")
+                .add("estado", guiaActual.getEstado() != null ? guiaActual.getEstado().name() : "")
+                .add("matricula", getVehiculoMatricula())
+                .add("chofer", getChoferNombreCompleto())
+                .add("corredorVial", getCorredorVialResuelto())
+                .add("rutaPlanificada", rutaArray)
+                .add("eventos", eventosArray)
+                .build()
+                .toString();
+    }
+
+    public boolean isNodoTrackingActivoSistema() {
+        if (nodosPerifericosService != null) {
+            return nodosPerifericosService.isTrackingHabilitado();
+        }
+        return isMockTrackingActivo();
+    }
+
+    public int getCantidadBalanzasActivas() {
+        if (nodosPerifericosService != null) {
+            return nodosPerifericosService.listarBalanzasHabilitadas().size();
+        }
+        return 0;
+    }
+
+    public String getResumenModoTracking() {
+        if (nodosPerifericosService == null) {
+            return "Estándar";
+        }
+        return nodosPerifericosService.getModoTrackingActivo().getEtiqueta();
     }
 
     public boolean isNodoTrackingOnline() {
@@ -1065,5 +1241,9 @@ public class DetalleViajeBean implements Serializable {
 
     void setTrackingMockService(TrackingMockServiceLocal trackingMockService) {
         this.trackingMockService = trackingMockService;
+    }
+
+    void setNodosPerifericosService(GestionNodosPerifericosServiceLocal nodosPerifericosService) {
+        this.nodosPerifericosService = nodosPerifericosService;
     }
 }

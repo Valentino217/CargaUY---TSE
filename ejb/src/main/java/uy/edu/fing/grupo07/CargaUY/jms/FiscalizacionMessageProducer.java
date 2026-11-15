@@ -45,8 +45,13 @@ public class FiscalizacionMessageProducer implements FiscalizacionProducerLocal 
         }
 
         try {
+            String correlacion = uy.edu.fing.grupo07.CargaUY.integration.TraceContext.normalizarCorrelacion(null);
+            String traceparent = uy.edu.fing.grupo07.CargaUY.integration.TraceContext.siguienteTraceparentHijo(null, correlacion);
             TextMessage message = jmsContext.createTextMessage(String.valueOf(guiaId));
             message.setLongProperty("guiaId", guiaId);
+            message.setJMSCorrelationID(correlacion);
+            message.setStringProperty(uy.edu.fing.grupo07.CargaUY.integration.TraceContext.JMS_PROP_CORRELACION, correlacion);
+            message.setStringProperty(uy.edu.fing.grupo07.CargaUY.integration.TraceContext.JMS_PROP_TRACEPARENT, traceparent);
 
             JMSProducer producer = jmsContext.createProducer();
             producer.send(fiscalizacionQueue, message);
@@ -76,10 +81,15 @@ public class FiscalizacionMessageProducer implements FiscalizacionProducerLocal 
                 : "";
 
         try {
+            String correlacion = uy.edu.fing.grupo07.CargaUY.integration.TraceContext.normalizarCorrelacion(null);
+            String traceparent = uy.edu.fing.grupo07.CargaUY.integration.TraceContext.siguienteTraceparentHijo(null, correlacion);
             String payload = PREFIJO_SIN_GUIA + matriculaLimpia + "|" + detalleLimpio;
             TextMessage message = jmsContext.createTextMessage(payload);
             message.setStringProperty("tipoEvaluacion", "SIN_GUIA");
             message.setStringProperty("matricula", matriculaLimpia);
+            message.setJMSCorrelationID(correlacion);
+            message.setStringProperty(uy.edu.fing.grupo07.CargaUY.integration.TraceContext.JMS_PROP_CORRELACION, correlacion);
+            message.setStringProperty(uy.edu.fing.grupo07.CargaUY.integration.TraceContext.JMS_PROP_TRACEPARENT, traceparent);
 
             JMSProducer producer = jmsContext.createProducer();
             producer.send(fiscalizacionQueue, message);

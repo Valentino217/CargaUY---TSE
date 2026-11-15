@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -17,11 +18,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import uy.edu.fing.grupo07.CargaUY.domain.entity.GuiaDeViaje;
@@ -36,6 +39,8 @@ import uy.edu.fing.grupo07.CargaUY.service.GuiaDeViajeEJBLocal;
 @DisplayName("Pruebas Unitarias - RegistrarPesajeBean")
 class RegistrarPesajeBeanTest {
 
+    private static final String TOKEN_PESAJE = "tok-pesaje";
+
     @Mock
     private GestionBalanzaServiceLocal balanzaService;
 
@@ -45,11 +50,21 @@ class RegistrarPesajeBeanTest {
     @Mock
     private MotorFiscalizacionLocal motorFiscalizacion;
 
+    private MockedStatic<SesionActual> sesionActualMock;
     private RegistrarPesajeBean bean;
 
     @BeforeEach
     void setUp() {
+        sesionActualMock = mockStatic(SesionActual.class);
+        sesionActualMock.when(SesionActual::token).thenReturn(TOKEN_PESAJE);
         bean = new RegistrarPesajeBean(balanzaService, guiaDeViajeEJB, motorFiscalizacion);
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (sesionActualMock != null) {
+            sesionActualMock.close();
+        }
     }
 
     @Test
@@ -62,8 +77,8 @@ class RegistrarPesajeBeanTest {
         List<GuiaDeViaje> guias = new ArrayList<>();
         guias.add(guia1);
 
-        when(guiaDeViajeEJB.listarGuias()).thenReturn(guias);
-        when(balanzaService.listarPesadasPorGuia(10L)).thenReturn(Collections.emptyList());
+        when(guiaDeViajeEJB.listarParaOperador(TOKEN_PESAJE)).thenReturn(guias);
+        when(balanzaService.listarPesadasPorGuia(TOKEN_PESAJE, 10L)).thenReturn(Collections.emptyList());
 
         bean.init();
 
@@ -91,13 +106,13 @@ class RegistrarPesajeBeanTest {
                 5L
         );
 
-        when(balanzaService.registrarPesada(any(PesadaBalanzaDTO.class))).thenReturn(pesadaRetornada);
-        when(balanzaService.listarPesadasPorGuia(5L)).thenReturn(Collections.singletonList(pesadaRetornada));
+        when(balanzaService.registrarPesada(eq(TOKEN_PESAJE), any(PesadaBalanzaDTO.class))).thenReturn(pesadaRetornada);
+        when(balanzaService.listarPesadasPorGuia(TOKEN_PESAJE, 5L)).thenReturn(Collections.singletonList(pesadaRetornada));
 
         bean.registrarPesaje();
 
-        verify(balanzaService, times(1)).registrarPesada(any(PesadaBalanzaDTO.class));
-        verify(balanzaService, times(1)).listarPesadasPorGuia(5L);
+        verify(balanzaService, times(1)).registrarPesada(eq(TOKEN_PESAJE), any(PesadaBalanzaDTO.class));
+        verify(balanzaService, times(1)).listarPesadasPorGuia(TOKEN_PESAJE, 5L);
     }
 
     @Test
@@ -108,7 +123,7 @@ class RegistrarPesajeBeanTest {
 
         bean.registrarPesaje();
 
-        verify(balanzaService, never()).registrarPesada(any());
+        verify(balanzaService, never()).registrarPesada(any(), any());
         verify(motorFiscalizacion, never()).evaluarGuia(any());
     }
 
@@ -128,12 +143,12 @@ class RegistrarPesajeBeanTest {
                 8L
         );
 
-        when(balanzaService.registrarPesada(any(PesadaBalanzaDTO.class))).thenReturn(pesadaRetornada);
-        when(balanzaService.listarPesadasPorGuia(8L)).thenReturn(Collections.singletonList(pesadaRetornada));
+        when(balanzaService.registrarPesada(eq(TOKEN_PESAJE), any(PesadaBalanzaDTO.class))).thenReturn(pesadaRetornada);
+        when(balanzaService.listarPesadasPorGuia(TOKEN_PESAJE, 8L)).thenReturn(Collections.singletonList(pesadaRetornada));
 
         bean.registrarPesaje();
 
-        verify(balanzaService, times(1)).registrarPesada(any(PesadaBalanzaDTO.class));
+        verify(balanzaService, times(1)).registrarPesada(eq(TOKEN_PESAJE), any(PesadaBalanzaDTO.class));
         verify(motorFiscalizacion, never()).evaluarGuia(any());
     }
 
@@ -143,8 +158,8 @@ class RegistrarPesajeBeanTest {
         GuiaDeViaje guiaPreseleccionada = new GuiaDeViaje();
         guiaPreseleccionada.setId(10L);
         guiaPreseleccionada.setEstado(TipoEstado.EN_CURSO);
-        when(guiaDeViajeEJB.listarGuias()).thenReturn(List.of(guiaPreseleccionada));
-        when(balanzaService.listarPesadasPorGuia(10L)).thenReturn(Collections.emptyList());
+        when(guiaDeViajeEJB.listarParaOperador(TOKEN_PESAJE)).thenReturn(List.of(guiaPreseleccionada));
+        when(balanzaService.listarPesadasPorGuia(TOKEN_PESAJE, 10L)).thenReturn(Collections.emptyList());
 
         bean.init();
         assertEquals(10L, bean.getGuiaIdSeleccionada());
@@ -161,13 +176,13 @@ class RegistrarPesajeBeanTest {
                 "STP 9999",
                 null
         );
-        when(balanzaService.registrarPesada(any(PesadaBalanzaDTO.class))).thenReturn(pesadaSinGuia);
+        when(balanzaService.registrarPesada(eq(TOKEN_PESAJE), any(PesadaBalanzaDTO.class))).thenReturn(pesadaSinGuia);
         when(motorFiscalizacion.evaluarVehiculoSinGuia(eq("STP 9999"), org.mockito.ArgumentMatchers.anyString()))
                 .thenReturn(true);
 
         bean.registrarPesaje();
 
-        verify(balanzaService).registrarPesada(org.mockito.ArgumentMatchers.argThat(dto ->
+        verify(balanzaService).registrarPesada(eq(TOKEN_PESAJE), org.mockito.ArgumentMatchers.argThat(dto ->
                 dto.guiaId() == null
                         && "STP 9999".equals(dto.matricula())
                         && dto.pesoRegistrado() == 42500

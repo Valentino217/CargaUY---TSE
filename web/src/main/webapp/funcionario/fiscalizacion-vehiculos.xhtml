@@ -130,6 +130,7 @@
                             </p:selectOneMenu>
                         </f:facet>
                         <ui:param name="vencPnc" value="#{fiscalizacionFlotaBean.obtenerVencimientoPnc(veh.matricula)}" />
+                        <ui:param name="nroPnc" value="#{fiscalizacionFlotaBean.obtenerNumeroPermisoPnc(veh.matricula)}" />
                         <p:tag value="#{fiscalizacionFlotaBean.obtenerEstadoVigencia(vencPnc)}"
                                severity="#{fiscalizacionFlotaBean.obtenerSeveridadVigencia(vencPnc)}"
                                icon="#{fiscalizacionFlotaBean.obtenerSeveridadVigencia(vencPnc) eq 'success' ? 'pi pi-check-circle' : 'pi pi-exclamation-triangle'}"
@@ -137,6 +138,11 @@
                         <div style="font-size: 0.76rem; color: #475569; margin-top: 0.2rem;">
                             #{vencPnc != null ? 'Vence: '.concat(vencPnc.toString()) : 'Sin registro PNC'}
                         </div>
+                        <ui:fragment rendered="#{not empty nroPnc}">
+                            <div style="font-size: 0.74rem; color: #0f2942; font-weight: 600;">
+                                Nro: #{nroPnc}
+                            </div>
+                        </ui:fragment>
                     </p:column>
 
                     <p:column headerText="Apto para circular" filterBy="#{fiscalizacionFlotaBean.tieneDocumentacionEnRegla(veh) ? 'APTO RUTA' : 'BLOQUEADO'}" filterMatchMode="exact" style="width: 125px; text-align: center;">
@@ -211,6 +217,12 @@
                             <div style="font-weight: 700; color: #0f2942; margin-bottom: 0.5rem;">
                                 <i class="pi pi-id-card" style="color: #2563eb;" /> Permiso Nacional de Circulación (PNC)
                             </div>
+                            <p:outputLabel for="numPnc" value="Nro. Permiso (PNC)" />
+                            <p:inputText id="numPnc"
+                                         label="Nro. Permiso (PNC)"
+                                         value="#{fiscalizacionFlotaBean.nuevoNumeroPermisoPnc}"
+                                         placeholder="Ej: PNC-2026-00123"
+                                         style="margin-top: 0.35rem; margin-bottom: 0.75rem;" />
                             <p:outputLabel for="fecPnc" value="Nueva Fecha de Vencimiento PNC" />
                             <div style="display: flex; gap: 0.6rem; margin-top: 0.35rem;">
                                 <p:datePicker id="fecPnc" label="Nueva Fecha de Vencimiento PNC" value="#{fiscalizacionFlotaBean.nuevaFechaPnc}" pattern="yyyy-MM-dd" showIcon="true"  panelStyleClass="cuy-calendar"  monthNavigator="true"  yearNavigator="select"  showButtonBar="true"  showOtherMonths="true"  yearRange="2020:2040"  showLongMonthNames="true" />

@@ -7,6 +7,13 @@
 
     <ui:define name="title">Monitoreo de Viajes</ui:define>
 
+    <ui:define name="head">
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+        <link rel="stylesheet" href="#{request.contextPath}/css/mapa-monitoreo.css?v=20261113" />
+        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+        <script src="#{request.contextPath}/js/mapa-monitoreo.js?v=20261113"></script>
+    </ui:define>
+
     <ui:define name="content">
         <div class="cuy-page-header">
             <div>
@@ -16,15 +23,10 @@
             </div>
             <div style="display: flex; gap: 0.6rem;">
                 <h:form id="monitoreoTopForm" style="margin: 0; display: flex; gap: 0.6rem;">
-                    <p:commandButton value="Simular Tracking"
-                                     icon="pi pi-send"
-                                     type="button"
-                                     onclick="PF('dlgTrackingWidget').show()"
-                                     styleClass="ui-button-outlined ui-button-success" />
                     <p:commandButton value="Actualizar"
                                      icon="pi pi-refresh"
                                      actionListener="#{detalleViajeBean.consultarViaje}"
-                                     update=":monitoreoForm :growl"
+                                     update=":monitoreoForm:monitoreoResumenPanel :monitoreoForm:monitoreoEstadoPanel :monitoreoForm:monitoreoTablasPanel :monitoreoForm:pollMonitoreo :monitoreoForm:datosMapaJson :monitoreoForm:mapaScriptTrigger :growl"
                                      styleClass="ui-button-outlined ui-button-secondary" />
                 </h:form>
             </div>
@@ -36,49 +38,64 @@
                 <div class="cuy-grid-3" style="align-items: center;">
                     <div class="cuy-field ui-fluid">
                         <p:outputLabel for="selGuiaMon" value="Seleccionar Guía de Viaje a Monitorear" />
-                        <p:selectOneMenu id="selGuiaMon" label="Seleccionar Guía de Viaje a Monitorear" value="#{detalleViajeBean.guiaIdSeleccionada}">
+                        <p:selectOneMenu id="selGuiaMon"
+                                         label="Seleccionar Guía de Viaje a Monitorear"
+                                         value="#{detalleViajeBean.guiaIdSeleccionada}"
+                                         filter="true"
+                                         filterMatchMode="contains"
+                                         filterNormalize="true"
+                                         filterPlaceholder="Buscar por ID, ruta o matrícula...">
                             <f:selectItem itemLabel="-- Seleccione una Guía --" itemValue="#{null}" noSelectionOption="true" />
                             <f:selectItems value="#{detalleViajeBean.guiasDisponibles}"
                                            var="g"
                                            itemLabel="#{detalleViajeBean.obtenerEtiquetaGuia(g)}"
                                            itemValue="#{g.id}" />
-                            <p:ajax listener="#{detalleViajeBean.onGuiaChange}" update=":monitoreoForm :monitoreoTopForm" />
+                            <p:ajax listener="#{detalleViajeBean.onGuiaChange}"
+                                    update=":monitoreoForm:monitoreoResumenPanel :monitoreoForm:monitoreoEstadoPanel :monitoreoForm:monitoreoTablasPanel :monitoreoForm:pollMonitoreo :monitoreoForm:datosMapaJson :monitoreoForm:mapaScriptTrigger :monitoreoTopForm" />
                         </p:selectOneMenu>
                     </div>
 
-                    <h:panelGroup rendered="#{detalleViajeBean.guiaActual != null}">
-                        <div style="font-size: 0.78rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Ruta y Unidad Asignada</div>
-                        <div style="font-size: 1.05rem; font-weight: 700; color: #0f2942; margin-top: 0.25rem;">
-                            #{detalleViajeBean.guiaActual.origen} &#8594; #{detalleViajeBean.guiaActual.destino}
-                        </div>
-                        <h:panelGroup rendered="#{not empty detalleViajeBean.guiaActual.corredorVial}">
-                            <div style="font-size: 0.82rem; color: #1d4ed8; font-weight: 600; margin-top: 0.15rem;">
-                                <i class="pi pi-directions" style="font-size: 0.8rem;" /> Corredor Planificado: #{detalleViajeBean.guiaActual.corredorVial}
+                    <h:panelGroup id="monitoreoResumenPanel">
+                        <h:panelGroup rendered="#{detalleViajeBean.guiaActual != null}">
+                            <div style="font-size: 0.78rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Ruta y Unidad Asignada</div>
+                            <div style="font-size: 1.05rem; font-weight: 700; color: #0f2942; margin-top: 0.25rem;">
+                                #{detalleViajeBean.guiaActual.origen} &#8594; #{detalleViajeBean.guiaActual.destino}
+                            </div>
+                            <h:panelGroup rendered="#{not empty detalleViajeBean.corredorVialResuelto}">
+                                <div style="font-size: 0.82rem; color: #1d4ed8; font-weight: 600; margin-top: 0.15rem;">
+                                    <i class="pi pi-directions" style="font-size: 0.8rem;" /> Corredor Planificado: #{detalleViajeBean.corredorVialResuelto}
+                                </div>
+                            </h:panelGroup>
+                            <div style="font-size: 0.85rem; color: #475569; margin-top: 0.2rem;">
+                                Matrícula: <span class="cuy-mono">#{detalleViajeBean.vehiculoMatricula}</span> | Chofer: <strong>#{detalleViajeBean.choferNombreCompleto}</strong>
                             </div>
                         </h:panelGroup>
-                        <div style="font-size: 0.85rem; color: #475569; margin-top: 0.2rem;">
-                            Matrícula: <span class="cuy-mono">#{detalleViajeBean.vehiculoMatricula}</span> | Chofer: <strong>#{detalleViajeBean.choferNombreCompleto}</strong>
-                        </div>
                     </h:panelGroup>
 
-                    <h:panelGroup rendered="#{detalleViajeBean.guiaActual != null}" style="text-align: right;">
-                        <p:tag value="#{detalleViajeBean.guiaActual.estado}"
-                                severity="#{detalleViajeBean.guiaActual.estado.name() eq 'EN_CURSO' ? 'info' : (detalleViajeBean.guiaActual.estado.name() eq 'FINALIZADO' ? 'success' : 'warning')}"
-                                rounded="true" />
-                        <div style="font-size: 0.9rem; color: #0f2942; font-weight: 700; margin-top: 0.4rem;">
-                            Peso de la carga: <h:outputText value="#{detalleViajeBean.guiaActual.volumenCarga}"><f:convertNumber pattern="#,##0" /></h:outputText> kg
-                        </div>
+                    <h:panelGroup id="monitoreoEstadoPanel" style="text-align: right;">
+                        <h:panelGroup rendered="#{detalleViajeBean.guiaActual != null}">
+                            <p:tag value="#{detalleViajeBean.guiaActual.estado}"
+                                    severity="#{detalleViajeBean.guiaActual.estado.name() eq 'EN_CURSO' ? 'info' : (detalleViajeBean.guiaActual.estado.name() eq 'FINALIZADO' ? 'success' : 'warning')}"
+                                    rounded="true" />
+                            <div style="font-size: 0.9rem; color: #0f2942; font-weight: 700; margin-top: 0.4rem;">
+                                Peso de la carga: <h:outputText value="#{detalleViajeBean.guiaActual.volumenCarga}"><f:convertNumber pattern="#,##0" /></h:outputText> kg
+                            </div>
+                        </h:panelGroup>
                     </h:panelGroup>
                 </div>
             </div>
 
-            <p:poll interval="3"
+            <p:poll id="pollMonitoreo"
+                    interval="4"
                     listener="#{detalleViajeBean.refrescarPorPollMock}"
-                    update=":monitoreoForm :dlgTrackingForm:trackingEstado"
-                    stop="#{not detalleViajeBean.mockTrackingActivo}" />
+                    update=":monitoreoForm:monitoreoResumenPanel :monitoreoForm:monitoreoEstadoPanel :monitoreoForm:monitoreoTablasPanel :monitoreoForm:pollMonitoreo :monitoreoForm:datosMapaJson :monitoreoForm:mapaScriptTrigger"
+                    stop="#{not detalleViajeBean.pollAutomaticoActivo}" />
+
+            <ui:include src="/WEB-INF/templates/mapaMonitoreo.xhtml" />
 
             <!-- Línea Temporal de Eventos de Ruta -->
-            <div class="cuy-card" style="margin-bottom: 0;">
+            <h:panelGroup id="monitoreoTablasPanel" layout="block">
+                <div class="cuy-card" style="margin-bottom: 0;">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.65rem;">
                     <h3 class="cuy-card-title" style="margin-bottom: 0;">
                         <i class="pi pi-compass" style="color: #2563eb;" />
@@ -145,99 +162,18 @@
                         </h:panelGroup>
                     </p:column>
                 </p:dataTable>
-            </div>
+                </div>
+            </h:panelGroup>
+
+            <h:outputText id="datosMapaJson" value="#{detalleViajeBean.datosMapaJson}" style="display:none;" />
+            <h:panelGroup id="mapaScriptTrigger">
+                <script type="text/javascript">
+                    if (window.actualizarMapaMonitoreo) {
+                        setTimeout(function() { window.actualizarMapaMonitoreo(false); }, 50);
+                    }
+                </script>
+            </h:panelGroup>
         </h:form>
-
-        <!-- Modal Simulador de Tracking (Nodo Periférico) -->
-        <p:dialog header="Nodo Periférico de Tracking (Mock)"
-                  widgetVar="dlgTrackingWidget"
-                  modal="true"
-                  responsive="true"
-                  width="560"
-                  closeOnEscape="true">
-            <h:form id="dlgTrackingForm" styleClass="ui-fluid">
-                <h:panelGroup id="trackingEstado" layout="block" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 1rem;">
-                    <div style="display: flex; align-items: center; gap: 0.6rem;">
-                        <p:tag value="#{detalleViajeBean.mockTrackingActivo ? 'ACTIVO' : 'DETENIDO'}"
-                               severity="#{detalleViajeBean.mockTrackingActivo ? 'success' : 'secondary'}"
-                               icon="#{detalleViajeBean.mockTrackingActivo ? 'pi pi-spin pi-spinner' : 'pi pi-pause'}"
-                               rounded="true" />
-                        <span style="font-size: 0.85rem; color: #0f2942; font-weight: 600;">
-                            Puntos emitidos: #{detalleViajeBean.mockTotalEventosEmitidos} | Desvíos: #{detalleViajeBean.mockTotalDesviosEmitidos}
-                        </span>
-                    </div>
-                    <span class="cuy-mono" style="font-size: 0.75rem;" title="Endpoint del contenedor periférico mock-tracking">
-                        #{detalleViajeBean.nodoTrackingEndpoint}
-                    </span>
-                </h:panelGroup>
-
-                <div class="cuy-field" style="margin-bottom: 1rem;">
-                    <p:outputLabel for="inputMockEvMin" value="Eventos por minuto" />
-                    <p:inputNumber id="inputMockEvMin"
-                                   label="Eventos por minuto"
-                                   value="#{detalleViajeBean.mockEventosPorMinuto}"
-                                   decimalPlaces="0"
-                                   minValue="1"
-                                   maxValue="120"
-                                   suffix=" ev/min" />
-                </div>
-
-                <div class="cuy-field" style="margin-bottom: 1rem;">
-                    <p:outputLabel for="inputMockDesvios" value="Cantidad de desvíos" />
-                    <p:inputNumber id="inputMockDesvios"
-                                   label="Cantidad de desvíos"
-                                   value="#{detalleViajeBean.mockCantidadDesvios}"
-                                   decimalPlaces="0"
-                                   minValue="0"
-                                   maxValue="50"
-                                   suffix=" desvíos" />
-                </div>
-
-                <h:panelGroup rendered="#{not empty detalleViajeBean.mockUltimoResultado}">
-                    <div style="margin-bottom: 1rem; padding: 0.55rem 0.8rem; background: #e0f2fe; border-left: 3px solid #0284c7; border-radius: 4px; font-size: 0.82rem; color: #0c4a6e;">
-                        <h:outputText value="#{detalleViajeBean.mockUltimoResultado}" />
-                    </div>
-                </h:panelGroup>
-
-                <div style="display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.25rem;">
-                    <p:commandButton value="Cerrar"
-                                     type="button"
-                                     icon="pi pi-times"
-                                     onclick="PF('dlgTrackingWidget').hide()"
-                                     styleClass="ui-button-outlined ui-button-secondary"
-                                     style="width: auto;" />
-                    <p:commandButton value="Reiniciar ruta"
-                                     icon="pi pi-refresh"
-                                     actionListener="#{detalleViajeBean.reiniciarRecorridoMock}"
-                                     process="@this"
-                                     update=":dlgTrackingForm :monitoreoForm :growl"
-                                     styleClass="ui-button-secondary ui-button-outlined"
-                                     style="width: auto;" />
-                    <p:commandButton value="Paso ahora"
-                                     icon="pi pi-step-forward"
-                                     actionListener="#{detalleViajeBean.emitirPasoMockAhora}"
-                                     process="@this inputMockEvMin inputMockDesvios"
-                                     update=":dlgTrackingForm :monitoreoForm :growl"
-                                     styleClass="ui-button-info ui-button-outlined"
-                                     style="width: auto;" />
-                    <p:commandButton value="Detener"
-                                     icon="pi pi-stop"
-                                     actionListener="#{detalleViajeBean.detenerMockTracking}"
-                                     process="@this"
-                                     update=":dlgTrackingForm :monitoreoForm :growl"
-                                     disabled="#{not detalleViajeBean.mockTrackingActivo}"
-                                     styleClass="ui-button-danger ui-button-outlined"
-                                     style="width: auto;" />
-                    <p:commandButton value="#{detalleViajeBean.mockTrackingActivo ? 'Actualizar' : 'Iniciar'}"
-                                     icon="pi pi-play"
-                                     actionListener="#{detalleViajeBean.iniciarMockTracking}"
-                                     process="@this inputMockEvMin inputMockDesvios"
-                                     update=":dlgTrackingForm :monitoreoForm :growl"
-                                     styleClass="ui-button-success"
-                                     style="width: auto;" />
-                </div>
-            </h:form>
-        </p:dialog>
 
         <!-- Modal Vista Previa de Foto de Incidente -->
         <p:dialog header="Evidencia Fotográfica del Incidente"

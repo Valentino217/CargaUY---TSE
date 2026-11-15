@@ -101,4 +101,74 @@ class ITVPNCEJBTest {
         assertEquals(1, lista.size());
         assertEquals(202, lista.get(0).getNro());
     }
+
+    @Test
+    @DisplayName("ITVEJB y PNCEJB fallan cerrados sin ControlAcceso y validan token por rol/empresa")
+    void testTokenizadoYFailClosed() throws Exception {
+        ITV itv = new ITV(LocalDate.now().plusDays(60), vehiculo);
+        itv.setNroCertificado(101);
+        PNC pnc = new PNC(LocalDate.now().plusDays(90), "PNC-2026-01", vehiculo);
+        pnc.setNro(202);
+
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class, () -> itvEJB.crear("tok", itv));
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class, () -> pncEJB.listarPNCs("tok"));
+
+        uy.edu.fing.grupo07.CargaUY.security.ControlAcceso control =
+                org.mockito.Mockito.mock(uy.edu.fing.grupo07.CargaUY.security.ControlAcceso.class);
+        Field cItv = ITVEJB.class.getDeclaredField("control");
+        cItv.setAccessible(true);
+        cItv.set(itvEJB, control);
+        Field cPnc = PNCEJB.class.getDeclaredField("control");
+        cPnc.setAccessible(true);
+        cPnc.set(pncEJB, control);
+
+        when(em.find(ITV.class, 101)).thenReturn(itv);
+        when(em.merge(itv)).thenReturn(itv);
+        itvEJB.crear("tok-emp", itv);
+        itvEJB.modificar("tok-emp", itv);
+        itvEJB.eliminar("tok-emp", itv);
+        verify(control, org.mockito.Mockito.times(3)).exigir(
+                "tok-emp",
+                uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.ADMINISTRADOR,
+                uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.FUNCIONARIO
+        );
+
+        when(em.find(PNC.class, 202)).thenReturn(pnc);
+        when(em.merge(pnc)).thenReturn(pnc);
+        pncEJB.crear("tok-emp", pnc);
+        pncEJB.modificar("tok-emp", pnc);
+        pncEJB.eliminar("tok-emp", pnc);
+        verify(control, org.mockito.Mockito.times(6)).exigir(
+                "tok-emp",
+                uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.ADMINISTRADOR,
+                uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.FUNCIONARIO
+        );
+
+        uy.edu.fing.grupo07.CargaUY.security.Acceso ciudadano =
+                new uy.edu.fing.grupo07.CargaUY.security.Acceso(
+                        7,
+                        41234567,
+                        "Resp",
+                        java.util.Set.of(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.CIUDADANO)
+                );
+        when(control.exigir(
+                eq("tok-ciu"),
+                eq(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.ADMINISTRADOR),
+                eq(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.FUNCIONARIO),
+                eq(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.AUTORIDAD),
+                eq(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.CIUDADANO)
+        )).thenReturn(ciudadano);
+
+        when(em.createQuery(org.mockito.ArgumentMatchers.contains("WHERE t.vehiculo.empresa.activa = true"), eq(ITV.class)))
+                .thenReturn(qItv);
+        when(qItv.setParameter("id", 7)).thenReturn(qItv);
+        when(qItv.getResultList()).thenReturn(List.of(itv));
+        assertEquals(1, itvEJB.listarITVs("tok-ciu").size());
+
+        when(em.createQuery(org.mockito.ArgumentMatchers.contains("WHERE p.vehiculo.empresa.activa = true"), eq(PNC.class)))
+                .thenReturn(qPnc);
+        when(qPnc.setParameter("id", 7)).thenReturn(qPnc);
+        when(qPnc.getResultList()).thenReturn(List.of(pnc));
+        assertEquals(1, pncEJB.listarPNCs("tok-ciu").size());
+    }
 }

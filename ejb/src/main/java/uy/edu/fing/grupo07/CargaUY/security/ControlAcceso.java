@@ -50,4 +50,26 @@ public class ControlAcceso {
                 && (g.getChofer()==null || g.getChofer().getId()!=a.id()))
             throw new ErrorAcceso(403,"La guía no pertenece al chofer autenticado");
     }
+    public void vehiculoChofer(String token, String matricula) {
+        Acceso a = exigir(token, TipoUsuario.ADMINISTRADOR, TipoUsuario.CHOFER);
+        if (a.tiene(TipoUsuario.ADMINISTRADOR)) return;
+        if (matricula == null || matricula.isBlank()) {
+            throw new ErrorAcceso(400, "matricula es obligatoria");
+        }
+        String mat = matricula.trim().toUpperCase(Locale.ROOT);
+        Vehiculo v = em.find(Vehiculo.class, mat);
+        if (v == null && !mat.equals(matricula.trim())) {
+            v = em.find(Vehiculo.class, matricula.trim());
+        }
+        if (v == null || v.getEmpresa() == null) {
+            throw new ErrorAcceso(403, "El vehículo no pertenece a una empresa vinculada al chofer autenticado");
+        }
+        VinculoEmpresa vinculo = em.find(
+                VinculoEmpresa.class,
+                VinculoEmpresa.clave(v.getEmpresa().getNroEmpresa(), a.id())
+        );
+        if (vinculo == null || !vinculo.isChofer() || !v.getEmpresa().isActiva()) {
+            throw new ErrorAcceso(403, "El vehículo no pertenece a una empresa vinculada al chofer autenticado");
+        }
+    }
 }

@@ -94,7 +94,7 @@ public class RegistrarPesajeBean implements Serializable {
      */
     public void cargarGuias() {
         try {
-            List<GuiaDeViaje> todasLasGuias = guiaDeViajeEJB.listarGuias();
+            List<GuiaDeViaje> todasLasGuias = guiaDeViajeEJB.listarParaOperador(SesionActual.token());
             if (todasLasGuias != null) {
                 this.guiasDisponibles = todasLasGuias.stream()
                         .filter(g -> g.getEstado() == TipoEstado.EN_CURSO)
@@ -147,7 +147,7 @@ public class RegistrarPesajeBean implements Serializable {
         }
 
         try {
-            this.pesadasDeLaGuia = balanzaService.listarPesadasPorGuia(guiaIdSeleccionada);
+            this.pesadasDeLaGuia = balanzaService.listarPesadasPorGuia(SesionActual.token(), guiaIdSeleccionada);
         } catch (Exception excepcion) {
             LOGGER.log(Level.WARNING, "Error al consultar pesadas de la guía {0}: {1}",
                     new Object[]{guiaIdSeleccionada, excepcion.getMessage()});
@@ -210,9 +210,10 @@ public class RegistrarPesajeBean implements Serializable {
         );
 
         try {
+            String token = SesionActual.token();
             if (viaPeriferico) {
                 PesadaBalanzaDTO registradaEnMock = balanzaService.registrarPesadaViaPeriferico(
-                        pesadaDTO, peaje, UUID.randomUUID().toString()
+                        token, pesadaDTO, peaje, UUID.randomUUID().toString()
                 );
                 this.matriculaManual = null;
                 String est = (peaje != null && !peaje.isBlank()) ? peaje : "balanza periférica";
@@ -228,7 +229,7 @@ public class RegistrarPesajeBean implements Serializable {
                 return;
             }
 
-            PesadaBalanzaDTO pesadaGuardada = balanzaService.registrarPesada(pesadaDTO);
+            PesadaBalanzaDTO pesadaGuardada = balanzaService.registrarPesada(token, pesadaDTO);
             this.matriculaManual = null;
             if (pesadaGuardada.guiaId() != null) {
                 this.guiaIdSeleccionada = pesadaGuardada.guiaId();
