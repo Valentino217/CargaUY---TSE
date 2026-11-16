@@ -15,9 +15,9 @@ object RetrofitClient {
 
     private val okHttpClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
-            .connectTimeout(5000, TimeUnit.MILLISECONDS)
-            .readTimeout(8000, TimeUnit.MILLISECONDS)
-            .writeTimeout(8000, TimeUnit.MILLISECONDS)
+            .connectTimeout(10_000, TimeUnit.MILLISECONDS)
+            .readTimeout(25_000, TimeUnit.MILLISECONDS)
+            .writeTimeout(25_000, TimeUnit.MILLISECONDS)
             .addInterceptor { chain ->
                 val original = chain.request()
                 val request = original.newBuilder()
@@ -87,13 +87,13 @@ object RetrofitClient {
             .build()
 
     suspend fun <T> executeWithFallback(block: suspend (ViajesApi) -> T): T {
-        // En emulador, priorizar 10.0.2.2; en físico, priorizar la IP activa y candidatos
-        val urlsOrdenadas = if (esEmulador()) {
-            (listOf(activeBaseUrl) + Constants.CANDIDATE_URLS).distinct()
-        } else {
-            (listOf(activeBaseUrl) + Constants.CANDIDATE_URLS).distinct()
-        }
+        val urlsOrdenadas = SyncAuthErrorHelper.urlsCandidatasParaEjecucion(
+            activeBaseUrl = activeBaseUrl,
+            candidateUrls = Constants.CANDIDATE_URLS,
+            tieneTokenSesion = SesionMovil.token.isNotBlank()
+        )
 
+        var firstNetworkException: Exception? = null
         var lastException: Exception? = null
         for (url in urlsOrdenadas) {
             val api = clientsByUrl.getOrPut(url) { crearApiParaUrl(url) }
@@ -105,7 +105,16 @@ object RetrofitClient {
                 return result
             } catch (e: Exception) {
                 Log.w("CARGAUY", "Fallo llamada en $url: ${e.javaClass.simpleName}: ${e.message}")
-                if (e is retrofit2.HttpException) throw e
+                if (e is retrofit2.HttpException) {
+                    if (firstNetworkException != null && SyncAuthErrorHelper.esErrorAutenticacion(e.code())) {
+                        lastException = firstNetworkException
+                        continue
+                    }
+                    throw e
+                }
+                if (firstNetworkException == null) {
+                    firstNetworkException = e
+                }
                 lastException = e
             }
         }

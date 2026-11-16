@@ -324,6 +324,25 @@ class SyncRepository(context: Context) {
         }
     }
 
+    private suspend fun refrescarGuiasYActualizarEstadoLocal(
+        guiaId: Long,
+        cedulaChofer: Int,
+        tipo: TipoEventoOption
+    ) {
+        try {
+            val guiasActualizadas = RetrofitClient.executeWithFallback { api ->
+                api.obtenerViajes(cedulaChofer)
+            }
+            dbHelper.guardarGuiasCache(cedulaChofer, guiasActualizadas)
+        } catch (_: Exception) {
+        }
+        if (tipo == TipoEventoOption.INICIO) {
+            dbHelper.actualizarEstadoGuiaLocal(guiaId, "EN_CURSO")
+        } else if (tipo == TipoEventoOption.FIN) {
+            dbHelper.actualizarEstadoGuiaLocal(guiaId, "FINALIZADO")
+        }
+    }
+
     /**
      * CU Crítico 1: Registrar evento de viaje con UUID único.
      * - Si no hay conexión (Flujo 3.A): guarda de forma local para sincronizar al recuperar internet.
@@ -435,18 +454,7 @@ class SyncRepository(context: Context) {
                         EstadoSyncLocal.SINCRONIZADO,
                         resultado?.mensaje ?: "Enviado"
                     )
-                    try {
-                        val guiasActualizadas = RetrofitClient.executeWithFallback { api ->
-                            api.obtenerViajes(cedulaChofer)
-                        }
-                        dbHelper.guardarGuiasCache(cedulaChofer, guiasActualizadas)
-                    } catch (_: Exception) {
-                    }
-                    if (tipo == TipoEventoOption.INICIO) {
-                        dbHelper.actualizarEstadoGuiaLocal(guiaId, "EN_CURSO")
-                    } else if (tipo == TipoEventoOption.FIN) {
-                        dbHelper.actualizarEstadoGuiaLocal(guiaId, "FINALIZADO")
-                    }
+                    refrescarGuiasYActualizarEstadoLocal(guiaId, cedulaChofer, tipo)
                     ResultadoOperacionEvento(
                         evento = eventoLocal.copy(estadoSync = EstadoSyncLocal.SINCRONIZADO.name),
                         guardadoOffline = false,
@@ -456,6 +464,7 @@ class SyncRepository(context: Context) {
 
                 EstadoSyncLocal.DUPLICADO -> {
                     dbHelper.eliminarEventoDuplicado(uuid)
+                    refrescarGuiasYActualizarEstadoLocal(guiaId, cedulaChofer, tipo)
                     ResultadoOperacionEvento(
                         evento = eventoLocal.copy(estadoSync = EstadoSyncLocal.DUPLICADO.name),
                         guardadoOffline = false,

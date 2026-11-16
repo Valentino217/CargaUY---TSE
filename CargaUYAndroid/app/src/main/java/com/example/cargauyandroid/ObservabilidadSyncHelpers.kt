@@ -122,6 +122,17 @@ object SyncAuthErrorHelper {
         return "Error del servidor (HTTP $httpCode). Mostrando tus viajes guardados."
     }
 
+    fun urlsCandidatasParaEjecucion(
+        activeBaseUrl: String,
+        candidateUrls: List<String>,
+        tieneTokenSesion: Boolean
+    ): List<String> {
+        if (tieneTokenSesion) {
+            return listOf(activeBaseUrl)
+        }
+        return (listOf(activeBaseUrl) + candidateUrls).distinct()
+    }
+
     fun mensajeRegistroHttpError(
         httpCode: Int,
         esSesionOidc: Boolean,
