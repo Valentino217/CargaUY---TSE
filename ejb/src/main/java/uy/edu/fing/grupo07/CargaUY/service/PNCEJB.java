@@ -53,18 +53,29 @@ public class PNCEJB implements PNCEJBLocal {
         return persistido.getEmpresa().getNroEmpresa();
     }
 
+    private void exigirPermisoEdicionEmpresa(String token, int nroEmpresa) {
+        Acceso actor = control.empresa(token, nroEmpresa, true);
+        if (actor != null && actor.tiene(TipoUsuario.FUNCIONARIO)
+                && !actor.tiene(TipoUsuario.ADMINISTRADOR)
+                && !actor.tiene(TipoUsuario.CIUDADANO)) {
+            throw new uy.edu.fing.grupo07.CargaUY.security.ErrorAcceso(
+                    403, "El funcionario no puede emitir ni modificar permisos ITV/PNC");
+        }
+    }
+
     @Override
     public void crear(String token, PNC pnc) {
         verificarControl();
-        control.exigir(token, TipoUsuario.ADMINISTRADOR, TipoUsuario.FUNCIONARIO);
-        resolverNroEmpresa(pnc);
+        if (pnc == null || pnc.getFechaVencimiento() == null) {
+            throw new IllegalArgumentException("El certificado PNC y su fecha de vencimiento son obligatorios.");
+        }
+        exigirPermisoEdicionEmpresa(token, resolverNroEmpresa(pnc));
         crear(pnc);
     }
 
     @Override
     public void modificar(String token, PNC pnc) {
         verificarControl();
-        control.exigir(token, TipoUsuario.ADMINISTRADOR, TipoUsuario.FUNCIONARIO);
         if (pnc == null) {
             throw new IllegalArgumentException("El certificado PNC es obligatorio.");
         }
@@ -73,9 +84,9 @@ public class PNCEJB implements PNCEJBLocal {
             if (existente == null) {
                 throw new IllegalArgumentException("Certificado PNC inexistente.");
             }
-            resolverNroEmpresa(existente);
+            exigirPermisoEdicionEmpresa(token, resolverNroEmpresa(existente));
         }
-        resolverNroEmpresa(pnc);
+        exigirPermisoEdicionEmpresa(token, resolverNroEmpresa(pnc));
         modificar(pnc);
     }
 

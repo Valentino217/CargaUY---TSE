@@ -317,7 +317,7 @@ public class PortalPublicoBean implements Serializable {
     }
 
     private boolean estaVehiculoHabilitado(Vehiculo v) {
-        if (v == null || !v.isEstadoHabilitacion()) {
+        if (v == null) {
             return false;
         }
         var persistenceUtil = jakarta.persistence.Persistence.getPersistenceUtil();

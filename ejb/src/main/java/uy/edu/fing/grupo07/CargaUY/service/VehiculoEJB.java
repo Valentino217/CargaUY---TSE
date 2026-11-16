@@ -77,6 +77,7 @@ public class VehiculoEJB implements VehiculoEJBLocal {
         }
         v.setMatricula(v.getMatricula().trim().toUpperCase());
         control.empresa(token,v.getEmpresa().getNroEmpresa(),true);
+        v.setEstadoHabilitacion(true);
         if (buscar(v.getMatricula()) != null) {
             throw new IllegalArgumentException("Ya existe un vehículo registrado con la matrícula " + v.getMatricula() + ".");
         }

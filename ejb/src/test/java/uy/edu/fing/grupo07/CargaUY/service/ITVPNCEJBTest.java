@@ -126,8 +126,9 @@ class ITVPNCEJBTest {
         when(em.merge(itv)).thenReturn(itv);
         itvEJB.crear("tok-emp", itv);
         itvEJB.modificar("tok-emp", itv);
+        verify(control, org.mockito.Mockito.times(3)).empresa("tok-emp", 10, true);
         itvEJB.eliminar("tok-emp", itv);
-        verify(control, org.mockito.Mockito.times(3)).exigir(
+        verify(control, org.mockito.Mockito.times(1)).exigir(
                 "tok-emp",
                 uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.ADMINISTRADOR,
                 uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.FUNCIONARIO
@@ -137,8 +138,9 @@ class ITVPNCEJBTest {
         when(em.merge(pnc)).thenReturn(pnc);
         pncEJB.crear("tok-emp", pnc);
         pncEJB.modificar("tok-emp", pnc);
+        verify(control, org.mockito.Mockito.times(6)).empresa("tok-emp", 10, true);
         pncEJB.eliminar("tok-emp", pnc);
-        verify(control, org.mockito.Mockito.times(6)).exigir(
+        verify(control, org.mockito.Mockito.times(2)).exigir(
                 "tok-emp",
                 uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.ADMINISTRADOR,
                 uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.FUNCIONARIO
@@ -170,5 +172,38 @@ class ITVPNCEJBTest {
         when(qPnc.setParameter("id", 7)).thenReturn(qPnc);
         when(qPnc.getResultList()).thenReturn(List.of(pnc));
         assertEquals(1, pncEJB.listarPNCs("tok-ciu").size());
+
+        // Ciudadano responsable de la empresa puede crear/modificar ITV y PNC
+        when(control.empresa("tok-ciu-edit", 10, true)).thenReturn(ciudadano);
+        itvEJB.crear("tok-ciu-edit", itv);
+        itvEJB.modificar("tok-ciu-edit", itv);
+        pncEJB.crear("tok-ciu-edit", pnc);
+        pncEJB.modificar("tok-ciu-edit", pnc);
+
+        // Funcionario NO puede emitir ni modificar permisos ITV/PNC (solo consultar)
+        uy.edu.fing.grupo07.CargaUY.security.Acceso funcionario =
+                new uy.edu.fing.grupo07.CargaUY.security.Acceso(
+                        9,
+                        49999999,
+                        "Func",
+                        java.util.Set.of(uy.edu.fing.grupo07.CargaUY.dto.TipoUsuario.FUNCIONARIO)
+                );
+        when(control.empresa("tok-func", 10, true)).thenReturn(funcionario);
+        org.junit.jupiter.api.Assertions.assertThrows(
+                uy.edu.fing.grupo07.CargaUY.security.ErrorAcceso.class,
+                () -> itvEJB.crear("tok-func", itv)
+        );
+        org.junit.jupiter.api.Assertions.assertThrows(
+                uy.edu.fing.grupo07.CargaUY.security.ErrorAcceso.class,
+                () -> itvEJB.modificar("tok-func", itv)
+        );
+        org.junit.jupiter.api.Assertions.assertThrows(
+                uy.edu.fing.grupo07.CargaUY.security.ErrorAcceso.class,
+                () -> pncEJB.crear("tok-func", pnc)
+        );
+        org.junit.jupiter.api.Assertions.assertThrows(
+                uy.edu.fing.grupo07.CargaUY.security.ErrorAcceso.class,
+                () -> pncEJB.modificar("tok-func", pnc)
+        );
     }
 }

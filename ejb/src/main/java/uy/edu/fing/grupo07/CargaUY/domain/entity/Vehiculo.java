@@ -33,7 +33,7 @@ public class Vehiculo implements Serializable {
     private int capacidadCarga;
 
     @Column(name = "estado_habilitacion", nullable = false)
-    private boolean estadoHabilitacion = false;
+    private boolean estadoHabilitacion = true;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "nro_empresa", nullable = false)
@@ -150,13 +150,13 @@ public class Vehiculo implements Serializable {
     }
 
     /**
-     * Verifica si el vehículo cuenta con habilitación administrativa, PNC e ITV vigentes a una fecha dada.
+     * Verifica si el vehículo cuenta con habilitación vigente (ITV y PNC al día) a una fecha dada.
      */
     public boolean verificarHabilitacionVigenteEn(LocalDate fechaReferencia) {
         LocalDate ref = fechaReferencia != null ? fechaReferencia : LocalDate.now();
         boolean itvValido = tieneDocumentoVigente(itvs, itv -> itv.isVigenteEn(ref));
         boolean pncValido = tieneDocumentoVigente(pncs, pnc -> pnc.isVigenteEn(ref));
-        return estadoHabilitacion && itvValido && pncValido;
+        return itvValido && pncValido;
     }
 
     private <T> boolean tieneDocumentoVigente(List<T> documentos, java.util.function.Predicate<T> predicado) {

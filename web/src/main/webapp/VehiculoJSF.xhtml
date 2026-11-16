@@ -154,14 +154,6 @@
                                            itemLabel="#{empresa.razonSocial}"/>
                         </h:selectOneMenu>
                     </div>
-
-                    <div class="form-field" style="justify-content: center;">
-                        <h:outputLabel for="estadoHabilitacion" value="Habilitación Administrativa:"/>
-                        <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
-                            <h:selectBooleanCheckbox id="estadoHabilitacion" label="Habilitación Administrativa" value="#{VehiculoBean.vehiculo.estadoHabilitacion}"/>
-                            <label for="form:estadoHabilitacion" style="font-weight: normal; cursor: pointer;">Vehículo habilitado para circular</label>
-                        </div>
-                    </div>
                 </div>
 
                 <div style="margin-top: 16px;">
@@ -212,8 +204,8 @@
                     </p:column>
 
                     <p:column headerText="Habilitación" style="width: 120px; text-align: center;">
-                        <span class="badge #{v.estadoHabilitacion ? 'badge-habilitado' : 'badge-inhabilitado'}">
-                            #{v.estadoHabilitacion ? 'HABILITADO' : 'INHABILITADO'}
+                        <span class="badge #{VehiculoBean.tieneDocumentacionEnRegla(v) ? 'badge-habilitado' : 'badge-inhabilitado'}">
+                            #{VehiculoBean.tieneDocumentacionEnRegla(v) ? 'HABILITADO' : 'INHABILITADO'}
                         </span>
                     </p:column>
 

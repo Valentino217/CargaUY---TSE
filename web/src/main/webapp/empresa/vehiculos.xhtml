@@ -167,6 +167,40 @@
                         <p:inputNumber id="capInput" label="Capacidad Máx. Carga (kg)" value="#{VehiculoBean.vehiculo.capacidadCarga}" decimalPlaces="0"
                                        thousandSeparator="." decimalSeparator="," suffix=" kg" minValue="1" required="true" />
                     </div>
+
+                    <ui:fragment rendered="#{!VehiculoBean.editando}">
+                        <div class="cuy-field">
+                            <p:outputLabel for="fecItvInput" value="Vencimiento ITV" />
+                            <p:datePicker id="fecItvInput" label="Vencimiento ITV"
+                                          value="#{VehiculoBean.fechaVencimientoItv}"
+                                          pattern="yyyy-MM-dd" showIcon="true"
+                                          panelStyleClass="cuy-calendar"
+                                          monthNavigator="true" yearNavigator="select"
+                                          showButtonBar="true" showOtherMonths="true"
+                                          yearRange="2020:2040" showLongMonthNames="true"
+                                          required="#{!VehiculoBean.editando}" />
+                        </div>
+
+                        <div class="cuy-field">
+                            <p:outputLabel for="numPncInput" value="Nro. Permiso PNC" />
+                            <p:inputText id="numPncInput" label="Nro. Permiso PNC"
+                                         value="#{VehiculoBean.numeroPermisoPnc}"
+                                         required="#{!VehiculoBean.editando}"
+                                         placeholder="Ej: PNC-2026-00123" />
+                        </div>
+
+                        <div class="cuy-field" style="grid-column: span 2;">
+                            <p:outputLabel for="fecPncInput" value="Vencimiento PNC" />
+                            <p:datePicker id="fecPncInput" label="Vencimiento PNC"
+                                          value="#{VehiculoBean.fechaVencimientoPnc}"
+                                          pattern="yyyy-MM-dd" showIcon="true"
+                                          panelStyleClass="cuy-calendar"
+                                          monthNavigator="true" yearNavigator="select"
+                                          showButtonBar="true" showOtherMonths="true"
+                                          yearRange="2020:2040" showLongMonthNames="true"
+                                          required="#{!VehiculoBean.editando}" />
+                        </div>
+                    </ui:fragment>
                 </div>
 
                 <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.75rem;">
