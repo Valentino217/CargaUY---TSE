@@ -138,63 +138,13 @@ services:
     volumes:
       - ./scripts:/scripts:ro
     entrypoint:
-      - psql
-      - -h
-      - postgres
-      - -U
-      - cargauy
-      - -d
-      - cargauy
-      - -v
-      - ON_ERROR_STOP=1
-      - -f
-      - /scripts/seed-datos-prueba.sql
-
-  reset-mongo:
-    image: mongo:7
-    restart: "no"
-    depends_on:
-      - mongodb
-    environment:
-      MONGO_DB: ${MONGO_DB:-cargauy_tracking}
-      MONGO_COLLECTION: ${MONGO_COLLECTION:-eventos_posicion}
-    entrypoint:
-      - mongosh
-      - mongodb://mongodb:27017/${MONGO_DB:-cargauy_tracking}
-      - --quiet
-      - --eval
-      - |
-        const colName = process.env.MONGO_COLLECTION || 'eventos_posicion';
-        const res = db.getCollection(colName).deleteMany({});
-        db.getCollectionNames().forEach(name => {
-          if (!name.startsWith('system.') && name !== colName) {
-            db.getCollection(name).deleteMany({});
-          }
-        });
-        const legacyDb = db.getSiblingDB('cargauy');
-        if (legacyDb.getCollectionNames().includes('posiciones')) {
-          legacyDb.posiciones.deleteMany({});
-        }
-        print('MongoDB reset (' + db.getName() + '.' + colName + '): deleted=' + res.deletedCount + ', remaining=' + db.getCollection(colName).countDocuments());
-
-  reset:
-    image: postgres:16-alpine
-    restart: "no"
-    depends_on:
-      - postgres
-      - reset-mongo
-    environment:
-      PGHOST: postgres
-      PGUSER: cargauy
-      PGDATABASE: cargauy
-      PGPASSWORD: ${DB_PASSWORD:-cargauy123}
-      TRACKING_ENDPOINT: ${TRACKING_ENDPOINT:-https://cargauy-mock-tracking-latest.onrender.com}
-      TZ: America/Montevideo
-    volumes:
-      - ./scripts:/scripts:ro
-    entrypoint:
       - sh
-      - /scripts/docker-reset.sh
+      - -c
+      - |
+        until pg_isready -h postgres -U cargauy -d cargauy >/dev/null 2>&1 && psql -h postgres -U cargauy -d cargauy -tAc "SELECT 1 FROM information_schema.tables WHERE table_schema='public' AND table_name='usuarios'" | grep -q 1; do
+          sleep 3
+        done
+        exec psql -h postgres -U cargauy -d cargauy -v ON_ERROR_STOP=1 -f /scripts/seed-datos-prueba.sql
 
   nginx:
     image: nginx:1.27-alpine

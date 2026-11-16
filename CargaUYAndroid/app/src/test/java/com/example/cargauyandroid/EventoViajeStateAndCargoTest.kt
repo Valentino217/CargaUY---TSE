@@ -246,4 +246,25 @@ class EventoViajeStateAndCargoTest {
         assertTrue(msgRegistroOidc.contains("OIDC", ignoreCase = true))
         assertTrue(msgRegistroOidc.contains("Inicio de viaje"))
     }
+
+    @Test
+    fun `Constants y SyncAuthErrorHelper evitan fallback a HTTP en nube o a servidores ajenos con sesion activa`() {
+        org.junit.Assert.assertFalse(
+            Constants.CANDIDATE_URLS.any { it.startsWith("http://") && it.contains("elasticloud.uy") }
+        )
+
+        val conSesion = SyncAuthErrorHelper.urlsCandidatasParaEjecucion(
+            activeBaseUrl = Constants.CLOUD_URL,
+            candidateUrls = Constants.CANDIDATE_URLS,
+            tieneTokenSesion = true
+        )
+        assertEquals(listOf(Constants.CLOUD_URL), conSesion)
+
+        val sinSesion = SyncAuthErrorHelper.urlsCandidatasParaEjecucion(
+            activeBaseUrl = Constants.CLOUD_URL,
+            candidateUrls = Constants.CANDIDATE_URLS,
+            tieneTokenSesion = false
+        )
+        assertEquals((listOf(Constants.CLOUD_URL) + Constants.CANDIDATE_URLS).distinct(), sinSesion)
+    }
 }
