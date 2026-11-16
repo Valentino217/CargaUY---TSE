@@ -28,6 +28,7 @@ import uy.edu.fing.grupo07.CargaUY.service.GestionBalanzaServiceLocal;
 import uy.edu.fing.grupo07.CargaUY.service.GestionEventosServiceLocal;
 import uy.edu.fing.grupo07.CargaUY.service.GestionNodosPerifericosServiceLocal;
 import uy.edu.fing.grupo07.CargaUY.service.GuiaDeViajeEJBLocal;
+import uy.edu.fing.grupo07.CargaUY.service.ReglasLecturaService;
 import uy.edu.fing.grupo07.CargaUY.service.TrackingMockServiceLocal;
 
 import java.io.Serializable;
@@ -74,6 +75,9 @@ public class DetalleViajeBean implements Serializable {
 
     @EJB
     private GestionNodosPerifericosServiceLocal nodosPerifericosService;
+
+    @EJB
+    private ReglasLecturaService reglasLecturaService;
 
     @Inject
     private FaasTrackingClient faasTrackingClient;
@@ -1119,6 +1123,7 @@ public class DetalleViajeBean implements Serializable {
             }
         }
 
+        double toleranciaDesvioKm = getToleranciaDesvioKm();
         JsonArrayBuilder eventosArray = Json.createArrayBuilder();
         if (this.eventos != null) {
             for (EventoViajeDTO ev : this.eventos) {
@@ -1139,11 +1144,12 @@ public class DetalleViajeBean implements Serializable {
                 if (ev.distanciaDesvioKm() != null && Double.isFinite(ev.distanciaDesvioKm())) {
                     double desvioRedondeado = Math.round(ev.distanciaDesvioKm() * 100.0) / 100.0;
                     evObj.add("desvioKm", desvioRedondeado);
-                    evObj.add("desviado", ev.distanciaDesvioKm() > 5.0);
+                    evObj.add("desviado", ev.distanciaDesvioKm() > toleranciaDesvioKm);
                 } else {
                     evObj.add("desvioKm", JsonValue.NULL);
                     evObj.add("desviado", false);
                 }
+                evObj.add("esAlerta", esEventoAlerta(ev, toleranciaDesvioKm));
 
                 if (ev.cantidadKg() != null) {
                     evObj.add("cantidadKg", ev.cantidadKg());
@@ -1176,6 +1182,46 @@ public class DetalleViajeBean implements Serializable {
                 .add("eventos", eventosArray)
                 .build()
                 .toString();
+    }
+
+    /**
+     * Retorna el umbral vigente de desvío (km) desde las reglas de fiscalización,
+     * con fallback a 5.0 km si no hay regla cargada en contexto.
+     */
+    public double getToleranciaDesvioKm() {
+        if (reglasLecturaService != null) {
+            try {
+                return reglasLecturaService.actuales().desvioKm();
+            } catch (Exception ignored) {
+                LOGGER.log(Level.FINE, "Usando tolerancia de desvío por defecto al no estar disponible ReglasLecturaService");
+            }
+        }
+        return 5.0;
+    }
+
+    /**
+     * Indica si el evento representa una alerta real (tipo INCIDENTE, desvío fuera de corredor
+     * o evidencia fotográfica adjunta) para distinguirlo de telemetría GPS informativa.
+     */
+    public boolean esEventoAlerta(EventoViajeDTO ev) {
+        return esEventoAlerta(ev, getToleranciaDesvioKm());
+    }
+
+    private boolean esEventoAlerta(EventoViajeDTO ev, double toleranciaDesvioKm) {
+        if (ev == null) {
+            return false;
+        }
+        if (ev.tipo() == TipoEvento.INCIDENTE) {
+            return true;
+        }
+        if (ev.distanciaDesvioKm() != null
+                && Double.isFinite(ev.distanciaDesvioKm())
+                && ev.distanciaDesvioKm() > toleranciaDesvioKm) {
+            return true;
+        }
+        return ev.incidente() != null
+                && ev.incidente().foto() != null
+                && !ev.incidente().foto().isBlank();
     }
 
     public boolean isNodoTrackingActivoSistema() {

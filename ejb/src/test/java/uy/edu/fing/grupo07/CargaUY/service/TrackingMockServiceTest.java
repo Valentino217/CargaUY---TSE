@@ -434,7 +434,10 @@ class TrackingMockServiceTest {
                 "El primer paso debe ubicarse al norte de Florida sin saltar a Rivera, lat=" + primerPaso.latitud());
         assertTrue(primerPaso.distanciaDesvioKm() <= 0.05,
                 "La polilínea recortada debe mantenerse sobre el corredor original, desvío=" + primerPaso.distanciaDesvioKm());
-        assertTrue(primerPaso.incidente().descripcion().contains("tramo 1/9"));
+        assertFalse(primerPaso.incidente().descripcion().contains("tramo 1/"),
+                "Con progreso previo hasta Florida no debe reiniciar en tramo 1/: " + primerPaso.incidente().descripcion());
+        assertTrue(primerPaso.incidente().descripcion().contains("tramo 3/11"),
+                "Debe continuar numeración de tramos desde Florida: " + primerPaso.incidente().descripcion());
 
         // 2. Nodo periférico remoto: reinicia antes de emitir cuando no hay eventos mock,
         //    no reinicia en ticks siguientes mientras existan eventos mock, y vuelve a reiniciar si se limpia la BD.
@@ -477,6 +480,14 @@ class TrackingMockServiceTest {
             orden.verify(trackingClientMock, calls(1)).emitirPaso(eq(12), eq(0), anyList(), anyString(), anyString());
             verify(trackingClientMock, times(2)).reiniciar(anyList(), anyString());
 
+            ArgumentCaptor<EventoViajeDTO> captorRemoto = ArgumentCaptor.forClass(EventoViajeDTO.class);
+            verify(eventosService, times(4)).guardarEvento(captorRemoto.capture());
+            EventoViajeDTO remotoPersistido = captorRemoto.getAllValues().get(1);
+            assertEquals("mock-1", remotoPersistido.uuid());
+            assertTrue(remotoPersistido.incidente().descripcion().contains("tramo 3/11"),
+                    "El evento remoto debe ajustar tramo 1/9 por el progreso previo: "
+                            + remotoPersistido.incidente().descripcion());
+
             List<double[]> polilineaEnviada = RedVialUruguay.deserializarPolilinea(
                     payloadCaptor.getValue().get(0).polilineaRuta());
             assertFalse(polilineaEnviada.isEmpty());
@@ -484,6 +495,59 @@ class TrackingMockServiceTest {
                     "La polilínea enviada tras reiniciar debe comenzar adelante de Florida, lat=" + polilineaEnviada.get(0)[0]);
         } finally {
             serviceConPeriferico.cerrar();
+        }
+    }
+
+    @Test
+    @DisplayName("Si FAAS_TRACKING_URL está configurada, delega el cálculo de desvío a GestionEventosService/FaaS")
+    void deberiaDelegarCalculoDesvioAFaasCuandoEndpointFaasEstaConfigurado() {
+        GuiaDeViaje guia = crearGuiaActiva(1001L, "Puerto de Montevideo", "Rivera (Frontera)", "STP 1234");
+        when(em.createQuery(anyString(), eq(GuiaDeViaje.class))).thenReturn(queryGuias);
+        when(queryGuias.setParameter("enCurso", TipoEstado.EN_CURSO)).thenReturn(queryGuias);
+        when(queryGuias.getResultList()).thenReturn(List.of(guia));
+        when(eventosService.listarEventosPorGuia(1001L)).thenReturn(List.of());
+
+        EventoViajeDTO evMockConDesvio = new EventoViajeDTO(
+                "mock-faas-1",
+                LocalDateTime.now(),
+                TipoEvento.POSICION,
+                -33.7333,
+                -56.3333,
+                1001L,
+                new IncidenteDTO(null, "Mock Tracking GPS - En ruta (Puerto de Montevideo -> Rivera (Frontera)) tramo 1/9"),
+                1.5,
+                null,
+                null,
+                null,
+                "STP 1234"
+        );
+
+        TrackingClient trackingClientMock = mock(TrackingClient.class);
+        lenient().when(trackingClientMock.getEndpointUrl()).thenReturn("http://mock-tracking:8080");
+        when(trackingClientMock.reiniciar(anyList(), anyString())).thenReturn(
+                new TrackingClient.EstadoNodoTracking(false, 12, 0, 0L, 0L, "Reiniciado", List.of())
+        );
+        when(trackingClientMock.emitirPaso(eq(12), eq(0), anyList(), eq("https://faas.ejemplo.test/api/tracking"), anyString())).thenReturn(
+                new TrackingClient.EstadoNodoTracking(true, 12, 0, 1L, 0L, "Paso emitido", List.of(evMockConDesvio))
+        );
+        when(eventosService.existeEvento("mock-faas-1")).thenReturn(false);
+
+        FaasTrackingClient faasConUrl = new FaasTrackingClient(null, "https://faas.ejemplo.test/api/tracking", "secreto");
+        TrackingMockServiceImpl service = new TrackingMockServiceImpl(
+                em,
+                eventosService,
+                motorFiscalizacion,
+                faasConUrl,
+                trackingClientMock
+        );
+        try {
+            assertEquals(1, service.emitirPasoGuiasActivas());
+            ArgumentCaptor<EventoViajeDTO> captor = ArgumentCaptor.forClass(EventoViajeDTO.class);
+            verify(eventosService).guardarEvento(captor.capture());
+            assertNull(captor.getValue().distanciaDesvioKm(),
+                    "Con FAAS_TRACKING_URL activa debe limpiar distanciaDesvioKm previa para que GestionEventosService invoque la FaaS");
+        } finally {
+            service.cerrar();
         }
     }
 }

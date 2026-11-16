@@ -79,19 +79,6 @@
                         </div>
                     </p:column>
 
-                    <p:column headerText="Habilitación" filterBy="#{veh.estadoHabilitacion ? 'HABILITADO' : 'SUSPENDIDO'}" filterMatchMode="exact" style="width: 150px; text-align: center;">
-                        <f:facet name="filter">
-                            <p:selectOneMenu onchange="PF('dtFlotaFisc').filter()" styleClass="ui-custom-filter" style="width: 100%;">
-                                <f:selectItem itemLabel="Todos" itemValue="#{null}" noSelectionOption="true" />
-                                <f:selectItem itemLabel="HABILITADO" itemValue="HABILITADO" />
-                                <f:selectItem itemLabel="SUSPENDIDO" itemValue="SUSPENDIDO" />
-                            </p:selectOneMenu>
-                        </f:facet>
-                        <p:tag value="#{veh.estadoHabilitacion ? 'HABILITADO' : 'SUSPENDIDO'}"
-                               severity="#{veh.estadoHabilitacion ? 'success' : 'danger'}"
-                               rounded="true" />
-                    </p:column>
-
                     <p:column headerText="Vigencia ITV" filterBy="#{VehiculoBean.obtenerEstadoVigencia(VehiculoBean.obtenerVencimientoItv(veh.matricula))}" filterMatchMode="exact" style="width: 185px; text-align: center;">
                         <f:facet name="filter">
                             <p:selectOneMenu onchange="PF('dtFlotaFisc').filter()" styleClass="ui-custom-filter" style="width: 100%;">
@@ -150,8 +137,103 @@
                                severity="#{VehiculoBean.tieneDocumentacionEnRegla(veh) ? 'success' : 'danger'}"
                                rounded="true" />
                     </p:column>
+
+                    <p:column headerText="Acciones" style="width: 155px; text-align: center;" exportable="false">
+                        <p:commandButton value="Emitir / Renovar"
+                                         icon="pi pi-calendar-plus"
+                                         actionListener="#{VehiculoBean.seleccionarVehiculoPermisos(veh)}"
+                                         update=":dlgPermisosEmpresaForm"
+                                         oncomplete="PF('dlgPermisosEmpresaWidget').show()"
+                                         styleClass="ui-button-outlined ui-button-primary ui-button-sm" />
+                    </p:column>
                 </p:dataTable>
             </div>
         </h:form>
+
+        <!-- Modal de Actualización de Permisos ITV y PNC por Empresa -->
+        <p:dialog header="Emisión y Renovación de Permisos"
+                  widgetVar="dlgPermisosEmpresaWidget"
+                  modal="true"
+                  responsive="true"
+                  width="560"
+                  closeOnEscape="true">
+            <h:form id="dlgPermisosEmpresaForm">
+                <h:panelGroup rendered="#{VehiculoBean.vehiculoSeleccionado != null}">
+                    <div style="background: #f8fafc; padding: 0.85rem 1rem; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 1rem;">
+                        <div style="font-size: 0.78rem; color: #64748b; text-transform: uppercase; font-weight: 700;">Unidad Seleccionada</div>
+                        <div style="font-size: 1.1rem; font-weight: 800; color: #0f2942;">
+                            <span class="cuy-mono">#{VehiculoBean.vehiculoSeleccionado.matricula}</span>
+                            &#8226; #{VehiculoBean.vehiculoSeleccionado.marca} #{VehiculoBean.vehiculoSeleccionado.modelo}
+                        </div>
+                    </div>
+
+                    <div class="ui-fluid">
+                        <!-- Bloque ITV -->
+                        <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; margin-bottom: 1rem;">
+                            <div style="font-weight: 700; color: #0f2942; margin-bottom: 0.5rem;">
+                                <i class="pi pi-wrench" style="color: #2563eb;" /> Inspección Técnica Vehicular (ITV)
+                            </div>
+                            <p:outputLabel for="fecItvEmp" value="Nueva Fecha de Vencimiento ITV" />
+                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 0.35rem;">
+                                <div style="flex: 1; min-width: 0;">
+                                    <p:datePicker id="fecItvEmp" label="Nueva Fecha de Vencimiento ITV"
+                                                  value="#{VehiculoBean.nuevaFechaItv}"
+                                                  pattern="yyyy-MM-dd" showIcon="true"
+                                                  panelStyleClass="cuy-calendar"
+                                                  monthNavigator="true" yearNavigator="select"
+                                                  showButtonBar="true" showOtherMonths="true"
+                                                  yearRange="2020:2040" showLongMonthNames="true" />
+                                </div>
+                                <p:commandButton value="Guardar ITV"
+                                                 icon="pi pi-check"
+                                                 actionListener="#{VehiculoBean.registrarRenovacionItv}"
+                                                 update=":flotaFiscForm:tablaFlotaFisc :kpiFlotaFisc :growl :dlgPermisosEmpresaForm"
+                                                 styleClass="ui-button-success"
+                                                 style="width: auto; white-space: nowrap; flex-shrink: 0;" />
+                            </div>
+                        </div>
+
+                        <!-- Bloque PNC -->
+                        <div style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem;">
+                            <div style="font-weight: 700; color: #0f2942; margin-bottom: 0.5rem;">
+                                <i class="pi pi-id-card" style="color: #2563eb;" /> Permiso Nacional de Circulación (PNC)
+                            </div>
+                            <p:outputLabel for="numPncEmp" value="Nro. Permiso (PNC)" />
+                            <p:inputText id="numPncEmp"
+                                         label="Nro. Permiso (PNC)"
+                                         value="#{VehiculoBean.nuevoNumeroPermisoPnc}"
+                                         placeholder="Ej: PNC-2026-00123"
+                                         style="margin-top: 0.35rem; margin-bottom: 0.75rem;" />
+                            <p:outputLabel for="fecPncEmp" value="Nueva Fecha de Vencimiento PNC" />
+                            <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 0.35rem;">
+                                <div style="flex: 1; min-width: 0;">
+                                    <p:datePicker id="fecPncEmp" label="Nueva Fecha de Vencimiento PNC"
+                                                  value="#{VehiculoBean.nuevaFechaPnc}"
+                                                  pattern="yyyy-MM-dd" showIcon="true"
+                                                  panelStyleClass="cuy-calendar"
+                                                  monthNavigator="true" yearNavigator="select"
+                                                  showButtonBar="true" showOtherMonths="true"
+                                                  yearRange="2020:2040" showLongMonthNames="true" />
+                                </div>
+                                <p:commandButton value="Guardar PNC"
+                                                 icon="pi pi-check"
+                                                 actionListener="#{VehiculoBean.registrarRenovacionPnc}"
+                                                 update=":flotaFiscForm:tablaFlotaFisc :kpiFlotaFisc :growl :dlgPermisosEmpresaForm"
+                                                 styleClass="ui-button-primary"
+                                                 style="width: auto; white-space: nowrap; flex-shrink: 0;" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; margin-top: 1.1rem;">
+                        <p:commandButton value="Cerrar"
+                                         type="button"
+                                         icon="pi pi-times"
+                                         onclick="PF('dlgPermisosEmpresaWidget').hide()"
+                                         styleClass="ui-button-outlined ui-button-secondary" />
+                    </div>
+                </h:panelGroup>
+            </h:form>
+        </p:dialog>
     </ui:define>
 </ui:composition>

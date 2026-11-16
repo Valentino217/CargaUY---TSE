@@ -18,7 +18,7 @@ Plataforma empresarial **Jakarta EE 10** (`ejb` + `web` + `ear`) desplegada sobr
    ```bash
    docker compose run --rm seed
    ```
-   *(Para vaciar PostgreSQL + MongoDB y recargar los datos limpios desde cero: `docker compose --profile reset run --rm reset`.)*
+   *(Para vaciar PostgreSQL + MongoDB, detener/reiniciar el nodo de tracking, recargar WildFly y cargar los datos limpios desde cero: `./scripts/reset-datos.ps1` en Windows, `./scripts/reset-datos.sh` en Linux/macOS, o `docker compose --profile reset run --rm reset`.)*
 4. **Acceso Web:** [`http://localhost:8080/CargaUY-web/`](http://localhost:8080/CargaUY-web/)
 
 ---

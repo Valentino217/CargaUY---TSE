@@ -95,6 +95,11 @@ public class VehiculoBean implements Serializable {
     private LocalDate origFechaVencimientoPnc;
     private LocalDate origFechaVencimientoItv;
 
+    private Vehiculo vehiculoSeleccionado;
+    private LocalDate nuevaFechaItv;
+    private LocalDate nuevaFechaPnc;
+    private String nuevoNumeroPermisoPnc;
+
     @PostConstruct
     public void init() {
         String token = SesionActual.token();
@@ -124,11 +129,11 @@ public class VehiculoBean implements Serializable {
 
     public void nuevo() {
         vehiculo = new Vehiculo();
-        vehiculo.setEstadoHabilitacion(false);
+        vehiculo.setEstadoHabilitacion(true);
         editando = false;
         numeroPermisoPnc = null;
-        fechaVencimientoPnc = null;
-        fechaVencimientoItv = null;
+        fechaVencimientoPnc = LocalDate.now().plusYears(1);
+        fechaVencimientoItv = LocalDate.now().plusYears(1);
         origNumeroPermisoPnc = null;
         origFechaVencimientoPnc = null;
         origFechaVencimientoItv = null;
@@ -215,15 +220,22 @@ public class VehiculoBean implements Serializable {
                 throw new IllegalArgumentException("Debe seleccionar una empresa válida.");
             }
 
+            String token = SesionActual.token();
             vehiculo.setEmpresa(empresaSeleccionada);
 
             if (editando) {
-                vehiculoEJB.modificar(SesionActual.token(), vehiculo);
+                vehiculoEJB.modificar(token, vehiculo);
                 mostrarMensaje(FacesMessage.SEVERITY_INFO, "Unidad Actualizada", "Los datos del vehículo " + vehiculo.getMatricula() + " fueron modificados.");
             } else {
-                vehiculo.setEstadoHabilitacion(false);
-                vehiculoEJB.crear(SesionActual.token(), vehiculo);
-                mostrarMensaje(FacesMessage.SEVERITY_INFO, "Unidad Registrada", "El vehículo " + vehiculo.getMatricula() + " fue dado de alta sin permisos (pendiente de habilitación por la autoridad).");
+                String pncLimpio = trimOrNull(numeroPermisoPnc);
+                if (fechaVencimientoItv == null || fechaVencimientoPnc == null || pncLimpio == null) {
+                    throw new IllegalArgumentException("Debe ingresar el número de permiso PNC y las fechas de vencimiento de ITV y PNC.");
+                }
+                vehiculo.setEstadoHabilitacion(true);
+                vehiculoEJB.crear(token, vehiculo);
+                itvEJB.crear(token, new ITV(fechaVencimientoItv, vehiculo));
+                pncEJB.crear(token, new PNC(fechaVencimientoPnc, pncLimpio, vehiculo));
+                mostrarMensaje(FacesMessage.SEVERITY_INFO, "Unidad Registrada", "El vehículo " + vehiculo.getMatricula() + " fue dado de alta con sus permisos ITV y PNC.");
             }
 
             cargarFlota();
@@ -319,7 +331,7 @@ public class VehiculoBean implements Serializable {
     }
 
     public boolean tieneDocumentacionEnRegla(Vehiculo v) {
-        if (v == null || !v.isEstadoHabilitacion()) return false;
+        if (v == null) return false;
         LocalDate itv = obtenerVencimientoItv(v.getMatricula());
         LocalDate pnc = obtenerVencimientoPnc(v.getMatricula());
         LocalDate hoy = LocalDate.now();
@@ -481,11 +493,100 @@ public class VehiculoBean implements Serializable {
         this.fechaVencimientoPnc = fechaVencimientoPnc;
     }
 
+    public void seleccionarVehiculoPermisos(Vehiculo v) {
+        this.vehiculoSeleccionado = v;
+        this.nuevaFechaItv = LocalDate.now().plusYears(1);
+        this.nuevaFechaPnc = LocalDate.now().plusYears(1);
+        this.nuevoNumeroPermisoPnc = v != null ? obtenerNumeroPermisoPnc(v.getMatricula()) : null;
+    }
+
+    public void registrarRenovacionItv() {
+        if (vehiculoSeleccionado == null || nuevaFechaItv == null) {
+            mostrarMensaje(FacesMessage.SEVERITY_WARN, "Validación", "Seleccione una fecha de vencimiento válida para la ITV.");
+            FacesContext.getCurrentInstance().validationFailed();
+            return;
+        }
+        try {
+            itvEJB.crear(SesionActual.token(), new ITV(nuevaFechaItv, vehiculoSeleccionado));
+            String matricula = vehiculoSeleccionado.getMatricula();
+            cargarFlota();
+            refrescarVehiculoSeleccionado(matricula);
+            mostrarMensaje(FacesMessage.SEVERITY_INFO, "ITV Actualizada",
+                    "Se registró nuevo certificado ITV para la unidad " + matricula + ".");
+        } catch (Exception e) {
+            FacesContext.getCurrentInstance().validationFailed();
+            mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error al actualizar ITV", extraerMensaje(e));
+        }
+    }
+
+    public void registrarRenovacionPnc() {
+        String permisoLimpio = trimOrNull(nuevoNumeroPermisoPnc);
+        if (vehiculoSeleccionado == null || nuevaFechaPnc == null || permisoLimpio == null) {
+            mostrarMensaje(FacesMessage.SEVERITY_WARN, "Validación",
+                    "Ingrese el Nro. de Permiso (PNC) y una fecha de vencimiento válida.");
+            FacesContext.getCurrentInstance().validationFailed();
+            return;
+        }
+        try {
+            pncEJB.crear(SesionActual.token(), new PNC(nuevaFechaPnc, permisoLimpio, vehiculoSeleccionado));
+            String matricula = vehiculoSeleccionado.getMatricula();
+            cargarFlota();
+            refrescarVehiculoSeleccionado(matricula);
+            mostrarMensaje(FacesMessage.SEVERITY_INFO, "PNC Actualizado",
+                    "Se registró el Permiso Nacional de Circulación " + permisoLimpio + " para la unidad " + matricula + ".");
+        } catch (Exception e) {
+            FacesContext.getCurrentInstance().validationFailed();
+            mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error al actualizar PNC", extraerMensaje(e));
+        }
+    }
+
+    private void refrescarVehiculoSeleccionado(String matricula) {
+        if (vehiculos == null || matricula == null) return;
+        for (Vehiculo v : vehiculos) {
+            if (v != null && matricula.equalsIgnoreCase(v.getMatricula())) {
+                this.vehiculoSeleccionado = v;
+                return;
+            }
+        }
+    }
+
     public LocalDate getFechaVencimientoItv() {
         return fechaVencimientoItv;
     }
 
     public void setFechaVencimientoItv(LocalDate fechaVencimientoItv) {
         this.fechaVencimientoItv = fechaVencimientoItv;
+    }
+
+    public Vehiculo getVehiculoSeleccionado() {
+        return vehiculoSeleccionado;
+    }
+
+    public void setVehiculoSeleccionado(Vehiculo vehiculoSeleccionado) {
+        this.vehiculoSeleccionado = vehiculoSeleccionado;
+    }
+
+    public LocalDate getNuevaFechaItv() {
+        return nuevaFechaItv;
+    }
+
+    public void setNuevaFechaItv(LocalDate nuevaFechaItv) {
+        this.nuevaFechaItv = nuevaFechaItv;
+    }
+
+    public LocalDate getNuevaFechaPnc() {
+        return nuevaFechaPnc;
+    }
+
+    public void setNuevaFechaPnc(LocalDate nuevaFechaPnc) {
+        this.nuevaFechaPnc = nuevaFechaPnc;
+    }
+
+    public String getNuevoNumeroPermisoPnc() {
+        return nuevoNumeroPermisoPnc;
+    }
+
+    public void setNuevoNumeroPermisoPnc(String nuevoNumeroPermisoPnc) {
+        this.nuevoNumeroPermisoPnc = nuevoNumeroPermisoPnc;
     }
 }

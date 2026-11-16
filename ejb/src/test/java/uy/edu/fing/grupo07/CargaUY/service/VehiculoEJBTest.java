@@ -325,4 +325,17 @@ class VehiculoEJBTest {
         assertFalse(ejbConConstructor.estaAptoParaOperar("   ", hoy));
         assertFalse(ejbConConstructor.estaAptoParaOperar(null, hoy));
     }
+
+    @Test
+    @DisplayName("crear inicializa estadoHabilitacion en true por compatibilidad de esquema sin exigir habilitación base")
+    void testCrearInicializaHabilitacionBaseEnTrue() {
+        Acceso ciudadano = new Acceso(7, 22222222, "Ciudadano", Set.of(TipoUsuario.CIUDADANO));
+        when(control.empresa("tok-ciu", 10, true)).thenReturn(ciudadano);
+        when(em.find(Vehiculo.class, "CIU 1001")).thenReturn(null);
+
+        Vehiculo nuevo = new Vehiculo("ciu 1001", "Volvo", "FH", 10000, 28000, false, emp);
+        vehiculoEJB.crear("tok-ciu", nuevo);
+        assertTrue(nuevo.isEstadoHabilitacion());
+        verify(em).persist(nuevo);
+    }
 }

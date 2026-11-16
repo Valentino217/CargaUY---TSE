@@ -54,18 +54,29 @@ public class ITVEJB implements ITVEJBLocal {
         return persistido.getEmpresa().getNroEmpresa();
     }
 
+    private void exigirPermisoEdicionEmpresa(String token, int nroEmpresa) {
+        Acceso actor = control.empresa(token, nroEmpresa, true);
+        if (actor != null && actor.tiene(TipoUsuario.FUNCIONARIO)
+                && !actor.tiene(TipoUsuario.ADMINISTRADOR)
+                && !actor.tiene(TipoUsuario.CIUDADANO)) {
+            throw new uy.edu.fing.grupo07.CargaUY.security.ErrorAcceso(
+                    403, "El funcionario no puede emitir ni modificar permisos ITV/PNC");
+        }
+    }
+
     @Override
     public void crear(String token, ITV itv) {
         verificarControl();
-        control.exigir(token, TipoUsuario.ADMINISTRADOR, TipoUsuario.FUNCIONARIO);
-        resolverNroEmpresa(itv);
+        if (itv == null || itv.getFechaVencimiento() == null) {
+            throw new IllegalArgumentException("El certificado ITV y su fecha de vencimiento son obligatorios.");
+        }
+        exigirPermisoEdicionEmpresa(token, resolverNroEmpresa(itv));
         crear(itv);
     }
 
     @Override
     public void modificar(String token, ITV itv) {
         verificarControl();
-        control.exigir(token, TipoUsuario.ADMINISTRADOR, TipoUsuario.FUNCIONARIO);
         if (itv == null) {
             throw new IllegalArgumentException("El certificado ITV es obligatorio.");
         }
@@ -74,9 +85,9 @@ public class ITVEJB implements ITVEJBLocal {
             if (existente == null) {
                 throw new IllegalArgumentException("Certificado ITV inexistente.");
             }
-            resolverNroEmpresa(existente);
+            exigirPermisoEdicionEmpresa(token, resolverNroEmpresa(existente));
         }
-        resolverNroEmpresa(itv);
+        exigirPermisoEdicionEmpresa(token, resolverNroEmpresa(itv));
         modificar(itv);
     }
 

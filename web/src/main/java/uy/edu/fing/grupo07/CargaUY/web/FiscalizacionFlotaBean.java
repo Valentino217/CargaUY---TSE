@@ -119,90 +119,11 @@ public class FiscalizacionFlotaBean implements Serializable {
     }
 
     public boolean tieneDocumentacionEnRegla(Vehiculo v) {
-        if (v == null || !v.isEstadoHabilitacion()) return false;
+        if (v == null) return false;
         LocalDate itv = obtenerVencimientoItv(v.getMatricula());
         LocalDate pnc = obtenerVencimientoPnc(v.getMatricula());
         LocalDate hoy = LocalDate.now();
         return itv != null && !itv.isBefore(hoy) && pnc != null && !pnc.isBefore(hoy);
-    }
-
-    public void seleccionarVehiculo(Vehiculo v) {
-        this.vehiculoSeleccionado = v;
-        this.nuevaFechaItv = LocalDate.now().plusYears(1);
-        this.nuevaFechaPnc = LocalDate.now().plusYears(1);
-        this.nuevoNumeroPermisoPnc = null;
-    }
-
-    public void registrarRenovacionItv() {
-        if (vehiculoSeleccionado == null || nuevaFechaItv == null) {
-            mostrarMensaje(FacesMessage.SEVERITY_WARN, "Validación", "Seleccione una fecha de vencimiento válida para la ITV.");
-            return;
-        }
-        try {
-            ITV nuevo = new ITV(nuevaFechaItv, vehiculoSeleccionado);
-            itvEJB.crear(SesionActual.token(), nuevo);
-            cargarFlota();
-            boolean reactivado = actualizarHabilitacionSiDocumentacionCompleta(vehiculoSeleccionado.getMatricula());
-            mostrarMensaje(FacesMessage.SEVERITY_INFO, "ITV Registrada",
-                    "Se emitió nuevo certificado ITV para la unidad " + vehiculoSeleccionado.getMatricula()
-                            + (reactivado ? " y se reactivó su habilitación operativa." : "."));
-        } catch (Exception e) {
-            mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error al registrar ITV", e.getMessage());
-        }
-    }
-
-    public void registrarRenovacionPnc() {
-        String permisoLimpio = nuevoNumeroPermisoPnc != null ? nuevoNumeroPermisoPnc.trim() : "";
-        if (vehiculoSeleccionado == null || nuevaFechaPnc == null || permisoLimpio.isBlank()) {
-            mostrarMensaje(FacesMessage.SEVERITY_WARN, "Validación",
-                    "Ingrese el Nro. de Permiso (PNC) y una fecha de vencimiento válida.");
-            return;
-        }
-        try {
-            PNC nuevo = new PNC(nuevaFechaPnc, permisoLimpio, vehiculoSeleccionado);
-            pncEJB.crear(SesionActual.token(), nuevo);
-            this.nuevoNumeroPermisoPnc = null;
-            cargarFlota();
-            boolean reactivado = actualizarHabilitacionSiDocumentacionCompleta(vehiculoSeleccionado.getMatricula());
-            mostrarMensaje(FacesMessage.SEVERITY_INFO, "PNC Registrado",
-                    "Se emitió el Permiso Nacional de Circulación " + permisoLimpio + " para la unidad " + vehiculoSeleccionado.getMatricula()
-                            + (reactivado ? " y se reactivó su habilitación operativa." : "."));
-        } catch (Exception e) {
-            mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error al registrar PNC", e.getMessage());
-        }
-    }
-
-    public void alternarHabilitacionBase(Vehiculo v) {
-        if (v == null) return;
-        try {
-            boolean nuevoEstado = !v.isEstadoHabilitacion();
-            v.setEstadoHabilitacion(nuevoEstado);
-            vehiculoEJB.modificar(SesionActual.token(), v);
-            cargarFlota();
-            mostrarMensaje(FacesMessage.SEVERITY_INFO, "Estado de Unidad Actualizado",
-                    "La unidad " + v.getMatricula() + " quedó " + (nuevoEstado ? "HABILITADA" : "SUSPENDIDA") + ".");
-        } catch (Exception e) {
-            mostrarMensaje(FacesMessage.SEVERITY_ERROR, "Error", "No se pudo cambiar el estado del vehículo: " + e.getMessage());
-        }
-    }
-
-    private boolean actualizarHabilitacionSiDocumentacionCompleta(String matricula) {
-        if (matricula == null) return false;
-        LocalDate itv = obtenerVencimientoItv(matricula);
-        LocalDate pnc = obtenerVencimientoPnc(matricula);
-        LocalDate hoy = LocalDate.now();
-        if (itv != null && !itv.isBefore(hoy) && pnc != null && !pnc.isBefore(hoy)) {
-            String token = SesionActual.token();
-            Vehiculo actual = vehiculoEJB.buscar(token, matricula);
-            if (actual != null && !actual.isEstadoHabilitacion()) {
-                actual.setEstadoHabilitacion(true);
-                vehiculoEJB.modificar(token, actual);
-                this.vehiculoSeleccionado = actual;
-                cargarFlota();
-                return true;
-            }
-        }
-        return false;
     }
 
     public long getTotalUnidades() {

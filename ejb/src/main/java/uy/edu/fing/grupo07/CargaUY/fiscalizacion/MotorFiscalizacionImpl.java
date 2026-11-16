@@ -249,10 +249,6 @@ public class MotorFiscalizacionImpl implements MotorFiscalizacionLocal {
 
         StringBuilder detalleFaltantes = new StringBuilder();
 
-        if (!vehiculo.isEstadoHabilitacion()) {
-            detalleFaltantes.append("El vehículo está administrativamente inhabilitado. ");
-        }
-
         boolean tieneItvVigente = false;
         List<ITV> listaItv = vehiculo.getItv();
         if (listaItv != null) {

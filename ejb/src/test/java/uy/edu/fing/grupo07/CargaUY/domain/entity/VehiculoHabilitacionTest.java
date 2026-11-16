@@ -60,7 +60,7 @@ class VehiculoHabilitacionTest {
     }
 
     @Test
-    @DisplayName("Vehículo con estadoHabilitacion en false NO debe estar habilitado")
+    @DisplayName("La habilitación depende únicamente de ITV y PNC vigentes (sin habilitación base)")
     void testVehiculoDeshabilitadoAdministrativamente() {
         vehiculo.setEstadoHabilitacion(false);
         PNC pnc = new PNC(LocalDate.now().plusMonths(6), vehiculo);
@@ -69,7 +69,11 @@ class VehiculoHabilitacionTest {
         vehiculo.getPncs().add(pnc);
         vehiculo.getItv().add(itv);
 
+        assertTrue(vehiculo.verificarHabilitacionVigente(),
+                "Con ITV y PNC vigentes el vehículo debe figurar habilitado aunque estadoHabilitacion sea false");
+
+        vehiculo.getItv().clear();
         assertFalse(vehiculo.verificarHabilitacionVigente(),
-                "El vehículo con estado administrativo falso no debe estar habilitado");
+                "Sin ITV vigente el vehículo no debe estar habilitado");
     }
 }
