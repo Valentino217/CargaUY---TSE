@@ -10,14 +10,14 @@ La solución implementa una **arquitectura empresarial en capas sobre Jakarta EE
 
 - **Persistencia políglota:** PostgreSQL 16 (modelo transaccional relacional + pista de auditoría inmutable *append-only*) y MongoDB 7 (colección Time-Series para serie temporal GPS).
 - **Mensajería asíncrona orientada a eventos:** Apache ActiveMQ Artemis embebido en WildFly (Jakarta Messaging 3.1) con colas dedicadas (`TrackingQueue`, `FiscalizacionQueue`, `NotificacionQueue`) y *Dead-Letter Queues* individuales (`DLQ.*`).
-- **Cómputo serverless (FaaS):** Función en Python (`faas/tracking-desvio-lambda`) compatible con AWS Lambda / Google Cloud Run Functions para cálculo geoespacial de desvío de ruta sobre corredores de la Red Vial Nacional (MTOP), con respaldo geométrico local.
-- **Cliente móvil offline-first:** Aplicación Android nativa (`CargaUYAndroid`, Kotlin + Room SQLite + `WorkManager`) con sincronización por lotes e idempotencia por UUID.
+- **Cómputo serverless (FaaS):** Función en Python (`faas/tracking-desvio-lambda`) compatible con Vercel / AWS Lambda / Google Cloud Run Functions para cálculo geoespacial de desvío de ruta sobre corredores de la Red Vial Nacional (MTOP), con respaldo geométrico local.
+- **Cliente móvil offline-first:** Aplicación Android nativa (`CargaUYAndroid`, Kotlin, Jetpack Compose, `OfflineDatabaseHelper` sobre SQLite local, `SyncRepository` con corrutinas y `Mutex`, `SyncBatchChunker` $< 1\text{ MiB}$ y `ConnectivityManager.NetworkCallback`) con sincronización por lotes e idempotencia por UUID.
 
 ```mermaid
 flowchart TB
     subgraph Clientes
         WEB["Frontoffice / Backoffice Web\n(JSF 4.0 + PrimeFaces 15)"]
-        MOB["App Móvil Chofer\n(Android Offline-First / Room)"]
+        MOB["App Móvil Chofer\n(Android Offline-First / SQLite)"]
     end
 
     subgraph Central["Componente Central — WildFly 41 (Jakarta EE 10)"]
@@ -39,7 +39,7 @@ flowchart TB
         PDI["PDI DNIC (SOAP + WS-Addressing)"]
         BAL["Nodo Balanzas (REST - Render o local)"]
         TRK["Nodo Tracking (REST - Render o local)"]
-        FAAS["AWS Lambda / Cloud Run (Desvío de Ruta)"]
+        FAAS["Vercel / AWS Lambda / Cloud Run (Desvío de Ruta)"]
     end
 
     WEB --> JSF
@@ -64,7 +64,7 @@ flowchart TB
 ## 2. Módulos y Capas del Componente Central
 
 ### 2.1 Capa de Presentación (`web` + `gub-callback-root`)
-- **Frontoffice y Backoffice JSF/PrimeFaces:** Vistas organizadas por rol bajo `/portal/*`, `/empresa/*`, `/funcionario/*`, `/backoffice/*` y `/admin/*`, con plantilla unificada (`WEB-INF/templates/template.xhtml`) y exportación de reportes agregados (`ReporteDashboardExporter`, PDF/Excel/CSV).
+- **Frontoffice y Backoffice JSF/PrimeFaces:** Vistas organizadas por rol bajo `/portal/*`, `/empresa/*`, `/funcionario/*`, `/backoffice/*` y `/admin/*`, con plantilla unificada (`WEB-INF/templates/template.xhtml`) y exportación de reportes agregados (`ReporteDashboardExporter`, PDF con OpenPDF y CSV sanitizado contra inyección de fórmulas). La habilitación operativa de vehículos depende únicamente de permisos **ITV y PNC vigentes**: el responsable de empresa carga ambos permisos al dar de alta la unidad en `/empresa/vehiculos.xhtml` y los emite/renueva en `/empresa/fiscalizacion-vehiculos.xhtml`, mientras el funcionario visualiza todas las flotas en `/funcionario/fiscalizacion-vehiculos.xhtml` en modo solo consulta.
 - **API REST (`AplicacionRest` bajo `/api/*`):**
   - `ChoferResource` (`/api/chofer/eventos/sync`, `/api/chofer/eventos/faas`, `/api/chofer/eventos/{guiaId}`, `/api/chofer/guia-asignada`, `/api/chofer/guias`, `/api/chofer/incidente`).
   - `BalanzaResource` (`/api/balanza/pesaje`, `/api/balanza/mock-sync`, `/api/balanza/guia/{guiaId}`).
@@ -267,6 +267,7 @@ erDiagram
 ```
 
 ### 3.2 Garantías de Integridad en Base de Datos
+- **Habilitación de vehículos (sin habilitación base administrativa):** La aptitud de un vehículo (`Vehiculo.verificarHabilitacionVigenteEn` y `VehiculoBean.tieneDocumentacionEnRegla`) se determina exclusivamente por la vigencia simultánea de su **ITV** y **PNC** (manteniéndose la columna `estado_habilitacion` en `true` por compatibilidad de esquema). La emisión y renovación de permisos ITV/PNC es potestad del responsable de empresa (`ITVEJB` / `PNCEJB` rechazan con HTTP `403` si un `FUNCIONARIO` intenta crear o modificar certificados).
 - **Auditoría inmutable (*append-only*) a nivel de motor:** Además del script `docker/postgres/init/02-audit-immutable.sql`, el bean `@Startup` `AuditoriaTriggerInstaller` (dependiente de `EsquemaMigracionStartupBean`) instala de forma idempotente en cada despliegue los triggers PostgreSQL `trg_audit_immutable` (`BEFORE UPDATE OR DELETE`) y `trg_audit_no_truncate` (`BEFORE TRUNCATE`) sobre `registro_auditoria`.
 - **Detección de vehículos sin guía e idempotencia:** Tanto `pesadas_balanza` como `infracciones` admiten `guia_id` nulo y referencian `vehiculo_matricula`. `EsquemaMigracionStartupBean` crea el índice único parcial `uk_infraccion_vehiculo_sin_guia_fecha ON infracciones (vehiculo_matricula, fecha, tipo) WHERE guia_id IS NULL AND vehiculo_matricula IS NOT NULL` para evitar infracciones duplicadas ante lecturas repetidas en balanza.
 - **Bloqueo optimista (`@Version`):** Presente en `GuiaDeViaje`, `Empresa`, `Usuario`, `VinculoEmpresa` y `ReglaFiscalizacion` para evitar condiciones de carrera en sincronización móvil y edición concurrente.
@@ -282,7 +283,7 @@ erDiagram
 ## 4. Flujos Críticos Implementados
 
 ### 4.1 Ingesta Asíncrona de Tracking, FaaS e Idempotencia (AC012)
-1. La app móvil genera un `uuid` único por evento en Room SQLite y envía lotes a `POST /api/chofer/eventos/sync`.
+1. La app móvil genera un `uuid` único por evento en SQLite local (`OfflineDatabaseHelper`) y envía lotes fraccionados (< 1 MiB) a `POST /api/chofer/eventos/sync`.
 2. `ChoferResource` valida precondiciones (`GestionEventosServiceLocal.validarEventoPreEncolado`) y deduplicación inmediata (`existeEvento`); los eventos de posición pura se publican vía `TrackingMessageProducer` en `java:/jms/queue/TrackingQueue` (con `JMSCorrelationID`, `X_Correlation_ID` y `traceparent`), liberando el hilo HTTP sin esperar la persistencia ni la fiscalización. Los hitos interactivos del chofer (`INICIO`, `FIN`, `CARGA_PARCIAL`, `DESCARGA_PARCIAL`, `INCIDENTE`) también pueden procesarse síncronamente para devolver confirmación inmediata al usuario.
 3. Si el evento proviene de la invocación directa desde la función FaaS (`POST /api/chofer/eventos/faas`), `AuthFilter` exige el header `X-FaaS-Secret` validado en tiempo constante (`MessageDigest.isEqual`) y limita el cuerpo a 1 MB.
 4. `TrackingMDB` (`maxSession = 10`) consume `TrackingQueue`, verifica idempotencia por `uuid` (`UNIQUE` en `eventos_viaje` y búsqueda previa en MongoDB), calcula desvío de ruta con `FaasTrackingClient` (o usa `distanciaDesvioKm` precalculado), persiste posiciones en MongoDB Time-Series (`PosicionNoSqlRepository`) y hitos operativos en PostgreSQL, y dispara `FiscalizacionMessageProducer` hacia `FiscalizacionQueue`.
@@ -328,9 +329,9 @@ stateDiagram-v2
   - `ClientePdi`: Bulkhead (`Semaphore(4)`), Circuit Breaker, 2 reintentos SOAP con WS-Addressing, timeouts acotados (1 s conexión / 2 s respuesta) y validación obligatoria de HTTPS fuera del entorno local.
   - `FaasTrackingClient`: Timeout HTTP de 6 s y fallback automático y determinista al motor geométrico local `RedVialUruguay` (grafo Dijkstra sobre Rutas Nacionales de Uruguay).
 - **Trazabilidad distribuida y observabilidad:**
-  - `TraceContext` propaga `X-Correlation-ID` y W3C `traceparent` (`00-<traceId>-<spanId>-01`) desde HTTP (`CorrelacionFilter`) hacia JMS (`TrackingMessageProducer`, `FiscalizacionMessageProducer`, `NotificacionMessageProducer` y sus MDBs), SOAP (`ClientePdi`) y REST saliente (`BalanzaClient`, `TrackingClient`, `FaasTrackingClient`).
-  - Logs JSON estructurados por componente.
-  - Endpoints de monitoreo: públicos (`/api/public/ready`, `/api/public/health`) y administrativos protegidos (`/api/ops/health`, `/api/ops/metrics`).
+  - `TraceContext` propaga `X-Correlation-ID` y W3C `traceparent` (`00-<traceId>-<spanId>-01`) desde HTTP (`CorrelacionFilter`) y cliente Android (`RetrofitClient` / `TraceHeaderHelper`) hacia JMS (`TrackingMessageProducer`, `FiscalizacionMessageProducer`, `NotificacionMessageProducer` y sus respectivos MDBs), SOAP (`ClientePdi`) y REST/FaaS saliente (`BalanzaClient`, `TrackingClient`, `FaasTrackingClient` y `lambda_function.py`).
+  - Logs JSON estructurados con `"evento"`, `"correlacion"` y `"traceparent"` emitidos en todos los componentes (`CorrelacionFilter`, clientes externos `ClientePdi`/`BalanzaClient`/`TrackingClient`/`FaasTrackingClient`, productores y MDBs JMS `Tracking*`/`Fiscalizacion*`/`Notificacion*`, FaaS `lambda_function.py` y simuladores `mock-pdi`/`mock-balanza`/`mock-tracking`).
+  - Endpoints de verificación de estado y métricas: públicos (`/api/public/ready` con verificación `SELECT 1` en PostgreSQL y `/api/public/health`) y administrativos protegidos para `ADMINISTRADOR` (`/api/ops/health` con estados `UP` / `DEGRADED` / `DOWN` y `/api/ops/metrics`).
 
 ---
 
@@ -342,3 +343,11 @@ stateDiagram-v2
 | **Cómputo Serverless / FaaS (Desvío de ruta)** | 1 pto | `faas/tracking-desvio-lambda/lambda_function.py` + `FaasTrackingClient` + polilíneas reales MTOP en `RedVialUruguay` |
 | **Autenticación interna con LDAP** | 1 pto | Contenedor `openldap` (`docker/ldap`) + `LdapClient` (JNDI + `{SSHA}` con salt + validación LDAPS en producción) |
 | **Firma Digital de Actas PDF (PKCS#12)** | 1 pto | Carga y ciclo de vida en `CertificadoDigitalEJB` + firma criptográfica PDFBox/BouncyCastle en `ActaServiceEJB` |
+
+---
+
+## 7. Verificación Automatizada y Cobertura (JaCoCo)
+
+- **Lógica de negocio (`CargaUY-ejb`):** `295` tests unitarios JUnit 5/Mockito (`0` fallos), alcanzando **82,01%** de cobertura de líneas (`6.305 / 7.688`), `58,14%` de ramas y `87,67%` de métodos, validado automáticamente con `jacoco:check >= 0.80` y cubriendo la totalidad de servicios `@Stateless`/`@Singleton`/`@MessageDriven`, transiciones válidas/inválidas de `EstadoInfraccion` e idempotencia por UUID.
+- **Capa Web (`CargaUY-web`):** `105` tests unitarios (`0` fallos, **40,38%** de cobertura de líneas sobre filtros HTTP, recursos REST y *backing beans*). Combinando ambos módulos en el reporte enviado a SonarQube (`**/target/site/jacoco/jacoco.xml`), la cobertura global es del **66,34%** de líneas.
+- **Aplicación móvil (`CargaUYAndroid`):** pruebas unitarias en `EventoViajeStateAndCargoTest.kt` validando sincronización idempotente, detección de conflictos de guía y cabeceras W3C `traceparent` / `X-Correlation-ID`.

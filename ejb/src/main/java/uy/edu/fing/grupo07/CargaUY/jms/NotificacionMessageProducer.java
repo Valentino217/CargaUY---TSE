@@ -7,6 +7,7 @@ import jakarta.jms.JMSContext;
 import jakarta.jms.JMSProducer;
 import jakarta.jms.Queue;
 import jakarta.jms.TextMessage;
+import jakarta.json.Json;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -53,11 +54,12 @@ public class NotificacionMessageProducer implements NotificacionProducerLocal {
             JMSProducer producer = jmsContext.createProducer();
             producer.send(notificacionQueue, message);
 
-            LOGGER.log(
-                    Level.INFO,
-                    "Notificación automática encolada en NotificacionQueue para el caso #{0} [correlacion={1}, traceparent={2}].",
-                    new Object[]{idCaso, correlacion, traceparent}
-            );
+            LOGGER.info(Json.createObjectBuilder()
+                    .add("evento", "jms.notificacion.encolado")
+                    .add("correlacion", correlacion)
+                    .add("traceparent", traceparent)
+                    .add("idCaso", idCaso)
+                    .build().toString());
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Fallo técnico al encolar notificación en NotificacionQueue para el caso #" + idCaso, e);
             throw new RuntimeException("Error al enviar mensaje a NotificacionQueue", e);

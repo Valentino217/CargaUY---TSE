@@ -127,13 +127,16 @@ public class FaasTrackingClient implements java.io.Serializable {
             polilinea = rutaPlanificada.polilinea();
         }
 
+        boolean intentoRemotoFallido = false;
         if (endpointUrl != null && !endpointUrl.isBlank()) {
             try {
                 return invocarFuncionRemota(evento, origenLimpio, destinoLimpio, polilinea, rutaPlanificada.corredorVial());
             } catch (InterruptedException ie) {
                 Thread.currentThread().interrupt();
+                intentoRemotoFallido = true;
                 LOGGER.log(Level.WARNING, "Invocación a FaaS interrumpida, aplicando cálculo de polilínea local", ie);
             } catch (Exception ex) {
+                intentoRemotoFallido = true;
                 LOGGER.log(
                         Level.WARNING,
                         "No se pudo contactar el FaaS remoto en {0} ({1}). Aplicando cálculo sobre polilínea vial de respaldo.",
@@ -147,6 +150,25 @@ public class FaasTrackingClient implements java.io.Serializable {
                 evento.longitud(),
                 polilinea
         );
+
+        if (intentoRemotoFallido) {
+            String corrFallback = TraceContext.normalizarCorrelacion(null);
+            String tpFallback = TraceContext.siguienteTraceparentHijo(null, corrFallback);
+            JsonObjectBuilder logBuilder = Json.createObjectBuilder()
+                    .add("evento", "faas.tracking.fallback")
+                    .add("correlacion", corrFallback)
+                    .add("traceparent", tpFallback)
+                    .add("endpoint", endpointUrl != null ? endpointUrl : "")
+                    .add("distanciaDesvioKm", desvioCalculado)
+                    .add("ok", false);
+            if (evento.uuid() != null) {
+                logBuilder.add("uuid", evento.uuid());
+            }
+            if (evento.guiaId() != null) {
+                logBuilder.add("guiaId", evento.guiaId());
+            }
+            LOGGER.info(logBuilder.build().toString());
+        }
 
         EventoViajeDTO enriquecido = new EventoViajeDTO(
                 evento.uuid(),
@@ -273,9 +295,20 @@ public class FaasTrackingClient implements java.io.Serializable {
             if (!timestampFaas.isBlank()) {
                 detalle = detalle + " [" + timestampFaas + "]";
             }
-            LOGGER.log(Level.INFO,
-                    "FaaS remota {0} procesó evento uuid={1}, guiaId={2}: desvio={3} km (corr={4})",
-                    new Object[]{endpointUrl, evento.uuid(), evento.guiaId(), desvioKm, corr});
+            JsonObjectBuilder logBuilder = Json.createObjectBuilder()
+                    .add("evento", "faas.tracking.invocacion")
+                    .add("correlacion", corr)
+                    .add("traceparent", traceparent)
+                    .add("endpoint", endpointUrl != null ? endpointUrl : "")
+                    .add("distanciaDesvioKm", desvioKm)
+                    .add("ok", true);
+            if (evento.uuid() != null) {
+                logBuilder.add("uuid", evento.uuid());
+            }
+            if (evento.guiaId() != null) {
+                logBuilder.add("guiaId", evento.guiaId());
+            }
+            LOGGER.info(logBuilder.build().toString());
 
             return new ResultadoFaas(enriquecido, desvioKm, true, detalle);
         }

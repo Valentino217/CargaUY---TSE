@@ -166,7 +166,7 @@ flowchart LR
 ```
 
 1. **Absorción y Paginación en Broker JMS (`ActiveMQ Artemis`):** `TrackingQueue` amortigua picos en memoria hasta $10\text{ MiB}$ y pagina en disco (`PAGE`) por bloques de $2\text{ MiB}$ para no descartar mensajes ni agotar heap en ráfagas $3\times\text{–}5\times$.
-2. **Degradación de la FaaS (`FaasTrackingClient`):** si `https://faas-py.vercel.app/api/tracking` tarda más de $6\text{ s}$, devuelve error o no tiene conectividad, `FaasTrackingClient` registra `WARNING` y calcula el desvío localmente contra la polilínea planificada.
+2. **Degradación de la FaaS (`FaasTrackingClient`):** registra en JSON estructurado `"faas.tracking.invocacion"` con `correlacion` y `traceparent`; si `https://faas-py.vercel.app/api/tracking` tarda más de $6\text{ s}$, devuelve error o no tiene conectividad, registra `WARNING` + evento JSON `"faas.tracking.fallback"` y calcula el desvío localmente contra la polilínea planificada (`RedVialUruguay`).
 3. **Degradación del Motor NoSQL (`PosicionNoSqlRepository`):** si MongoDB supera el timeout de $1,5\text{ s}$ (selección/conexión), aplica un backoff de $15\text{ s}$ y almacena/consulta las posiciones en su `ConcurrentHashMap` en memoria (`respaldoMemoria`), reportando `mongodb: DEGRADED_FALLBACK_MEMORIA` en `/api/ops/health`.
 4. **Idempotencia Estricta (AC012 / Sección 3.7.3.c) y Reconstrucción Temporal (Sección 3.7.3.d):** tanto `ChoferResource` como `TrackingMDB` verifican UUID único (PostgreSQL + MongoDB), descartando duplicados con `DUPLICATE`, y `listarEventosPorGuia` ordena por prioridad semántica (`INICIO` $\rightarrow$ intermedios $\rightarrow$ `FIN`) y marca temporal del evento (`tiempo`), reconstruyendo la ruta correcta sin importar el orden de llegada.
 

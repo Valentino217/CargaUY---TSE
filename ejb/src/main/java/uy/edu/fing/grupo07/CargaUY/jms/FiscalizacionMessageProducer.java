@@ -9,6 +9,7 @@ import jakarta.jms.JMSContext;
 import jakarta.jms.JMSProducer;
 import jakarta.jms.Queue;
 import jakarta.jms.TextMessage;
+import jakarta.json.Json;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -56,11 +57,12 @@ public class FiscalizacionMessageProducer implements FiscalizacionProducerLocal 
             JMSProducer producer = jmsContext.createProducer();
             producer.send(fiscalizacionQueue, message);
 
-            LOGGER.log(
-                    Level.INFO,
-                    "Solicitud de fiscalización encolada con éxito en FiscalizacionQueue para la guía ID: {0}",
-                    guiaId
-            );
+            LOGGER.info(Json.createObjectBuilder()
+                    .add("evento", "jms.fiscalizacion.encolado")
+                    .add("correlacion", correlacion)
+                    .add("traceparent", traceparent)
+                    .add("guiaId", guiaId)
+                    .build().toString());
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Fallo técnico al encolar solicitud en FiscalizacionQueue para la guía ID: " + guiaId, e);
             throw new RuntimeException("Error al enviar mensaje a FiscalizacionQueue", e);
@@ -94,11 +96,12 @@ public class FiscalizacionMessageProducer implements FiscalizacionProducerLocal 
             JMSProducer producer = jmsContext.createProducer();
             producer.send(fiscalizacionQueue, message);
 
-            LOGGER.log(
-                    Level.INFO,
-                    "Solicitud de fiscalización VIAJE_SIN_GUIA encolada en FiscalizacionQueue para matrícula: {0}",
-                    matriculaLimpia
-            );
+            LOGGER.info(Json.createObjectBuilder()
+                    .add("evento", "jms.fiscalizacion.sin_guia.encolado")
+                    .add("correlacion", correlacion)
+                    .add("traceparent", traceparent)
+                    .add("matricula", matriculaLimpia)
+                    .build().toString());
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Fallo técnico al encolar fiscalización VIAJE_SIN_GUIA para matrícula: " + matriculaLimpia, e);
             throw new RuntimeException("Error al enviar mensaje VIAJE_SIN_GUIA a FiscalizacionQueue", e);
