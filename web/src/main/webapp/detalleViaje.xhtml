@@ -426,7 +426,7 @@
 
                         <p:column headerText="Desvío FaaS (km)" style="width: 140px;">
                             <h:panelGroup rendered="#{ev.distanciaDesvioKm() != null}">
-                                <span class="badge #{ev.distanciaDesvioKm() > 5.0 ? 'badge-INCIDENTE' : 'badge-FINALIZADO'}">
+                                <span class="badge #{ev.distanciaDesvioKm() > detalleViajeBean.toleranciaDesvioKm ? 'badge-INCIDENTE' : 'badge-FINALIZADO'}">
                                     #{ev.distanciaDesvioKm()} km
                                 </span>
                             </h:panelGroup>
@@ -446,7 +446,7 @@
                                 </div>
                             </h:panelGroup>
                             <h:panelGroup rendered="#{ev.incidente() != null}">
-                                <strong style="color: #991b1b;">#{ev.incidente().descripcion()}</strong>
+                                <span style="color: #{detalleViajeBean.esEventoAlerta(ev) ? '#991b1b' : '#475569'}; font-weight: #{detalleViajeBean.esEventoAlerta(ev) ? '700' : '500'};">#{ev.incidente().descripcion()}</span>
                                 <h:panelGroup rendered="#{not empty ev.incidente().foto() and ev.incidente().foto().startsWith('data:image/')}">
                                     <div style="margin-top: 6px;">
                                         <img src="#{ev.incidente().foto()}"

@@ -682,6 +682,13 @@ public final class RedVialUruguay implements Serializable {
     }
 
     /**
+     * Resultado de recortar la polilínea planificada desde la última posición conocida,
+     * incluyendo la fracción de recorrido total ya cubierta antes del recorte.
+     */
+    public record PolilineaRecortada(List<double[]> polilinea, double fraccionPrevia) {
+    }
+
+    /**
      * Recorta la polilínea planificada para que comience un paso adelante de la última posición
      * conocida (latP, lonP) sobre la ruta hacia el destino, evitando que rutas EN_CURSO que ya
      * tienen eventos registrados retrocedan al origen al iniciar la simulación GPS.
@@ -692,8 +699,21 @@ public final class RedVialUruguay implements Serializable {
             double lonP,
             int cantidadPasos
     ) {
+        return recortarPolilineaConProgreso(polilinea, latP, lonP, cantidadPasos).polilinea();
+    }
+
+    /**
+     * Recorta la polilínea planificada y retorna además la fracción previa recorrida respecto a
+     * la ruta completa, para continuar la numeración de tramos desde el progreso real.
+     */
+    public static PolilineaRecortada recortarPolilineaConProgreso(
+            List<double[]> polilinea,
+            double latP,
+            double lonP,
+            int cantidadPasos
+    ) {
         if (polilinea == null || polilinea.size() < 2) {
-            return polilinea;
+            return new PolilineaRecortada(polilinea, 0.0);
         }
         int numSegmentos = polilinea.size() - 1;
         double[] longitudes = new double[numSegmentos];
@@ -720,7 +740,7 @@ public final class RedVialUruguay implements Serializable {
         }
 
         if (longitudTotal < 1e-6 || minDistKm > 15.0) {
-            return polilinea;
+            return new PolilineaRecortada(polilinea, 0.0);
         }
 
         double distanciaRecorridaKm = mejorT * longitudes[mejorSeg];
@@ -728,9 +748,10 @@ public final class RedVialUruguay implements Serializable {
             distanciaRecorridaKm += longitudes[i];
         }
         if (distanciaRecorridaKm <= 1.0) {
-            return polilinea;
+            return new PolilineaRecortada(polilinea, 0.0);
         }
 
+        double fraccionPrevia = Math.min(0.95, Math.max(0.0, distanciaRecorridaKm / longitudTotal));
         double restanteKm = longitudTotal - distanciaRecorridaKm;
         int pasos = Math.max(2, cantidadPasos);
         double avancePrimerPasoKm = Math.min(restanteKm * 0.85, restanteKm / pasos);
@@ -763,7 +784,20 @@ public final class RedVialUruguay implements Serializable {
             }
             recortada.add(new double[]{v[0], v[1]});
         }
-        return recortada;
+        return new PolilineaRecortada(recortada, fraccionPrevia);
+    }
+
+    /**
+     * Convierte una fracción de ruta ya recorrida antes del inicio del mock en la cantidad
+     * equivalente de tramos previos respecto a los {@code tramosRestantes} planificados.
+     */
+    public static int calcularTramosPrevios(double fraccionPrevia, int tramosRestantes) {
+        if (!Double.isFinite(fraccionPrevia) || fraccionPrevia <= 1e-6 || tramosRestantes <= 0) {
+            return 0;
+        }
+        double acotada = Math.min(0.95, fraccionPrevia);
+        int calculados = (int) Math.round(tramosRestantes * (acotada / (1.0 - acotada)));
+        return Math.max(1, Math.min(tramosRestantes * 4, calculados));
     }
 
     private static double proyectarEnSegmento(double latP, double lonP, double[] a, double[] b) {

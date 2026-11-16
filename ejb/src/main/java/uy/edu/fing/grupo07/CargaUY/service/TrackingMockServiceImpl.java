@@ -44,6 +44,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Servicio coordinador del Nodo Periférico Descentralizado de Tracking GPS (mock-tracking)
@@ -68,6 +70,7 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
     private static final int MIN_EVENTOS_POR_MINUTO = 1;
     private static final int MAX_EVENTOS_POR_MINUTO = 120;
     private static final int PASOS_RUTA_BASE = 10;
+    private static final Pattern PATRON_TRAMO_EN_RUTA = Pattern.compile("^(.*?\\btramo\\s+)(\\d+)/(\\d+)(.*)$");
 
     @PersistenceContext(unitName = "CargaUYPersistenceUnit")
     private EntityManager em;
@@ -169,6 +172,7 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
     private final Map<Long, EstadoSimulacionGuia> estadosPorGuia = new ConcurrentHashMap<>();
     private final Set<Long> guiasInicializadasEnSesion = ConcurrentHashMap.newKeySet();
     private final Set<Long> guiasConMockPersistido = ConcurrentHashMap.newKeySet();
+    private final Map<Long, Double> fraccionPreviaPorGuia = new ConcurrentHashMap<>();
 
     public record PasoSimulado(
             double latitud,
@@ -374,6 +378,9 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
         estadosPorGuia.clear();
         guiasInicializadasEnSesion.clear();
         guiasConMockPersistido.clear();
+        fraccionPreviaPorGuia.clear();
+        totalEventosEmitidos.set(0L);
+        totalDesviosEmitidos.set(0L);
         if (trackingClient != null) {
             try {
                 List<GuiaDeViaje> guiasActivas = buscarGuiasEnCurso();
@@ -591,6 +598,7 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
             estadosPorGuia.clear();
             guiasInicializadasEnSesion.clear();
             guiasConMockPersistido.clear();
+            fraccionPreviaPorGuia.clear();
             if (trackingClient != null) {
                 try {
                     trackingClient.sincronizarGuiasYDrenar(List.of(), true, UUID.randomUUID().toString());
@@ -614,6 +622,7 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
         estadosPorGuia.keySet().retainAll(idsActivos);
         guiasInicializadasEnSesion.retainAll(idsActivos);
         guiasConMockPersistido.retainAll(idsActivos);
+        fraccionPreviaPorGuia.keySet().retainAll(idsActivos);
 
         boolean reiniciarRemoto = requiereReinicioPorEstadoPersistencia(guiasParaEmitir);
         List<TrackingClient.GuiaActivaPayload> payloadGuias = construirPayloadGuias(guiasParaEmitir);
@@ -655,8 +664,13 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
             EstadoSimulacionGuia existente = estadosPorGuia.get(guiaId);
             EstadoSimulacionGuia estadoGuia;
             if (existente == null || existente.getDesviosConfigurados() != this.cantidadDesvios) {
-                List<double[]> polilineaSim = resolverPolilineaSimulacion(guia);
-                EstadoSimulacionGuia nuevoEstado = construirEstadoSimulacion(guia, this.cantidadDesvios, polilineaSim);
+                RedVialUruguay.PolilineaRecortada polilineaSim = resolverPolilineaSimulacionConProgreso(guia);
+                EstadoSimulacionGuia nuevoEstado = construirEstadoSimulacion(
+                        guia,
+                        this.cantidadDesvios,
+                        polilineaSim.polilinea(),
+                        polilineaSim.fraccionPrevia()
+                );
                 estadoGuia = estadosPorGuia.compute(guiaId, (id, curr) ->
                         (curr == null || curr.getDesviosConfigurados() != this.cantidadDesvios) ? nuevoEstado : curr);
             } else {
@@ -751,10 +765,11 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
             return 0;
         }
         int persistidos = 0;
-        for (EventoViajeDTO ev : eventosRemotos) {
-            if (ev == null || ev.uuid() == null || ev.uuid().isBlank()) {
+        for (EventoViajeDTO rawEv : eventosRemotos) {
+            if (rawEv == null || rawEv.uuid() == null || rawEv.uuid().isBlank()) {
                 continue;
             }
+            EventoViajeDTO ev = normalizarTramoEventoPeriferico(rawEv);
             try {
                 if (eventosService != null) {
                     if (!eventosService.existeEvento(ev.uuid())) {
@@ -771,6 +786,71 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
             }
         }
         return persistidos;
+    }
+
+    private EventoViajeDTO normalizarTramoEventoPeriferico(EventoViajeDTO ev) {
+        if (ev.guiaId() == null) {
+            return ev;
+        }
+        String descActual = (ev.incidente() != null) ? ev.incidente().descripcion() : null;
+        String descNormalizada = descActual;
+        if (esEventoMockTracking(ev)) {
+            Double fraccionPrevia = fraccionPreviaPorGuia.get(ev.guiaId());
+            if (fraccionPrevia != null && fraccionPrevia > 1e-6) {
+                descNormalizada = ajustarDescripcionTramoPorProgreso(descActual, fraccionPrevia);
+            }
+        }
+        boolean delegarDesvioAFaas = faasTrackingClient != null
+                && faasTrackingClient.getEndpointUrl() != null
+                && !faasTrackingClient.getEndpointUrl().isBlank();
+        if (!delegarDesvioAFaas && (descNormalizada == null ? descActual == null : descNormalizada.equals(descActual))) {
+            return ev;
+        }
+        IncidenteDTO incidenteNormalizado = (ev.incidente() != null)
+                ? new IncidenteDTO(ev.incidente().foto(), descNormalizada)
+                : null;
+        return new EventoViajeDTO(
+                ev.uuid(),
+                ev.tiempo(),
+                ev.tipo(),
+                ev.latitud(),
+                ev.longitud(),
+                ev.guiaId(),
+                incidenteNormalizado,
+                delegarDesvioAFaas ? null : ev.distanciaDesvioKm(),
+                ev.cantidadKg(),
+                ev.mercaderia(),
+                ev.empresaCarga(),
+                ev.matricula()
+        );
+    }
+
+    static String ajustarDescripcionTramoPorProgreso(String descripcion, double fraccionPrevia) {
+        if (descripcion == null || !Double.isFinite(fraccionPrevia) || fraccionPrevia <= 1e-6) {
+            return descripcion;
+        }
+        Matcher matcher = PATRON_TRAMO_EN_RUTA.matcher(descripcion);
+        if (!matcher.matches()) {
+            return descripcion;
+        }
+        try {
+            int tramoActual = Integer.parseInt(matcher.group(2));
+            int totalRestante = Integer.parseInt(matcher.group(3));
+            if (tramoActual < 1 || totalRestante < 1 || tramoActual > totalRestante) {
+                return descripcion;
+            }
+            int tramosPrevios = RedVialUruguay.calcularTramosPrevios(fraccionPrevia, totalRestante);
+            if (tramosPrevios <= 0) {
+                return descripcion;
+            }
+            return matcher.group(1)
+                    + (tramoActual + tramosPrevios)
+                    + "/"
+                    + (totalRestante + tramosPrevios)
+                    + matcher.group(4);
+        } catch (NumberFormatException ignored) {
+            return descripcion;
+        }
     }
 
     private void actualizarEstadoDesdePeriferico(TrackingClient.EstadoNodoTracking estadoRemoto) {
@@ -846,17 +926,18 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
         return polilinea;
     }
 
-    private List<double[]> resolverPolilineaSimulacion(GuiaDeViaje guia) {
+    private RedVialUruguay.PolilineaRecortada resolverPolilineaSimulacionConProgreso(GuiaDeViaje guia) {
         String origen = (guia.getOrigen() != null && !guia.getOrigen().isBlank()) ? guia.getOrigen().trim() : "Montevideo";
         String destino = (guia.getDestino() != null && !guia.getDestino().isBlank()) ? guia.getDestino().trim() : "Rivera";
 
         List<double[]> polilinea = resolverPolilineaBase(guia, origen, destino);
         if (eventosService == null || guia.getId() == null) {
-            return polilinea;
+            return new RedVialUruguay.PolilineaRecortada(polilinea, 0.0);
         }
         List<EventoViajeDTO> eventos = eventosService.listarEventosPorGuia(guia.getId());
         if (eventos == null || eventos.isEmpty()) {
-            return polilinea;
+            fraccionPreviaPorGuia.remove(guia.getId());
+            return new RedVialUruguay.PolilineaRecortada(polilinea, 0.0);
         }
         EventoViajeDTO ultimoPreMock = null;
         for (EventoViajeDTO ev : eventos) {
@@ -865,15 +946,22 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
             }
         }
         if (ultimoPreMock == null) {
-            return polilinea;
+            fraccionPreviaPorGuia.remove(guia.getId());
+            return new RedVialUruguay.PolilineaRecortada(polilinea, 0.0);
         }
         int pasos = Math.max(PASOS_RUTA_BASE, this.cantidadDesvios + 4);
-        return RedVialUruguay.recortarPolilineaDesdePosicion(
+        RedVialUruguay.PolilineaRecortada recortada = RedVialUruguay.recortarPolilineaConProgreso(
                 polilinea,
                 ultimoPreMock.latitud(),
                 ultimoPreMock.longitud(),
                 pasos
         );
+        if (recortada.fraccionPrevia() > 1e-6) {
+            fraccionPreviaPorGuia.put(guia.getId(), recortada.fraccionPrevia());
+        } else {
+            fraccionPreviaPorGuia.remove(guia.getId());
+        }
+        return recortada;
     }
 
     private List<TrackingClient.GuiaActivaPayload> construirPayloadGuias(List<GuiaDeViaje> guias) {
@@ -888,7 +976,9 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
             String matricula = g.getVehiculo() != null ? g.getVehiculo().getMatricula() : null;
             String origen = (g.getOrigen() != null && !g.getOrigen().isBlank()) ? g.getOrigen().trim() : "Montevideo";
             String destino = (g.getDestino() != null && !g.getDestino().isBlank()) ? g.getDestino().trim() : "Rivera";
-            String polilineaSerializada = RedVialUruguay.serializarPolilinea(resolverPolilineaSimulacion(g));
+            String polilineaSerializada = RedVialUruguay.serializarPolilinea(
+                    resolverPolilineaSimulacionConProgreso(g).polilinea()
+            );
             resultado.add(new TrackingClient.GuiaActivaPayload(
                     g.getId(),
                     origen,
@@ -902,13 +992,22 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
     }
 
     static EstadoSimulacionGuia construirEstadoSimulacion(GuiaDeViaje guia, int desviosDeseados) {
-        return construirEstadoSimulacion(guia, desviosDeseados, null);
+        return construirEstadoSimulacion(guia, desviosDeseados, null, 0.0);
     }
 
     static EstadoSimulacionGuia construirEstadoSimulacion(
             GuiaDeViaje guia,
             int desviosDeseados,
             List<double[]> polilineaPersonalizada
+    ) {
+        return construirEstadoSimulacion(guia, desviosDeseados, polilineaPersonalizada, 0.0);
+    }
+
+    static EstadoSimulacionGuia construirEstadoSimulacion(
+            GuiaDeViaje guia,
+            int desviosDeseados,
+            List<double[]> polilineaPersonalizada,
+            double fraccionPrevia
     ) {
         String origen = (guia.getOrigen() != null && !guia.getOrigen().isBlank()) ? guia.getOrigen().trim() : "Montevideo";
         String destino = (guia.getDestino() != null && !guia.getDestino().isBlank()) ? guia.getDestino().trim() : "Rivera";
@@ -923,6 +1022,8 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
 
         List<PasoSimulado> plan = new ArrayList<>();
         int ultimoIdx = puntosRuta.size() - 1;
+        int tramosPrevios = RedVialUruguay.calcularTramosPrevios(fraccionPrevia, ultimoIdx);
+        int totalTramos = ultimoIdx + tramosPrevios;
         int desviosInsertados = 0;
 
         for (int i = 0; i < ultimoIdx; i++) {
@@ -933,7 +1034,8 @@ public class TrackingMockServiceImpl implements TrackingMockServiceLocal {
                     false,
                     false,
                     false,
-                    String.format("Mock Tracking GPS - En ruta (%s -> %s) tramo %d/%d", origen, destino, i + 1, ultimoIdx)
+                    String.format("Mock Tracking GPS - En ruta (%s -> %s) tramo %d/%d",
+                            origen, destino, i + 1 + tramosPrevios, totalTramos)
             ));
 
             // Si quedan desvíos por simular, insertamos el episodio de desvío (2 puntos en desvío)

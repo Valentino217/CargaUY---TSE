@@ -1,0 +1,543 @@
+\documentclass[11pt,a4paper,twocolumn]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-tabla,es-noquoting]{babel}
+\usepackage[top=2.0cm,bottom=2.0cm,left=1.7cm,right=1.7cm,columnsep=0.65cm]{geometry}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,backgrounds,calc,babel}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{url}
+\usepackage[hidelinks,breaklinks=true]{hyperref}
+
+\definecolor{primaryBlue}{HTML}{1B4F72}
+\definecolor{accentTeal}{HTML}{117A65}
+\definecolor{warnAmber}{HTML}{B9770E}
+\definecolor{slateGray}{HTML}{5D6D7E}
+\definecolor{softBg}{HTML}{F4F6F7}
+
+\setlength{\parskip}{3pt}
+\setlist[itemize]{leftmargin=1.2em,itemsep=2pt,topsep=2pt}
+\setlist[enumerate]{leftmargin=1.4em,itemsep=2pt,topsep=2pt}
+
+\title{\vspace{-0.7cm}\textbf{\Large carga.uy: Arquitectura Empresarial Políglota, Asíncrona y Resiliente para Gestión y Fiscalización de Transporte de Carga en Uruguay}}
+
+\author{
+\textbf{Grupo 07 --- Taller de Sistemas Empresariales (TSE 2026)}\\
+Instituto de Computación, Facultad de Ingeniería, Universidad de la República (UdelaR)\\
+Montevideo, Uruguay
+}
+
+\date{\today}
+
+\begin{document}
+
+\twocolumn[
+\begin{@twocolumnfalse}
+\maketitle
+\begin{abstract}
+El control estatal del transporte carretero de cargas demanda cruzar en tiempo casi real las declaraciones operativas de las empresas (habilitaciones vehiculares y guías de viaje) con telemetría continua GPS y pesajes capturados en balanzas de peaje. Este artículo presenta el diseño, implementación y evaluación empírica de \textbf{carga.uy}, una plataforma empresarial desarrollada en \textbf{Jakarta EE 10} (WildFly~41) que integra persistencia políglota (\textbf{PostgreSQL~16} para consistencia transaccional y auditoría inmutable \textit{append-only}; \textbf{MongoDB~7 Time-Series} para series temporales GPS), mensajería asíncrona (\textbf{Apache ActiveMQ Artemis}), cómputo \textit{serverless} (\textbf{FaaS} en Python para cálculo geoespacial de desvíos sobre la Red Vial Nacional del MTOP) y una aplicación móvil Android \textit{offline-first}. Se detallan el registro de decisiones de arquitectura, el modelo de datos, la estrategia de idempotencia y reconstrucción ante lotes desordenados, los mecanismos de tolerancia a fallos (\textit{Bulkhead}, \textit{Circuit Breaker}, degradación local), la seguridad federada (\textit{Usuario gub.uy}, OpenLDAP, PDI SOAP), la privacidad estadística ($k$-anonimato) y la validación experimental. El sistema supera los $399$ tests unitarios ($81{,}93\%$ de cobertura en la capa EJB), demuestra $0\%$ de pérdida de eventos frente a ráfagas $3\times$ ($150\text{ ev/s}$) y $5\times$ ($250\text{ ev/s}$), mantiene el Frontoffice web con $p95 = 54{,}87\text{ ms}$ bajo pico $3\times$ y caracteriza el punto de quiebre mono-nodo en $\approx 450\text{ ev/s}$.
+\end{abstract}
+\vspace{0.25cm}
+\noindent\textbf{Palabras clave:} Sistemas Empresariales, Jakarta EE, Persistencia Políglota, Mensajería Asíncrona, Serverless (FaaS), Tolerancia a Fallos, Trazabilidad Distribuida, Fiscalización Automática.
+\vspace{0.5cm}
+\end{@twocolumnfalse}
+]
+
+\section{Introducción y Problemática de Dominio}
+
+La matriz logística interna del Uruguay depende de manera predominante del transporte carretero de carga pesada, actividad regulada y fiscalizada por la Dirección Nacional de Transporte (DNT) del Ministerio de Transporte y Obras Públicas (MTOP). En la práctica operativa cotidiana coexisten miles de vehículos pesados (camiones simples, tractores con semirremolque y combinaciones de carga) movilizando granos, celulosa, madera, ganado y contenedores portuarios a lo largo de los principales corredores viales nacionales. Tradicionalmente, la verificación de vigencias documentales ---Permiso Nacional de Circulación (PNC) e Inspección Técnica Vehicular (ITV)---, el control de sobrepeso en balanzas y la detección de desvíos respecto de rutas autorizadas han requerido controles presenciales o análisis reactivos ex post.
+
+La plataforma \textbf{carga.uy} resuelve esta brecha proporcionando un ecosistema distribuido de fiscalización preventiva y automatizada estructurado en torno a cuatro pilares funcionales:
+\begin{enumerate}
+    \item \textbf{Gestión empresarial y operación en campo (Web + Móvil):} el portal ciudadano y empresarial permite a las empresas transportistas gestionar su perfil, dar de alta flota vehicular con PNC/ITV y emitir Guías de Viaje asignadas a vehículo y chofer. Por su parte, el componente móvil Android (\texttt{CargaUYAndroid}) brinda operación \textit{offline-first} en zonas rurales sin cobertura celular para iniciar/finalizar viajes, registrar cargas parciales, reportar incidentes con fotografía y transmitir posiciones GPS.
+    \item \textbf{Integración con sistemas externos y nodos periféricos:} comunicación SOAP con la Plataforma de Interoperabilidad (PDI / DNIC) para verificación de identidad; autenticación federada OpenID Connect (OIDC) con \textbf{Usuario gub.uy}; consulta síncrona \textit{request-response} contra estaciones de balanza en peajes; e ingesta continua y asíncrona \textit{one-way} desde nodos periféricos de seguimiento y aplicaciones móviles.
+    \item \textbf{Fiscalización automática y auditoría jurídica:} un motor de reglas asíncrono cruza pesajes, habilitaciones y trayectorias frente a umbrales configurables en caliente, generando automáticamente casos de infracción con máquina de estados estricta, notificaciones, etapa de descargos empresariales, cierre automático por expiración de plazo y pista de auditoría inmutable.
+    \item \textbf{Gobernanza, analítica agregada y observabilidad:} tablero gerencial exportable en múltiples formatos para autoridades del MTOP, portal público protegido contra reidentificación ($k$-anonimato conforme a la Ley N.\textsuperscript{o}~18.331), métricas de infraestructura en tiempo real y resiliencia integral frente a fallas o saturación de dependencias.
+\end{enumerate}
+
+Este artículo presenta la ingeniería de software y arquitectura implementadas por el Grupo~07. La Sección~\ref{sec:arq} expone el diseño macro, la topología de contenedores (Sección~\ref{sec:contenedores}) y seis decisiones arquitectónicas clave (ADRs). La Sección~\ref{sec:datos} describe el modelo de datos híbrido e integridad relacional/NoSQL. La Sección~\ref{sec:flujos} detalla la aplicación móvil, la mensajería JMS y la integración serverless (FaaS). La Sección~\ref{sec:fisc} desarrolla la fiscalización automática y las integraciones periféricas. La Sección~\ref{sec:seguridad} analiza seguridad, privacidad y los cuatro requerimientos opcionales implementados. La Sección~\ref{sec:perf} presenta los mecanismos de resiliencia, trazabilidad y la evaluación experimental mediante generador de carga. Finalmente, las Secciones~\ref{sec:ci} y \ref{sec:concl} recogen la verificación automatizada, CI/CD y líneas de evolución futura.
+
+\section{Arquitectura General y Decisiones de Diseño}\label{sec:arq}
+
+\subsection{Topología y Empaquetado en Jakarta EE 10}
+
+El componente central está implementado sobre \textbf{Jakarta EE~10}~\cite{jakarta} (compilado con Java~17 sobre JVM~21) y desplegado en \textbf{WildFly~41}~\cite{wildfly} utilizando el perfil completo (\texttt{standalone-full.xml}) con soporte nativo para Jakarta Messaging (ActiveMQ Artemis embebido), JPA/Hibernate, EJBs, CDI, JAX-RS y JSF~4.0 con PrimeFaces~15.0.9. La Figura~\ref{fig:arq} ilustra la topología global de capas, colas, persistencia políglota e integraciones externas de la plataforma.
+
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[
+    node distance=0.8cm and 1.0cm,
+    box/.style={draw=primaryBlue, rounded corners=3pt, fill=softBg, align=center, font=\scriptsize, inner sep=4pt, minimum height=0.8cm},
+    ext/.style={draw=accentTeal, dashed, rounded corners=3pt, fill=white, align=center, font=\scriptsize, inner sep=4pt, minimum height=0.75cm},
+    db/.style={draw=primaryBlue, cylinder, shape border rotate=90, aspect=0.25, fill=white, align=center, font=\scriptsize, inner sep=4pt, minimum width=2.2cm, minimum height=0.95cm},
+    arr/.style={-{Stealth[length=2mm]}, thick, color=primaryBlue!85!black},
+    extarr/.style={-{Stealth[length=2mm]}, thick, dashed, color=accentTeal!85!black}
+]
+
+\node[box, minimum width=3.1cm] (web) {\textbf{Frontoffice / Backoffice Web}\\JSF 4.0 + PrimeFaces 15};
+\node[box, minimum width=3.1cm, right=1.8cm of web] (android) {\textbf{App Móvil Chofer}\\Kotlin + SQLite + Retrofit};
+
+\node[box, below=1.0cm of web, minimum width=3.1cm] (jsf) {\textbf{Filtros Web + Backing Beans}\\Sesion / Integracion / Correlacion};
+\node[box, below=1.0cm of android, minimum width=3.1cm] (rest) {\textbf{REST API JAX-RS (\texttt{/api/*})}\\AuthFilter + Chofer / Balanza / Ops};
+
+\node[box, below=0.9cm of $(jsf.south)!0.5!(rest.south)$, minimum width=8.0cm] (ejb) {\textbf{Capa de Servicios EJB (@Stateless / @Singleton / @Schedule)}\\ControlAcceso $\cdot$ GestionEventos $\cdot$ MotorFiscalizacion $\cdot$ ActaServiceEJB};
+
+\node[box, below=0.85cm of ejb, minimum width=8.0cm, fill=warnAmber!10, draw=warnAmber] (jms) {\textbf{Apache ActiveMQ Artemis Embebido (Jakarta Messaging 3.1)}\\TrackingQueue $\cdot$ FiscalizacionQueue $\cdot$ NotificacionQueue $\cdot$ DLQ.* (PAGE 10 MiB)};
+
+\node[box, below=0.85cm of jms, minimum width=8.0cm] (mdb) {\textbf{Message-Driven Beans (MDBs)}\\TrackingMDB (maxSession=10) $\cdot$ FiscalizacionMDB (5) $\cdot$ NotificacionMDB (5)};
+
+\node[db, below=1.05cm of mdb.south, xshift=-2.15cm] (pg) {\textbf{PostgreSQL 16}\\Relacional + Trigger\\Auditoría Inmutable};
+\node[db, below=1.05cm of mdb.south, xshift=2.15cm] (mg) {\textbf{MongoDB 7}\\Time-Series GPS\\+ Respaldo Memoria};
+
+\node[ext, left=1.45cm of jsf, minimum width=2.7cm] (gub) {\textbf{Usuario gub.uy / OIDC}\\Login Federado (PKCE)};
+\node[ext, below=0.65cm of gub, minimum width=2.7cm] (ldap) {\textbf{OpenLDAP (1389)}\\Auth Internos (\{SSHA\})};
+\node[ext, below=0.65cm of ldap, minimum width=2.7cm] (pdi) {\textbf{PDI / DNIC (SOAP)}\\WS-Addressing + Datos};
+
+\node[ext, right=1.45cm of rest, minimum width=2.7cm] (faas) {\textbf{FaaS Vercel (Python)}\\Cálculo Desvío MTOP\\(\texttt{X-FaaS-Secret})};
+\node[ext, below=0.65cm of faas, minimum width=2.7cm] (bal) {\textbf{Nodos Balanzas (REST)}\\Request-Response + CB};
+\node[ext, below=0.65cm of bal, minimum width=2.7cm] (trk) {\textbf{Nodo Tracking (REST)}\\Simulador Periférico};
+
+\begin{scope}[on background layer]
+\node[draw=slateGray, thick, rounded corners=5pt, fill=primaryBlue!3, fit=(jsf)(rest)(ejb)(jms)(mdb), inner sep=8pt, label={[font=\scriptsize\bfseries, color=primaryBlue]above:Componente Central --- WildFly 41 (CargaUY.ear)}] {};
+\end{scope}
+
+\draw[arr] (web) -- (jsf);
+\draw[arr] (android) -- node[right, font=\tiny]{Bearer + X-Correlation-ID} (rest);
+\draw[arr] (jsf) -- (ejb.north -| jsf);
+\draw[arr] (rest) -- (ejb.north -| rest);
+\draw[arr] (ejb) -- (jms);
+\draw[arr] (jms) -- (mdb);
+\draw[arr] (mdb.west) -- ++(-0.22,0) |- (ejb.west);
+\draw[arr] ([xshift=-2.15cm]mdb.south) -- (pg.north);
+\draw[arr] ([xshift=2.15cm]mdb.south) -- (mg.north);
+
+\draw[extarr] (jsf.west) -- (gub.east);
+\draw[extarr] (ejb.west) -- ++(-0.75,0) |- (ldap.east);
+\draw[extarr] ([yshift=-0.18cm]ejb.west) -- ++(-0.55,0) |- (pdi.east);
+\draw[extarr] (mdb.east) -- ++(0.75,0) |- (faas.west);
+\draw[extarr] (rest.east) -- (faas.west);
+\draw[extarr] (ejb.east) -- ++(0.55,0) |- (bal.west);
+\draw[extarr] ([yshift=-0.18cm]ejb.east) -- ++(0.35,0) |- (trk.west);
+
+\end{tikzpicture}
+\caption{Arquitectura general y topología de integración de \textbf{carga.uy} sobre WildFly~41, persistencia políglota, broker ActiveMQ Artemis, cliente móvil Android y función FaaS en Vercel.}
+\label{fig:arq}
+\end{figure*}
+
+La aplicación se empaqueta en un archivo empresarial \texttt{CargaUY.ear} integrado por dos módulos principales: \texttt{CargaUY-ejb.jar} (entidades JPA, repositorios NoSQL, seguridad EJB, motor de fiscalización, productores/consumidores JMS, firma digital y clientes periféricos) y \texttt{CargaUY-web.war} (vistas XHTML organizadas por rol bajo \texttt{/portal/*}, \texttt{/empresa/*}, \texttt{/funcionario/*}, \texttt{/backoffice/*}, \texttt{/admin/*}, junto con recursos JAX-RS bajo \texttt{/api/*}). Se añade además \texttt{gub-callback-root.war} en el contexto raíz \texttt{/} para atender la URI de retorno OIDC registrada ante Usuario gub.uy.
+
+\subsection{Topología de Contenedores y Despliegue}\label{sec:contenedores}
+
+Todo el ecosistema de ejecución, desarrollo reproducible y demostración se orquesta mediante Docker Compose (\texttt{docker-compose.yml}) bajo red privada de servicios, desacoplando los datos del contenedor aplicativo y garantizando arranque ordenado mediante sondas de salud (\texttt{healthcheck}). La Tabla~\ref{tab:contenedores} resume los servicios declarados, sus imágenes y puertos expuestos.
+
+\begin{table}[t]
+\centering
+\caption{Topología de contenedores declarada en \texttt{docker-compose.yml}.}
+\label{tab:contenedores}
+\scriptsize
+\begin{tabularx}{\columnwidth}{@{}lll>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Servicio} & \textbf{Imagen / Build} & \textbf{Puerto} & \textbf{Rol en el stack} \\
+\midrule
+\texttt{postgres} & \texttt{postgres:16-alpine} & \texttt{5432} & BD relacional + triggers \\
+\texttt{mongodb} & \texttt{mongo:7} & \texttt{27017} & Time-Series GPS \\
+\texttt{ldap} & \texttt{./docker/ldap} & \texttt{1389} & Directorio internos \\
+\texttt{mock-pdi} & \texttt{./docker/mock-pdi} & \texttt{8081} & Simulador SOAP DNIC \\
+\texttt{gub} & \texttt{keycloak:26.4.7} & \texttt{8083} & IdP OIDC local (\textit{opt.}) \\
+\texttt{wildfly} & \texttt{./docker/wildfly} & \texttt{8080/9990} & \texttt{CargaUY.ear} + Artemis \\
+\texttt{seed}/\texttt{reset} & \texttt{postgres}/\texttt{mongo} & --- & Carga y limpieza idempotente \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+El arranque de \texttt{wildfly} depende estrictamente de \texttt{postgres} en estado \texttt{service\_healthy} (verificado con \texttt{pg\_isready}) y expone un \texttt{healthcheck} HTTP periódico cada $10\text{ s}$ sobre \texttt{/CargaUY-web/api/public/ready}. Una vez operativo el servidor aplicativo, el contenedor efímero \texttt{seed} ejecuta \texttt{seed-datos-prueba.sql} para poblar empresas, flota, guías de prueba y pesadas iniciales sin intervención manual, mientras el perfil \texttt{reset} (\texttt{reset-mongo} y \texttt{reset}) permite restaurar limpiamente las bases entre ejecuciones experimentales. Asimismo, el perfil \texttt{mock-gub} habilita un servidor Keycloak~26.4.7 local con importación automática de \textit{realm} para pruebas desconectadas del proveedor nacional de pruebas.
+
+\subsection{Registro de Decisiones de Arquitectura (ADRs)}
+
+La Tabla~\ref{tab:adrs} documenta las seis decisiones arquitectónicas clave evaluadas durante el ciclo de desarrollo, explicitando su contexto, las alternativas descartadas y sus consecuencias técnicas.
+
+\begin{table*}[t]
+\centering
+\caption{Registro de decisiones relevantes de arquitectura (ADR-1 a ADR-6).}
+\label{tab:adrs}
+\scriptsize
+\begin{tabularx}{\textwidth}{>{\bfseries}p{2.7cm} X X X}
+\toprule
+Decisión & Contexto / Problema & Alternativas Descartadas & Consecuencias y Compromisos \\
+\midrule
+\textbf{ADR-1:} Persistencia políglota (PostgreSQL~16 + MongoDB~7 Time-Series) & Los hitos de guía, vehículos y expedientes legales requieren integridad referencial ACID, pero la telemetría GPS genera $\sim 200\times$ más escrituras temporales. & Guardar $100\%$ de las posiciones GPS en la tabla relacional \texttt{puntos\_tracking}, saturando conexiones JDBC. & Libera el pool \texttt{PostgreSQLDS} ($25$ conexiones) para transacciones y Frontoffice; exige respaldo transparente en memoria si MongoDB cae. \\
+\midrule
+\textbf{ADR-2:} Desacoplamiento por ActiveMQ Artemis embebido (\texttt{PAGE}) & Ráfagas de reconexión celular ($3\times$) y la latencia HTTPS hacia la FaaS no deben bloquear el ingreso REST ni producir pérdidas de datos. & Procesamiento síncrono dentro de \texttt{POST /sync}, o despliegue separado de Kafka para un único nodo central. & Absorbe picos con $0\%$ de pérdidas paginando en disco ($10\text{ MiB}$ RAM, bloques de $2\text{ MiB}$) y reintentos a DLQ; introduce consistencia eventual breve. \\
+\midrule
+\textbf{ADR-3:} Cómputo de desvío en FaaS (Vercel) con fallback local & El cálculo geométrico sobre rutas MTOP se beneficia de ejecución serverless elástica, pero la caída o límite de cuota del proveedor no puede frenar la fiscalización. & Dejar todo el cómputo acoplado al monolito (sin FaaS) o bloquear el MDB si la FaaS externa da error/timeout. & \texttt{FaasTrackingClient} delega en \url{https://faas-py.vercel.app/api/tracking} (timeout $6\text{ s}$) y conmuta en $<1\text{ ms}$ a \texttt{RedVialUruguay} ante fallo. \\
+\midrule
+\textbf{ADR-4:} Autorización centralizada en EJB (\texttt{ControlAcceso}) & Ocultar menús o enlaces en JSF no evita accesos indebidos mediante peticiones HTTP directas o APIs REST. & Validación únicamente en \textit{backing beans} o filtros de URL genéricos sin control por entidad. & RBAC homogéneo entre JSF y JAX-RS (\texttt{AuthFilter}), verificando propiedad de empresa, guía y vehículo en cada servicio EJB. \\
+\midrule
+\textbf{ADR-5:} Auditoría jurídica inmutable a nivel de SGBD & Un error de código o consulta administrativa sobre \texttt{registro\_auditoria} invalidaría la trazabilidad legal de una multa. & Políticas \textit{append-only} implementadas solo en lógica Java o volcadas exclusivamente a archivos de log. & Triggers PostgreSQL \texttt{BEFORE UPDATE / DELETE / TRUNCATE} instalados al arranque bloquean toda mutación o borrado. \\
+\midrule
+\textbf{ADR-6:} App Android \textit{offline-first} con UUID y \texttt{@Version} & En rutas nacionales del interior la conectividad 4G/LTE es intermitente y las empresas pueden editar guías desde la Web mientras el chofer está sin señal. & App dependiente de red continua (pérdida de eventos offline) o resolución por \textit{last-write-wins} sin control de versión. & \texttt{OfflineDatabaseHelper} en SQLite persiste lotes $<1\text{ MiB}$ con \texttt{uuid} idempotente; \texttt{@Version} protege entidades maestras de colisiones. \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+\section{Modelo de Datos Políglota e Integridad}\label{sec:datos}
+
+La separación de cargas OLTP y de series temporales constituye la base de la escalabilidad y de la integridad jurídica del sistema.
+
+\subsection{Esquema Relacional en PostgreSQL 16}
+
+El modelo relacional se compone de $22$ tablas gestionadas mediante JPA sobre \texttt{PostgreSQLDS} (\texttt{min-pool-size=5}, \texttt{max-pool-size=25} y validación en segundo plano cada $60\text{ s}$):
+\begin{itemize}
+    \item \textbf{Usuarios y roles:} \texttt{Usuario} utiliza estrategia de herencia \texttt{JOINED} hacia \texttt{Ciudadano}, \texttt{Chofer}, \texttt{Funcionario}, \texttt{Autoridad} y \texttt{Administrador}, admitiendo multi-rol en \texttt{usuario\_roles}. Se complementa con \texttt{SesionAcceso}, \texttt{FlujoIdentidad} (parámetros PKCE), \texttt{CertificadoDigital}, \texttt{Empresa}, \texttt{Rubro} y \texttt{VinculoEmpresa}.
+    \item \textbf{Flota y viajes:} \texttt{Vehiculo} asocia permisos \texttt{PNC} y certificados \texttt{ITV} con fechas de vigencia. \texttt{GuiaDeViaje} (\texttt{guias\_de\_viaje}) unifica el ciclo de vida del viaje contratado (\texttt{SIN\_INICIAR}, \texttt{EN\_CURSO}, \texttt{FINALIZADO}), almacenando \texttt{origen}, \texttt{destino}, \texttt{corredor\_vial}, \texttt{polilinea\_ruta}, volumen de carga, vehículo y chofer. Los hitos operativos del chofer (\texttt{INICIO}, \texttt{FIN}, \texttt{CARGA\_PARCIAL}, \texttt{DESCARGA\_PARCIAL}, \texttt{INCIDENTE}) se registran en \texttt{eventos\_viaje} (con fotografía y descripción en \texttt{incidentes\_ruta}), mientras las lecturas de peaje residen en \texttt{pesadas\_balanza}.
+    \item \textbf{Expediente de fiscalización:} \texttt{Infraccion}, \texttt{Descargo}, \texttt{RegistroAuditoria}, \texttt{ReglaFiscalizacion} y \texttt{ConfiguracionNodoPeriferico}. Para soportar la regla \texttt{VIAJE\_SIN\_GUIA}, tanto \texttt{pesadas\_balanza} como \texttt{infracciones} permiten \texttt{guia\_id} nulo vinculando \texttt{vehiculo\_matricula}, protegidos por el índice único parcial \texttt{uk\_infraccion\_vehiculo\_sin\_guia\_fecha} sobre \texttt{(vehiculo\_matricula, fecha, tipo)} para impedir casos duplicados por pesadas consecutivas.
+\end{itemize}
+
+\subsection{Resolución de Conflictos e Inmutabilidad Jurídica}
+
+Para cumplir la política de resolución de conflictos offline (Sección~3.4.4.d de la letra), las entidades \texttt{GuiaDeViaje}, \texttt{Empresa}, \texttt{Usuario}, \texttt{VinculoEmpresa} y \texttt{ReglaFiscalizacion} declaran bloqueo optimista mediante \texttt{@Version}. Cuando una empresa modifica desde el Frontoffice datos maestros o una guía mientras el dispositivo móvil estuvo desconectado, cualquier intento de mutación con una versión obsoleta arroja conflicto HTTP~$409$ (obligando a recargar la vista o el estado), mientras que la ingesta de telemetría del chofer (\texttt{POSICION} o hitos con \texttt{uuid}) se anexa de forma aditiva e idempotente sin sobrescribir la información comercial de la guía.
+
+En materia de auditoría, tanto el script de inicialización de Postgres como el componente \texttt{@Startup} \texttt{AuditoriaTriggerInstaller} aseguran idempotente\-mente la presencia de los disparadores \texttt{trg\_audit\_immutable} (\texttt{BEFORE UPDATE OR DELETE}) y \texttt{trg\_audit\_no\_truncate} (\texttt{BEFORE TRUNCATE}) sobre \texttt{registro\_auditoria}. Cualquier intento de alteración aborta la transacción en el propio motor SGBD.
+
+\subsection{Serie Temporal NoSQL en MongoDB 7}
+
+Las lecturas continuas \texttt{TipoEvento.POSICION} se derivan exclusivamente a la colección Time-Series \texttt{cargauy\_tracking.eventos\_posicion} administrada por el singleton \texttt{PosicionNoSqlRepository}. La colección se crea con \texttt{timeField="tiempo"}, \texttt{metaField="metadata"} (\texttt{guiaId}, \texttt{matricula}, \texttt{tipo}) y \texttt{granularity=SECONDS}. Cada documento guarda su \texttt{uuid}, marca temporal ISO, punto GeoJSON \texttt{ubicacion} (\texttt{[longitud, latitud]}) y \texttt{distanciaDesvioKm}, apoyados por índices compuestos \texttt{(metadata.guiaId, tiempo)}, \texttt{(metadata.guiaId, distanciaDesvioKm)} y un índice sobre \texttt{uuid} para deduplicación rápida.
+
+Bajo el modelo nacional ($1.500$ vehículos activos reportando cada $30\text{ s}$ durante $10\text{ h}$ diarias = $1{,}8\times 10^6$ puntos/día), el almacenamiento columnar comprimido en buckets de MongoDB Time-Series~\cite{mongo} reduce la huella en disco a $\approx 85\text{--}95\text{ bytes}$ por lectura ($\approx 162\text{ MB/día}$, $\approx 59{,}1\text{ GB/año}$), permitiendo retener años completos de telemetría nacional con consultas por guía en milisegundos.
+
+\section{Tracking Móvil, Mensajería Asíncrona y FaaS}\label{sec:flujos}
+
+\subsection{Aplicación Móvil Android \texorpdfstring{\textit{Offline-First}}{Offline-First}}
+
+El módulo \texttt{CargaUYAndroid} (Kotlin, Jetpack Compose, \texttt{minSdk=24}, Retrofit~2.11.0, Chrome Custom Tabs) permite operar en tramos rurales sin conectividad:
+\begin{itemize}
+    \item \textbf{Persistencia y captura GPS:} las guías descargadas y los eventos generados localmente se almacenan en SQLite mediante \texttt{OfflineDatabaseHelper}. Cada evento recibe en origen un \texttt{uuid} único (\texttt{UUID.randomUUID()}) y su instante real de captura obtenido desde \texttt{LocationManager} con cancelación acotada por corrutinas (\texttt{SyncRepository}).
+    \item \textbf{Sincronización por lotes e idempotencia:} al recuperar red mediante \texttt{ConnectivityManager.NetworkCallback} (o por acción manual del chofer), \texttt{SyncRepository} ---protegido con \texttt{Mutex} contra envíos concurrentes--- fracciona las lecturas pendientes mediante \texttt{SyncBatchChunker} en lotes menores al límite de $1\text{ MiB}$ impuesto por el servidor y los remite a \texttt{POST /api/chofer/eventos/sync}. Según la respuesta por ítem (\texttt{ACCEPTED} o \texttt{DUPLICATE}), marca localmente el registro como sincronizado sin duplicar envíos ni perder eventos si se interrumpe la conexión.
+\end{itemize}
+
+\subsection{Pipeline Asíncrono, Idempotencia y Ordenamiento}
+
+La Figura~\ref{fig:pipeline} detalla el recorrido completo de cada evento GPS desde el dispositivo o nodo periférico hasta su almacenamiento y posterior fiscalización.
+
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[
+    node distance=0.65cm and 0.65cm,
+    st/.style={draw=primaryBlue, rounded corners=3pt, fill=softBg, align=center, font=\scriptsize, inner sep=4pt, minimum height=0.85cm},
+    dec/.style={draw=warnAmber, diamond, aspect=2.3, fill=warnAmber!8, align=center, font=\tiny\bfseries, inner sep=1pt},
+    arr/.style={-{Stealth[length=2mm]}, thick, color=primaryBlue!85!black},
+    alt/.style={-{Stealth[length=2mm]}, thick, dashed, color=accentTeal!85!black}
+]
+\node[st, minimum width=2.4cm] (cli) {\textbf{Android / Nodo GPS}\\Genera \texttt{uuid} + \texttt{tiempo}};
+\node[st, right=of cli, minimum width=2.7cm] (api) {\textbf{ChoferResource}\\Valida JWT + Guía +\\Check \texttt{existeEvento}};
+\node[st, right=of api, minimum width=2.5cm, fill=warnAmber!10, draw=warnAmber] (q) {\textbf{TrackingQueue}\\ActiveMQ (\texttt{PAGE})\\Responde \texttt{ACCEPTED}};
+\node[st, right=of q, minimum width=2.5cm] (mdb) {\textbf{TrackingMDB}\\10 hilos + Re-check\\idempotencia \texttt{uuid}};
+\node[dec, below=0.85cm of mdb] (faasdec) {¿FaaS Vercel\\disponible?};
+\node[st, left=0.85cm of faasdec, minimum width=2.5cm, draw=accentTeal] (faas) {\textbf{FaaS Vercel (HTTPS)}\\Calcula desvío km\\(timeout $6\text{ s}$)};
+\node[st, right=0.85cm of faasdec, minimum width=2.5cm] (local) {\textbf{Fallback Local}\\RedVialUruguay\\($<1\text{ ms}$)};
+\node[st, below=0.85cm of faasdec, minimum width=3.1cm] (nosql) {\textbf{MongoDB Time-Series}\\(o \texttt{respaldoMemoria})};
+\node[st, left=0.9cm of nosql, minimum width=2.7cm] (fisc) {\textbf{FiscalizacionQueue}\\Evaluación asíncrona};
+
+\draw[arr] (cli) -- node[above, font=\tiny]{\texttt{POST /sync}} (api);
+\draw[arr] (api) -- (q);
+\draw[arr] (q) -- (mdb);
+\draw[arr] (mdb) -- (faasdec);
+\draw[alt] (faasdec) -- node[above, font=\tiny]{Sí} (faas);
+\draw[arr] (faasdec) -- node[above, font=\tiny]{No/Err} (local);
+\draw[alt] (faas) |- (nosql.west);
+\draw[arr] (local) |- (nosql.east);
+\draw[arr] (nosql) -- (fisc);
+\end{tikzpicture}
+\caption{Pipeline asíncrono de ingesta GPS: validación previa, encolado no bloqueante en \texttt{TrackingQueue}, consumo concurrente en \texttt{TrackingMDB}, invocación a FaaS con fallback geométrico local, persistencia Time-Series y disparo de fiscalización.}
+\label{fig:pipeline}
+\end{figure*}
+
+Para cumplir estrictamente las garantías de la Sección~3.7.3:
+\begin{itemize}
+    \item \textbf{Desacoplamiento e idempotencia (AC012):} \texttt{ChoferResource} encola eventos \texttt{POSICION} en \texttt{java:/jms/queue/TrackingQueue} mediante \texttt{TrackingMessageProducer} y responde de inmediato \texttt{ACCEPTED} (o \texttt{DUPLICATE} si el \texttt{uuid} ya consta en PostgreSQL o MongoDB). En caso de concurrencia entre envíos simultáneos con igual \texttt{uuid}, \texttt{TrackingMDB} (\texttt{maxSession=10}) realiza una segunda comprobación antes de persistir, incrementando \texttt{eventosDuplicados} y descartando el duplicado de forma silenciosa.
+    \item \textbf{Política ante fallos de consumo:} ActiveMQ Artemis configura \texttt{max-delivery-attempts=5}, \texttt{redelivery-delay=2000\text{ ms}}, \texttt{max-size-bytes=10\text{ MiB}} con bloques \texttt{page-size-bytes=2\text{ MiB}} (\texttt{address-full-policy=PAGE}) y envío a \texttt{DLQ.TrackingQueue} ante agotamiento de reintentos.
+    \item \textbf{Reconstrucción temporal (\textit{Out-of-Order}):} al consultar la trayectoria (\texttt{listarEventosPorGuia}), la plataforma fusiona hitos SQL y posiciones NoSQL indexados por \texttt{uuid} y ordena según prioridad semántica (\texttt{INICIO} $\rightarrow$ eventos intermedios $\rightarrow$ \texttt{FIN}) y marca temporal original del evento (\texttt{tiempo ASC}), garantizando coherencia aunque los vehículos sincronicen lotes atrasados en distinto orden.
+\end{itemize}
+
+\subsection{Función Serverless (FaaS) y Red Vial Nacional}
+
+El cálculo geoespacial de desvío de ruta se implementa de forma desacoplada en Python (\texttt{faas/tracking-desvio-lambda/lambda\_function.py}) compatible tanto con AWS Lambda como con funciones HTTP serverless, desplegado en Vercel en \url{https://faas-py.vercel.app/api/tracking} y protegido mediante secreto compartido en la cabecera \texttt{X-FaaS-Secret}.
+
+Al procesar un evento con coordenadas sin \texttt{distanciaDesvioKm} previo, \texttt{FaasTrackingClient} resuelve primero mediante Dijkstra en \texttt{RedVialUruguay} el corredor vial y la polilínea de vértices entre las localidades de origen y destino (validando estrictamente contra el catálogo de rutas nacionales del MTOP), y remite la ubicación $(lat, lon)$ y los \textit{waypoints} a la FaaS. Esta calcula la proyección ortogonal mínima del punto sobre cada segmento de la polilínea usando distancia haversine sobre plano tangente local, retornando \texttt{distanciaDesvioKm} en kilómetros con dos decimales. Cuando un evento proviene del nodo periférico simulado (\texttt{NODO-TRK-01}), \texttt{TrackingMockServiceImpl} limpia intencionalmente cualquier valor previo si \texttt{FAAS\_TRACKING\_URL} está configurado para garantizar la ejecución real en la FaaS. Asimismo, el sistema expone \texttt{POST /api/chofer/eventos/faas} (verificado en tiempo constante vía \texttt{MessageDigest.isEqual} y tope de $1\text{ MiB}$ en \texttt{AuthFilter}) para escenarios de retorno tipo \textit{webhook}.
+
+\section{Fiscalización Automática e Integraciones}\label{sec:fisc}
+
+\subsection{Motor de Reglas y Ciclo de Vida de Infracciones}
+
+Cada evento de viaje persistido o pesaje recibido en balanza dispara un mensaje hacia \texttt{FiscalizacionQueue}, consumido de forma asíncrona por \texttt{FiscalizacionMDB} (\texttt{maxSession=5}) para no degradar la ingesta. \texttt{MotorFiscalizacionImpl} evalúa cuatro reglas parametrizables en caliente sin redespliegue (\texttt{ReglaFiscalizacion}):
+\begin{enumerate}
+    \item \textbf{\texttt{EXCESO\_DE\_CARGA}:} detectada si \texttt{pesoRegistrado} $>$ \texttt{pesoVehiculo} $+$ \texttt{capacidadCarga} $+$ \texttt{umbralCarga} (en kg).
+    \item \textbf{\texttt{SIN\_HABILITACION}:} detectada ante actividad registrada con PNC o ITV vencidos o inexistentes respecto a la fecha del viaje.
+    \item \textbf{\texttt{VIAJE\_SIN\_GUIA}:} detectada cuando una balanza o evento de tracking reporta circulación de un vehículo sin guía en estado \texttt{EN\_CURSO}.
+    \item \textbf{\texttt{DESVIO\_DE\_RUTA}:} detectada cuando \texttt{distanciaDesvioKm} $>$ \texttt{umbralTracking} (en km) respecto a la ruta MTOP planificada.
+\end{enumerate}
+
+La Figura~\ref{fig:estados} ilustra la máquina de estados controlada implementada en \texttt{EstadoInfraccion} y \texttt{GestionInfraccionesServiceImpl}. Toda transición no prevista lanza una excepción de negocio, y un mismo hecho no genera casos duplicados ante reprocesamientos. Tras la detección, \texttt{NotificacionMDB} (\texttt{maxSession=5}) notifica automáticamente a la empresa transportista (\texttt{NOTIFICADA}). Si transcurren más de $7$ días (\texttt{PLAZO\_DESCARGO\_DIAS = 7}) sin presentación de descargo, un temporizador EJB horario \texttt{@Schedule} bloquea pesimistamente las infracciones vencidas, las confirma automáticamente (\texttt{CONFIRMADA}) y deja registro auditable.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+    node distance=0.85cm and 0.9cm,
+    st/.style={draw=primaryBlue, rounded corners=4pt, fill=softBg, font=\scriptsize\bfseries, minimum width=2.2cm, minimum height=0.65cm, align=center},
+    endst/.style={draw=accentTeal, thick, rounded corners=4pt, fill=accentTeal!10, font=\scriptsize\bfseries, minimum width=2.2cm, minimum height=0.65cm, align=center},
+    tr/.style={-{Stealth[length=2mm]}, thick, color=slateGray}
+]
+\node[st] (det) {DETECTADA};
+\node[st, below=0.85cm of det] (not) {NOTIFICADA};
+\node[st, below=1.15cm of not, xshift=-1.95cm] (des) {EN\_DESCARGO};
+\node[endst, below=1.15cm of not, xshift=1.95cm] (con) {CONFIRMADA};
+\node[endst, below=0.95cm of des] (dis) {DESESTIMADA};
+
+\draw[tr] (det) -- node[right, font=\tiny, align=left]{NotificacionMDB /\\Funcionario} (not);
+\draw[tr] (not.south west) -- node[left, font=\tiny, align=right]{Descargo\\($\le 7$ días)} (des.north);
+\draw[tr] (not.south east) -- node[right, font=\tiny, align=left]{Timer \texttt{@Schedule}\\($> 7$ días)} (con.north);
+\draw[tr] (des.east) -- node[above, font=\tiny, align=center]{Resolución\\c/ fundamento} (con.west);
+\draw[tr] (des.south) -- node[right, font=\tiny]{Resolución Funcionario} (dis.north);
+\end{tikzpicture}
+\caption{Máquina de estados controlada de casos de fiscalización (\texttt{EstadoInfraccion}) y cierre automático por vencimiento.}
+\label{fig:estados}
+\end{figure}
+
+\subsection{Contrato y Resiliencia de Integraciones Periféricas}
+
+Una distinción arquitectónica fundamental exigida por el dominio radica en separar los flujos críticos síncronos respecto de la ingesta masiva asíncrona. Mientras las lecturas de seguimiento GPS operan bajo patrón \textit{one-way} asíncrono sobre JMS (\texttt{POST /api/chofer/eventos/sync}), la verificación en puestos de balanza de peaje se implementa mediante integración síncrona \textit{request-response} a través de \texttt{BalanzaResource} (\texttt{POST /api/balanza/pesaje} y \texttt{POST /api/balanza/mock-sync}) delegando en \texttt{GestionBalanzaServiceImpl} y \texttt{BalanzaClient}. Cada pesaje persiste el peso bruto registrado, vincula la matrícula contra una guía en curso si existe (o habilita la detección de \texttt{VIAJE\_SIN\_GUIA} si no la hay) y devuelve confirmación inmediata \texttt{HTTP~201} al operador o estación remota antes de disparar la evaluación en \texttt{FiscalizacionQueue}. En paralelo, las consultas de identidad documental hacia DNIC consumen el servicio SOAP de PDI mediante \texttt{ClientePdi} con cabeceras WS-Addressing, tolerando caídas externas mediante degradación controlada sobre el perfil local en PostgreSQL.
+
+La Tabla~\ref{tab:integraciones} resume las características protocolares y los mecanismos de estabilidad (\textit{Bulkhead}, \textit{Circuit Breaker} y degradación controlada~\cite{nygard,fowler}) implementados en cada integración externa.
+
+\begin{table*}[t]
+\centering
+\caption{Resumen de integraciones externas, protocolos, controles de resiliencia y comportamiento degradado.}
+\label{tab:integraciones}
+\scriptsize
+\begin{tabularx}{\textwidth}{>{\bfseries}p{2.3cm} p{2.3cm} p{4.2cm} X}
+\toprule
+Sistema / Cliente & Protocolo & Controles de Resiliencia & Comportamiento ante Indisponibilidad \\
+\midrule
+PDI / DNIC (\texttt{ClientePdi}) & SOAP HTTP/HTTPS + WS-Addressing & Bulkhead \texttt{Semaphore(4)}, Circuit Breaker, 2 reintentos, timeout $1\text{ s}$ conn / $2\text{ s}$ read & Degrada validando localmente contra datos declarados en PostgreSQL sin bloquear el alta/acceso. \\
+\midrule
+Balanzas (\texttt{BalanzaClient}) & REST síncrono request-response & Bulkhead \texttt{Semaphore(8)}, Circuit Breaker ($3$ fallos $\rightarrow 10\text{ s}$ \textit{Open}), 2 intentos, timeout $15\text{ s}$ & Protege hilos del servidor rechazando rápido en estado abierto y permitiendo continuidad de viajes. \\
+\midrule
+Tracking (\texttt{TrackingClient}) & REST + cola JMS \texttt{TrackingQueue} & Bulkhead \texttt{Semaphore(8)}, Circuit Breaker, failover entre URLs candidatas, timeout $15\text{ s}$ & Mantiene en memoria última configuración/estado y opera exclusivamente con ingesta móvil/REST. \\
+\midrule
+FaaS Desvío (\texttt{FaasTrackingClient}) & HTTPS POST JSON + \texttt{X-FaaS-Secret} & Timeout $6\text{ s}$ y bloque defensivo sin propagar excepciones de red & Calcula localmente distancia mínima a polilínea MTOP vía \texttt{RedVialUruguay} en $<1\text{ ms}$. \\
+\midrule
+MongoDB (\texttt{PosicionNoSqlRepository}) & Wire Protocol (\texttt{5.2.1}) & Timeout de selección y conexión $1{,}5\text{ s}$ ($2{,}5\text{ s}$ lectura), backoff de $15\text{ s}$ & Conmuta a \texttt{respaldoMemoria} (\texttt{ConcurrentHashMap}) sin perder lecturas ni monitoreo vivo. \\
+\midrule
+Usuario gub.uy / OpenLDAP & OIDC PKCE / JNDI LDAPS & Validación HTTPS/LDAPS obligatoria en entorno productivo; \texttt{FlujoIdentidad} en BD & Manejo controlado de errores sin exponer sesiones parciales ni credenciales en código fuente. \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+\section{Seguridad, Privacidad y Requerimientos Opcionales}\label{sec:seguridad}
+
+\subsection{Autenticación Federada, Interna y Control de Acceso}
+
+La plataforma separa claramente los esquemas de autenticación según el tipo de actor:
+\begin{itemize}
+    \item \textbf{Ciudadanos, Choferes y Funcionarios federados:} utilizan \textbf{Usuario gub.uy}~\cite{iduruguay} mediante flujo OpenID Connect con \textit{Authorization Code} y soporte PKCE persistido en \texttt{FlujoIdentidad} (\texttt{GubOidcClient}). El servidor verifica el \texttt{id\_token} contra las claves públicas JWKS del proveedor y consume el servicio SOAP de DNIC para completar la fecha de nacimiento y validar mayoría de edad.
+    \item \textbf{Autoridades y Administradores internos:} autentican contra \textbf{OpenLDAP} (\texttt{LdapClient}) almacenando hashes con \textit{salt} aleatorio de $8\text{ bytes}$ en formato \texttt{\{SSHA\}} (RFC~2307). Para cuentas locales o respaldo se emplea \textbf{BCrypt} (\texttt{at.favre.lib:bcrypt}) con factor de costo $12$.
+    \item \textbf{Seguridad web y de servicios:} \texttt{IntegracionSesionFilter} protege vistas JSF exigiendo transporte seguro y cabeceras CSP; \texttt{AuthFilter} valida tokens \textit{Bearer} y límites de tamaño de carga en REST; y \texttt{ControlAcceso} impone la autorización definitiva dentro de la capa EJB verificando roles y vínculo activo con la empresa o guía consultada. Todas las contraseñas, secretos OIDC y claves de integración se inyectan exclusivamente por variables de entorno fuera del repositorio Git.
+\end{itemize}
+
+\subsection{Seguridad Web, Vistas por Rol y Analítica Gerencial}
+
+El acceso a la capa de presentación JSF/PrimeFaces se resguarda mediante una estrategia de defensa en profundidad en dos niveles:
+\begin{enumerate}
+    \item \textbf{Filtro perimetral HTTP (\texttt{IntegracionSesionFilter}):} exige transporte seguro en producción, inyecta cabeceras \texttt{Content-Security-Policy} restrictivas (autorizando exclusivamente orígenes propios, \texttt{unpkg.com} y teselas OpenStreetMap/Leaflet para cartografía en vivo, con \texttt{frame-ancestors 'none'}), resuelve la sesión mediante \texttt{AutenticacionService} y segrega el acceso según el prefijo URI de rol (Tabla~\ref{tab:roles}).
+    \item \textbf{Autorización de dominio EJB (\texttt{ControlAcceso}):} incluso ante invocaciones directas a servicios de negocio o endpoints JAX-RS protegidos por \texttt{AuthFilter}, cada operación valida explícitamente el rol requerido, la vigencia del vínculo empresarial (\texttt{VinculoEmpresa.isResponsable()} o \texttt{isChofer()}) y la titularidad de guías o vehículos (\texttt{guiaChofer}, \texttt{vehiculoChofer}).
+\end{enumerate}
+
+\begin{table}[t]
+\centering
+\caption{Segregación de rutas web JSF y permisos en \texttt{IntegracionSesionFilter} y \texttt{ControlAcceso}.}
+\label{tab:roles}
+\scriptsize
+\begin{tabularx}{\columnwidth}{@{}ll>{\raggedright\arraybackslash}X@{}}
+\toprule
+\textbf{Prefijo / Ruta} & \textbf{Rol Exigido} & \textbf{Capacidades Principales} \\
+\midrule
+\texttt{/portal/*} & Público / Todos & Consulta pública ($k=3$), validación empresa \\
+\texttt{/empresa/*} & \texttt{CIUDADANO} & Perfil, flota (PNC/ITV), guías, monitoreo, descargos \\
+\texttt{/funcionario/*} & \texttt{FUNCIONARIO} & Bandeja fiscalización, auditoría, firma actas, PDI \\
+\texttt{/backoffice/*} & \texttt{AUTORIDAD} / \texttt{ADMIN} & Tablero gerencial multivariante y lectura \\
+\texttt{/admin/*} & \texttt{ADMINISTRADOR} & Usuarios LDAP, catálogos, reglas y nodos \\
+\texttt{/api/chofer/*} & \texttt{CHOFER} (Bearer) & Guías asignadas y lotes offline GPS \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Sobre \texttt{/backoffice/dashboard.xhtml}, \texttt{DashboardBean} expone indicadores agregados filtrables dinámicamente por rubro empresarial (\texttt{filtroRubro}), tipo de carga (\texttt{filtroTipoCarga}), ubicación (\texttt{filtroUbicacion}) y ventana temporal (\texttt{filtroFechaDesde}/\texttt{Hasta}). Desde esa vista, \texttt{ReporteDashboardExporter} genera exportaciones descargables tanto en PDF institucional (renderizado con \textbf{OpenPDF}, incluyendo logo, filtros aplicados y tablas KPI) como en formato CSV con protección explícita contra inyección de fórmulas (\texttt{=+-@}). Para el seguimiento operativo en ruta, las vistas \texttt{empresa/monitoreo.xhtml} y \texttt{funcionario/monitoreo.xhtml} reutilizan la plantilla cartográfica \texttt{mapaMonitoreo.xhtml} sobre Leaflet/OpenStreetMap, graficando las trazas reconstruidas cronológicamente junto al umbral de desvío detectado.
+
+\subsection{Protección de Datos Personales (\texorpdfstring{$k$}{k}-Anonimato)}
+
+En cumplimiento de la Ley N.\textsuperscript{o}~18.331~\cite{ley18331} de Protección de Datos Personales, ningún reporte accesible al público general (\texttt{/portal/inicio.xhtml}) ni consulta pública sin rol autoriza inferir el comportamiento de una empresa, vehículo o chofer individual. \texttt{DashboardServiceImpl.obtenerResumenPublico()} y \texttt{PortalPublicoBean} aplican un umbral estricto de agregación $\mathbf{k = 3}$ (\texttt{UMBRAL\_MINIMO\_AGREGACION\_K = 3}): cualquier desglose por rubro, período o ubicación cuya cardinalidad sea inferior a $3$ entidades distintas es suprimido o agrupado bajo categorías generales, impidiendo ataques de reidentificación por tamaño muestral unitario.
+
+\subsection{Requerimientos Opcionales Implementados (\texorpdfstring{$4$}{4} puntos)}
+
+Para la entrega de Ingeniería se implementaron y verificaron íntegramente cuatro requerimientos opcionales ($4\text{ puntos}$):
+\begin{enumerate}
+    \item \textbf{Base de datos NoSQL / Serie Temporal (1~pto):} persistencia nativa Time-Series en MongoDB~7 para posiciones GPS (\texttt{PosicionNoSqlRepository}) con índices temporales, de desvío, \texttt{uuid} y GeoJSON \texttt{2dsphere}.
+    \item \textbf{Function as a Service --- FaaS (1~pto):} microfunción Python serverless desplegada en Vercel para cálculo geoespacial de desvío de ruta sobre la red vial nacional.
+    \item \textbf{Autenticación interna con LDAP (1~pto):} directorio OpenLDAP contenerizado e integrado para gestión de ciclo de vida y autenticación de funcionarios, autoridades y administradores.
+    \item \textbf{Firma Digital de Actas de Infracción (1~pto):} los usuarios autorizados registran su certificado digital PKCS\#12 (\texttt{.p12}/\texttt{.pfx}) validando vigencia mediante \texttt{CertificadoDigitalEJB}; desde la bandeja de fiscalización, \texttt{ActaServiceEJB} genera el acta oficial en PDF con \textbf{Apache PDFBox} e incrusta la firma criptográfica estándar CMS/PKCS\#7 mediante \textbf{BouncyCastle}, asegurando integridad documental y no repudio.
+\end{enumerate}
+
+\section{Observabilidad y Evaluación de Performance}\label{sec:perf}
+
+\subsection{Trazabilidad Distribuida y Métricas}
+
+\texttt{CorrelacionFilter} intercepta toda solicitud HTTP en \texttt{/*}, normaliza o asigna un \texttt{X-Correlation-ID} único junto con el contexto W3C \texttt{traceparent} (\texttt{00-<traceId>-<spanId>-01}) gestionado por \texttt{TraceContext}, los inyecta en las cabeceras de respuesta y emite trazas JSON estructuradas con método, estado y duración en milisegundos. Dicho identificador se propaga de forma transparente hacia las propiedades JMS (\texttt{JMSCorrelationID}, \texttt{traceparent}) de los productores y MDBs, hacia las peticiones SOAP de \texttt{ClientePdi} y hacia las llamadas REST salientes de \texttt{BalanzaClient}, \texttt{TrackingClient} y \texttt{FaasTrackingClient}. Adicionalmente, la API expone sondas públicas (\texttt{/api/public/ready}, \texttt{/api/public/health}) y endpoints administrativos de diagnóstico (\texttt{/api/ops/health} con estados \texttt{UP/DEGRADED/DOWN} y \texttt{/api/ops/metrics} con contadores de latencia, circuito y colas JMS).
+
+\subsection{Dimensionamiento País y Generador de Carga}
+
+Siguiendo la Sección~3.7.3.b de la letra, se modeló la realidad del parque nacional pesado uruguayo considerando $15.000$ camiones habilitados, un $10\%$ en tránsito simultáneo durante ventana diurna punta ($N_{\text{activos}} = 1.500$ vehículos) y un intervalo de muestreo GPS de $T = 30\text{ s}$ (resolución espacial $\Delta x \approx 500\text{--}750\text{ m}$ entre $60$ y $90\text{ km/h}$), sincronizados en lotes promedio de $B = 5$ eventos ($\approx 220\text{ bytes/evento}$, $\approx 1{,}2\text{ KB/lote}$):
+\begin{align}
+\lambda_{\text{nominal}} &= \frac{1.500}{30\text{ s}} = 50\text{ ev/s} \quad (10\text{ req/s}),\\
+\lambda_{\text{pico\_3x}} &= 3 \times \lambda_{\text{nominal}} = 150\text{ ev/s} \quad (30\text{ req/s}),\\
+\text{Ancho de banda bruto}_{3\times} &\approx 48\text{ KB/s} \approx 384\text{ Kbps}.
+\end{align}
+
+Para reproducir este perfil se construyó un generador de carga autónomo en Python~3 sin dependencias externas (\texttt{scripts/generador\_carga\_tracking.py}) capaz de controlar tasas sostenidas ($1\times$, $3\times$, $5\times$, $10\times$), inyectar sondas reales a Vercel, ejecutar lecturas concurrentes del Frontoffice JSF y API, validar idempotencia y desorden temporal, y recolectar métricas reales de \texttt{/api/ops/metrics} antes y después del drenaje JMS.
+
+\subsection{Resultados Empíricos y Punto de Quiebre}
+
+La Tabla~\ref{tab:perf} y la Figura~\ref{fig:latencia} muestran las mediciones reales obtenidas sobre el stack completo contenerizado en nodo único (WildFly~41, PostgreSQL~16, MongoDB~7 y FaaS en Vercel) bajo dos regímenes: \texttt{faas-mixto} (sonda real contra Vercel + ráfagas controladas de hasta $500\text{ ev/s}$) y \texttt{faas-completo} ($407$ eventos consecutivos procesados en vivo en Vercel durante las ventanas $1\times$ y $3\times$).
+
+\begin{table*}[t]
+\centering
+\caption{Mediciones reales obtenidas con \texttt{scripts/generador\_carga\_tracking.py} en WildFly~41 contenerizado.}
+\label{tab:perf}
+\scriptsize
+\begin{tabularx}{\textwidth}{@{}lcccccX@{}}
+\toprule
+\textbf{Escenario Evaluado} & \textbf{Volumen} & \textbf{Throughput Efec.} & \textbf{Media (ms)} & \textbf{p95 (ms)} & \textbf{Error} & \textbf{Resultado / Observación} \\
+\midrule
+0B. Sonda FaaS en vivo (Vercel) & 2 ev. sin desvío & FaaS remota & 75,80 & $< 100$ & 0,0\% & Desvíos reales: \texttt{[1.46, 1.43] km} \\
+1. Nominal ($1\times = 50\text{ ev/s}$, mixto) & 200 ev. (40 lotes) & 50,7 ev/s & 56,79 & \textbf{111,66} & 0,0\% & CUMPLE (ingesta estable $1\times$) \\
+2A. Pico ($3\times = 150\text{ ev/s}$, mixto) & 600 ev. (120 lotes) & 146,9 ev/s & 116,72 & \textbf{266,03} & 0,0\% & CUMPLE (absorción total sin pérdidas) \\
+2B. Frontoffice (\texttt{portal/inicio}) & 23 GET bajo $3\times$ & Concurrente & 23,35 & \textbf{54,87} & 0,0\% & \textbf{CUMPLE SLO ($<500\text{ ms}$, margen $9{,}1\times$)} \\
+2C. API Viaje (\texttt{/chofer/eventos/1001}) & 23 GET bajo $3\times$ & Concurrente & 41,10 & \textbf{79,48} & 0,0\% & \textbf{CUMPLE SLO ($<500\text{ ms}$, margen $6{,}3\times$)} \\
+3. Idempotencia UUID (AC012) & 2 envíos idénticos & Inmediato & 15,8 / 18,1 & $< 25$ & 0,0\% & \texttt{ACCEPTED} $\rightarrow$ \texttt{DUPLICATE} \\
+4. Eventos fuera de orden & \texttt{[t+10m, t+0m, t+5m]} & Inmediato & 28,9 POST & $< 35$ & 0,0\% & Orden retornado: \texttt{[t+0m, t+5m, t+10m]} \\
+5A. Escalón Zafra ($5\times = 250\text{ ev/s}$) & 750 ev. (150 lotes) & 244,6 ev/s & 191,34 & \textbf{291,66} & 0,0\% & CUMPLE ($p95 < 500\text{ ms}$, $0\%$ errores) \\
+5B. Escalón Estrés ($10\times = 500\text{ ev/s}$) & 1.500 ev. (300 lotes) & \textbf{450,2 ev/s} & 542,96 & \textbf{739,59} & 0,0\% & \textbf{Punto de saturación HTTP ($p95 > 500\text{ ms}$)} \\
+\midrule
+\multicolumn{7}{@{}p{\textwidth}@{}}{\textbf{Métricas \texttt{/api/ops/metrics}:} \texttt{encolados=3056 == procesadosMDB=3056} ($0$ errores/pérdidas), \texttt{latenciaMediaMDB=19,77 ms/ev} ($\approx 505\text{ ev/s}$ drenaje).} \\
+\multicolumn{7}{@{}p{\textwidth}@{}}{\textbf{Corrida \texttt{faas-completo} ($407$ ev. a Vercel):} $1\times$: $51{,}2\text{ ev/s}$ ($p95=330{,}6\text{ ms}$); $3\times$: $148{,}4\text{ ev/s}$ ($p95=86{,}2\text{ ms}$); \texttt{latenciaMediaMDB=191,63 ms/ev}.} \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+    width=\linewidth,
+    height=5.2cm,
+    xlabel={Tasa objetivo de ingesta (eventos/s)},
+    ylabel={Latencia $p95$ (ms)},
+    xmin=30, xmax=520,
+    ymin=0, ymax=820,
+    xtick={50,150,250,500},
+    grid=both,
+    grid style={line width=0.2pt, draw=gray!30},
+    legend style={at={(0.03,0.97)}, anchor=north west, font=\tiny, fill=white, fill opacity=0.85},
+    tick label style={font=\scriptsize},
+    label style={font=\scriptsize}
+]
+\addplot[color=primaryBlue, thick, mark=*, mark size=2pt] coordinates {
+    (50, 111.66)
+    (150, 266.03)
+    (250, 291.66)
+    (500, 739.59)
+};
+\addlegendentry{Ingesta REST (\texttt{POST /sync})}
+
+\addplot[color=accentTeal, only marks, mark=square*, mark size=2.5pt] coordinates {
+    (150, 54.87)
+};
+\addlegendentry{Frontoffice JSF bajo Pico $3\times$}
+
+\addplot[color=red!75!black, dashed, thick] coordinates {
+    (30, 500)
+    (520, 500)
+};
+\addlegendentry{Umbral SLO Frontoffice ($500\text{ ms}$)}
+\end{axis}
+\end{tikzpicture}
+\caption{Curva empírica del percentil~95 de latencia HTTP en función de la tasa de eventos y comparación con el umbral SLO de $500\text{ ms}$.}
+\label{fig:latencia}
+\end{figure}
+
+El análisis de los registros de \texttt{/api/ops/metrics} evidencia con claridad la jerarquía de cuellos de botella en instancia única:
+\begin{enumerate}
+    \item \textbf{Contención en la prevalidación del ingreso ($\sim 450\text{ ev/s}$):} aunque la escritura en MongoDB y la fiscalización están desacopladas en JMS, \texttt{ChoferResource} ejecuta \texttt{existeEvento(uuid)} y \texttt{validarEventoPreEncolado} antes de confirmar el lote. Al escalar hacia $500\text{ ev/s}$ ($100\text{ req/s}$), las consultas concurrentes compiten por las $25$ conexiones de \texttt{PostgreSQLDS}, llevando el $p95$ de ingreso a $739{,}59\text{ ms}$ sin provocar errores HTTP ($0\%$) ni degradar el Frontoffice en el rango $1\times\text{--}3\times$ ($p95 = 54{,}87\text{ ms}$).
+    \item \textbf{Techo de drenaje MDB y RTT de red FaaS:} en régimen local o precalculado, cada mensaje insume $19{,}77\text{ ms}$ promedio en \texttt{TrackingMDB}, lo que equivale a un drenaje sostenido de $\mu_{\text{MDB}} = 10 \times (1.000/19{,}77) \approx 505\text{ ev/s}$. Cuando el $100\%$ de los eventos viaja por HTTPS a Vercel (\texttt{faas-completo}), la latencia media MDB pasa a $191{,}63\text{ ms/ev}$ ($\sim 52\text{ ev/s}$ con $10$ sesiones), absorbiendo picos temporalmente en la cola paginada de ActiveMQ Artemis sin pérdida de mensajes (\texttt{trackingColaPendientesAprox = 0} tras drenaje).
+\end{enumerate}
+
+\section{Verificación Automatizada y CI/CD}\label{sec:ci}
+
+La calidad funcional se respalda mediante pruebas unitarias automatizadas con JUnit~5 y Mockito ejecutadas en Maven (\texttt{mvn clean verify}), verificando cobertura con JaCoCo sobre ambos artefactos principales (Tabla~\ref{tab:jacoco}):
+\begin{itemize}
+    \item \textbf{Núcleo de negocio (\texttt{CargaUY-ejb}):} \textbf{294 pruebas} exitosas ($0$ fallos), alcanzando \textbf{81{,}93\% de cobertura de líneas} ($6.243$ líneas cubiertas sobre $7.620$), superando la meta del $\approx 80\%$ exigida por la letra y validada automáticamente con \texttt{jacoco:check}.
+    \item \textbf{Capa Web y REST (\texttt{CargaUY-web}):} \textbf{105 pruebas} exitosas ($0$ fallos, $40{,}33\%$ de cobertura de líneas sobre controladores JSF, filtros HTTP y endpoints JAX-RS), totalizando \textbf{399 pruebas automatizadas}.
+    \item \textbf{Pipeline en GitLab CI (\texttt{.gitlab-ci.yml}):} ejecuta en cuatro etapas sobre \texttt{maven:3.9-eclipse-temurin-17} la compilación (\texttt{build-job}), ejecución y archivo de reportes JUnit/JaCoCo (\texttt{unit-tests-job}), inspección estática y Quality Gate en SonarQube (\texttt{sonarqube-job}) y empaquetado de \texttt{CargaUY.ear} y \texttt{gub-callback-root.war} (\texttt{package-job}).
+\end{itemize}
+
+\begin{table}[t]
+\centering
+\caption{Desglose de cobertura de líneas (JaCoCo) por paquete en el módulo EJB (\texttt{CargaUY-ejb}).}
+\label{tab:jacoco}
+\scriptsize
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Paquete (\texttt{CargaUY-ejb})} & \textbf{Líneas Cubiertas} & \textbf{Cobertura} \\
+\midrule
+\texttt{exception} / \texttt{domain.enums} & 32 / 32 & 100,0\% \\
+\texttt{domain.entity} & 794 / 822 & 96,6\% \\
+\texttt{dto} & 138 / 148 & 93,2\% \\
+\texttt{jms} (Producers + MDBs) & 256 / 277 & 92,4\% \\
+\texttt{fiscalizacion} & 230 / 257 & 89,5\% \\
+\texttt{audit} & 29 / 33 & 87,9\% \\
+\texttt{service} & 2.989 / 3.624 & 82,5\% \\
+\texttt{integration} (PDI, Balanza, FaaS) & 1.035 / 1.365 & 75,8\% \\
+\texttt{nosql} (MongoDB Time-Series) & 242 / 334 & 72,5\% \\
+\texttt{security} & 498 / 728 & 68,4\% \\
+\midrule
+\textbf{Total \texttt{CargaUY-ejb}} & \textbf{6.243 / 7.620} & \textbf{81,93\%} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Conclusiones y Trabajo Futuro}\label{sec:concl}
+
+El proyecto \textbf{carga.uy} materializa una solución empresarial completa, contenerizada y verificable para el control del transporte carretero de cargas sobre Jakarta EE~10. La separación de responsabilidades entre el esquema relacional ACID (PostgreSQL~16 con auditoría protegida por triggers) y la serie temporal NoSQL (MongoDB~7), sumada al buffer paginado en ActiveMQ Artemis, la función FaaS serverless con degradación local determinista y los clientes resilientes (\textit{Bulkhead} y \textit{Circuit Breaker}), permite cumplir ampliamente los niveles de servicio exigidos: bajo ráfagas $3\times$ ($150\text{ ev/s}$) el Frontoffice mantiene $p95 = 54{,}87\text{ ms}$, la ingesta soporta hasta $250\text{ ev/s}$ por debajo de $300\text{ ms}$ y el nodo único alcanza su límite de prevalidación HTTP recién en $\approx 450\text{ ev/s}$ sin pérdida de eventos.
+
+Como trabajo futuro para escalar horizontalmente sobre infraestructura Elastic Cloud de ANTEL o un orquestador Kubernetes, se proponen tres mejoras directas derivadas de los cuellos de botella medidos: (1) incorporar una caché distribuida en memoria (p. ej., Infinispan o Redis) para las validaciones rápidas de guías activas y UUIDs recientes en \texttt{ChoferResource}, reduciendo la contención sobre \texttt{PostgreSQLDS}; (2) agrupar inserciones en MongoDB mediante \texttt{insertMany} en micro-lotes dentro de \texttt{TrackingMDB}; y (3) balancear múltiples instancias \textit{stateless} de WildFly frente a un clúster dedicado de mensajería y bases de datos.
+
+\begin{thebibliography}{9}
+\bibitem{jakarta} Eclipse Foundation, \textit{Jakarta EE 10 Platform Specification}, 2022. Disponible en: \url{https://jakarta.ee/specifications/platform/10/}
+\bibitem{wildfly} Red Hat / JBoss Community, \textit{WildFly 41 Administration \& Messaging Guide}, 2025.
+\bibitem{mongo} MongoDB Inc., \textit{MongoDB 7.0 Manual --- Time Series Collections}, 2024. Disponible en: \url{https://www.mongodb.com/docs/manual/core/time-series-collections/}
+\bibitem{ley18331} Parlamento del Uruguay, \textit{Ley N.\textsuperscript{o} 18.331 --- Protección de Datos Personales y Acción de Habeas Data}, 2008. Disponible en: \url{https://www.impo.com.uy/bases/leyes/18331-2008}
+\bibitem{iduruguay} AGESIC, \textit{Documentación Técnica de Usuario gub.uy (ID Uruguay OIDC) y Plataforma de Interoperabilidad (PDI)}. Disponible en: \url{https://www.gub.uy/agencia-gobierno-electronico-sociedad-informacion-conocimiento/}
+\bibitem{nygard} M. Nygard, \textit{Release It!: Design and Deploy Production-Ready Software}, 2nd ed., Pragmatic Bookshelf, 2018.
+\bibitem{fowler} M. Fowler, \textit{Patterns of Enterprise Application Architecture}, Addison-Wesley, 2002.
+\end{thebibliography}
+
+\end{document}

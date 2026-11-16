@@ -273,6 +273,9 @@ public class FaasTrackingClient implements java.io.Serializable {
             if (!timestampFaas.isBlank()) {
                 detalle = detalle + " [" + timestampFaas + "]";
             }
+            LOGGER.log(Level.INFO,
+                    "FaaS remota {0} procesó evento uuid={1}, guiaId={2}: desvio={3} km (corr={4})",
+                    new Object[]{endpointUrl, evento.uuid(), evento.guiaId(), desvioKm, corr});
 
             return new ResultadoFaas(enriquecido, desvioKm, true, detalle);
         }

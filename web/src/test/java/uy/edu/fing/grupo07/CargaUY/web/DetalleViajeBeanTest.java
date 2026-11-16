@@ -456,7 +456,7 @@ class DetalleViajeBeanTest {
                 -33.5200,
                 -56.2000,
                 1001L,
-                null,
+                new IncidenteDTO(null, "Mock Tracking GPS - En ruta (Puerto de Montevideo -> Rivera (Frontera)) tramo 3/11"),
                 1.25,
                 24500.0,
                 "Granos",
@@ -481,6 +481,12 @@ class DetalleViajeBeanTest {
         bean.setGuiaActual(guia);
         bean.setEventos(List.of(sinGps, evNormal, evDesvio));
 
+        assertFalse(bean.esEventoAlerta(evNormal),
+                "Un evento POSICION en corredor con mensaje informativo no debe marcarse como alerta");
+        assertTrue(bean.esEventoAlerta(evDesvio),
+                "Un INCIDENTE o desvío fuera de corredor sí debe marcarse como alerta");
+        assertEquals(5.0, bean.getToleranciaDesvioKm(), 0.01);
+
         String jsonStr = bean.getDatosMapaJson();
         try (JsonReader reader = Json.createReader(new StringReader(jsonStr))) {
             JsonObject json = reader.readObject();
@@ -498,6 +504,7 @@ class DetalleViajeBeanTest {
             JsonObject primero = eventos.getJsonObject(0);
             assertEquals("u-1", primero.getString("uuid"));
             assertFalse(primero.getBoolean("desviado"));
+            assertFalse(primero.getBoolean("esAlerta"));
             assertEquals(24500.0, primero.getJsonNumber("cantidadKg").doubleValue(), 0.01);
             assertEquals("Granos", primero.getString("mercaderia"));
             assertEquals("AgroSur", primero.getString("empresaCarga"));
@@ -506,6 +513,7 @@ class DetalleViajeBeanTest {
             assertEquals("u-2", segundo.getString("uuid"));
             assertEquals("INCIDENTE", segundo.getString("tipo"));
             assertTrue(segundo.getBoolean("desviado"));
+            assertTrue(segundo.getBoolean("esAlerta"));
             assertEquals(18.4, segundo.getJsonNumber("desvioKm").doubleValue(), 0.01);
             assertEquals("Desvío detectado en ruta", segundo.getString("incidente"));
         }

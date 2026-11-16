@@ -92,7 +92,7 @@
     }
 
     function determinarColorEvento(ev) {
-        if (ev.desviado || ev.tipo === 'INCIDENTE') {
+        if (ev.desviado || ev.esAlerta || ev.tipo === 'INCIDENTE') {
             return '#dc2626';
         }
         if (ev.tipo === 'INICIO') {
@@ -136,7 +136,13 @@
             lineas.push('<div><strong>Empresa:</strong> ' + escaparHtml(ev.empresaCarga) + '</div>');
         }
         if (ev.incidente) {
-            lineas.push('<div class="cuy-map-popup-alert" style="margin-top:4px;"><strong>Incidente:</strong> ' + escaparHtml(ev.incidente) + '</div>');
+            if (ev.tipo === 'INCIDENTE') {
+                lineas.push('<div class="cuy-map-popup-alert" style="margin-top:4px;"><strong>Incidente:</strong> ' + escaparHtml(ev.incidente) + '</div>');
+            } else if (ev.desviado || ev.esAlerta) {
+                lineas.push('<div class="cuy-map-popup-alert" style="margin-top:4px;"><strong>Alerta de desvío:</strong> ' + escaparHtml(ev.incidente) + '</div>');
+            } else {
+                lineas.push('<div style="color:#475569;margin-top:4px;"><strong>Detalle:</strong> ' + escaparHtml(ev.incidente) + '</div>');
+            }
         }
 
         lineas.push('</div>');
