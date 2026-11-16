@@ -6,6 +6,7 @@ import jakarta.ejb.MessageDriven;
 import jakarta.jms.Message;
 import jakarta.jms.MessageListener;
 import jakarta.jms.TextMessage;
+import jakarta.json.Json;
 import uy.edu.fing.grupo07.CargaUY.dto.InfraccionDTO;
 import uy.edu.fing.grupo07.CargaUY.exception.BusinessException;
 import uy.edu.fing.grupo07.CargaUY.service.GestionInfraccionesServiceLocal;
@@ -78,18 +79,14 @@ public class NotificacionMDB implements MessageListener {
 
             InfraccionDTO notificada = infraccionesService.procesarNotificacionAutomatica(idCaso);
             if (notificada != null) {
-                LOGGER.log(
-                        Level.INFO,
-                        "Empresa transportista \"{0}\" notificada exitosamente sobre el caso #{1} ({2}, vehículo {3}) [correlacion={4}, traceparent={5}].",
-                        new Object[]{
-                                notificada.nombreEmpresa() != null ? notificada.nombreEmpresa() : "Sin empresa registrada",
-                                notificada.idCaso(),
-                                notificada.tipo(),
-                                notificada.matricula() != null ? notificada.matricula() : "N/D",
-                                correlacion,
-                                traceparent
-                        }
-                );
+                LOGGER.info(Json.createObjectBuilder()
+                        .add("evento", "jms.notificacion.procesado")
+                        .add("correlacion", correlacion)
+                        .add("traceparent", traceparent)
+                        .add("idCaso", notificada.idCaso())
+                        .add("tipo", notificada.tipo() != null ? notificada.tipo().name() : "")
+                        .add("matricula", notificada.matricula() != null ? notificada.matricula() : "N/D")
+                        .build().toString());
             }
         } catch (BusinessException be) {
             LOGGER.log(Level.WARNING, "Validación de negocio en NotificacionMDB: {0}", be.getMessage());

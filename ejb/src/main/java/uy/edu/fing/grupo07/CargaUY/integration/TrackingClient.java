@@ -331,10 +331,12 @@ public class TrackingClient implements Serializable {
             final long duracionFinalMs = (System.nanoTime() - inicio) / 1_000_000;
             final boolean exitoFinal = exito;
             final String pathFinal = path != null ? path : "";
-            LOGGER.log(Level.FINE, () -> Json.createObjectBuilder()
+            final String tpFinal = TraceContext.normalizarTraceparent(null, corr);
+            LOGGER.log(Level.INFO, () -> Json.createObjectBuilder()
                     .add("evento", "tracking.periferico.post")
-                    .add("path", pathFinal)
                     .add("correlacion", corr)
+                    .add("traceparent", tpFinal)
+                    .add("path", pathFinal)
                     .add("ok", exitoFinal)
                     .add("duracionMs", duracionFinalMs)
                     .build().toString());

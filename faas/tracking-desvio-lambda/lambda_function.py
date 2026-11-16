@@ -552,12 +552,30 @@ def enviar_webhook_backend(
         return (False, str(err))
 
 
+def _emitir_log_faas(corr, tp, cantidad_eventos, event_uuid=None):
+    registro = {
+        "evento": "faas.tracking.procesado",
+        "correlacion": corr,
+        "traceparent": tp,
+        "cantidadEventos": cantidad_eventos,
+    }
+    if event_uuid is not None:
+        registro["uuid"] = event_uuid
+    print(json.dumps(registro), flush=True)
+
+
 def procesar_payload(cuerpo, headers=None):
     headers_norm = {str(k).lower(): v for k, v in (headers or {}).items()}
     verificar_autenticacion_faas(headers_norm)
     auth_header = headers_norm.get("authorization")
-    corr = headers_norm.get("x-correlation-id")
-    tp = headers_norm.get("traceparent")
+    corr_raw = headers_norm.get("x-correlation-id")
+    corr = str(corr_raw).strip() if corr_raw and str(corr_raw).strip() else str(uuid.uuid4())
+    tp_raw = headers_norm.get("traceparent")
+    tp = (
+        str(tp_raw).strip()
+        if tp_raw and str(tp_raw).strip()
+        else f"00-{uuid.uuid4().hex}-{uuid.uuid4().hex[:16]}-01"
+    )
 
     if isinstance(cuerpo, list):
         resultados = [procesar_evento_individual(ev) for ev in cuerpo]
@@ -567,6 +585,7 @@ def procesar_payload(cuerpo, headers=None):
         for r in resultados:
             r["webhookEnviado"] = enviado
             r["webhookDetalle"] = detalle
+        _emitir_log_faas(corr, tp, len(resultados))
         return resultados
 
     if isinstance(cuerpo, dict):
@@ -578,6 +597,7 @@ def procesar_payload(cuerpo, headers=None):
             for r in resultados:
                 r["webhookEnviado"] = enviado
                 r["webhookDetalle"] = detalle
+            _emitir_log_faas(corr, tp, len(resultados))
             return resultados
 
         resultado = procesar_evento_individual(cuerpo)
@@ -586,6 +606,7 @@ def procesar_payload(cuerpo, headers=None):
         )
         resultado["webhookEnviado"] = enviado
         resultado["webhookDetalle"] = detalle
+        _emitir_log_faas(corr, tp, 1, resultado.get("uuid"))
         return resultado
 
     raise ValueError("El cuerpo de la solicitud debe ser un objeto JSON o una lista de eventos.")
@@ -595,12 +616,16 @@ def lambda_handler(event, context):
     """
     Entrypoint estándar para AWS Lambda (Function URL y API Gateway).
     """
+    req_headers = {str(k).lower(): v for k, v in (event.get("headers") or {}).items()}
+    corr_hdr = req_headers.get("x-correlation-id")
     headers_cors = {
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type, Authorization, X-FaaS-Secret, X-Correlation-ID, traceparent",
     }
+    if corr_hdr and str(corr_hdr).strip():
+        headers_cors["X-Correlation-ID"] = str(corr_hdr).strip()
 
     metodo = (
         event.get("requestContext", {}).get("http", {}).get("method")
@@ -668,11 +693,16 @@ def evaluar_tracking_http(request):
         cuerpo = request.get_json(silent=True)
         if cuerpo is None:
             raise ValueError("JSON inválido o vacío")
-        resultado = procesar_payload(cuerpo, dict(request.headers))
+        req_headers = dict(request.headers)
+        resultado = procesar_payload(cuerpo, req_headers)
+        resp_headers = {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"}
+        corr_hdr = next((v for k, v in req_headers.items() if str(k).lower() == "x-correlation-id"), None)
+        if corr_hdr and str(corr_hdr).strip():
+            resp_headers["X-Correlation-ID"] = str(corr_hdr).strip()
         return (
             json.dumps(resultado),
             200,
-            {"Content-Type": "application/json", "Access-Control-Allow-Origin": "*"},
+            resp_headers,
         )
     except PermissionError as pexc:
         return (

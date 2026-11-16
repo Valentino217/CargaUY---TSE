@@ -6,6 +6,7 @@ import jakarta.ejb.MessageDriven;
 import jakarta.jms.Message;
 import jakarta.jms.MessageListener;
 import jakarta.jms.TextMessage;
+import jakarta.json.Json;
 import uy.edu.fing.grupo07.CargaUY.domain.enums.TipoInfraccion;
 import uy.edu.fing.grupo07.CargaUY.exception.BusinessException;
 import uy.edu.fing.grupo07.CargaUY.fiscalizacion.MotorFiscalizacionLocal;
@@ -79,11 +80,13 @@ public class FiscalizacionMDB implements MessageListener {
                 }
                 String detalle = sep >= 0 ? resto.substring(sep + 1).trim() : "";
                 boolean generada = motorFiscalizacion.evaluarVehiculoSinGuia(matricula, detalle);
-                LOGGER.log(
-                        Level.INFO,
-                        "Fiscalización VIAJE_SIN_GUIA completada para matrícula {0}. Nueva infracción generada: {1} [correlacion={2}, traceparent={3}]",
-                        new Object[]{matricula, generada, correlacion, traceparent}
-                );
+                LOGGER.info(Json.createObjectBuilder()
+                        .add("evento", "jms.fiscalizacion.sin_guia.procesado")
+                        .add("correlacion", correlacion)
+                        .add("traceparent", traceparent)
+                        .add("matricula", matricula)
+                        .add("infraccionGenerada", generada)
+                        .build().toString());
                 return;
             }
 
@@ -96,11 +99,13 @@ public class FiscalizacionMDB implements MessageListener {
             }
 
             List<TipoInfraccion> infracciones = motorFiscalizacion.evaluarGuia(guiaId);
-            LOGGER.log(
-                    Level.INFO,
-                    "Fiscalización completada para la guía {0}. Nuevas infracciones: {1} [correlacion={2}, traceparent={3}]",
-                    new Object[]{guiaId, infracciones.size(), correlacion, traceparent}
-            );
+            LOGGER.info(Json.createObjectBuilder()
+                    .add("evento", "jms.fiscalizacion.procesado")
+                    .add("correlacion", correlacion)
+                    .add("traceparent", traceparent)
+                    .add("guiaId", guiaId)
+                    .add("infraccionesGeneradas", infracciones.size())
+                    .build().toString());
 
         } catch (BusinessException be) {
             LOGGER.log(Level.WARNING, "Validación de negocio en FiscalizacionMDB: {0}", be.getMessage());
