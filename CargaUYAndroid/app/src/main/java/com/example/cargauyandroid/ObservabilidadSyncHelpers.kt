@@ -144,3 +144,23 @@ object SyncAuthErrorHelper {
         return "$etiquetaTipo guardado en el teléfono (HTTP $httpCode). Se enviará al reintentar."
     }
 }
+
+object SyncRetryHelper {
+    fun esHttpTransitorio(httpCode: Int): Boolean =
+        httpCode == 408 || httpCode == 502 || httpCode == 503 || httpCode == 504
+
+    fun debeReintentarEnvio(
+        error: Throwable,
+        httpCode: Int?,
+        hayConexionInternet: Boolean
+    ): Boolean {
+        if (!hayConexionInternet) {
+            return false
+        }
+        if (httpCode != null) {
+            return esHttpTransitorio(httpCode)
+        }
+        return error is java.io.InterruptedIOException ||
+            error.cause is java.io.InterruptedIOException
+    }
+}

@@ -16,8 +16,8 @@ object RetrofitClient {
     private val okHttpClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
             .connectTimeout(10_000, TimeUnit.MILLISECONDS)
-            .readTimeout(25_000, TimeUnit.MILLISECONDS)
-            .writeTimeout(25_000, TimeUnit.MILLISECONDS)
+            .readTimeout(45_000, TimeUnit.MILLISECONDS)
+            .writeTimeout(45_000, TimeUnit.MILLISECONDS)
             .addInterceptor { chain ->
                 val original = chain.request()
                 val request = original.newBuilder()

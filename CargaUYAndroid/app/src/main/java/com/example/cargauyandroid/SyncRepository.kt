@@ -14,7 +14,9 @@ import android.os.Build
 import android.os.CancellationSignal
 import android.util.Log
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -312,6 +314,8 @@ class SyncRepository(context: Context) {
                 desdeCacheOffline = true,
                 mensajeAviso = SyncAuthErrorHelper.mensajeConsultaHttpError(e.code(), SesionMovil.esSesionOidc)
             )
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             servidorAlcanzable = false
             Log.e("CARGAUY", "Fallo al consultar guias: ${e.message}", e)
@@ -425,21 +429,41 @@ class SyncRepository(context: Context) {
             )
         }
 
-        // Intentar sincronizar directamente con el backend; si no hay red, cae en el catch (Flujo 3.A)
+        // Intentar sincronizar directamente con el backend; reintentar 1 vez si hubo timeout transitorio teniendo red
         return@withContext try {
             Log.d("CARGAUY", "Enviando evento $uuid (${tipo.codigo}) al servidor...")
             asegurarTokenLocal(cedulaChofer)
             val matriculaCache = dbHelper.obtenerGuiaPorId(guiaId)?.vehiculoMatricula
-            val resultados = try {
-                RetrofitClient.executeWithFallback { api ->
-                    api.sincronizarEventos(listOf(eventoLocal.toDto(matriculaCache)))
-                }
-            } catch (e: retrofit2.HttpException) {
-                if (SyncAuthErrorHelper.esErrorAutenticacion(e.code()) && !SesionMovil.esSesionOidc) {
-                    asegurarTokenLocal(cedulaChofer, forzarRenovacion = true)
+            val payloadDto = eventoLocal.toDto(matriculaCache)
+
+            suspend fun enviarUnaVez(): List<SyncResultDto> {
+                return try {
                     RetrofitClient.executeWithFallback { api ->
-                        api.sincronizarEventos(listOf(eventoLocal.toDto(matriculaCache)))
+                        api.sincronizarEventos(listOf(payloadDto))
                     }
+                } catch (e: retrofit2.HttpException) {
+                    if (SyncAuthErrorHelper.esErrorAutenticacion(e.code()) && !SesionMovil.esSesionOidc) {
+                        asegurarTokenLocal(cedulaChofer, forzarRenovacion = true)
+                        RetrofitClient.executeWithFallback { api ->
+                            api.sincronizarEventos(listOf(payloadDto))
+                        }
+                    } else {
+                        throw e
+                    }
+                }
+            }
+
+            var huboReintentoTransitorio = false
+            val resultados = try {
+                enviarUnaVez()
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                val code = (e as? retrofit2.HttpException)?.code()
+                if (SyncRetryHelper.debeReintentarEnvio(e, code, hayConexionInternet())) {
+                    Log.w("CARGAUY", "Reintentando envío idempotente de evento $uuid (${tipo.codigo}) tras fallo transitorio: ${e.message}")
+                    huboReintentoTransitorio = true
+                    delay(400L)
+                    enviarUnaVez()
                 } else {
                     throw e
                 }
@@ -466,10 +490,16 @@ class SyncRepository(context: Context) {
                     dbHelper.eliminarEventoDuplicado(uuid)
                     refrescarGuiasYActualizarEstadoLocal(guiaId, cedulaChofer, tipo)
                     ResultadoOperacionEvento(
-                        evento = eventoLocal.copy(estadoSync = EstadoSyncLocal.DUPLICADO.name),
+                        evento = eventoLocal.copy(
+                            estadoSync = if (huboReintentoTransitorio) EstadoSyncLocal.SINCRONIZADO.name else EstadoSyncLocal.DUPLICADO.name
+                        ),
                         guardadoOffline = false,
-                        duplicadoDetectado = true,
-                        mensajeUsuario = "Este evento ya estaba registrado."
+                        duplicadoDetectado = !huboReintentoTransitorio,
+                        mensajeUsuario = if (huboReintentoTransitorio) {
+                            "${tipo.etiqueta} registrado correctamente."
+                        } else {
+                            "Este evento ya estaba registrado."
+                        }
                     )
                 }
 
@@ -524,6 +554,8 @@ class SyncRepository(context: Context) {
                     tipo.etiqueta
                 )
             )
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             if (tipo == TipoEventoOption.INICIO) {
                 dbHelper.actualizarEstadoGuiaLocal(guiaId, "EN_CURSO")
@@ -723,6 +755,8 @@ class SyncRepository(context: Context) {
                     rutaActualizada = false,
                     mensaje = msg
                 )
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 servidorAlcanzable = false
                 Log.w("CARGAUY", "Fallo al sincronizar lote pendiente: ${e.message}")
@@ -778,6 +812,8 @@ class SyncRepository(context: Context) {
                     estadoSync = EstadoSyncLocal.SINCRONIZADO.name
                 )
             }
+        } catch (ce: CancellationException) {
+            throw ce
         } catch (_: Exception) {
             servidorAlcanzable = false
         }

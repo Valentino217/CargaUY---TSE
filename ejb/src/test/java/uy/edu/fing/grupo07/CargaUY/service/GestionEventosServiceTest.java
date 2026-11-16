@@ -675,4 +675,65 @@ class GestionEventosServiceTest {
         assertNotNull(service.guardarEvento("tok-ch", dtoSinGuiaId));
         verify(controlMock).vehiculoChofer("tok-ch", "444555");
     }
+
+    @Test
+    @DisplayName("Hitos móviles delegan la consulta a balanzas de forma asíncrona sin bloquear el registro de INICIO")
+    void testGuardarInicioDelegaSincronizacionBalanzaAsync() throws Exception {
+        uy.edu.fing.grupo07.CargaUY.integration.BalanzaClient balanzaMock =
+                mock(uy.edu.fing.grupo07.CargaUY.integration.BalanzaClient.class);
+        jakarta.ejb.SessionContext ctxMock = mock(jakarta.ejb.SessionContext.class);
+        GestionEventosServiceLocal proxyAsyncMock = mock(GestionEventosServiceLocal.class);
+        uy.edu.fing.grupo07.CargaUY.jms.FiscalizacionProducerLocal producerMock =
+                mock(uy.edu.fing.grupo07.CargaUY.jms.FiscalizacionProducerLocal.class);
+
+        GestionEventosServiceImpl svc = new GestionEventosServiceImpl(em, null, producerMock);
+        var fBalanza = GestionEventosServiceImpl.class.getDeclaredField("balanzaClient");
+        fBalanza.setAccessible(true);
+        fBalanza.set(svc, balanzaMock);
+        var fCtx = GestionEventosServiceImpl.class.getDeclaredField("sessionContext");
+        fCtx.setAccessible(true);
+        fCtx.set(svc, ctxMock);
+
+        Vehiculo vehiculo = new Vehiculo("STP 1234", "Volvo", "FH", 8000, 30000, true, null);
+        guiaPrueba.setVehiculo(vehiculo);
+        guiaPrueba.setEstado(TipoEstado.SIN_INICIAR);
+
+        when(em.createQuery(anyString(), eq(Long.class))).thenReturn(queryCount);
+        when(queryCount.setParameter(eq("uuid"), anyString())).thenReturn(queryCount);
+        when(queryCount.getSingleResult()).thenReturn(0L);
+        when(em.find(GuiaDeViaje.class, 1L)).thenReturn(guiaPrueba);
+        when(ctxMock.getBusinessObject(GestionEventosServiceLocal.class)).thenReturn(proxyAsyncMock);
+
+        EventoViajeDTO dtoInicio = new EventoViajeDTO(
+                "uuid-ini-async",
+                LocalDateTime.now(),
+                TipoEvento.INICIO,
+                -34.9,
+                -56.1,
+                1L,
+                null
+        );
+
+        EventoViaje ev = svc.guardarEvento(dtoInicio);
+        assertNotNull(ev);
+        assertEquals(TipoEstado.EN_CURSO, guiaPrueba.getEstado());
+        verify(proxyAsyncMock).sincronizarBalanzasDeGuiaAsync(1L, "uuid-ini-async");
+        verify(balanzaMock, never()).consultarPesadasVehiculo(anyString(), any(), any(), any(), anyString());
+        verify(producerMock).solicitarEvaluacion(1L);
+
+        @SuppressWarnings("unchecked")
+        TypedQuery<uy.edu.fing.grupo07.CargaUY.domain.entity.PesadaBalanza> queryPesadas = mock(TypedQuery.class);
+        when(em.createQuery(anyString(), eq(uy.edu.fing.grupo07.CargaUY.domain.entity.PesadaBalanza.class)))
+                .thenReturn(queryPesadas);
+        when(queryPesadas.setParameter(eq("guiaId"), eq(1L))).thenReturn(queryPesadas);
+        when(queryPesadas.getResultList()).thenReturn(Collections.emptyList());
+        when(balanzaMock.consultarPesadasVehiculo(eq("STP 1234"), any(), any(), any(), eq("uuid-ini-async")))
+                .thenReturn(List.of(new uy.edu.fing.grupo07.CargaUY.dto.PesadaBalanzaDTO(
+                        99, LocalDate.now(), java.time.LocalTime.NOON, 28000, "STP 1234", null
+                )));
+
+        svc.sincronizarBalanzasDeGuiaAsync(1L, "uuid-ini-async");
+        verify(em).persist(any(uy.edu.fing.grupo07.CargaUY.domain.entity.PesadaBalanza.class));
+        verify(producerMock, times(2)).solicitarEvaluacion(1L);
+    }
 }

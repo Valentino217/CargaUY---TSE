@@ -210,7 +210,7 @@ fun NavegationComponent(
         }
         refrescarEstadoLocal()
         if (syncRepository.baseDatosReiniciadaPorNuevaCompilacion) {
-        } else if (enLinea && pendientesCount > 0) {
+        } else if (pendientesCount > 0 && syncRepository.hayConexionInternet()) {
             ejecutarSincronizacion()
         }
     }
@@ -305,6 +305,7 @@ fun NavegationComponent(
                     guiaId = guiaId,
                     cedulaChofer = cedulaActual,
                     syncRepository = syncRepository,
+                    registroScope = scope,
                     onEventoRegistrado = { msg ->
                         refrescarEstadoLocal()
                         mensajeGlobalSync = msg
@@ -1018,10 +1019,12 @@ fun PantallaRegistrarEvento(
     guiaId: Long,
     cedulaChofer: Int,
     syncRepository: SyncRepository,
+    registroScope: kotlinx.coroutines.CoroutineScope? = null,
     onEventoRegistrado: (String) -> Unit
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val envioScope = registroScope ?: scope
     var guiaLocal by remember(guiaId) { mutableStateOf(syncRepository.dbHelper.obtenerGuiaPorId(guiaId)) }
     var estadoGuiaActual by remember(guiaId) { mutableStateOf(guiaLocal?.estado) }
     val otraGuiaEnCurso = remember(guiaId, estadoGuiaActual, cedulaChofer) {
@@ -1414,7 +1417,7 @@ fun PantallaRegistrarEvento(
                     }
 
                     guardando = true
-                    scope.launch {
+                    envioScope.launch {
                         val res = syncRepository.registrarEvento(
                             guiaId = guiaId,
                             tipo = tipoSeleccionado,

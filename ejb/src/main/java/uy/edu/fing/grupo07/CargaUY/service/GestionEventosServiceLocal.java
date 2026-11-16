@@ -71,4 +71,11 @@ public interface GestionEventosServiceLocal {
     ) {
         return reportarIncidente(dto);
     }
+
+    /**
+     * Sincroniza asíncronamente las pesadas de balanzas periféricas asociadas a una guía
+     * sin bloquear el hilo HTTP de los hitos móviles del chofer.
+     */
+    default void sincronizarBalanzasDeGuiaAsync(Long guiaId, String correlacion) {
+    }
 }

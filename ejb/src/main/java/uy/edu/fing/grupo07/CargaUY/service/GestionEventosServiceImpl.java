@@ -1,7 +1,12 @@
 package uy.edu.fing.grupo07.CargaUY.service;
 
+import jakarta.annotation.Resource;
+import jakarta.ejb.Asynchronous;
 import jakarta.ejb.EJB;
+import jakarta.ejb.SessionContext;
 import jakarta.ejb.Stateless;
+import jakarta.ejb.TransactionAttribute;
+import jakarta.ejb.TransactionAttributeType;
 import jakarta.inject.Inject;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -55,6 +60,9 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
 
     @EJB
     private ControlAcceso control;
+
+    @Resource
+    private SessionContext sessionContext;
 
     private void verificarControl() {
         if (control == null) {
@@ -257,13 +265,44 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
         }
 
         if (esHitoBalanza(dto.tipo())) {
-            sincronizarBalanzasPorHito(guia, dto.uuid());
+            boolean despachadoAsync = false;
+            if (sessionContext != null && guia.getId() != null) {
+                try {
+                    sessionContext
+                            .getBusinessObject(GestionEventosServiceLocal.class)
+                            .sincronizarBalanzasDeGuiaAsync(guia.getId(), dto.uuid());
+                    despachadoAsync = true;
+                } catch (Exception ex) {
+                    LOGGER.log(Level.FINE, "Fallback sincrono al consultar balanzas para guia #"
+                            + guia.getId() + ": " + ex.getMessage());
+                }
+            }
+            if (!despachadoAsync) {
+                sincronizarBalanzasPorHito(guia, dto.uuid());
+            }
         }
 
         if (fiscalizacionProducer != null && guia.getId() != null) {
             fiscalizacionProducer.solicitarEvaluacion(guia.getId());
         }
         return evento;
+    }
+
+    @Override
+    @Asynchronous
+    @TransactionAttribute(TransactionAttributeType.REQUIRES_NEW)
+    public void sincronizarBalanzasDeGuiaAsync(Long guiaId, String correlacion) {
+        if (guiaId == null || em == null || balanzaClient == null) {
+            return;
+        }
+        GuiaDeViaje guia = em.find(GuiaDeViaje.class, guiaId);
+        if (guia == null) {
+            return;
+        }
+        int importadas = sincronizarBalanzasPorHito(guia, correlacion);
+        if (importadas > 0 && fiscalizacionProducer != null) {
+            fiscalizacionProducer.solicitarEvaluacion(guiaId);
+        }
     }
 
     private static boolean esHitoBalanza(TipoEvento tipo) {
@@ -275,13 +314,13 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
                 || tipo == TipoEvento.DESCARGA_PARCIAL;
     }
 
-    private void sincronizarBalanzasPorHito(GuiaDeViaje guia, String correlacion) {
+    private int sincronizarBalanzasPorHito(GuiaDeViaje guia, String correlacion) {
         if (balanzaClient == null || guia == null || guia.getVehiculo() == null) {
-            return;
+            return 0;
         }
         String matricula = guia.getVehiculo().getMatricula();
         if (matricula == null || matricula.isBlank()) {
-            return;
+            return 0;
         }
         LocalDate fechaDesde = guia.getFecha() != null ? guia.getFecha() : LocalDate.now();
         LocalDate hoy = LocalDate.now();
@@ -298,9 +337,11 @@ public class GestionEventosServiceImpl implements GestionEventosServiceLocal {
                 LOGGER.log(Level.INFO, "Se importaron {0} pesada(s) desde balanzas para guía #{1} (correlación={2}).",
                         new Object[]{nuevas.size(), guia.getId(), correlacion});
             }
+            return nuevas.size();
         } catch (Exception e) {
             LOGGER.log(Level.WARNING, "No se pudieron consultar pesadas de balanza para guía #"
                     + guia.getId() + " (correlación=" + correlacion + "): " + e.getMessage());
+            return 0;
         }
     }
 

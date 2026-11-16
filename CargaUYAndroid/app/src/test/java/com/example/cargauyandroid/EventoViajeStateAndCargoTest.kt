@@ -267,4 +267,16 @@ class EventoViajeStateAndCargoTest {
         )
         assertEquals((listOf(Constants.CLOUD_URL) + Constants.CANDIDATE_URLS).distinct(), sinSesion)
     }
+
+    @Test
+    fun `SyncRetryHelper reintenta ante timeout transitorio con red disponible y no sin senal`() {
+        val timeout = java.net.SocketTimeoutException("timeout")
+        assertTrue(SyncRetryHelper.debeReintentarEnvio(timeout, null, hayConexionInternet = true))
+        org.junit.Assert.assertFalse(SyncRetryHelper.debeReintentarEnvio(timeout, null, hayConexionInternet = false))
+        org.junit.Assert.assertFalse(
+            SyncRetryHelper.debeReintentarEnvio(java.net.ConnectException("refused"), null, hayConexionInternet = true)
+        )
+        assertTrue(SyncRetryHelper.debeReintentarEnvio(IllegalStateException("503"), 503, hayConexionInternet = true))
+        org.junit.Assert.assertFalse(SyncRetryHelper.debeReintentarEnvio(IllegalStateException("401"), 401, hayConexionInternet = true))
+    }
 }
