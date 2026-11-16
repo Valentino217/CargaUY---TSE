@@ -26,7 +26,7 @@ El proyecto sigue una estructura multimódulo Maven (`pom.xml` raíz) con empaqu
 ```bash
 mvn -B --errors --fail-at-end clean verify
 ```
-El objetivo `verify` ejecuta todos los tests unitarios (`CargaUY-ejb` y `CargaUY-web`), genera los reportes HTML de cobertura en `ejb/target/site/jacoco/index.html` y `web/target/site/jacoco/index.html` y valida automáticamente la regla `jacoco:check` en el módulo `ejb` (`jacoco.minimum.coverage = 0.80` en `pom.xml` raíz).
+El objetivo `verify` ejecuta todos los tests unitarios (`CargaUY-ejb`: 295 tests con **82,01%** de cobertura de líneas; `CargaUY-web`: 105 tests con **40,38%** — **400 tests totales**), genera los reportes HTML de cobertura en `ejb/target/site/jacoco/index.html` y `web/target/site/jacoco/index.html` y valida automáticamente la regla `jacoco:check` en el módulo `ejb` (`jacoco.minimum.coverage = 0.80` en `pom.xml` raíz).
 
 ### Compilar y empaquetar rápido (tests sin validación de gate / sin tests)
 ```bash
@@ -57,7 +57,7 @@ El archivo `docker-compose.yml` referencia (como opcionales con `required: false
 
 ### 3.2 Levantar todo el entorno
 ```bash
-# Construir e iniciar todos los servicios
+# Construir e iniciar todos los servicios (postgres, mongodb, ldap, mock-pdi, wildfly, seed)
 docker compose up -d --build --remove-orphans
 ```
 
@@ -123,7 +123,7 @@ cd CargaUYAndroid
 *(En Windows PowerShell/CMD: `.\gradlew.bat assembleDebug`)*. Configurar la URL del backend según el entorno (emulador Android: `10.0.2.2:8080`, o IP local de la máquina en red LAN).
 
 ### 6.2 Función FaaS de Desvío de Ruta (`faas/tracking-desvio-lambda`)
-Contiene `lambda_function.py` con el cálculo geoespacial de desvío sobre polilíneas de Rutas Nacionales de Uruguay (MTOP). Provee handler para **AWS Lambda** (`lambda_function.lambda_handler`) y para **Google Cloud Run Functions** (`evaluar_tracking_http`), configurable en WildFly mediante `FAAS_TRACKING_URL` y `FAAS_SHARED_SECRET`.
+Contiene `lambda_function.py` con el cálculo geoespacial de desvío sobre polilíneas de Rutas Nacionales de Uruguay (MTOP) y emisión de logs JSON estructurados con propagación de `X-Correlation-ID` y `traceparent`. Es compatible con funciones HTTP serverless (p. ej. **Vercel** en `https://faas-py.vercel.app/api/tracking`), **AWS Lambda** (`lambda_function.lambda_handler`) y **Google Cloud Run Functions** (`evaluar_tracking_http`), configurable en WildFly mediante `FAAS_TRACKING_URL` y `FAAS_SHARED_SECRET`.
 
 ---
 

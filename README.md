@@ -34,7 +34,7 @@ Plataforma empresarial **Jakarta EE 10** (`ejb` + `web` + `ear`) desplegada sobr
 | **Mock PDI (SOAP)** | `http://localhost:8081/pdi/ws` | Simulador DNIC/PDI en contenedor local. |
 | **Nodo Balanzas (REST)** | `${BALANZA_ENDPOINT}` | Configurado en `.env` (Render: `cargauy-mock-balanza-latest.onrender.com`, timeout `15s`). |
 | **Nodo Tracking (REST)** | `${TRACKING_ENDPOINT}` | Configurado en `.env` (Render: `cargauy-mock-tracking-latest.onrender.com`, timeout `15s`). |
-| **FaaS Desvío de Ruta** | AWS Lambda (`faas/tracking-desvio-lambda`) | Cálculo geométrico de desvío sobre corredor vial; fallback local ante fallo. |
+| **FaaS Desvío de Ruta** | Vercel / AWS Lambda (`faas/tracking-desvio-lambda`) | Cálculo geométrico de desvío sobre corredor vial (`FAAS_TRACKING_URL`); fallback local ante fallo. |
 
 Variables clave en `.env` / `docker-compose.yml`:
 - `P1_ENTORNO_LOCAL=true` y `P1_BOOTSTRAP=true`: habilitan el usuario administrador inicial (`BOOTSTRAP_ADMIN_UID`) y endpoints de prueba/dev para el componente móvil (`/api/auth/dev-chofer`). En producción deben deshabilitarse.
@@ -48,3 +48,5 @@ Variables clave en `.env` / `docker-compose.yml`:
 
 - **[BUILD.md](BUILD.md)** — Compilación Maven, pruebas unitarias/cobertura JaCoCo, despliegue Docker/WildFly, scripts de datos y compilación de la app Android y FaaS.
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** — Arquitectura Jakarta EE, modelo de datos híbrido (PostgreSQL + MongoDB), mensajería JMS + DLQ, integraciones, seguridad, resiliencia y observabilidad.
+- **[CALCULOS-TRYHARD-PERFORMANCE-Y-CAPACIDAD.md](docs/CALCULOS-TRYHARD-PERFORMANCE-Y-CAPACIDAD.md)** — Dimensionamiento país (Sección 3.7.3), estimación de almacenamiento, análisis de cuellos de botella, punto de quiebre y métricas medidas.
+- **[paper-cargauy.tex](docs/paper-cargauy.tex)** — Artículo técnico en LaTeX para la entrega de Ingeniería.
