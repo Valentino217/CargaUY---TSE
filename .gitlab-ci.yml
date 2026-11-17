@@ -34,19 +34,20 @@ unit-tests-job:
     paths:
       - "**/target/site/jacoco/"
 
-# Etapa 3: Análisis estático de código y Quality Gate en SonarQube
+# Etapa 3: Análisis estático de código y Quality Gate en SonarQube (solo si SONAR_TOKEN está definido)
 sonarqube-job:
   stage: quality
   image: maven:3.9-eclipse-temurin-17
   script:
-    - mvn $MAVEN_CLI_OPTS test-compile sonar:sonar
+    - mvn $MAVEN_CLI_OPTS test-compile org.sonarsource.scanner.maven:sonar-maven-plugin:sonar
         -Dsonar.host.url=${SONAR_HOST_URL:-https://sonarqube.fing.edu.uy}
-        -Dsonar.login=${SONAR_TOKEN}
+        -Dsonar.token=${SONAR_TOKEN}
         -Dsonar.projectKey=uy.edu.fing.grupo07:CargaUY
-        -Dsonar.coverage.jacoco.xmlReportPaths=**/target/site/jacoco/jacoco.xml
-  only:
-    - main
-    - develop
+        '-Dsonar.coverage.jacoco.xmlReportPaths=**/target/site/jacoco/jacoco.xml'
+  rules:
+    - if: '$SONAR_TOKEN && ($CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "develop")'
+      when: on_success
+    - when: never
 
 # Etapa 4: Empaquetado final del EAR para entrega / despliegue
 package-job:
