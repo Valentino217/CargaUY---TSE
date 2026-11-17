@@ -132,5 +132,5 @@ Contiene `lambda_function.py` con el cálculo geoespacial de desvío sobre polil
 El pipeline de GitLab ejecuta automáticamente en 4 etapas (`maven:3.9-eclipse-temurin-17`):
 1. `build-job`: Compilación limpia de todos los módulos (`mvn clean compile`).
 2. `unit-tests-job`: Ejecución de tests unitarios, reporte JaCoCo en `ejb` y `web` y verificación `jacoco:check >= 80%` en `ejb` (`mvn verify`).
-3. `sonarqube-job`: Análisis estático y Quality Gate en SonarQube (ramas `main` y `develop`).
+3. `sonarqube-job`: Análisis estático y Quality Gate en SonarQube (ramas `main` y `develop`, cuando `SONAR_TOKEN` está definido en CI/CD Variables).
 4. `package-job`: Empaquetado y publicación de `ear/target/CargaUY.ear` y `gub-callback-root/target/gub-callback-root.war`.
